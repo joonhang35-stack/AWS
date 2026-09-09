@@ -1,0 +1,43 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+<h:panelGrid columns="3">
+	<h:selectOneMenu value="#{tourPkgBean.tourDepVO.idCompany}">
+		<f:selectItems value="#{tourPkgBean.companyList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.id}"/>
+	</h:selectOneMenu>
+	<p:commandButton value="Import Items" actionListener="#{tourPkgBean.importDefaultInvoiceItems}" update="@form,:idAddTourDepForm:idShowCompanyCodeList,:idEditTourDepForm:idShowCompanyCodeList"/>
+	<p:commandButton value="Close" actionListener="#{tourPkgBean.resetTourDepItemForm}" oncomplete="varDepItemListDialog.hide()" process="@this"/>
+</h:panelGrid>
+
+<p:accordionPanel id="idCompanyTourDepItemList" value="#{tourPkgBean.tourDepItemList}" var="list">
+	<p:tab title="#{list.get(0).companyVO.name}">
+		<p:panelGrid style="border:0;">
+			<p:row>
+				<p:column><p:commandButton value="Add Item" actionListener="#{tourPkgBean.addTourDepItem(list.get(0).companyVO)}" update=":idAddDepItemDialog" oncomplete="varAddDepItemDialog.show()" process="@this"/></p:column>
+				<p:column style="text-align:right;"><p:commandButton icon="ui-icon-close" actionListener="#{tourPkgBean.deleteTourDepItemList(list)}" update="@form,:idAddTourDepForm:idShowCompanyCodeList,:idEditTourDepForm:idShowCompanyCodeList"/></p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:dataTable value="#{list}" var="vo" scrollable="true" scrollHeight="200">
+			<p:column headerText="Edit" style="width:50px; text-align:center;"><p:commandLink styleClass="ui-icon ui-icon-pencil" actionListener="#{tourPkgBean.setTourDepItemVO(vo)}" oncomplete="varEditDepItemDialog.show()" update=":idEditDepItemForm" process="@this" rendered="#{vo.isEditable}"/></p:column>
+			<p:column headerText="Delete" style="width:55px; text-align:center;"><p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{tourPkgBean.delTourDepItem(vo)}" update=":idTourDepItemListForm" process="@this" rendered="#{vo.isEditable}"/></p:column>
+			<p:column headerText="Item Type" style="width:100px">
+				<h:outputText value="#{bterp:lookupItemDesc('inv_items_type', vo.itemTypeCd)}" />
+			</p:column>
+			<p:column headerText="Item Code" style="width:150px"><h:outputText value="#{vo.code}"/></p:column>
+			
+			<p:column headerText="Invoice Item" style="width:200px"><h:outputText value="#{vo.desc}"/></p:column>
+			<p:column headerText="Unit Price" style="width:100px"><h:outputText value="#{vo.amount}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+			<p:column headerText="IsMisc" style="width:70px"><h:outputText value="#{vo.isMisc ? 'Y' : 'N'}"/></p:column>		
+		</p:dataTable>
+	</p:tab>
+</p:accordionPanel>
+</ui:composition>

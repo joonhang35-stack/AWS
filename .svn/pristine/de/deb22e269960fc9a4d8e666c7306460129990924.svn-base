@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.bcs.zsg.bank.vo">
+
+    <class table="bank" name="BankAcctViewVO" polymorphism="explicit">
+        <id name="id" type="long" column="ID">
+        	<generator class="native"/>
+        </id>
+        <property name="idCompany" type="long" column="id_company"/>
+        <property name="typeCd" type="string" column="type_cd"/>
+        <property name="seqNo" type="int" column="seq_no"/>
+        <property name="acctNo" type="string" column="acct_no"/>
+        <property name="name" type="string" column="name"/>
+        <property name="contactName" type="string" column="contact_name"/>
+        <property name="dtLastRecon" type="timestamp" column="dt_last_recon"/>
+        
+        <many-to-one name="acctViewVO" class="com.bcs.zsg.acct.vo.AcctViewVO" column="id_acct" lazy="false"/>
+        <set name="bankAddrList" table="bank_address" inverse="true" lazy="false" fetch="select">
+        	<key><column name="id_bank"/></key>
+        	<one-to-many class="com.bcs.zsg.bank.vo.BankAddrVO" />
+        </set>
+        <set name="bankContactList" table="bank_contact" inverse="true" lazy="false" fetch="select">
+        	<key><column name="id_bank"/></key>
+        	<one-to-many class="com.bcs.zsg.bank.vo.BankContactVO" />
+        </set>
+        
+        <!-- BaseVO attributes -->
+		<property name="createdDate" type="timestamp" column="dt_created" update="false"/>
+		<property name="createdBy" type="string" column="created_by"/>
+		<property name="updatedDate" type="timestamp" column="dt_upd"/>
+		<property name="updatedBy" type="string" column="upd_by"/>
+    </class>
+</hibernate-mapping>

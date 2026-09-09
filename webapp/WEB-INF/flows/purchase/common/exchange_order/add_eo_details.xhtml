@@ -1,0 +1,106 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	<p:growl id="msg"/>
+	
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varAddDetailsDialog.show()
+			} else {
+				varAddDetailsDialog.hide();
+			}
+		}
+	</script>
+	
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idAddDesc">Description <span class="required">*</span></h:outputLabel></p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAddDesc" colspan="3" label="Description" value="#{purchaseEOBean.exOrderDetailsViewVO.desc}" required="true" maxlength="255" size="50"
+					 validatorMessage="Description is invalid.">
+					<f:validateRegex pattern="[\x00-\x7F]*"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+				
+		<p:row>
+		<p:column><h:outputLabel for="idAddPrice">Price <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idAddPrice1" label="Price" value="#{purchaseEOBean.exOrderDetailsViewVO.price}" required="true" rendered="#{purchaseEOBean.add}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+			<p:inputText id="idAddPrice" label="Price" value="#{purchaseEOBean.exOrderDetailsViewVO.price}" required="true" rendered="#{not purchaseEOBean.add}">
+				<f:convertNumber pattern="#,##0.00"/>
+				<p:ajax listener="#{purchaseEOBean.calAmt}" update=":idAddEODetailsForm:idAddPrice,:idAddEODetailsForm:idAddAmt,:idAddEODetailsForm:idAddFCAmt"
+					process="@this,idAddQty,idAddForeCur">
+					<p:focus for="idAddQty"/>
+				</p:ajax>
+			</p:inputText>
+		</p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddQty">Quantity <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="3">
+			<p:inputText id="idAddQty" colspan="3" label="Quantity" value="#{purchaseEOBean.exOrderDetailsViewVO.qty}" required="true" maxlehgth="3">
+				<p:ajax listener="#{purchaseEOBean.calAmt}" update=":idAddEODetailsForm:idAddQty,:idAddEODetailsForm:idAddPrice,:idAddEODetailsForm:idAddAmt,:idAddEODetailsForm:idAddFCAmt"
+					process="@this,idAddPrice,idAddPrice1,idAddForeCur"/>
+			</p:inputText>
+		</p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddFCAmt">Amount </h:outputLabel></p:column>
+		<p:column>
+			<h:outputLabel id="idAddFCAmt" label="Amount" value="#{purchaseEOBean.exOrderDetailsViewVO.foreCurAmt}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</h:outputLabel>
+		</p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddForeCur">Currency </h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idAddForeCur" value="#{purchaseEOBean.exOrderDetailsViewVO.currencyId}">  
+	            <f:selectItems value="#{purchaseEOBean.foreignExRateList}" var="vo" itemLabel="#{vo.code}" itemValue="#{vo.id}" />  
+	            <p:ajax update=":idAddEODetailsForm:idAddExRate,:idAddEODetailsForm:idAddPrice,:idAddEODetailsForm:idAddAmt,:idAddEODetailsForm:idAddFCAmt" listener="#{purchaseEOBean.onChgExchgRate}"
+	            	process="@this,idAddPrice,idAddPrice1,idAddQty"/>  
+	        </h:selectOneMenu>  
+        </p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddExRate">Exchange Rate </h:outputLabel></p:column>
+		<p:column>
+			<!-- <h:outputLabel id="idAddExRate" label="Exchange Rate" value="#{purchaseEOBean.exOrderDetailsViewVO.exRate}">
+				<f:convertNumber pattern="#,##0.000000"/>
+			</h:outputLabel> -->
+			<p:inputText id="idAddExRate" label="Exchange Rate" value="#{purchaseEOBean.exOrderDetailsViewVO.exRate}" required="true">
+				<p:ajax listener="#{purchaseEOBean.calAmt}" update=":idAddEODetailsForm:idAddQty,:idAddEODetailsForm:idAddPrice,:idAddEODetailsForm:idAddAmt,:idAddEODetailsForm:idAddFCAmt"
+					process="@this,idAddPrice,idAddPrice1,idAddQty,idAddForeCur"/>
+			</p:inputText>
+		</p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddAmt">Local Amount (RM) </h:outputLabel></p:column>
+		<p:column>
+			<h:outputLabel id="idAddAmt" label="Local Amount (RM)" value="#{purchaseEOBean.exOrderDetailsViewVO.amount}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</h:outputLabel>
+		</p:column>
+		</p:row>
+		
+	</p:panelGrid>
+
+	<p:panelGrid columns="2" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseEOBean.addExOrderDetails}" update="@form,:idAddExOrderForm:idTabExOrder:idShowEODetails,:idAddExOrderForm:idEOAmt" rendered="#{purchaseEOBean.add}"/>
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseEOBean.editEODetails}" update="@form,:idAddExOrderForm:idTabExOrder:idShowEODetails,:idAddExOrderForm:idEOAmt" oncomplete="onValidation(xhr, status, args)" rendered="#{not purchaseEOBean.add}"/>
+		<p:commandButton value="Cancel" actionListener="#{purchaseEOBean.resetEODetailsForm}" oncomplete="varAddDetailsDialog.hide()" update="@form,:idAddEODetailsForm" process="@this" />
+	</p:panelGrid>
+</ui:composition>

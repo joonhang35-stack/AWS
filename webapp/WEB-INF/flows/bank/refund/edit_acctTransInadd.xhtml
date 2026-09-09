@@ -1,0 +1,45 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	<p:growl id="msg"/>  	
+		 <script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varEditAcctTransDialog.show();
+		} else {
+			varEditAcctTransDialog.hide();
+		}
+	}
+</script>		
+	<p:panelGrid>
+	<p:row>
+		 <p:column><h:outputLabel for="idAcct">account <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+		
+			<p:autoComplete id="idAcct" label="Account" value="#{refundBean.acctTransViewVO.code}"   
+                    completeMethod="#{refundBean.complete}" required="true">  
+       <p:ajax event="itemSelect" listener="#{refundBean.changeDesc}" update=":idEditAcctTrans:idAddDescription"/> 
+     </p:autoComplete>
+			&nbsp;  <p:commandButton icon="ui-icon-search" oncomplete="varAcctListDialogInAdd.show()" update=":idAcctListDialogInAdd" process="@this"/>
+		</p:column>
+        </p:row>
+		<p:row>
+        <p:column><h:outputLabel for="idAddDescription">Description</h:outputLabel></p:column>
+		<p:column><h:outputText id="idAddDescription" label="Description" value="#{refundBean.acctTransViewVO.desc}" required="true"/></p:column>
+		 </p:row>
+		<p:row>
+		 <p:column><h:outputLabel for="idAddAmount">Amount<span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddAmount" label="Amount" value="#{refundBean.acctTransViewVO.credit}" required="true">
+		<f:convertNumber pattern="#,##0.00"/></p:inputText></p:column>
+	</p:row>
+	</p:panelGrid>
+	<p:panelGrid columns="3" style="width:1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{refundBean.editAcctTrans}" update="@form,:idAddRefund:idShowAcctTrans,:idEditAcctTrans,:idAddAcctTrans" oncomplete="onValidation(xhr, status, args)"/>
+		<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{refundBean.cancel}" onclick="varEditAcctTransDialog.hide()" process="@this" update="@form,:idAddRefund:idShowAcctTrans"/>
+	</p:panelGrid>
+</ui:composition>

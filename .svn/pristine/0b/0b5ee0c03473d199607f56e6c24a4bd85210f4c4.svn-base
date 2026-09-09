@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="general_ledger_subcode_rpt" pageWidth="572" pageHeight="802" columnWidth="572" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="a1e6027b-9c00-4fd5-920a-a4d275467a1a">
+	<property name="ireport.zoom" value="5.0"/>
+	<property name="ireport.x" value="1284"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="isShowSource" class="java.lang.Boolean"/>
+	<parameter name="showColumnType" class="java.lang.String"/>
+	<parameter name="isShowQty" class="java.lang.Boolean"/>
+	<field name="code" class="java.lang.String"/>
+	<field name="subCode" class="java.lang.String"/>
+	<field name="desc" class="java.lang.String"/>
+	<field name="subDesc" class="java.lang.String"/>
+	<field name="beginBal" class="java.lang.Double"/>
+	<field name="bfBal" class="java.lang.Double"/>
+	<field name="currBal" class="java.lang.Double"/>
+	<field name="totalDebit" class="java.lang.Double"/>
+	<field name="totalCredit" class="java.lang.Double"/>
+	<field name="acctTransViewList" class="java.util.List"/>
+	<group name="Account Sub Code">
+		<groupExpression><![CDATA[$F{subCode}]]></groupExpression>
+		<groupHeader>
+			<band height="30">
+				<staticText>
+					<reportElement x="23" y="15" width="77" height="15" uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7" isBold="false"/>
+					</textElement>
+					<text><![CDATA[Fin Year Beg Bal:]]></text>
+				</staticText>
+				<textField pattern="#,##0.00 DR;#,##0.00 CR">
+					<reportElement x="482" y="15" width="90" height="15" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{bfBal}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00 DR;#,##0.00 CR">
+					<reportElement x="100" y="15" width="90" height="15" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{beginBal}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="446" y="15" width="36" height="15" uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7" isBold="false"/>
+					</textElement>
+					<text><![CDATA[B/F Bal:]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="23" y="0" width="77" height="15" uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Sub Account:]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="100" y="0" width="472" height="15" uuid="6f8097da-ff49-45c1-91bd-554039bf5f6e"/>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[($F{subCode}).equals("") ? "-" : $F{subCode} + " " + $F{subDesc}]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="15">
+				<textField pattern="#,##0.00;(#,##0.00)">
+					<reportElement x="45" y="1" width="53" height="14" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314">
+						<printWhenExpression><![CDATA[$P{isShowQty}]]></printWhenExpression>
+					</reportElement>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{totalDebit}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="322" y="1" width="160" height="14" uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7" isBold="false"/>
+					</textElement>
+					<text><![CDATA[Total Sub Account Current Balance:]]></text>
+				</staticText>
+				<textField pattern="#,##0.00;(#,##0.00)">
+					<reportElement x="98" y="1" width="53" height="14" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314">
+						<printWhenExpression><![CDATA[$P{isShowQty}]]></printWhenExpression>
+					</reportElement>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{totalCredit}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="0" y="1" width="45" height="14" uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Totals:]]></text>
+				</staticText>
+				<textField pattern="#,##0.00 DR;#,##0.00 CR">
+					<reportElement x="482" y="1" width="90" height="14" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{currBal}]]></textFieldExpression>
+				</textField>
+				<line>
+					<reportElement positionType="Float" x="45" y="0" width="106" height="1" uuid="01c360f2-a4be-46ef-9c89-d3a5c0d28bde">
+						<printWhenExpression><![CDATA[$P{isShowQty}]]></printWhenExpression>
+					</reportElement>
+					<graphicElement>
+						<pen lineWidth="0.5" lineStyle="Solid"/>
+					</graphicElement>
+				</line>
+				<textField pattern="#,##0.00;(#,##0.00)">
+					<reportElement x="45" y="1" width="60" height="14" uuid="a3469894-22ff-4242-82e1-5c107b47a5c9">
+						<printWhenExpression><![CDATA[!$P{isShowQty}]]></printWhenExpression>
+					</reportElement>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{totalDebit}]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00;(#,##0.00)">
+					<reportElement x="105" y="1" width="60" height="14" uuid="5d853004-1a48-4549-b2e0-43658752fe7f">
+						<printWhenExpression><![CDATA[!$P{isShowQty}]]></printWhenExpression>
+					</reportElement>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="7"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{totalCredit}]]></textFieldExpression>
+				</textField>
+				<line>
+					<reportElement positionType="Float" x="45" y="0" width="120" height="1" uuid="974a734d-e339-49ee-b716-8febaad6a2df">
+						<printWhenExpression><![CDATA[!$P{isShowQty}]]></printWhenExpression>
+					</reportElement>
+					<graphicElement>
+						<pen lineWidth="0.5" lineStyle="Solid"/>
+					</graphicElement>
+				</line>
+			</band>
+		</groupFooter>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="15" splitType="Stretch">
+			<subreport>
+				<reportElement positionType="Float" x="0" y="0" width="572" height="15" isRemoveLineWhenBlank="true" uuid="399099db-0926-4a6f-b606-90ba1e951065"/>
+				<subreportParameter name="showColumnType">
+					<subreportParameterExpression><![CDATA[$P{showColumnType}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="isShowQty">
+					<subreportParameterExpression><![CDATA[$P{isShowQty}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="isShowSource">
+					<subreportParameterExpression><![CDATA[$P{isShowSource}]]></subreportParameterExpression>
+				</subreportParameter>
+				<dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{acctTransViewList})]]></dataSourceExpression>
+				<subreportExpression><![CDATA["general_ledger_details_rpt.jasper"]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+</jasperReport>

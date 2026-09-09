@@ -1,0 +1,60 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<div style="width:1200px; overflow:auto;">
+<p:dataTable id="idTourPkgListImportCMS" value="#{tourPkgBean.tourPkgListImportCMS}" var="vo" paginator="true" rows="10" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="5,10,15" filterEvent="enter">
+	
+	<p:column headerText="Import" style="width:30px;">
+		<p:commandLink styleClass="ui-icon ui-icon-search"
+			actionListener="#{tourPkgBean.setTourPkgCMSVO(vo)}"
+			oncomplete="varImportItineraryCMSDialog.show();"
+			update=":idImportItineraryCMSForm"
+			style="margin-left: 8px;" rendered="#{not empty vo.tourPkgDailyItineraryCount and vo.tourPkgDailyItineraryCount gt 0}"/>
+	</p:column>
+	
+	<p:column headerText="Tour Category" style="font-size:10px;" filterBy="#{vo.catDesc}" filterMatchMode="contains">
+		<h:outputText value="#{vo.catDesc}"/>
+	</p:column>
+	<p:column headerText="Tour Category" style="font-size:10px;" filterBy="#{vo.catDesc}" filterMatchMode="contains">
+		<h:outputText value="#{vo.catDesc}"/>
+	</p:column>
+	<p:column headerText="Tour Parent Theme" style="font-size:10px;" filterBy="#{vo.parentThemeDesc}" filterMatchMode="contains">
+		<h:outputText value="#{vo.parentThemeDesc}"/>
+	</p:column>
+	<p:column headerText="Tour Theme" style="font-size:10px;" filterBy="#{vo.themeDesc}" filterMatchMode="contains">
+		<h:outputText value="#{vo.themeDesc}"/>
+	</p:column>
+	<p:column headerText="Year" style="font-size:10px;" filterBy="#{vo.year}" styleClass="txt_center">
+		<h:outputText value="#{vo.year}"/>
+	</p:column>
+	<p:column headerText="Code" style="font-size:10px;" filterBy="#{vo.code}" styleClass="txt_center">
+		<h:outputText value="#{vo.code}"/>
+	</p:column>
+	<p:column headerText="Description" style="font-size:10px;" filterMatchMode="contains"
+		 filterBy="#{vo.numDays}D #{vo.numNights}N #{vo.nameEn} #{vo.nameZh} #{vo.nameOther}" >
+		<h:outputText value="#{vo.numDays}D #{vo.numNights}N #{vo.nameEn} #{vo.nameZh} #{vo.nameOther}"/>
+	</p:column>
+	<p:column headerText="Daily Itinerary Count" style="font-size:10px;" filterBy="#{vo.tourPkgDailyItineraryCount}" styleClass="txt_center">
+		<h:outputText value="#{vo.tourPkgDailyItineraryCount}"/>
+	</p:column>
+</p:dataTable>
+</div>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varTourPkgListCMSDialog.hide()"/>
+	<p:selectBooleanCheckbox
+		value="#{tourPkgBean.tourPkgListInactiveRecords}" itemLabel="Inactive Records"
+		style="width:150px; margin-left:10px;">
+		<p:ajax event="change" listener="#{tourPkgBean.loadTourPkgListCMS}" update=":idTourPkgListCMSForm:idTourPkgListImportCMS" process="@this"/>	
+	</p:selectBooleanCheckbox>
+</h:panelGrid>
+
+</ui:composition>

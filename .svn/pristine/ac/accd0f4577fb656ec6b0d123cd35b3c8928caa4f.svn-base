@@ -1,0 +1,130 @@
+package com.bcs.zsg.feedback.service;
+
+import java.net.URLEncoder;
+import java.util.List;
+import java.util.UUID;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.bcs.zsg.common.helper.AESEncryption;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.feedback.bo.FeedbackBO;
+import com.bcs.zsg.feedback.dao.FeedbackDAO;
+import com.bcs.zsg.product.dao.TourPackageDAO;
+import com.bcs.zsg.product.vo.FeedbackVO;
+import com.bcs.zsg.product.vo.TourPackageVO;
+
+public class FeedbackServiceImpl implements FeedbackService {
+
+    @Autowired
+    private FeedbackBO feedbackBO;
+
+    @Autowired
+    private FeedbackDAO feedbackDAO;
+    
+    @Autowired
+    private TourPackageDAO tourPkgDAO;
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.service.FeedbackService#getInvoiceForFeedback()
+     */
+
+    @Override
+    @Transactional
+    public List<FeedbackVO> getInvoiceForFeedback() throws BusinessException {
+        return getInvoiceForFeedback(null);
+    }
+
+    @Override
+    @Transactional
+    public List<FeedbackVO> getInvoiceForFeedback(Long idTourBooking) throws BusinessException {
+        List<FeedbackVO> feedbackList = feedbackDAO.getInvoiceForFeedback(idTourBooking);
+
+        for (FeedbackVO vo : feedbackList) {
+            try {
+                if (vo.getTourBookingId() != null) {
+                    String existingStatus = feedbackDAO.getFeedbackStatus(vo.getTourBookingId());
+                    if (existingStatus != null) {
+                        System.out.println("Feedback entry already exists for booking: " + vo.getTourBookingId() + ", skipping insertion.");
+                        continue;
+                    }
+                }
+
+                String uuid = UUID.randomUUID().toString();
+                vo.setTokenUuid(uuid);
+                vo.setFeedbackStatus("P");
+                feedbackDAO.insertFeedback(vo);
+            } catch (Exception ex) {
+                System.err.println("Error processing feedback for invoice: " + vo.getInvId());
+                ex.printStackTrace();
+            }
+        }
+       
+        return feedbackList;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.service.FeedbackService#insertFeedback(com.bcs.zsg.product.vo.FeedbackVO)
+     */
+    @Override
+    @Transactional
+    public void insertFeedback(FeedbackVO feedbackVO) throws BusinessException {
+        feedbackBO.insertFeedback(feedbackVO);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.service.FeedbackService#getFeedbackListbyTourDepId(java.lang.Long)
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<FeedbackVO> getFeedbackListbyTourDepId(Long idTourDep) throws BusinessException {
+        return feedbackBO.getFeedbackListbyTourDepId(idTourDep);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.service.FeedbackService#updateFeedbackStatus(java.lang.Long, java.lang.String)
+     */
+    @Override
+    @Transactional
+    public void updateFeedbackStatus(Long idInvoice, String status) throws BusinessException {
+        feedbackBO.updateFeedbackStatus(idInvoice, status);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.service.FeedbackService#updateFeedbackStatusByBookingId(java.lang.Long, java.lang.String)
+     */
+    @Override
+    @Transactional
+    public void updateFeedbackStatusByBookingId(Long idBooking, String status) throws BusinessException {
+        feedbackBO.updateFeedbackStatusByBookingId(idBooking, status);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.service.FeedbackService#getFeedbackStatus(java.lang.Long)
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public String getFeedbackStatus(Long idBooking) throws BusinessException {
+        return feedbackBO.getFeedbackStatus(idBooking);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FeedbackVO> getPendingFeedbackList() throws BusinessException {
+        return feedbackBO.getPendingFeedbackList();
+    }
+
+    @Override
+    @Transactional
+    public void updateFeedbackForEmailSent(Long idFeedback, String tokenUuid, String status, String updBy) throws BusinessException {
+        feedbackBO.updateFeedbackForEmailSent(idFeedback, tokenUuid, status, updBy);
+    }
+
+}

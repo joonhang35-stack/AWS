@@ -1,0 +1,300 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<script type="text/javascript">
+	function onAddCruiseScheduleValidate(xhr, status, args) {
+		if (args.validationFailed) {
+			
+		} else {
+			varAddCruiseScheduleDialog.hide();
+			varAddCruiseScheduleItemDialog.show();
+		}
+	}
+	function calSum() {
+		var idAptTaxAdt = document.getElementById('idAddCruiseScheduleForm:idAptTaxAdt');
+		var idTrvlIns = document.getElementById('idAddCruiseScheduleForm:idTrvlIns');
+		var idVisa = document.getElementById('idAddCruiseScheduleForm:idVisa');
+		var idAC = document.getElementById('idAddCruiseScheduleForm:idAC');
+		var idTipping = document.getElementById('idAddCruiseScheduleForm:idTipping');
+		var idDeviation = document.getElementById('idAddCruiseScheduleForm:idDeviation');
+		
+		var idIsSumAptTaxAdt = document.getElementById('idAddCruiseScheduleForm:idIsSumAptTaxAdt_input');
+		var idIsSumTrvlIns = document.getElementById('idAddCruiseScheduleForm:idIsSumTrvlIns_input');
+		var idIsSumVisa = document.getElementById('idAddCruiseScheduleForm:idIsSumVisa_input');
+		var idIsSumAC = document.getElementById('idAddCruiseScheduleForm:idIsSumAC_input');
+		var idIsSumTipping = document.getElementById('idAddCruiseScheduleForm:idIsSumTipping_input');
+		var idIsSumDeviation = document.getElementById('idAddCruiseScheduleForm:idIsSumDeviation_input');
+		
+		var total = 0;
+		var totalGroupChargeAmt = 0;
+		
+		if (idAptTaxAdt != null &#38;&#38; idIsSumAptTaxAdt != null)	total += parseFloat(idAptTaxAdt.value);
+		if (idTrvlIns != null &#38;&#38; idIsSumTrvlIns != null)		total += parseFloat(idTrvlIns.value);
+		if (idVisa != null &#38;&#38; idIsSumVisa != null)				total += parseFloat(idVisa.value);
+		if (idAC != null &#38;&#38; idIsSumAC != null)					total += parseFloat(idAC.value);
+		if (idTipping != null &#38;&#38; idIsSumTipping != null)		total += parseFloat(idTipping.value);
+		if (idDeviation != null &#38;&#38; idIsSumDeviation != null)	total += parseFloat(idDeviation.value);
+		
+		if (idAptTaxAdt != null &#38;&#38; idIsSumAptTaxAdt != null &#38;&#38; idIsSumAptTaxAdt.checked)	totalGroupChargeAmt += parseFloat(idAptTaxAdt.value);
+		if (idTrvlIns != null &#38;&#38; idIsSumTrvlIns != null &#38;&#38; idIsSumTrvlIns.checked)			totalGroupChargeAmt += parseFloat(idTrvlIns.value);
+		if (idVisa != null &#38;&#38; idIsSumVisa != null &#38;&#38; idIsSumVisa.checked)					totalGroupChargeAmt += parseFloat(idVisa.value);
+		if (idAC != null &#38;&#38; idIsSumAC != null &#38;&#38; idIsSumAC.checked)							totalGroupChargeAmt += parseFloat(idAC.value);
+		if (idTipping != null &#38;&#38; idIsSumTipping != null &#38;&#38; idIsSumTipping.checked)			totalGroupChargeAmt += parseFloat(idTipping.value);
+		if (idDeviation != null &#38;&#38; idIsSumDeviation != null &#38;&#38; idIsSumDeviation.checked)	totalGroupChargeAmt += parseFloat(idDeviation.value);
+		
+		var idTotalCharges = document.getElementById('idAddCruiseScheduleForm:idTotalCharges');
+		var idGroupChargeAmt = document.getElementById('idAddCruiseScheduleForm:idGroupChargeAmt');
+		if (idTotalCharges != null)		idTotalCharges.value = total.toFixed(2);
+		if (idGroupChargeAmt != null)	idGroupChargeAmt.value = parseFloat(totalGroupChargeAmt.toFixed(2));
+		
+		var idExtraItemChargeTable = document.getElementById('idAddCruiseScheduleForm:idExtraItemChargeTable').querySelector('table');
+		if (idExtraItemChargeTable != null) {
+			for(var j = 0; j &lt; idExtraItemChargeTable.rows.length; j++) {
+				if (j == 0) 	continue; // first row is header
+				var row = idExtraItemChargeTable.rows.item(j).cells;
+				// row.item(3) - Extra Fee Amount
+				// row.item(5) - Sum into Total Y/N
+				if (row != null &#38;&#38; row.item(3) != null &#38;&#38; row.item(5) != null &#38;&#38; row.item(5).innerText == 'Y')	
+					totalGroupChargeAmt += parseFloat(row.item(3).innerText)
+				if (row != null &#38;&#38; row.item(3) != null)	
+					total += parseFloat(row.item(3).innerText)
+			}
+		}
+		
+		if (idTotalCharges != null)		idTotalCharges.value = parseFloat(total.toFixed(2));
+		if (idGroupChargeAmt != null)	idGroupChargeAmt.value = parseFloat(totalGroupChargeAmt.toFixed(2));
+		
+		if (isNaN(total) &#38; idTotalCharges != null)	idTotalCharges.value = ""
+	}
+</script>
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idScheduleName">Schedule Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idScheduleName" label="Schedule Name" value="#{cruiseBean.cruiseScheduleVO.desc}" required="true" style="width:300px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idRemarks">Remarks</h:outputLabel></p:column>
+		<p:column><p:inputText id="idRemarks" value="#{cruiseBean.cruiseScheduleVO.remarks}" maxlength="255" style="width:300px;"/></p:column>
+	</p:row>
+	<!-- <p:row>
+		<p:column><h:outputLabel for="idTktValidity">Ticket Validity (Day) <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idTktValidity" label="Ticket Validity" value="#{cruiseBean.cruiseScheduleVO.tktValidity}" required="true"/></p:column>
+	</p:row> -->
+	<p:row>
+		<p:column colspan="2">
+			<p:panel header="Fees and Charges">
+				<p:panelGrid>
+					<p:row>
+						<p:column></p:column>
+						<p:column></p:column>
+						<p:column>Add Label
+							<p:commandButton id="idInfo" icon="ui-icon-info"/>
+							<p:tooltip for="idInfo">
+								This column is for grouping several invoice items into one item with a user-defined label. 
+								<br></br>When the checkbox is checked, system will auto calculate checked items amount into one amount.
+							</p:tooltip> 
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width:150px;"><h:outputLabel>Port Charges (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<!-- <p:column><h:outputLabel for="idAptTaxAdt">ADT</h:outputLabel></p:column> -->
+						<p:column>
+							<p:inputText id="idAptTaxAdt" label="Port Charges" value="#{cruiseBean.cruiseScheduleVO.amtAptAdt}" required="true" onkeyup="calSum()">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+						<p:column>
+							<p:panelGrid style="width:150px;">
+								<p:row>
+									<!-- <p:column><h:outputLabel for="idIsSumAptTaxAdt">Sum into Total Charges?</h:outputLabel></p:column> -->
+									<p:column><p:selectBooleanCheckbox id="idIsSumAptTaxAdt" value="#{cruiseBean.cruiseScheduleVO.sumAmtApt}" onchange="calSum()"/> </p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column> 
+						<!-- <p:column><h:outputLabel for="idAptTaxChd">CHD</h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idAptTaxChd" label="APT Tax CHD" value="#{cruiseBean.cruiseScheduleVO.amtAptChd}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column> -->
+					</p:row>
+					<!-- <p:row>
+						<p:column><h:outputLabel>YQ &amp; Fuel (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column><h:outputLabel for="idFuelAdt">ADT</h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idFuelAdt" label="YQ &amp; Fuel ADT" value="#{cruiseBean.cruiseScheduleVO.amtFuelAdt}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+						<p:column><h:outputLabel for="idFuelChd">CHD</h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idFuelChd" label="YQ &amp; Fuel CHD" value="#{cruiseBean.cruiseScheduleVO.amtFuelChd}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+					</p:row> -->
+					<p:row>
+						<p:column><h:outputLabel for="idTrvlIns">Trvl Insurance (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idTrvlIns" label="Trvl Insurance" value="#{cruiseBean.cruiseScheduleVO.amtTrvlIns}" required="true" onkeyup="calSum()">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+						<p:column>
+							<p:panelGrid style="width:150px;">
+								<p:row>
+									<!-- <p:column><h:outputLabel for="idIsSumTrvlIns">Sum into Total Charges?</h:outputLabel></p:column> -->
+									<p:column><p:selectBooleanCheckbox id="idIsSumTrvlIns" value="#{cruiseBean.cruiseScheduleVO.sumAmtTrvlIns}" onchange="calSum()"/> </p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column> 
+					</p:row>
+					<p:row>
+						<p:column><h:outputLabel for="idVisa">Visa (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idVisa" label="Visa" value="#{cruiseBean.cruiseScheduleVO.amtVisa}" required="true" onkeyup="calSum()">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+						<p:column>
+							<p:panelGrid style="width:150px;">
+								<p:row>
+									<!-- <p:column><h:outputLabel for="idIsSumVisa">Sum into Total Charges?</h:outputLabel></p:column> -->
+									<p:column><p:selectBooleanCheckbox id="idIsSumVisa" value="#{cruiseBean.cruiseScheduleVO.sumAmtVisa}" onchange="calSum()"/> </p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column> 
+					</p:row>
+					<p:row>
+						<p:column><h:outputLabel for="idAC">A/C (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idAC" label="A/C" value="#{cruiseBean.cruiseScheduleVO.amtAC}" required="true" onkeyup="calSum()">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+						<p:column>
+							<p:panelGrid style="width:150px;">
+								<p:row>
+									<!-- <p:column><h:outputLabel for="idIsSumAC">Sum into Total Charges?</h:outputLabel></p:column> -->
+									<p:column><p:selectBooleanCheckbox id="idIsSumAC" value="#{cruiseBean.cruiseScheduleVO.sumAmtAC}" onchange="calSum()"/> </p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column> 
+					</p:row>
+					<p:row>
+						<p:column><h:outputLabel for="idTipping">Gratuities Fees (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idTipping" label="Tipping" value="#{cruiseBean.cruiseScheduleVO.amtTipping}" required="true" onkeyup="calSum()">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+						<p:column>
+							<p:panelGrid style="width:150px;">
+								<p:row>
+									<!-- <p:column><h:outputLabel for="idIsSumTipping">Sum into Total Charges?</h:outputLabel></p:column> -->
+									<p:column><p:selectBooleanCheckbox id="idIsSumTipping" value="#{cruiseBean.cruiseScheduleVO.sumAmtTipping}" onchange="calSum()"/> </p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column> 
+					</p:row>
+					<p:row>
+						<p:column><h:outputLabel for="idDeviation">Deviation (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idDeviation" label="Deviation" value="#{cruiseBean.cruiseScheduleVO.amtDeviation}" required="true" onkeyup="calSum()">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+						<p:column>
+							<p:panelGrid style="width:150px;">
+								<p:row>
+									<!-- <p:column><h:outputLabel for="idIsSumDeviation">Sum into Total Charges?</h:outputLabel></p:column> -->
+									<p:column><p:selectBooleanCheckbox id="idIsSumDeviation" value="#{cruiseBean.cruiseScheduleVO.sumAmtDeviation}" onchange="calSum()"/> </p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column> 
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Extra Charges" oncomplete="varAddScheduleChargeDialog.show()" immediate="true" update=":idAddScheduleChargeDialog"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="4">
+							<p:panel id="idExtraItemCharge" style="border:0;">
+								<p:dataTable id="idExtraItemChargeTable" value="#{cruiseBean.cruiseScheduleVO.extraItemChargeList}" var="vo" rendered="#{not empty cruiseBean.cruiseScheduleVO.extraItemChargeList}">
+									<p:column style="width:30px;"><p:commandLink styleClass="ui-icon ui-icon-pencil" actionListener="#{cruiseBean.setExtraItemChargeVO(vo)}" update=":idEditScheduleChargeDialog" process="@this" oncomplete="varEditScheduleChargeDialog.show()"/></p:column>
+									<p:column style="width:30px;">
+										<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{cruiseBean.delExtraItemCharge(vo, 0)}" update=":idAddCruiseScheduleForm:idExtraItemCharge,:idEditCruiseSchedulesForm:idExtraItemCharge" process="@this" rendered="#{empty vo.id}"/>
+										<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{cruiseBean.delExtraItemCharge(vo, 1)}" update=":idEditCruiseSchedulesForm:idExtraItemCharge" process="@this" rendered="#{not empty vo.id}"/>
+									</p:column>
+									<p:column headerText="Extra Fee Name"><h:outputText value="#{vo.typeDesc}"/></p:column>
+									<p:column headerText="Extra Fee Amount">
+										<h:outputText value="#{vo.amount}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+									</p:column>
+									<p:column headerText="Calculate MISC" style="text-align:center;">
+										<h:outputText value="Y" rendered="#{vo.isMisc}"/>
+										<h:outputText value="N" rendered="#{not vo.isMisc}"/>
+									</p:column>
+<!-- 									
+									<p:column headerText="Sum into Total" style="text-align:center;">
+										<h:outputText value="Y" rendered="#{vo.isSumIntoTotal}"/>
+										<h:outputText value="N" rendered="#{not vo.isSumIntoTotal}"/>
+									</p:column>
+									 -->
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:column>
+	</p:row>
+<!-- 	<p:row> -->
+<!-- 		<p:column><h:outputLabel for="idTotalCharges">Total Fees &#38; Charges <span class="required">*</span></h:outputLabel></p:column> -->
+<!-- 		<p:column><p:inputText id="idTotalCharges" label="Total Charges" readonly="true"/></p:column> -->
+<!-- 	</p:row> -->
+	
+<!-- 	<p:row></p:row> -->
+	
+<!-- 	<p:row> -->
+<!-- 		<p:column><h:outputLabel for="idGroupChargeLabel">Grouping Charges Label <span class="required">*</span></h:outputLabel></p:column> -->
+<!-- 		<p:column> -->
+<!-- 			<p:inputText id="idGroupChargeLabel" label="Grouping Charges Label" value="#{cruiseBean.cruiseScheduleVO.groupingChargeLabel}"/> -->
+<!-- 			<p:commandButton id="idLabelInputInfo" icon="ui-icon-info"/> -->
+<!-- 			<p:tooltip for="idLabelInputInfo"> -->
+<!-- 				This column is the naming of grouped invoice items. -->
+<!-- 				<br/> It will appear on the invoice with the amount below. -->
+<!-- 			</p:tooltip>  -->
+<!-- 		</p:column> -->
+<!-- 	</p:row> -->
+<!-- 	<p:row> -->
+<!-- 		<p:column><h:outputLabel for="idGroupChargeAmt">Grouping Charges Amount <span class="required">*</span></h:outputLabel></p:column> -->
+<!-- 		<p:column><p:inputText id="idGroupChargeAmt" label="Grouping Charges Amount" value="#{cruiseBean.cruiseScheduleVO.amtTotalCharge}" readonly="true"/></p:column> -->
+<!-- 	</p:row> -->
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{cruiseBean.addCruiseSchedule}" oncomplete="onAddCruiseScheduleValidate(xhr, status, args)" update="@form,:idCruiseSchedulesForm"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varAddCruiseScheduleDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddCruiseScheduleForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

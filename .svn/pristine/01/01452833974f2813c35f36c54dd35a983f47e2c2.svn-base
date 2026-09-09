@@ -1,0 +1,33 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	  			
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idAccountNo">Account No </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAccountNo" label="Account No" value="#{billPymtBean.acctTransViewVO.code}" onclick="varAcctSubCatList.show()"/>
+	        </p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idDesc">Description </h:outputLabel></p:column>
+			<p:column><p:inputText id="idDesc" label="Description" value="#{billPymtBean.acctTransViewVO.desc}" onclick="varAcctSubCatList.show()"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAmt">Amount </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAmt" label="Amount" value="#{billPymtBean.acctTransViewVO.debit}" >
+					<f:convertNumber pattern="#,##0.00"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="Save" actionListener="#{billPymtBean.editGLAcct}" update="@form, :idAddFuncForm:msg,:idAddFuncForm:tabView:idBillPmntGLAcct" process="@form" oncomplete="varEditAcctDialog.hide()"/>
+		<p:commandButton value="Cancel" actionListener="#{billPymtBean.resetGLAcctForm}" onclick="varEditAcctDialog.hide()" process="@this" />
+	</p:panelGrid>
+</ui:composition>

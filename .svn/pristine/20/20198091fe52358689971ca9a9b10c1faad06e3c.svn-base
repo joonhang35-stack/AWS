@@ -1,0 +1,94 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+<div style="height:500px;overflow:auto;">
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idHotelName">Hotel Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idHotelName" label="Hotel Name" value="#{hotelBean.hotelVO.name}" required="true" style="width:300px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idEmail">Email</h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idEmail" label="Email" value="#{hotelBean.hotelVO.email}" style="width:300px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idWebsite">Website</h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idWebsite" label="Website" value="#{hotelBean.hotelVO.website}" style="width:300px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><p:commandButton value="Add Contact" oncomplete="varAddContactDialog.show()" update=":idAddContactDialog" immediate="true"/></p:column>
+		<p:column colspan="3">
+			<p:panel id ="idShowContact" style="border:none">
+				<p:dataTable id="idShowContactList" value="#{hotelBean.hotelVO.hotelContList}" var="vo" style="width:250px" rendered="#{not empty hotelBean.hotelVO.hotelContList}">
+					<p:column style="width:30px;">
+						<p:commandLink styleClass="ui-icon ui-icon-pencil" actionListener="#{hotelBean.setHotelContVO(vo)}" update=":idEditContactDialog" process="@this" oncomplete="varEditContactDialog.show()"/>
+					</p:column>
+					<p:column style="width:30px;">
+						<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{hotelBean.delContFromList(vo)}" update=":idAddHotelForm:idShowContact,:idEditHotelForm:idShowContact" process="@this" rendered="#{empty vo.id}"/>
+						<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{hotelBean.addDelContList(vo)}" update=":idEditHotelForm:idShowContact" process="@this" rendered="#{not empty vo.id}"/>
+					</p:column>
+					<p:column headerText="Contact Type">
+						<h:outputText value="#{vo.typeCd}"/>
+					</p:column>
+					<p:column headerText="Contact No">
+						<h:outputText value="#{vo.number}"/>
+					</p:column>
+				</p:dataTable>
+			</p:panel>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idNoStar">No. Star</h:outputLabel></p:column>
+		<p:column colspan="3">
+			<h:selectOneMenu id="idNoStar" label="No. Star" value="#{hotelBean.hotelVO.starCd}" effect="fade">
+				<f:selectItems value="#{zsg:referenceDataList('HOTEL_STAR')}" var="vo" itemLabel="#{vo.value}" itemValue="#{vo.code}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAddr1">Address Line 1 <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddr1" label="Address Line 1" value="#{hotelBean.hotelAddrVO.addr1}" required="true" style="width:300px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAddr2">Address Line 2</h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddr2" label="Address Line 2" value="#{hotelBean.hotelAddrVO.addr2}" style="width:300px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAddr3">Address Line 3</h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddr3" label="Address Line 3" value="#{hotelBean.hotelAddrVO.addr3}" style="width:300px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idCity">City</h:outputLabel></p:column>
+		<p:column><p:inputText id="idCity" label="City" value="#{hotelBean.hotelAddrVO.city}" style="width:100px;"/></p:column>
+		<p:column><h:outputLabel for="idState">State / Province</h:outputLabel></p:column>
+		<p:column><p:inputText id="idState" label="State / Province" value="#{hotelBean.hotelAddrVO.state}" style="width:100px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idPostcode">Postcode</h:outputLabel></p:column>
+		<p:column><p:inputText id="idPostcode" label="Postcode" value="#{hotelBean.hotelAddrVO.postcode}" style="width:100px;"/></p:column>
+		<p:column><h:outputLabel for="idCountry">Country <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idCountry" label="Country" value="#{hotelBean.hotelAddrVO.idCountry}" effect="fade" required="true">
+				<f:selectItems value="#{hotelBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idRemarks">Remarks</h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputTextarea id="idRemarks" label="Remarks" value="#{hotelBean.hotelVO.remarks}" style="width:300px;"/></p:column>
+	</p:row>
+</p:panelGrid>
+</div>
+<p:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{hotelBean.addHotel}" update="@form,:idHotelForm:idHotelList" rendered="#{empty hotelBean.hotelVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{hotelBean.updHotel}" oncomplete="varEditHotelDialog.hide()" update="@form,:idHotelForm:idHotelList" rendered="#{not empty hotelBean.hotelVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{hotelBean.resetForm}" oncomplete="varAddHotelDialog.hide(),varEditHotelDialog.hide()" update="@form" process="@this" />
+</p:panelGrid>
+</ui:composition>

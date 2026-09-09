@@ -1,0 +1,150 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<style type="text/css">
+	.amountMain {
+		text-align:right;
+	}
+	
+	.ui-datatable tbody td, .ui-datatable tfoot td {
+		white-space: normal !important;
+    	word-break: break-all !important;
+	} 
+	
+</style>
+
+<script type="text/javascript">
+function monitorExporting(start, complete) {
+	if (start) {
+		start();
+	}
+
+	window.pdfExportingMonitor = setInterval(function() {
+		var exportingComplete = $.cookie('cookie.pdf.exporting');
+
+		if (exportingComplete === 'true') {
+			if (complete) {
+				complete();
+			}
+			$.cookie('cookie.pdf.exporting', null);
+			clearInterval(window.pdfExportingMonitor);
+		}
+	}, 500);
+}
+
+function start() {
+	statusDialog.show();
+}
+
+function stop() {
+	statusDialog.hide();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var filters = document.querySelectorAll('input.ui-column-filter');
+    filters.forEach(function(filter) {
+        filter.setAttribute('enterkeyhint', 'enter');
+    });
+});
+
+function setEnterKeyHint() {
+    var filters = document.querySelectorAll('input.ui-column-filter');
+    filters.forEach(function(filter) {
+        filter.setAttribute('enterkeyhint', 'enter');
+    });
+}
+</script>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Report Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the report is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+<p:panel header="Reconciliation" toggleable="true" toggleSpeed="500">
+	<h:form id="idReconForm">
+		<h:panelGrid id="idBankSearchPanel" columns="2" style="width:1px;" rendered="#{not bterpBean.addReconForm}">
+			<h:selectOneMenu value="#{bterpBean.searchParamVO.obj3}" effect="fade">
+				<f:selectItem itemLabel="Select One"/>
+				<f:selectItems value="#{bterpBean.bankAcctList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.id}"/>
+			</h:selectOneMenu>
+			<p:commandButton value="Search" actionListener="#{bterpBean.handleBankSelect}" oncomplete="varReconList.clearFilters(); setEnterKeyHint();" update="idReconList"/>
+		</h:panelGrid>
+		
+		<h:panelGrid columns="1">
+			<p:commandButton value="Add" actionListener="#{bterpBean.setAddReconForm(true)}" update="@form" process="@this" rendered="#{not bterpBean.addReconForm}"/>
+		</h:panelGrid>
+		
+		<p:dataTable id="idReconList" widgetVar="varReconList" value="#{bterpBean.bankReconList}" var="vo" paginator="true" rows="20" rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500"
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			filterEvent="enter" filteredValue="#{bterpBean.filteredObjList}" rendered="#{not bterpBean.addReconForm}">
+			<p:column headerText="Edit" style="width:50px;">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{bterpBean.setBankReconVO(vo)}" update="@form" process="@this"/>
+			</p:column>
+			<!--p:column headerText="Delete" style="width:60px;text-align:center;"> 
+				<p:commandButton icon="ui-icon-close" actionListener="#{bterpBean.handleDeleteVO(vo)}" oncomplete="varDelDialog.show()"/>
+			</p:column-->
+			<p:column headerText="Year" style="width:140px;" sortBy="#{vo.year}" filterBy="#{vo.year}" filterMatchMode="contains"><h:outputText value="#{vo.year}"/></p:column>
+			<p:column headerText="Month" style="width:140px;" sortBy="#{vo.month}" filterBy="#{vo.month}" filterMatchMode="contains"><h:outputText value="#{vo.month}"/></p:column>
+			<p:column headerText="From Date" style="width:110px;"><h:outputText value="#{vo.dtStart}"><f:convertDateTime pattern="#{config['date.display.pattern']}"/></h:outputText></p:column>
+			<p:column headerText="To Date" style="width:110px;"><h:outputText value="#{vo.dtEnd}"><f:convertDateTime pattern="#{config['date.display.pattern']}"/></h:outputText></p:column>
+			<p:column headerText="Total Credit" styleClass="amountMain"><h:outputText value="#{vo.statementCr}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+			<p:column headerText="Total Debit" styleClass="amountMain"><h:outputText value="#{vo.statementDr}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+			<p:column headerText="Last Balance" styleClass="amountMain"><h:outputText value="#{vo.statementBal}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+		</p:dataTable>
+		<h:panelGrid columns="1">
+			<!--p:commandButton value="Add" onclick="varAddBankReconDialog.show()" update=":idAddBankReconForm"/-->
+			<p:commandButton value="Add" actionListener="#{bterpBean.setAddReconForm(true)}" update="@form" process="@this" rendered="#{not bterpBean.addReconForm}"/>
+		</h:panelGrid>
+		
+		<p:panel id="idBankReconPanel" widgetVar="varBankReconPanel" style="border:0;" rendered="#{bterpBean.addReconForm}">
+			<ui:include src="add_reconciliation.xhtml"/>
+		</p:panel>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - ADD BANK RECON
+
+<p:dialog widgetVar="varAddBankReconDialog" header="Add Reconciliation" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idAddBankReconForm">
+		<ui:include src="add_reconciliation.xhtml" />
+	</h:form>
+</p:dialog>
+-->
+<!--
+	DIALOG - EDIT BANK RECON
+
+<p:dialog widgetVar="varEditBankReconDialog" header="Edit Reconciliation" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idEditBankReconForm">
+		<ui:include src="add_reconciliation.xhtml" />
+	</h:form>
+</p:dialog>
+-->
+
+<!--
+	DIALOG - DELETE BANK RECON
+-->
+<p:confirmDialog widgetVar="varDelDialog" message="Are you sure want to delete the selected record?">
+	<h:form>
+		<p:growl id="msgDel"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{bterpBean.deleteRecord}" update="@form,:idReconForm, :idReconForm:idReconList" oncomplete="varDelDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" process="@this" oncomplete="varDelDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+
+</ui:define>
+</ui:composition>

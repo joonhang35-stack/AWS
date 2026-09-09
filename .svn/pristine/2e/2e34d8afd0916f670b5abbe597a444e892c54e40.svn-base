@@ -1,0 +1,3672 @@
+package com.bcs.zsg.sales.web.bean;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+import javax.faces.event.AjaxBehaviorEvent;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.SerializationUtils;
+import org.primefaces.component.datatable.DataTable;
+import org.primefaces.context.RequestContext;
+import org.primefaces.event.DateSelectEvent;
+import org.primefaces.event.SelectEvent;
+import org.primefaces.event.UnselectEvent;
+import org.primefaces.event.data.FilterEvent;
+import org.primefaces.event.data.PageEvent;
+import org.primefaces.json.JSONObject;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+
+import com.bcs.zsg.acct.bo.ChartOfAcctBO;
+import com.bcs.zsg.acct.bo.EInvoiceBO;
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.acct.helper.EInvoiceProperties;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeVO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.EInvoiceConstant;
+import com.bcs.zsg.common.helper.EInvoiceUtils;
+import com.bcs.zsg.common.helper.EnglishNumberToWords;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.LookupItemConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.QRCodeUtils;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.component.security.bo.SecurityBO;
+import com.bcs.zsg.component.security.vo.UserRoleViewVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.db.bterp.vo.CompanyTaxVO;
+import com.bcs.zsg.db.bterp.vo.gst.TaxCodeVO;
+import com.bcs.zsg.gst.bo.GSTBO;
+import com.bcs.zsg.gst.helper.GSTType;
+import com.bcs.zsg.maintenance.bo.AppSettingBO;
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.maintenance.bo.MalaysiaStateBO;
+import com.bcs.zsg.maintenance.bo.POSUploadSalesBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.bo.SystemNumberGenerationBO;
+import com.bcs.zsg.maintenance.helper.ConstantAppSetting;
+import com.bcs.zsg.maintenance.helper.MaintConstant;
+import com.bcs.zsg.maintenance.vo.AppSettingVO;
+import com.bcs.zsg.maintenance.vo.CompanyContactVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.product.bo.InvoiceAndExchangeOrderBO;
+import com.bcs.zsg.product.bo.TourPackageBO;
+import com.bcs.zsg.product.helper.ProductConstant;
+import com.bcs.zsg.product.vo.AirlineVO;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderViewVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.product.vo.TourDepartureViewVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.EOInvoiceVO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.purchase.vo.PersonVO;
+import com.bcs.zsg.sales.bo.BookingBO;
+import com.bcs.zsg.sales.bo.CustomerBO;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.BookingVO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.CustomerRemarksVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.IdentityDetailVO;
+import com.bcs.zsg.sales.vo.InvPmntAuthVO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+import com.bcs.zsg.sales.vo.InvoicePaxVO;
+import com.bcs.zsg.sales.vo.InvoicePaymentVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.sales.vo.PersonContactVO;
+import com.bcs.zsg.sales.vo.PersonLangVO;
+import com.bcs.zsg.sales.vo.PersonMealVO;
+import com.bcs.zsg.web.object.EInvoiceDocument;
+
+import net.sf.jasperreports.engine.JasperPrint;
+
+public class CreditNoteBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	protected transient InvoiceBO invoiceBO;
+	@Autowired
+	protected transient ChartOfAcctBO chartOfAcctBO;
+	@Autowired
+	protected transient TourPackageBO tourPackageBO;
+	@Autowired
+	protected transient BookingBO bookingBO;
+	@Autowired
+	private transient CustomerBO customerBO;
+	@Autowired
+	private transient CorporateProfileBO corporateProfileBO;
+	@Autowired
+	private transient SecurityBO securityBO;
+	@Autowired
+	private transient SystemNumberGenerationBO systemNumberGenerationBO;
+	@Autowired
+	private transient GSTBO gstBO;
+	@Autowired
+	private transient POSUploadSalesBO posUploadSalesBO;
+	@Autowired
+	private transient AppSettingBO appSettingBO;
+	@Autowired
+	private transient MalaysiaStateBO malaysiaStateBO;
+	@Autowired
+	private transient RegionBO regionBO;
+	@Autowired
+	protected transient EInvoiceBO eInvoiceBO;
+	@Autowired
+	protected transient InvoiceAndExchangeOrderBO invoiceAndExchangeOrderBO;
+	@Autowired
+	private transient MessageSource messageSource;
+	
+	private String searchType;
+	private String searchValueType;
+	private String searchValue;
+	private Date fromDate, toDate;
+	private Date departureDateFr, departureDateTo;
+	private String orderSourceCode;
+	private String paymentStatus;
+	private String[] paymentStatusList;
+	
+	private InvoiceVO invoiceVO;
+	private InvoiceItemVO invoiceItemVO;
+	private InvoiceItemVO invoiceItemOrgVO;
+	private InvoicePaxVO invoicePaxVO;
+	private InvoicePaymentVO invoicePaymentVO;
+	private InvoicePaymentVO invoicePaymentOrgVO;
+	private EOInvoiceVO eoInvVO;
+	private CustDetailsVO custDetailsVO;
+	private AcctVO acctVO;
+	private CustomerVO passangerVO;
+	private IdentityVO identityVO;
+	private PersonLangVO personLangVO;
+	private PersonMealVO personMealVO;
+	private PersonContactVO personContactVO;
+	private CorContactVO corContactVO;
+	private CustomerRemarksVO remarksVO;
+	private InvPmntAuthVO invPmntAuthVO;
+	protected TourDepartureVO availableTourDepVO;
+	
+	private LazyDataModel<InvoiceVO> lazyDataModel;
+	private List<InvoiceVO> invoiceList;
+	private List<EmployeeViewVO> employeeList;
+	private List<CustomerVO> customerList;
+	private List<CustDetailsVO> custDetailsList;
+	private List<CustDetailsVO> passangerDetailsList;
+	private List<CompanyVO> companyList;
+	private List<TourDepartureViewVO> tourDepViewList;
+	private List<BookingVO> bookingList;
+	private List<ExOrderVO> exOrderList;
+	protected List<AcctViewVO> acctViewList;
+	protected List<InvoiceAndExchangeOrderViewVO> invEOItemViewList;
+	private List<CountryVO> countryList;
+	protected List<TourDepartureVO> availableTourDepList;
+	private List<InvoiceVO> cnInvoiceList;
+	private List<AirlineVO> airlineList;
+	
+	private AddUpdDelVO invoiceItemVOList;
+	private AddUpdDelVO invoicePaxVOList;
+	private AddUpdDelVO invoicePaymentVOList;
+	private AddUpdDelVO eoInvVOList;
+	
+	private boolean invItemAdd;
+	private boolean invPaxAdd;
+	private boolean invPmntAdd;
+	private boolean invPassAdd;
+	private boolean addEdit;
+	private boolean GSTPeriod;
+	
+	private boolean identityAdd;
+	private boolean languageAdd;
+	private boolean mealAdd;
+	private boolean contactAdd;
+	private boolean remarksAdd;
+	
+	private boolean editablePOSUploaded;
+	private boolean lockAmountChanges;
+	private boolean saveAccCodeOnly = false;
+	private boolean isPrintLetterHead; //show letter head
+	
+	private boolean fromBooking;
+	private String strOnLoad;
+	private String travelInsPolicyS;
+	private String travelInsPolicyF;
+	private String docTypeCd;
+	private String docTypeDesc;
+	private String prefixValue;
+//	private String invPrefixVal;
+	private String prefixValueRN;
+	private double posTotalAmountLocked;
+	
+	private List<TaxCodeVO> inputTaxCodeVOList;
+	private List<TaxCodeVO> outputTaxCodeVOList;
+	
+	// E-Invoice
+	private String cancellationReason;
+	private Boolean isEInvSubm = false;
+	private Boolean showSubmittedInvOnly = false;
+	private List<InvoiceVO> mulpInvSubmRespList;
+	private InvoiceVO[] selectedInvoiceList;
+	private List<InvoiceVO> savedSelectedInvoiceList;
+	private String eInvoiceStatus;
+	private String[] eInvoiceStatusList;
+	
+	@Override
+	public void resetForm() {
+		setInvoiceVO(new InvoiceVO());
+		setInvoiceItemVO(new InvoiceItemVO());
+		setInvoicePaxVO(new InvoicePaxVO());
+		setInvoicePaymentVO(new InvoicePaymentVO());
+		setEoInvVO(new EOInvoiceVO());
+		setCustDetailsVO(new CustDetailsVO());
+		
+		resetCustomerListForm();
+		
+		setAddEdit(true);
+		setFromBooking(false);
+		setGSTPeriod(false);
+		editablePOSUploaded = true;
+		
+		invoiceVO.setInvoiceItemList(new ArrayList<InvoiceItemVO>());
+		invoiceVO.setInvoicePaymentList(new ArrayList<InvoicePaymentVO>());
+		invoiceVO.setEoInvList(new ArrayList<EOInvoiceVO>());
+		
+		invoiceVO.setCustomerList(new ArrayList<CustomerVO>());
+		invoiceVO.setInvoicePaxList(new ArrayList<InvoicePaxVO>());
+		if (!docTypeCd.equals("C")) {
+			invoiceVO.setSalerId(this.getSessionInfoBean().getEmployeeVO().getId());
+			invoiceVO.setSalerName(this.getSessionInfoBean().getUserVO().getName());
+		}
+		invoiceVO.setCompanyId(this.getSessionInfoBean().getCompanyVO().getId());
+		invoiceVO.setAcctId(this.getSessionInfoBean().getCompanyVO().getIdAcctSales());
+		invoiceVO.setIssuerId(this.getSessionInfoBean().getEmployeeVO().getId());
+		invoiceVO.setIssuedBy(this.getSessionInfoBean().getUserVO().getName());
+		invoiceVO.setIdAcctGST(this.getSessionInfoBean().getCompanyVO().getIdAcctGST());
+		//invoiceVO.setIdAcctRounding(this.getSessionInfoBean().getCompanyVO().getIdAcctRounding());
+		
+		invoiceVO.setDocTypeCd(docTypeCd);
+		invoiceVO.setInvoiceDt(new Date());
+		invoiceVO.setInvoiceDue(addInvoiceDueDate(new Date()));
+		invoiceVO.setPrefix(prefixValue);
+		
+		setOriObj(null);
+	}
+	
+	/**
+	 * Reset language form
+	 * @throws BusinessException
+	 */
+	public void resetCustomerListForm() {
+		setSearchType("");
+		setSearchValueType("");
+		setSearchValue("");
+		
+		setCustDetailsList(new ArrayList<CustDetailsVO>());
+	}
+	
+	
+	/**
+	 * Reset passanger list form
+	 * @throws BusinessException
+	 */
+	public void resetPassangerListForm() {
+		setSearchType("");
+		setSearchValueType("");
+		setSearchValue("");
+		
+		setPassangerDetailsList(new ArrayList<CustDetailsVO>());
+	}
+	
+	/**
+	 * Reset invoice item form
+	 * @throws BusinessException
+	 */
+	public void resetInvItemForm() throws BusinessException {
+		setInvItemAdd(true);
+		setInvoiceItemVO(new InvoiceItemVO());
+		invoiceItemVO.setSalesAcctCd("");
+		invoiceItemVO.setInvItemCd("");
+		invoiceItemVO.setQty(0);
+		invoiceItemVO.setUnitPrice(0.0);
+	}
+	
+	/**
+	 * Reset invoice payment form
+	 * @throws BusinessException
+	 */
+	public void resetInvPaxForm() throws BusinessException {
+		setInvPaxAdd(true);
+		setInvoicePaxVO(new InvoicePaxVO());
+		invoicePaxVO.setCustDetailsVO(new CustDetailsVO());
+		
+		resetInvPaxPassanger();
+	}
+	
+	/**
+	 * Reset invoice pax passanger
+	 * @throws BusinessException
+	 */
+	public void resetInvPaxPassanger() throws BusinessException {
+		setPersonLangVO(new PersonLangVO());
+		setPersonMealVO(new PersonMealVO());
+		
+		if (invoicePaxVO != null) {
+			if (invoicePaxVO.getCustDetailsVO() != null) {
+				invoicePaxVO.getCustDetailsVO().setLangList(new ArrayList<PersonLangVO>());
+				invoicePaxVO.getCustDetailsVO().setMealList(new ArrayList<PersonMealVO>());
+				invoicePaxVO.getCustDetailsVO().setLangVOList(new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>()));
+				invoicePaxVO.getCustDetailsVO().setMealVOList(new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>()));
+			}
+		}
+	}
+	
+	/**
+	 * Reset invoice payment form
+	 * @throws BusinessException
+	 */
+	public void resetInvPmntForm() throws BusinessException {
+		setInvPmntAdd(true);
+		setInvoicePaymentVO(new InvoicePaymentVO());
+		
+		//invoicePaymentVO.setPmntDt(new Date());
+		invoicePaymentVO.setPmntDt(invoiceVO.getInvoiceDt());
+		invoicePaymentVO.setIssuerId(this.getSessionInfoBean().getEmployeeVO().getId());
+		
+		if (custDetailsVO.getCustType() != null) {
+			if (custDetailsVO.getCustType().equals("P")) {
+				invoicePaymentVO.setRecievedFr(custDetailsVO.getContPersonName());
+			} else if (custDetailsVO.getCustType().equals("C")) {
+				invoicePaymentVO.setRecievedFr(custDetailsVO.getCompanyName());
+			}
+		}
+	}
+	
+	/**
+	 * Reset exchange order invoice
+	 * @throws BusinessException
+	 */
+	public void resetEoInvForm() throws BusinessException {
+		setEoInvVO(new EOInvoiceVO());
+	}
+	
+	/**
+	 * Reset invoice passanger form
+	 * @throws BusinessException
+	 */
+	public void resetInvPassForm() throws BusinessException {
+		setInvPassAdd(true);
+		setPassangerVO(new CustomerVO());
+		setIdentityVO(new IdentityVO());
+		identityVO.setIdentityDetailVO(new IdentityDetailVO());
+		setPersonLangVO(new PersonLangVO());
+		setPersonMealVO(new PersonMealVO());
+		setPersonContactVO(new PersonContactVO());
+		setCorContactVO(new CorContactVO());
+		setRemarksVO(new CustomerRemarksVO());
+		
+		passangerVO.setPersonVO(new PersonVO());
+		passangerVO.setIdentityList(new ArrayList<IdentityVO>());
+		passangerVO.setPersonLangList(new ArrayList<PersonLangVO>());
+		passangerVO.setPersonMealList(new ArrayList<PersonMealVO>());
+		passangerVO.setPersonContactList(new ArrayList<PersonContactVO>());
+		passangerVO.setCustRemarksList(new ArrayList<CustomerRemarksVO>());
+	}
+	
+	/**
+	 * Reset identity form
+	 * @throws BusinessException
+	 */
+	public void resetIdentityForm() throws BusinessException {
+		setIdentityAdd(true);
+		identityVO = new IdentityVO();
+		identityVO.setIdentityDetailVO(new IdentityDetailVO());
+	}
+	
+	/**
+	 * Reset language form
+	 * @throws BusinessException
+	 */
+	public void resetLanguageForm() throws BusinessException {
+		setLanguageAdd(true);
+		personLangVO = new PersonLangVO();
+	}
+	
+	/**
+	 * Reset meal form
+	 * @throws BusinessException
+	 */
+	public void resetMealForm() throws BusinessException {
+		setMealAdd(true);
+		personMealVO = new PersonMealVO();
+	}
+	
+	/**
+	 * Reset contact form
+	 * @throws BusinessException
+	 */
+	public void resetContactForm() throws BusinessException {
+		setContactAdd(true);
+		personContactVO = new PersonContactVO();
+		setCorContactVO(new CorContactVO());
+	}
+	
+	/**
+	 * Reset remarks form
+	 * @throws BusinessException
+	 */
+	public void resetRemarksForm() throws BusinessException {
+		setRemarksAdd(true);
+		remarksVO = new CustomerRemarksVO();
+	}
+	
+	/**
+	 * Reset available tour departure form
+	 */
+	public void resetAvailableTourDepForm() {
+		availableTourDepVO = null;
+	}
+	
+	public void resetSelection() {
+		savedSelectedInvoiceList = new ArrayList<InvoiceVO>();
+		selectedInvoiceList = new InvoiceVO[1];
+	}
+	
+	/**
+	 * Invoice maintenance
+	 */
+	public void init(String docTypeCd) {
+		try {
+			// Set document type and prefix (Invoice or Credit Note)
+			setDocTypeCd(docTypeCd);
+			SystemNumberGenerationVO invSNGVO = new SystemNumberGenerationVO();
+			SystemNumberGenerationVO rnSNGVO = new SystemNumberGenerationVO();
+			// Credit Note
+			if (docTypeCd.equals("C")) {
+				invSNGVO = systemNumberGenerationBO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_CRDT_NOTE, this.getSessionInfoBean().getCompanyVO().getId());
+				rnSNGVO = systemNumberGenerationBO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_RFND_NOTE, this.getSessionInfoBean().getCompanyVO().getId());
+				invSNGVO.setCode(CommonConstant.SYS_NUM_CD_CRDT_NOTE);
+				rnSNGVO.setCode(CommonConstant.SYS_NUM_CD_RFND_NOTE);
+				setDocTypeDesc("Credit Note");
+			} else {
+				invSNGVO = systemNumberGenerationBO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_INVC, this.getSessionInfoBean().getCompanyVO().getId());
+				invSNGVO.setCode(CommonConstant.SYS_NUM_CD_INVC);
+				setDocTypeDesc("Invoice");
+			}
+			setPrefixValue(invSNGVO.getPrefixid());
+			setPrefixValueRN(rnSNGVO.getPrefixid());
+			
+//			SystemNumberGenerationVO cnInvSNGVO = systemNumberGenerationBO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_INVC, this.getSessionInfoBean().getCompanyVO().getId());
+//			setInvPrefixVal(cnInvSNGVO.getPrefixid());
+			initPrefixVal();
+			
+			resetForm();
+			loadCreditNoteDisplay();
+			loadAll();
+			loadAuthority();
+			
+			// GST Code
+			inputTaxCodeVOList = gstBO.getTaxCodeList(GSTType.INPUT);
+			outputTaxCodeVOList = gstBO.getTaxCodeList(GSTType.OUTPUT);
+			
+			showSubmittedInvOnly = false;
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void loadAll() {
+		try{
+			loadEmployeeList();
+			loadAcctList();
+			//loadInvEOItemList();
+	
+			setAcctVO(chartOfAcctBO.getAcctVO(this.getSessionInfoBean().getCompanyVO().getIdAcctSales()));
+			invoiceVO.setAcctVO(chartOfAcctBO.getAcctVO(this.getSessionInfoBean().getCompanyVO().getIdAcctSales()));
+			setCountryList(customerBO.getCountryList());
+			
+		} catch(Exception t) {
+			errorResult(t);
+		}
+	}
+	
+	public void loadEmployeeList() {
+		try {
+			setEmployeeList(invoiceBO.getFullEmployeeViewList(this.getSessionInfoBean().getCompanyVO().getId()));
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	/**
+	 * Load invoice list
+	 * @throws BusinessException
+	 */
+	public void loadCreditNoteDisplay() throws BusinessException {
+//		TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+//		trackingLogUtils.startLogs();
+		resetForm();
+//		setInvoiceList(invoiceBO.getCreditNoteDisplayList( this.getSessionInfoBean().getCompanyVO().getId()));
+//		trackingLogUtils.endLogs("loadCreditNoteDisplay");
+		
+		lazyDataModel = new LazyInvoiceDataModel();
+	}
+	
+	private void loadAuthority() throws BusinessException {
+		List<UserRoleViewVO> userRoleList = securityBO.getUserRoleListByUser(this.getSessionInfoBean().getUserVO().getUuid());
+		EmployeeVO employeeVO = getSessionInfoBean().getEmployeeVO();
+		String department = employeeVO.getDepartment();
+		
+		invPmntAuthVO = new InvPmntAuthVO();
+		if (CollectionUtils.isNotEmpty(userRoleList)) {
+			for (UserRoleViewVO userRoleVO : userRoleList) {
+				if (userRoleVO.getRoleCode().equals(SalesConstant.INVOICE_PMNT_ROLE_ADD)) {
+					invPmntAuthVO.setPmntAdd(true);
+				} else if (userRoleVO.getRoleCode().equals(SalesConstant.INVOICE_PMNT_ROLE_UPD)) {
+					invPmntAuthVO.setPmntUpd(true);
+				} else if (userRoleVO.getRoleCode().equals(SalesConstant.INVOICE_PMNT_ROLE_DEL)) {
+					invPmntAuthVO.setPmntDel(true);
+				} else if (userRoleVO.getRoleCode().equals(SalesConstant.USE_TRVL_WRRNT_ROLE)) {
+					invPmntAuthVO.setUseTrvlWrrnt(true);
+				} else if (userRoleVO.getRoleCode().equals(SalesConstant.INV_SALES_PERSON_ROLE)) {
+					invPmntAuthVO.setSalesPerson(true);
+				} else if (userRoleVO.getRoleCode().equalsIgnoreCase(SalesConstant.ACCT_MANAGER_ROLE)) {
+					invPmntAuthVO.setAccountManager(true);
+					invPmntAuthVO.setAccountRole(true);
+				} else if (StringUtils.equalsIgnoreCase(userRoleVO.getRoleCode(), SalesConstant.ACCT_EXEC_ROLE) || 
+						StringUtils.equalsIgnoreCase(userRoleVO.getRoleCode(), SalesConstant.ACCT_ASST_ROLE)) {
+					invPmntAuthVO.setAccountRole(true);
+				} else if (StringUtils.equalsIgnoreCase(userRoleVO.getRoleCode(), SalesConstant.SUPER_USER_ROLE) 
+						|| StringUtils.equalsIgnoreCase(userRoleVO.getRoleCode(), SalesConstant.E_INV_SUBMIT)) {
+					invPmntAuthVO.seteInvoice(true);
+				}
+			}
+		}
+		
+		if (StringUtils.equals(department, MaintConstant.DEPT_TYPE_FINANCE)) {
+			invPmntAuthVO.setInReviewStmt(true);
+		}
+		if (StringUtils.equals(department, MaintConstant.DEPT_TYPE_ACCT) || StringUtils.equals(department, MaintConstant.DEPT_TYPE_FINANCE)) {
+			invPmntAuthVO.seteInvoice(true);
+		}
+	}
+	
+	/**
+	 * Verify if the document is already attached to another CN to prevent multiple CNs from referencing the same document.
+	 * 
+	 * @param action - CommonConstant.ACTION_CD_ADD / CommonConstant.ACTION_CD_UPD
+	 * @param oriVO - null if action = CommonConstant.ACTION_CD_ADD
+	 * @param currentVO
+	 * @throws BusinessException
+	 */
+	private void checkDocAttachedCN(String action, InvoiceVO oriVO, InvoiceVO currentVO) throws BusinessException {
+		if (CommonConstant.ACTION_CD_ADD.equals(action)) {
+			InvoicePaymentVO paymentVO = invoiceBO.getInvPaymentById(invoiceVO.getInvPmntId());
+			if (paymentVO.getCreditNoteId() != null) {
+				throw new BusinessException(CommonErrConstant.ERR_CN_ATTACHED_DOC);
+			}
+		} else if (CommonConstant.ACTION_CD_UPD.equals(action)) {
+			if (invoiceVO.getInvPmntId().equals(oriVO.getInvPmntId())) {
+				// if equals, mean didn't change
+				// didn't change = no need check?
+			} else {
+				// if not equals, mean user changed attached doc
+				InvoicePaymentVO paymentVO = invoiceBO.getInvPaymentById(invoiceVO.getInvPmntId());
+				if (paymentVO.getCreditNoteId() != null) {
+					throw new BusinessException(CommonErrConstant.ERR_CN_ATTACHED_DOC);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Add invoice
+	 */
+	public void addInvoice() {
+		try {
+			
+			// check financial closed / GST submitted
+			checkFinGSTClosed(CommonConstant.ACTION_CD_ADD, null, invoiceVO.getInvoiceDt(), invPmntAuthVO.isAccountManager());
+			// check if document already attached to another CN
+			checkDocAttachedCN(CommonConstant.ACTION_CD_ADD, null, invoiceVO);
+			
+			if (invoiceVO.getBookingId() != null && invoiceVO.getBookingId() == 0) invoiceVO.setBookingId(null);
+			
+			if (custDetailsVO.getContPersonName() == null) {
+				throw new BusinessException(CommonErrConstant.ERR_INV_CUST_REQUIRED);
+			} else if (invoiceVO.getInvoiceItemList().size() == 0) {
+				throw new BusinessException(CommonErrConstant.ERR_INV_ITEM_REQUIRED, null, new String[]{docTypeDesc});
+			} else if (invoiceVO.getBalance() != 0) {
+				throw new BusinessException(CommonErrConstant.ERR_CN_AMT_DUE_ZERO);
+			} else {
+				// if there is credit note
+				// set credit note default value
+				setCreditNote(); 
+				
+				calTtlAmt();
+				invoiceBO.insertInvoice(invoiceVO, invoiceVO.getTourDepId());
+				try {
+					invoiceBO.updInvCd(invoiceVO);
+				} catch (Exception e) {
+					errorResult(e);
+					e.printStackTrace();
+				}
+				
+				try {
+//					if (StringUtils.isEmpty(invoiceVO.getRnNo())) invoiceBO.updRfndNoteCd(invoiceVO);
+//					if (StringUtils.isEmpty(invoiceVO.getRnNo()) && invoiceVO.getRefundAmt() != null && invoiceVO.getRefundAmt() != 0.0) invoiceBO.updRfndNoteCd(invoiceVO);
+
+				} catch (Exception e) {
+					errorResult(e);
+					e.printStackTrace();
+				}
+				
+				onInvoiceSelected(invoiceVO);
+				
+				successResult();
+			}
+			
+			//if (msg != null) FacesContext.getCurrentInstance().addMessage(null, msg);
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit invoice
+	 */
+	public void updateInvoice() {
+		TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+		try {
+			InvoiceVO oriVO = (InvoiceVO) getOriObj();
+			
+			// check financial closed / GST submitted
+			checkFinGSTClosed(CommonConstant.ACTION_CD_UPD, oriVO.getInvoiceDt(), invoiceVO.getInvoiceDt(), invPmntAuthVO.isAccountManager());
+			// check if document already attached to another CN
+			checkDocAttachedCN(CommonConstant.ACTION_CD_UPD, oriVO, invoiceVO);
+			
+			if (invoiceVO.getBookingId() != null && invoiceVO.getBookingId() == 0) invoiceVO.setBookingId(null);
+			
+			if (invoiceVO.getStatusCd().equals(CommonConstant.STATUS_CD_VOID) || invoiceVO.getStatusCd().equals(CommonConstant.STATUS_CD_CANCELLED)) {
+				throw new BusinessException(CommonErrConstant.ERR_INV_VOIDED);
+			} else if (custDetailsVO.getContPersonName() == null) {
+				throw new BusinessException(CommonErrConstant.ERR_INV_CUST_REQUIRED);
+			} else if (invoiceVO.getInvoiceItemList().size() == 0) {
+				throw new BusinessException(CommonErrConstant.ERR_INV_ITEM_REQUIRED, null, new String[]{docTypeDesc});
+			} else if (invoiceVO.getBalance() != 0) {
+				throw new BusinessException(CommonErrConstant.ERR_CN_AMT_DUE_ZERO);
+			} else {
+				InvoiceVO currentInvVO = invoiceBO.getInvoiceById(invoiceVO.getId());
+				if (currentInvVO.getVersion() > invoiceVO.getVersion()) throw new BusinessException(CommonErrConstant.ERR_INV_NOT_LATEST_VERSION);
+				
+				calTtlAmt();
+				trackingLogUtils.startLogs();
+				invoiceBO.updateInvoice(invoiceVO, invoiceVO.getTourDepId());
+				trackingLogUtils.endLogs("invoiceBO.updateInvoice");
+				trackingLogUtils.startLogs();
+				
+				try {
+//					if (StringUtils.isEmpty(invoiceVO.getRnNo())) invoiceBO.updRfndNoteCd(invoiceVO);
+					if (StringUtils.isEmpty(invoiceVO.getRnNo()) && invoiceVO.getRefundAmt() != null && invoiceVO.getRefundAmt() != 0.0) invoiceBO.updRfndNoteCd(invoiceVO);
+
+				} catch (Exception e) {
+					errorResult(e);
+					e.printStackTrace();
+				}
+				
+				// for audit trial history purpose
+				invoiceBO.insertInvoiceHistory(invoiceVO.getId(), CommonConstant.ACTION_CD_UPD, invoiceVO.getReason());
+				onInvoiceSelected(invoiceVO);
+				successResult();
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+		trackingLogUtils.endLogs("updateInvoice");
+	}
+	
+	public void validatePostedInvoiceAmount() {
+		boolean isPass = true;
+		if (lockAmountChanges && posTotalAmountLocked != invoiceVO.getAmount()) {
+			FacesMessage msg = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Unable to save due to total amount does not match with posted amount (RM " + new BigDecimal(posTotalAmountLocked).setScale(2) + ")", "");
+			FacesContext.getCurrentInstance().addMessage(null, msg);
+			isPass = false;
+		}
+		RequestContext.getCurrentInstance().addCallbackParam("isPass", isPass);
+	}
+	
+	/**
+	 * Reinsert multiple list item
+	 */
+	public void rewriteMultipleList() {
+		invoiceItemVOList.setAddList(new ArrayList<Object>());
+		invoicePaxVOList.setAddList(new ArrayList<Object>());
+		invoicePaymentVOList.setAddList(new ArrayList<Object>());
+		eoInvVOList.setAddList(new ArrayList<Object>());
+		
+		for (InvoiceItemVO vo : invoiceVO.getInvoiceItemList()) {
+			if (vo.getId() == null) {
+				invoiceItemVOList.getAddList().add(vo);
+			}
+		}
+		
+		for (InvoicePaxVO vo : invoiceVO.getInvoicePaxList()) {
+			if (vo.getId() == null) {
+				invoicePaxVOList.getAddList().add(vo);
+			}
+		}
+		
+		for (InvoicePaymentVO vo : invoiceVO.getInvoicePaymentList()) {
+			if (vo.getId() == null) {
+				invoicePaymentVOList.getAddList().add(vo);
+			}
+		}
+		
+		for (EOInvoiceVO vo : invoiceVO.getEoInvList()) {
+			if (vo.getId() == null) {
+				eoInvVOList.getAddList().add(vo);
+			}
+		}
+	}
+	
+	/**
+	 * Delete Invoice
+	 */
+	public void deleteInvoice() {
+		try {
+			// Unable to delete this record due to financial period closed.
+			if (invoiceVO.isDateInFinPeriodClosed()) throw new BusinessException(CommonErrConstant.ERR_ACCT_FIN_PERIOD_CLOSED_CANNOT_DEL);
+			
+			invoiceBO.deleteInvoice(invoiceVO);
+			invoiceBO.insertInvoiceHistory(invoiceVO.getId(), CommonConstant.ACTION_CD_DEL, "");
+			loadCreditNoteDisplay();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Set invoice value for credit note
+	 */
+	public void setCreditNote() {
+		try {
+			if (docTypeCd.equals("C")) {
+				invoiceVO.setCatCd("");
+				invoiceVO.setAttnTo("");
+				invoiceVO.setTourDepId(null);
+				invoiceVO.setBookingId(null);
+				invoiceVO.setDepartureDt(new Date());
+				invoiceVO.setOrderCd("");
+				invoiceVO.setInvoiceDue(new Date());
+				invoiceVO.setGdsBookingRef("");
+				invoiceVO.setSubjLine("");
+			} else {
+				invoiceVO.setCnInvNo("");
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void printInvoiceWithLetterHead(String printType) {
+		isPrintLetterHead = true;
+		printInvoice(printType);
+		isPrintLetterHead = false;
+	}
+	/**
+	 * Print Invoice
+	 */
+	public void printInvoice(String printType) {
+		try {
+			InvoiceVO tempVO = SerializationUtils.clone(invoiceVO);
+			InvoiceVO invVO = invoiceBO.getInvoiceDetails(tempVO);
+			List <InvoiceVO> invList = new ArrayList<InvoiceVO>();
+			CompanyVO companyVO = corporateProfileBO.getCompanyDetails(invVO.getCompanyId());
+			
+			if (printType.equalsIgnoreCase("Invoice")) {
+				calTtlAmt(invVO, true);
+				
+				HashMap<String, Object> map = new HashMap<String, Object>();
+				map.put("invPrefixVal", invPrefixVal);
+				
+				CompanyTaxVO companyTaxVO = corporateProfileBO.getCompanyTax(getSessionInfoBean().getCompanyVO().getId());
+				companyTaxVO.setTaxNumber((companyTaxVO.getTaxNumber().isEmpty()) ? "" : companyTaxVO.getTaxNumber());
+				map.put("companyCode", companyVO != null ? companyVO.getCode() : "");
+				map.put("docTypeCd", invVO.getDocTypeCd());
+				
+				if (isPrintLetterHead) {
+					map.put("letterHeadUrl", "../img/letter-head-header.png");
+					if (companyVO != null) {
+						validateEffectiveCompanyName(companyVO, invVO.getInvoiceDt());
+						map.put("letterHeadUrl", companyVO.getLetterHeadUrl());
+					}
+				}
+				map.put("taxNumber", companyTaxVO.getTaxNumber());
+				map.put("GSTPeriod", GSTPeriod);
+				
+				if (invVO.getCustDetailsVO().getCustType().equals("C")) {
+					if (invVO.getCustDetailsVO().getCorAddressVO() != null) {
+						invVO.getCustDetailsVO().getCorAddressVO().setCountryName(getCountryName(invVO.getCustDetailsVO().getCorAddressVO().getCountryId()));
+					}
+				} else {
+					if (invVO.getCustDetailsVO().getAddressVO() != null) {
+						invVO.getCustDetailsVO().getAddressVO().setCountryName(getCountryName(invVO.getCustDetailsVO().getAddressVO().getCountryId()));
+					}
+				}
+				
+				invVO.setSalerName(getUserName(invVO.getSalerId()));
+				invVO.setBalanceWord(EnglishNumberToWords.withCents(invVO.getBalance().doubleValue()));
+				if (invVO.getTourDepId() != null) {
+					TourDepartureVO tourDpVO = tourPackageBO.getTourDepById(invoiceVO.getTourDepId());
+					invVO.setTourDpInvRmk(tourDpVO.getInvRemarks());
+				}
+				
+				// Set contact
+				String contact = "";
+				if (invVO.getCustDetailsVO().getCustType().equals("P")) {
+					if (CollectionUtils.isNotEmpty(invVO.getCustDetailsVO().getContactList())) {
+						for (PersonContactVO vo : invVO.getCustDetailsVO().getContactList()) {
+							contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getTypeCd()) + ": " + vo.getNumber() + "\n";
+						}
+						invVO.getCustDetailsVO().setContact(contact);
+					}
+				} else {
+					if (CollectionUtils.isNotEmpty(invVO.getCustDetailsVO().getCorContactList())) {
+						for (CorContactVO vo : invVO.getCustDetailsVO().getCorContactList()) {
+							contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getContactType()) + ": " + vo.getContactNo() + "\n";
+						}
+						invVO.getCustDetailsVO().setContact(contact);
+					}
+				}
+				
+				// Sorting Tax Code
+				invVO.setInvoiceItemTaxList(new ArrayList<InvoiceItemVO>());
+				for (InvoiceItemVO vo : invVO.getInvoiceItemList()) {
+					if (vo.getTaxCode() == null) {
+						vo.setTaxCode("");
+					}
+					invVO.getInvoiceItemTaxList().add(vo);
+					
+					// Condition for show invoice item desc
+//					vo.setDesc(vo.getDesc() + " - " + vo.getSubDesc());
+					if (StringUtils.isNotEmpty(vo.getSubDesc()))
+						vo.setDesc(vo.getSubDesc());
+					else
+						vo.setDesc(vo.getDesc());
+				}
+				
+				if (invVO.getInvoiceItemTaxList().size() > 0) {
+					Collections.sort(invVO.getInvoiceItemTaxList(), new Comparator<InvoiceItemVO>() {
+						@Override
+						public int compare(final InvoiceItemVO obj1, final InvoiceItemVO obj2) {
+							return obj1.getTaxCode().compareTo(obj2.getTaxCode());
+						}
+					});
+				}
+				
+				/***
+				 * Exclude the deposit account amount -START-
+				 */
+				List<String> acctList = new ArrayList<>();
+				AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_POS_CONFIG_GL_ACCT_TO_EXCLUDE);
+				
+				if (StringUtils.isNotBlank(appSettingVO.getValue())) {
+					List<String> strAcctList = Arrays.asList(appSettingVO.getValue().split(","));
+					
+					for (String acctExclude : strAcctList)
+						acctList.add(acctExclude);
+					
+					List<InvoiceItemVO> tempItemVOList = new ArrayList<>();
+					List<InvoiceItemVO> tempExcludeItemVOList = new ArrayList<>();
+					for (InvoiceItemVO vo : invVO.getInvoiceItemList()) {
+						// Check Account was deposit payment
+						boolean accountToExcludeMatch = false;
+						
+						for (String idAcct : acctList) {
+							if (vo.getAcctId().equals(Long.valueOf(idAcct))) {
+								accountToExcludeMatch = true;
+								break;
+							}
+						}
+						
+						if (!accountToExcludeMatch) tempItemVOList.add(vo);
+						else tempExcludeItemVOList.add(vo);
+					}
+					
+					// Calculate again the total amount
+					if (CollectionUtils.isNotEmpty(tempExcludeItemVOList)) {
+						invVO.setInvoiceItemList(tempItemVOList);
+						invVO.setInvoiceItemExcludeList(tempExcludeItemVOList);
+						
+						BigDecimal totalAmtExclude = BigDecimal.ZERO;
+						if (CollectionUtils.isNotEmpty(tempExcludeItemVOList)) {
+							AmountCalcViewVO amtExcludeCalcViewVO = AccountHelper.computeAmountTotalBasedItem(new AmountCalcViewVO(), false, tempExcludeItemVOList, null, false);
+							if (amtExcludeCalcViewVO != null)
+								totalAmtExclude = amtExcludeCalcViewVO.getTotalAmountAfterRounding();
+						}
+						
+						AmountCalcViewVO amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(new AmountCalcViewVO(), false, tempItemVOList, invVO.getInvoicePaymentList(), false);
+						invVO.setAmount(amtCalcViewVO.getTotalAmountAfterRounding().doubleValue());
+						invVO.setBalance(amtCalcViewVO.getTotalAmountAfterRounding()
+								.add(totalAmtExclude)
+								.subtract(amtCalcViewVO.getTotalAmountPaid()).doubleValue());
+					}
+				}
+				/***
+				 * Exclude the deposit account amount -END-
+				 */
+				
+				for (InvoicePaxVO vo : invVO.getInvoicePaxList()) {
+					vo.setRoomTypeDesc(LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_ROOM_TYPE, vo.getRoomTypeCd()));
+					vo.setLangDesc("");
+					String languages = "";
+					if (vo.getCustDetailsVO() != null) {
+						if (CollectionUtils.isNotEmpty(vo.getCustDetailsVO().getLangList())) {
+							for (int i=0; i<vo.getCustDetailsVO().getLangList().size(); i++) {
+								PersonLangVO langVO = vo.getCustDetailsVO().getLangList().get(i);
+								if (i==0) {
+									languages += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_LANG_DILC, langVO.getLangCd());
+								} else {
+									languages += ", " + LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_LANG_DILC, langVO.getLangCd());
+								}
+							}
+						}
+					}
+					vo.setLangDesc(languages);
+				}
+				for (InvoicePaymentVO vo : invVO.getInvoicePaymentList()) {
+					vo.setPmntIssuedBy(getUserName(vo.getIssuerId()));
+					vo.setPmntTypeName(LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_PYMT_TYPE, vo.getPmntTypeCd()));
+				}
+				invList.add(invVO);
+				
+				// set e inv qr code
+				if (StringUtils.isNotBlank(invVO.geteInvoiceDocumentUuid()) && invVO.geteInvoiceStatus() != null && invVO.geteInvoiceStatus().equals(EInvoiceConstant.E_INV_STATUS_VALID)) {
+					String validLink = invVO.geteInvoiceValidationLink();
+					invVO.setQrCode(QRCodeUtils.generateQRCodeByteArrayInputStream(validLink, 300, 300));
+				}
+				
+				if (StringUtils.isNotBlank(invVO.geteInvoiceRnDocumentUuid()) && invVO.geteInvoiceRnStatus() != null && invVO.geteInvoiceRnStatus().equals(EInvoiceConstant.E_INV_STATUS_VALID)) {
+					String validLink = invVO.geteInvoiceRnValidationLink();
+					invVO.setRnQrCode(QRCodeUtils.generateQRCodeByteArrayInputStream(validLink, 300, 300));
+				}
+				
+				if (CollectionUtils.isEmpty(invList)) throw new BusinessException("No result.");
+				
+				String jasperFileName = CommonConstant.JAS_RPT_INV;
+				String reportName = CommonConstant.PDF_RPT_INV;
+				if (docTypeCd.equals("C")) {
+					jasperFileName = isPrintLetterHead ? CommonConstant.JAS_RPT_CN_WITH_LETTER_HEAD : CommonConstant.JAS_RPT_CN;
+					reportName = CommonConstant.PDF_RPT_CN;
+				}
+
+				JasperPrint jasperPrint1 = ReportUtils.getJasperPrint(invList, map, jasperFileName);
+				ReportUtils.printReport(jasperPrint1, reportName);
+				
+			} else if (printType.equalsIgnoreCase("Receipt")) {
+				invVO.setCompanyVO(companyVO);
+				Map<String, Object> map = new HashMap<>();
+				map.put("companyName", invVO.getCompanyVO().getName());
+				map.put("slogan", invVO.getCompanyVO().getSlogan());
+				map.put("address1", invVO.getCompanyVO().getCompanyAddressVO().getAddress1());
+				map.put("address2", invVO.getCompanyVO().getCompanyAddressVO().getAddress2());
+				map.put("address3", invVO.getCompanyVO().getCompanyAddressVO().getAddress3());
+				map.put("city", invVO.getCompanyVO().getCompanyAddressVO().getCity());
+				map.put("state", invVO.getCompanyVO().getCompanyAddressVO().getState());
+				map.put("postcode", invVO.getCompanyVO().getCompanyAddressVO().getPostcode());
+				map.put("countryName", getCountryName(invVO.getCompanyVO().getCompanyAddressVO().getCountryid()));
+				
+				String contact = "";
+				for (CompanyContactVO vo : invVO.getCompanyVO().getCompanyContactList()) {
+					contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getTypecodecontact()) + ": " + vo.getNumber() + "  ";
+				}
+				map.put("contact", contact);
+				map.put("prefix", prefixValue);
+				map.put("invNo", invVO.getCode());
+				map.put("tourCd", invVO.getTourCd());
+				map.put("custId", invVO.getCustDetailsVO().getCustId());
+				map.put("custType", invVO.getCustDetailsVO().getCustType());
+				map.put("contPersonName", invVO.getCustDetailsVO().getContPersonName());
+				map.put("custCompanyName", invVO.getCustDetailsVO().getCompanyName());
+				map.put("subjLine", invVO.getSubjLine());
+				map.put("letterHeadUrl", "../img/letter-head-header.png");
+				if (companyVO != null) {
+					validateEffectiveCompanyName(companyVO, invVO.getInvoiceDt());
+					map.put("letterHeadUrl", companyVO.getLetterHeadUrl());
+				}
+				for (InvoicePaymentVO invPymt : invVO.getInvoicePaymentList()) {
+					invPymt.setPmntTypeName(LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_PYMT_TYPE, invPymt.getPmntTypeCd()));
+					invPymt.setAmountWord(EnglishNumberToWords.withCents(invPymt.getAmount().doubleValue()));
+					invPymt.setPmntIssuedBy(getUserName(invPymt.getIssuerId()));
+					validateEffectiveCompanyName(companyVO, invPymt.getPmntDt());
+					invPymt.setCompanyName(companyVO.getName());
+					invPymt.setCompanyShortName(companyVO.getShortName());
+				}
+				
+				String jasperFileName = CommonConstant.JAS_RPT_INV_RCPT;
+				String reportName = CommonConstant.PDF_RPT_RCPT;
+				if (docTypeCd.equals("C")) {
+					jasperFileName = CommonConstant.JAS_RPT_CN_RCPT;
+				}
+				
+				JasperPrint jasperPrint2 = ReportUtils.getJasperPrint(invVO.getInvoicePaymentList(), map, jasperFileName);
+				ReportUtils.printReport(jasperPrint2, reportName);
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add invoice items
+	 */
+	public void addInvItem() {
+		try {
+			if (!addEdit) invoiceItemVO.setInvId(invoiceVO.getId());
+			invoiceVO.getInvoiceItemList().add(invoiceItemVO);
+			calTtlAmt();
+			resetInvItemForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit invoice items
+	 */
+	public void updateInvItem() {
+		try {
+			setEditInvoiceItem(invoiceItemVO, invoiceItemOrgVO);
+			calTtlAmt();
+			resetInvItemForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Delete invoice items
+	 */
+	public void deleteInvItem(InvoiceItemVO vo) {
+		try {
+			invoiceVO.getInvoiceItemList().remove(vo);
+			calTtlAmt();
+			
+			resetInvItemForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Set invoice item
+	 */
+	public void setEditInvoiceItem(InvoiceItemVO fromVO, InvoiceItemVO toVO) {
+		try {
+			toVO.setId(fromVO.getId());
+			
+			toVO.setInvId(fromVO.getInvId());
+			toVO.setAcctId(fromVO.getAcctId());
+			toVO.setSalesAcctCd(fromVO.getSalesAcctCd());
+			toVO.setSalesAcctDesc(fromVO.getSalesAcctDesc());
+			toVO.setInvEOItemId(fromVO.getInvEOItemId());
+			toVO.setInvItemCd(fromVO.getInvItemCd());
+			toVO.setCode(fromVO.getCode());
+			toVO.setDesc(fromVO.getDesc());
+			toVO.setSubDesc(fromVO.getSubDesc());
+			toVO.setAirlineId(fromVO.getAirlineId());
+			toVO.setTypeCd(fromVO.getTypeCd());
+			// TODO GST Apply
+			toVO.setTaxCode(fromVO.getTaxCode());
+			toVO.setTaxRate(fromVO.getTaxRate());
+			toVO.setQty(fromVO.getQty());
+			toVO.setUnitPrice(fromVO.getUnitPrice());
+			toVO.setNetPrice(fromVO.getNetPrice());
+			toVO.setTaxAmount(fromVO.getTaxAmount());
+			toVO.setAmount(fromVO.getAmount());
+			toVO.setTaxIncAmt(fromVO.getTaxIncAmt());
+			toVO.setIsLock(fromVO.getIsLock());
+			
+			toVO.setCreatedDate(fromVO.getCreatedDate());
+			toVO.setCreatedBy(fromVO.getCreatedBy());
+			toVO.setUpdatedDate(fromVO.getUpdatedDate());
+			toVO.setUpdatedBy(fromVO.getUpdatedBy());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add invoice payments
+	 */
+	public void addInvPmnt() {
+		try {
+			if (!addEdit) invoicePaymentVO.setInvId(invoiceVO.getId());
+			invoiceVO.getInvoicePaymentList().add(invoicePaymentVO);
+			calTtlAmt();
+			
+			resetInvPmntForm();
+			invoicePaymentVO.setAmount(invoiceVO.getBalance());
+			invoicePaymentVO.setPmntIssuedBy(getUserName(invoicePaymentVO.getIssuerId()));
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+
+	/**
+	 * Add credit note payments
+	 */
+	public void addCreditNotePmnt() {
+		try {
+			invoicePaymentVO.setPmntTypeCd(ProductConstant.CREDIT_NOTE_PAYMENT_TYPE);
+			addInvPmnt();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit invoice payments
+	 */
+	public void updateInvPmnt() {
+		try {
+			setEditInvoicePayment(invoicePaymentVO, invoicePaymentOrgVO);
+			calTtlAmt();
+			resetInvPmntForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Delete invoice payments
+	 */
+	public void deleteInvPmnt(InvoicePaymentVO vo) {
+		try {
+			invoiceVO.getInvoicePaymentList().remove(vo);
+			calTtlAmt();
+			resetInvPmntForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Set invoice payment
+	 */
+	public void setEditInvoicePayment(InvoicePaymentVO fromVO, InvoicePaymentVO toVO) {
+		try {
+			toVO.setId(fromVO.getId());
+			
+			toVO.setInvId(fromVO.getInvId());
+			toVO.setIssuerId(fromVO.getIssuerId());
+			toVO.setPmntIssuedBy(fromVO.getPmntIssuedBy());
+			toVO.setBankId(fromVO.getBankId());
+			toVO.setPmntDt(fromVO.getPmntDt());
+			toVO.setCode(fromVO.getCode());
+			toVO.setPmntTypeCd(fromVO.getPmntTypeCd());
+			toVO.setPmntTypeName(fromVO.getPmntTypeName());
+			toVO.setRefNo(fromVO.getRefNo());
+			toVO.setPmntFor(fromVO.getPmntFor());
+			toVO.setRecievedFr(fromVO.getRecievedFr());
+			toVO.setAmountWord(fromVO.getAmountWord());
+			toVO.setAmount(fromVO.getAmount());
+			toVO.setInvPmnt(fromVO.getInvPmnt());
+			toVO.setIdCashBook(fromVO.getIdCashBook());
+			
+			toVO.setCreatedDate(fromVO.getCreatedDate());
+			toVO.setCreatedBy(fromVO.getCreatedBy());
+			toVO.setUpdatedDate(fromVO.getUpdatedDate());
+			toVO.setUpdatedBy(fromVO.getUpdatedBy());
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param vo
+	 * Convert Customer Name To Upper Case
+	 */
+	public void convertNameToUpperCase(CustomerVO vo) {
+		try {
+			vo.getPersonVO().setLastName(vo.getPersonVO().getLastName().toUpperCase().trim());
+			vo.getPersonVO().setGivenName(vo.getPersonVO().getGivenName().toUpperCase().trim());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Initiate invoice list
+	 * @throws BusinessException
+	 */
+	public void initAddInvoice() {
+		try {
+			resetForm();
+			GSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), invoiceVO.getInvoiceDt());
+			loadAll();
+		
+		} catch(Exception t) {
+			errorResult(t);
+		}
+	}
+	
+	public void initAddInvoiceItem() throws BusinessException {
+		resetInvItemForm();
+	}
+	
+	/**
+	 * On selected customer details
+	 */
+	public void handleCustSelect(SelectEvent event) {
+		try {
+			CustDetailsVO vo = invoiceBO.getCustDetails(((CustomerVO) event.getObject()).getId());
+			invoiceVO.setCustomerId(vo.getCustId());
+			invoiceVO.setAttnTo(vo.getContPersonName());
+			setCustDetailsVO(vo);
+			invoiceVO.setCustDetailsVO(vo);
+			resetCustomerListForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On selected account
+	 */
+	public void handleAcctSelect(SelectEvent event) throws BusinessException{
+		try {
+			AcctViewVO vo = (AcctViewVO) event.getObject();
+			invoiceItemVO.setAcctId(vo.getId());
+			
+			if (vo.getSubCode().equals("")) {
+				invoiceItemVO.setSalesAcctCd(vo.getCode());
+				invoiceItemVO.setSalesAcctDesc(vo.getDesc());
+			} else {
+				invoiceItemVO.setSalesAcctCd(vo.getCode() + "-" + vo.getSubCode());
+				invoiceItemVO.setSalesAcctDesc(vo.getDesc() + ", " + vo.getSubDesc());
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On selected Invoice exchange order item
+	 */
+	public void handleInvEOItemSelect(SelectEvent event) throws BusinessException{
+		try {
+			InvoiceAndExchangeOrderViewVO vo = (InvoiceAndExchangeOrderViewVO) event.getObject();
+			invoiceItemVO.setInvItemCd(vo.getCode());
+			invoiceItemVO.setInvEOItemId(vo.getId());
+			invoiceItemVO.setCode(vo.getCode());
+			invoiceItemVO.setDesc(vo.getDescription());
+			
+			if (GSTPeriod && invoiceVO.getIdAcctGST() != null) {
+				invoiceItemVO.setTaxCode(vo.getTaxCode());
+				invoiceItemVO.setTaxRate(vo.getTaxRate());
+			} else {
+				invoiceItemVO.setTaxCode(null);
+				invoiceItemVO.setTaxRate(null);
+			}
+//			invoiceItemVO.setQty(1);
+//			invoiceItemVO.setUnitPrice(vo.getAmount());
+//			invoiceItemVO.setTaxAmount(0.00);
+//			invoiceItemVO.setAmount(vo.getAmount());
+//			invoiceItemVO.setTaxIncAmt(vo.getAmount());
+			invoiceItemVO.setAcctId(vo.getAcctVO().getId());
+			if (vo.getAcctVO().getSubCode().equals("")) {
+				invoiceItemVO.setSalesAcctCd(vo.getAcctVO().getCode());
+				invoiceItemVO.setSalesAcctDesc(vo.getAcctVO().getDesc());
+			} else {
+				invoiceItemVO.setSalesAcctCd(vo.getAcctVO().getCode() + "-" + vo.getAcctVO().getSubCode());
+				invoiceItemVO.setSalesAcctDesc(vo.getAcctVO().getDesc() + ", " + vo.getAcctVO().getSubDesc());
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleGSTSelect(SelectEvent event) {
+		try {
+			TaxCodeVO vo = (TaxCodeVO) event.getObject();
+			// TODO GST Apply
+			if (gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), invoiceVO.getInvoiceDt())) {
+				invoiceItemVO.setTaxCode(vo.getCode());
+				invoiceItemVO.setTaxRate(vo.getRate());
+				
+				handleAmountIncludeTaxChange();
+			} else {
+				invoiceItemVO.setTaxCode(null);
+				invoiceItemVO.setTaxRate(null);
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On selected invoice for credit note
+	 */
+	public void handleCNInvoiveSelect(SelectEvent event) throws BusinessException{
+		try {
+			InvoiceVO vo = (InvoiceVO) event.getObject(); 
+			invoiceVO.setCnInv(vo);
+//			System.out.println("CYY vo.getDocTypeCd():" + vo.getDocTypeCd());
+//			System.out.println("CYY vo.getPsNo():" + vo.getPsNo());
+//			System.out.println("CYY vo.getCode():" + vo.getCode());
+			if (StringUtils.isNotBlank(vo.getDocTypeCd())) {
+				if (vo.getDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_PAX_STMT)) {
+					invoiceVO.setCnPsNo(vo.getPsNo());
+					invoiceVO.setCnInvNo(null); // when ps selected, clear cn_inv to clear previous selected value
+					invoiceVO.setCnDocNoForDisplay(vo.getPsNo());				
+				} else if (vo.getDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_INVC)) {
+					if (StringUtils.isNotBlank(vo.getPsNo())) {
+						invoiceVO.setCnPsNo(vo.getPsNo());
+					} else {
+						invoiceVO.setCnPsNo(null); // when inv selected, clear cn_ps to clear previous selected value
+					}
+					invoiceVO.setCnInvNo(vo.getCode());
+					invoiceVO.setCnDocNoForDisplay(vo.getCode());	
+				} else {
+					throw new BusinessException(CommonErrConstant.ERR_E_INV_ERR_MSG, null,
+							FunctionUtils.generateArrayFromStr("Invalid doc type code \"" + vo.getDocTypeCd() + "\""));
+				}
+			} else {
+				throw new BusinessException(CommonErrConstant.ERR_E_INV_ERR_MSG, null, FunctionUtils.generateArrayFromStr("Document does not have a doc type code."));
+			}
+			
+			invoiceVO.setSalerId(vo.getSalerId());
+			invoiceVO.setSalerName(getUserName(vo.getSalerId()));
+			invoiceVO.setInvPmntId(vo.getInvPmntId());
+			
+			List<InvoiceItemVO> invItemList = invoiceBO.getInvItemList(vo);
+			
+			invoiceVO.setInvoiceItemList(new ArrayList<InvoiceItemVO>());
+			for (InvoiceItemVO itemVO : invItemList) {
+				itemVO.setId(null);
+				if (!addEdit) {
+					itemVO.setInvId(invoiceVO.getId());
+				}
+				itemVO.setCreatedBy(null);
+				itemVO.setCreatedDate(null);
+				itemVO.setUpdatedBy(null);
+				itemVO.setUpdatedDate(null);
+				
+				if (!GSTPeriod) {
+					itemVO.setTaxCode(null);
+					itemVO.setTaxRate(null);
+					if (itemVO.getAmount() != null && itemVO.getTaxAmount() != null) {
+						BigDecimal taxInclAmt = (new BigDecimal(String.valueOf(itemVO.getAmount()))).add(new BigDecimal(String.valueOf(itemVO.getTaxAmount())));
+						itemVO.setAmount(taxInclAmt.doubleValue());
+					}
+					
+					itemVO.setTaxAmount(0.00);
+				}
+				
+				invoiceVO.getInvoiceItemList().add(itemVO);
+			}
+			
+			List<InvoicePaymentVO> invPmntList = invoiceBO.getInvPmntList(vo);
+			
+			invoiceVO.setInvoicePaymentList(new ArrayList<InvoicePaymentVO>());
+			for (InvoicePaymentVO pmntVO : invPmntList) {
+				if (vo.getInvPmntId().equals(pmntVO.getId())) {
+					pmntVO.setId(null);
+					pmntVO.setCode(null);
+					pmntVO.setPmntDt(invoiceVO.getInvoiceDt());
+					pmntVO.setPmntFor(null);
+					pmntVO.setIssuerId(invoiceVO.getIssuerId());
+					pmntVO.setAmount(pmntVO.getAmount());
+					if (custDetailsVO.getCustType() != null) {
+						if (custDetailsVO.getCustType().equals("P")) {
+							pmntVO.setRecievedFr(custDetailsVO.getContPersonName());
+						} else if (custDetailsVO.getCustType().equals("C")) {
+							pmntVO.setRecievedFr(custDetailsVO.getCompanyName());
+						}
+					}
+					if (!addEdit) pmntVO.setInvId(invoiceVO.getId());
+					invoiceVO.getInvoicePaymentList().add(pmntVO);
+				}
+			}
+			
+			//calTtlAmt();
+			calTtlAmt(null, false);
+			
+			// Set Customer Info
+			CustDetailsVO custVO = invoiceBO.getCustDetails(vo.getCustomerId());
+			invoiceVO.setCustomerId(custVO.getCustId());
+			setCustDetailsVO(custVO);
+			invoiceVO.setCustDetailsVO(custVO);
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On invoice item description change
+	 */
+	public void onInvoiceItemChange() throws BusinessException{
+		try {
+			invoiceItemVO.setInvItemCd("");
+			invoiceItemVO.setInvEOItemId(null);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Search customer list
+	 */
+	public void custSearch() {
+		try {
+			custDetailsList = customerBO.getCustomerListSearch(this.getSessionInfoBean().getCompanyVO().getId());
+		
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Load account list
+	 */
+	public void loadAcctList() {
+		try {
+			setAcctViewList(chartOfAcctBO.getAcctViewList(this.getSessionInfoBean().getCompanyVO().getId(), null));
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Load Invoice EO item list
+	 */
+	public void loadInvEOItemList() {
+		try {
+			setInvEOItemViewList(invoiceBO.getInvEOItemViewList(this.getSessionInfoBean().getCompanyVO().getId(), invPmntAuthVO.isAccountManager(), null));
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Load invoice list for credit note
+	 */
+	public void loadCNInvoiceList() {
+		try {
+			setCnInvoiceList(invoiceBO.getInvoiceListNoCN(invoiceVO));
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * load CN invoice info & tour code
+	 * @param invoiceVO
+	 * @throws BusinessException
+	 */
+	public void loadCnInv(InvoiceVO invoiceVO) throws BusinessException {
+		if (StringUtils.isNotBlank(invoiceVO.getCnInvNo())) {
+			invoiceVO.setCnInv(invoiceBO.getInvoiceByCode(invoiceVO.getCnInvNo(), SalesConstant.DOC_TYPE_CD_INVC));
+			invoiceVO.setCnDocNoForDisplay(invoiceVO.getCnInvNo());			
+		} else if (StringUtils.isNotBlank(invoiceVO.getCnPsNo())) {
+			invoiceVO.setCnInv(invoiceBO.getInvoiceByCode(invoiceVO.getCnPsNo(), SalesConstant.DOC_TYPE_CD_PAX_STMT));
+			invoiceVO.setCnDocNoForDisplay(invoiceVO.getCnPsNo());		
+		}
+		
+		if (invoiceVO.getCnInv() != null && invoiceVO.getCnInv().getTourDepId() != null) {
+			TourDepartureVO tourDepVO = tourPackageBO.getTourDepById(invoiceVO.getCnInv().getTourDepId());
+			invoiceVO.getCnInv().setTourCd(tourDepVO.getCode());
+		}
+	}
+	
+	/**
+	 * Get country name
+	 */
+	public String getCountryName(Long id) {
+		try {
+			if (id != null && CollectionUtils.isNotEmpty(countryList)) {
+				for (CountryVO vo : countryList){
+					if (vo.getId().longValue() == id.longValue()) {
+						return vo.getCountry();
+					}
+				}
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return "";
+	}
+	
+	/**
+	 * Get staff name
+	 */
+	public String getUserName(Long id) {
+		try {
+			for (EmployeeViewVO vo : employeeList){
+				if (vo.getId().longValue() == id.longValue()) {
+					return vo.getUserVO().getName();
+				}
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		
+		return "";
+	}
+	
+	/**
+	 * Get customer name
+	 */
+	public String getCustName(Long id) {
+		try {
+			CustDetailsVO vo = invoiceBO.getCustDetails(id);
+			if (vo != null) return vo.getContPersonName();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		
+		return "";
+	}
+	
+	/**
+	 * Get account code
+	 */
+	public String getAcctCd(Long id) {
+		try {
+			for (AcctViewVO vo : acctViewList){
+				if (vo.getId().longValue() == id.longValue()) {
+					if (vo.getSubCode().equals("")) {
+						return vo.getCode();
+					} else {
+						return vo.getCode() + "-" + vo.getSubCode();
+					}
+				}
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		
+		return "";
+	}
+	
+	public String getAcctDesc(Long id) {
+		try {
+			for (AcctViewVO vo : acctViewList){
+				if (vo.getId().longValue() == id.longValue()) {
+					if (vo.getSubCode().equals("")) {
+						return vo.getDesc();
+					} else {
+						return vo.getDesc() + "-" + vo.getSubDesc();
+					}
+				}
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		
+		return "";
+	}
+	
+	/**
+	 * Calculate invoice amount
+	 */
+	public void calInvAmt() {
+		try {
+			if (invoiceItemVO.getAcctId() == null) 
+				throw new BusinessException(CommonErrConstant.ERR_INV_SALES_ACCT_EMPTY);
+			
+			invoiceItemVO = (InvoiceItemVO) AccountHelper.calcTaxableAmount(invoiceItemVO, true, invoiceItemVO.getQty(), invoiceItemVO.getUnitPrice());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void calRefundNoteTtlAmt(InvoiceItemVO invItemVO) {
+		try {
+			if (new BigDecimal(invItemVO.getAmount()).compareTo(new BigDecimal(invItemVO.getRefundAmt())) < 0)
+				throw new BusinessException(CommonErrConstant.ERR_AMOUNT_LESS_THEN);
+			calTtlAmt();
+		
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Calculate total amount
+	 */
+	public void calTtlAmt() {
+		calTtlAmt(null, true);
+	}
+	
+	/**
+	 * Calculate total amount
+	 */
+	public void calTtlAmt(InvoiceVO invVO, boolean updateItemAmount) {
+		try {
+			if (invVO == null) {
+				//Manual update the item Amount here
+				if(!updateItemAmount) {
+					calculateInvoiceItemsAmount(invoiceVO.getInvoiceItemList());
+				}
+				
+				AmountCalcViewVO amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(new AmountCalcViewVO(), false, invoiceVO.getInvoiceItemList(),
+																	invoiceVO.getInvoicePaymentList(), false);
+	
+				invoiceVO.setTaxAmt(amtCalcViewVO.getTotalTax().doubleValue());
+				invoiceVO.setTaxIncAmt(amtCalcViewVO.getTotalAmountIncludeTax().doubleValue());
+				invoiceVO.setRoundingAmt(amtCalcViewVO.getTotalRounding().doubleValue());
+				invoiceVO.setAmount(amtCalcViewVO.getTotalAmountAfterRounding().doubleValue());
+				invoiceVO.setAmtPaid(amtCalcViewVO.getTotalAmountPaid().doubleValue());
+				invoiceVO.setBalance(amtCalcViewVO.getTotalAmountAfterRounding()
+										.subtract(amtCalcViewVO.getTotalAmountPaid()).doubleValue());
+				
+				BigDecimal taxAmt = new BigDecimal(String.valueOf(invoiceVO.getTaxAmt()));
+				BigDecimal taxIncAmt = new BigDecimal(String.valueOf(invoiceVO.getTaxIncAmt()));
+				BigDecimal taxExcAmt = taxIncAmt.subtract(taxAmt);
+				invoiceVO.setTaxExcAmt(taxExcAmt.doubleValue());
+				
+				EInvoiceUtils.calcEInvItemList(invoiceVO);
+				calculateRefundAmount(invoiceVO.getInvoiceItemList());
+				
+			} else { // From Print Invoice
+				if(updateItemAmount) {
+					calculateInvoiceItemsAmount(invVO.getInvoiceItemList());
+					updateItemAmount = false;
+				}
+				
+				AmountCalcViewVO amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(new AmountCalcViewVO(), updateItemAmount, invVO.getInvoiceItemList(),
+																	invVO.getInvoicePaymentList(), false);
+				
+				invVO.setTaxAmt(amtCalcViewVO.getTotalTax().doubleValue());
+				invVO.setTaxIncAmt(amtCalcViewVO.getTotalAmountIncludeTax().doubleValue());
+				invVO.setRoundingAmt(amtCalcViewVO.getTotalRounding().doubleValue());
+				invVO.setAmount(amtCalcViewVO.getTotalAmountAfterRounding().doubleValue());
+				invVO.setAmtPaid(amtCalcViewVO.getTotalAmountPaid().doubleValue());
+				invVO.setBalance(amtCalcViewVO.getTotalAmountAfterRounding()
+										.subtract(amtCalcViewVO.getTotalAmountPaid()).doubleValue());
+				
+				BigDecimal taxAmt = new BigDecimal(String.valueOf(invVO.getTaxAmt()));
+				BigDecimal taxIncAmt = new BigDecimal(String.valueOf(invVO.getTaxIncAmt()));
+				BigDecimal taxExcAmt = taxIncAmt.subtract(taxAmt);
+				invVO.setTaxExcAmt(taxExcAmt.doubleValue());
+				
+				EInvoiceUtils.calcEInvItemList(invVO);
+				calculateRefundAmount(invVO.getInvoiceItemList());
+			}
+
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	private void calculateInvoiceItemsAmount(List<InvoiceItemVO> invoiceItemList) throws BusinessException {
+		//Manual update the item Amount here
+		for(InvoiceItemVO vo : invoiceItemList) {
+			BigDecimal qty = new BigDecimal(String.valueOf(vo.getQty()));
+			BigDecimal unitPrice = new BigDecimal(String.valueOf(vo.getUnitPrice()));
+			BigDecimal totalPriceIncGST = unitPrice.multiply(qty);
+			vo.setTaxIncAmt(totalPriceIncGST.doubleValue());
+			if (vo.getQty() == 0 || vo.getUnitPrice() == 0.00) {
+				vo.setAmount(0.00);
+			}
+			
+			//vo = (InvoiceItemVO) AccountHelper.calcAmountBaseOnTotalTaxableAmount(vo);
+		}
+	}
+	
+	public void handleAmountIncludeTaxChange() {
+		try {
+			BigDecimal qty = new BigDecimal(String.valueOf(invoiceItemVO.getQty()));
+			BigDecimal unitPrice = new BigDecimal(String.valueOf(invoiceItemVO.getUnitPrice()));
+			BigDecimal totalPriceIncGST = unitPrice.multiply(qty);
+			invoiceItemVO.setTaxIncAmt(totalPriceIncGST.doubleValue());
+			if (invoiceItemVO.getQty() == 0 || invoiceItemVO.getUnitPrice() == 0.00) {
+				invoiceItemVO.setAmount(0.00);
+			}
+			
+			invoiceItemVO = (InvoiceItemVO) AccountHelper.calcAmountBaseOnTotalTaxableAmount(invoiceItemVO);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleGSTAmtChange() {
+		try {
+			BigDecimal qty = new BigDecimal(String.valueOf(invoiceItemVO.getQty()));
+			BigDecimal unitPrice = new BigDecimal(String.valueOf(invoiceItemVO.getUnitPrice()));
+			BigDecimal taxAmount = new BigDecimal(String.valueOf(invoiceItemVO.getTaxAmount()));
+			BigDecimal totalPriceIncGST = unitPrice.multiply(qty);
+			invoiceItemVO.setTaxIncAmt(totalPriceIncGST.doubleValue());
+			if (invoiceItemVO.getQty() == 0 || invoiceItemVO.getUnitPrice() == 0.00) {
+				invoiceItemVO.setAmount(0.00);
+			}
+			
+			invoiceItemVO = (InvoiceItemVO) AccountHelper.calcAmountBaseOnTotalTaxableAmount(invoiceItemVO);
+			
+			if (invoiceItemVO.getTaxIncAmt() != 0.00) {
+				totalPriceIncGST = new BigDecimal(String.valueOf(invoiceItemVO.getTaxIncAmt()));
+				invoiceItemVO.setTaxAmount(taxAmount.doubleValue());
+				invoiceItemVO.setAmount(totalPriceIncGST.subtract(taxAmount).doubleValue());
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void calculateRefundAmount(List<InvoiceItemVO> invoiceItemList) throws BusinessException {
+		if (CollectionUtils.isNotEmpty(invoiceItemList)) {
+			BigDecimal totalRefundAmt = BigDecimal.ZERO;
+			BigDecimal amtAftRefund = BigDecimal.ZERO;
+			BigDecimal totalAmt = new BigDecimal(String.valueOf(invoiceVO.getAmount()));
+			
+			for(InvoiceItemVO vo : invoiceItemList) {
+				if (vo.getRefundAmt() != null) {
+					totalRefundAmt = totalRefundAmt.add(new BigDecimal(String.valueOf(vo.getRefundAmt())));
+				}
+			}
+			
+			amtAftRefund = totalAmt.subtract(totalRefundAmt);
+			invoiceVO.setRefundAmt(totalRefundAmt.doubleValue());
+			invoiceVO.setAmtAftRefund(amtAftRefund.doubleValue());
+		}
+	}
+	
+	public void handleCNDateChange() {
+		resetSelection();
+		lazyDataModel = new LazyInvoiceDataModel();
+	}
+	
+	public void handleOrderSourceSelect() {
+		resetSelection();
+		lazyDataModel = new LazyInvoiceDataModel();
+	}
+	
+	public void handlePaymentStatusSelect() {
+		resetSelection();
+		
+		if (StringUtils.isNotBlank(paymentStatus)) {
+			paymentStatusList = FunctionUtils.generateArrayFromStr(paymentStatus);
+		} else {
+			paymentStatusList = new String[] {};
+		}
+
+		lazyDataModel = new LazyInvoiceDataModel();
+	}
+	
+	public void handleEInvStatusSelect() {
+		resetSelection();
+		
+		if (StringUtils.isNotBlank(eInvoiceStatus)) {
+			eInvoiceStatusList = FunctionUtils.generateArrayFromStr(eInvoiceStatus);
+		} else {
+			eInvoiceStatusList = new String[] {};
+		}
+		
+		lazyDataModel = new LazyInvoiceDataModel();
+	}
+	
+	private Map<String, Object> generateSearchParams() {
+		Map<String, Object> params = new HashMap<String, Object>();
+		
+		params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+		
+		if (StringUtils.isNotBlank(orderSourceCode))	params.put("orderSourceCode", orderSourceCode);
+		if (ArrayUtils.isNotEmpty(paymentStatusList))	params.put("paymentStatusList", paymentStatusList);
+		if (ArrayUtils.isNotEmpty(eInvoiceStatusList))	params.put("eInvoiceStatusList", eInvoiceStatusList);
+		if (fromDate != null)							params.put("fromDate", fromDate);
+		if (toDate != null)								params.put("toDate", toDate);
+		if (departureDateFr != null)					params.put("departureDateFr", departureDateFr);
+		if (departureDateTo != null)					params.put("departureDateTo", departureDateTo);
+		if (showSubmittedInvOnly != null)				params.put("showSubmittedInvOnly", showSubmittedInvOnly);
+		
+		return params;
+	}
+	
+	/**
+	 * On passanger selected
+	 * @param event
+	 */
+	public void handlePassangerSelect(SelectEvent event) {
+		try {
+			CustDetailsVO vo = (CustDetailsVO) event.getObject();
+			invoiceBO.setPerSubInfo(vo); // set languages and meals list
+			invoicePaxVO.setCustId(vo.getCustId());
+			invoicePaxVO.setCustDetailsVO(vo);
+			
+			resetPassangerListForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On invoice item selected
+	 * @param event
+	 */
+	public void onInvoiceSelected(InvoiceVO vo) {
+		try {
+			setAddEdit(false);
+			
+			invoiceVO = invoiceBO.getInvoiceById(vo.getId());
+			InvoicePaymentVO invPmntVO = invoiceBO.getInvPmnt(invoiceVO);
+			invoiceVO.setInvPmntId(invPmntVO.getId());
+			
+			/*** quick fix for CN link missing issue ***/
+			List<InvoicePaymentVO> pmntList = invoiceBO.getInvPmntListByIdCreditNote(invoiceVO.getId());
+			if(CollectionUtils.isNotEmpty(pmntList) &&  pmntList.size() > 1) {
+				for (InvoicePaymentVO invoicePaymentVO : pmntList) {
+					if (invoicePaymentVO.getInvoiceDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_INVC)) {
+						invoiceVO.setInvPmntId(invoicePaymentVO.getId());
+					}
+				}
+			}
+			/*** quick fix for CN link missing issue ***/
+			
+			setOriObj(invoiceVO.clone());
+			
+			invoiceBO.getInvoiceDetails(invoiceVO);
+			invoiceVO.setIssuedBy(getUserName(invoiceVO.getIssuerId()));
+			invoiceVO.setSalerName(getUserName(invoiceVO.getSalerId()));
+			custDetailsVO = invoiceVO.getCustDetailsVO();
+			resetInvItemForm();
+			resetEoInvForm();
+			resetInvPmntForm();
+			loadAll();
+			invoiceVO.setIdAcctGST(this.getSessionInfoBean().getCompanyVO().getIdAcctGST());
+			//invoiceVO.setIdAcctRounding(this.getSessionInfoBean().getCompanyVO().getIdAcctRounding());
+			
+			GSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), invoiceVO.getInvoiceDt());
+			
+			calTtlAmt(null, false);
+			
+			// Check Financial Period Closed
+			invoiceVO.setDateInFinPeriodClosed(getFinPeriodClosedStatus());
+			
+			checkPOSUploadEditable(vo.getId().toString());
+			
+			loadCnInv(invoiceVO);
+						
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	private void checkPOSUploadEditable(String idInv) throws BusinessException {
+		// Check Invoice was POS uploaded
+		Map<String, Object> params = new HashMap<>();
+		Map<String, String> filters = new HashMap<>();
+		filters.put("idInvoice", idInv);
+		params.put("filters", filters);
+		
+		editablePOSUploaded = true;
+		lockAmountChanges = false;
+		
+		if (posUploadSalesBO.getPOSUploadSalesTransListCount(params) > 0) {
+			posTotalAmountLocked = SerializationUtils.clone(invoiceVO.getAmount());
+			editablePOSUploaded = false;
+			lockAmountChanges = true;
+			
+			if (invPmntAuthVO.isAccountManager()) {
+				editablePOSUploaded = true; // Account role can edit even the POS uploaded
+			}
+		}
+	}
+	
+	/**
+	 * On invoice item selected
+	 * @param event
+	 */
+	public void onInvoiceItemSelected(InvoiceItemVO vo) {
+		try {
+			invItemAdd = false;
+			
+			AcctVO acctVO = null;
+			if (vo.getAcctId() != null) {
+				acctVO = chartOfAcctBO.getAcctVO(vo.getAcctId());
+				if (acctVO.getSubCode().equals("")) {
+					vo.setSalesAcctCd(acctVO.getCode());
+					vo.setSalesAcctDesc(acctVO.getDesc());
+				} else {
+					vo.setSalesAcctCd(acctVO.getCode() + "-" + acctVO.getSubCode());
+					vo.setSalesAcctDesc(acctVO.getDesc() + ", " + acctVO.getSubDesc());
+				}
+			}
+			invoiceItemOrgVO = vo;
+			setEditInvoiceItem(vo, invoiceItemVO);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On invoice pax selected
+	 * @param event
+	 */
+	public void onInvoicePaxSelected(InvoicePaxVO vo) {
+		try {
+			setInvPaxAdd(false);
+			
+			// reset
+			resetInvPaxPassanger();
+			setInvoicePaxVO(vo);
+			setPersonLangVO(new PersonLangVO());
+			setPersonMealVO(new PersonMealVO());
+			
+			invoicePaxVO.getCustDetailsVO().setLangVOList(new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>()));
+			invoicePaxVO.getCustDetailsVO().setMealVOList(new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>()));
+			
+			if (invoiceVO.getTourDepId() != null) {
+				TourDepartureVO tourDeptVO = tourPackageBO.getTourDepById(invoiceVO.getTourDepId());
+				setTravelInsPolicyS(tourDeptVO.getTravelInsPolicyS());
+				setTravelInsPolicyF(tourDeptVO.getTravelInsPolicyF());
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	/**
+	 * On Travel Warrant checked
+	 * @param event
+	 */
+	public void checkedWarrant()
+	{ 
+		//calTtlAmt(); 
+	}
+	/**
+	 * On invoice payment selected
+	 * @param event
+	 */
+	public void onInvoicePaymentSelected(InvoicePaymentVO vo) {
+		try {
+			setInvPmntAdd(false);
+			vo.setPmntIssuedBy(getUserName(vo.getIssuerId()));
+			
+			setInvoicePaymentOrgVO(vo);
+			setEditInvoicePayment(vo, invoicePaymentVO);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On invoice payment selected
+	 * @param event
+	 */
+	public void onAddInvoicePayment() {
+		try {
+			resetInvPmntForm();
+			
+			invoicePaymentVO.setAmount(invoiceVO.getBalance());
+			invoicePaymentVO.setPmntIssuedBy(getUserName(invoicePaymentVO.getIssuerId()));
+			 		
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On invoice pax selected
+	 * @param event
+	 */
+	public void onAddInvoicePax() {
+		try {
+			resetInvPaxForm();
+			if (invPaxAdd == true) {
+				if (invoiceVO.getTourDepId() != null) {
+					TourDepartureVO vo = tourPackageBO.getTourDepById(invoiceVO.getTourDepId());
+					
+					setTravelInsPolicyS(vo.getTravelInsPolicyS());
+					setTravelInsPolicyF(vo.getTravelInsPolicyF());
+				}
+			}
+			
+			// For ticketing [ti]
+			if (invoiceVO.getCatCd().equalsIgnoreCase(CommonConstant.LOOKUP_ITM_INV_CAT_TICKETING)) {
+				invoicePaxVO.setRoomTypeCd(CommonConstant.LOOKUP_ITM_ROOM_TYPE_NA);
+				invoicePaxVO.setRoomPairingNo(0);
+				invoicePaxVO.setTravelInsType(CommonConstant.LOOKUP_ITM_TRVL_INS_NA);
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On invoice payment selected
+	 * @param event
+	 */
+	public void onAddInvoicePassanger() {
+		try {
+			resetInvPassForm();
+			passangerVO.setPcTypeCd("P");
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 *  Calculate Age
+	 */
+	public void calculateAge(DateSelectEvent event) {
+		Calendar dob = Calendar.getInstance();
+		dob.setTime(event.getDate());
+		Calendar today = Calendar.getInstance();
+
+		Integer age = today.get(Calendar.YEAR) - dob.get(Calendar.YEAR);
+		
+		if(today.get(Calendar.DAY_OF_YEAR) <= dob.get(Calendar.DAY_OF_YEAR)) {
+			age--;
+		}
+		
+		//set the age variable
+		passangerVO.getPersonVO().setAge(age);
+	}
+	
+	/**
+	 * 
+	 *  Add invoice due date
+	 */
+	public void setInvoiceDueDate(DateSelectEvent event) {
+		//set the invoive due variable
+		invoiceVO.setInvoiceDue(addInvoiceDueDate(event.getDate()));
+		
+		// Reset if not in GST period
+		try {
+			GSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), invoiceVO.getInvoiceDt());
+			
+			if (CollectionUtils.isNotEmpty(invoiceVO.getInvoiceItemList())) {
+				if (!GSTPeriod) {
+					for (InvoiceItemVO vo : invoiceVO.getInvoiceItemList()) {
+						vo.setTaxCode(null);
+						vo.setTaxRate(null);
+						vo.setAmount(vo.getTaxIncAmt());
+					}
+					calTtlAmt();
+				}
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public Date addInvoiceDueDate(Date dt) {
+		Calendar invDt = Calendar.getInstance();
+		if (dt == null) {
+			invDt.setTime(new Date());
+		} else {
+			invDt.setTime(dt);
+		}
+		invDt.add(Calendar.DATE, Integer.parseInt(LookupItemUtils.getGlobalConfigValue(LookupItemConstant.GC_CATEGORY, LookupItemConstant.GC_PAID_EXP)));
+		return invDt.getTime();
+	}
+	
+	/**
+	 * On Identity selected
+	 * @param event
+	 */
+	public void onIdentitySelected(IdentityVO vo) {
+		try {
+			setIdentityAdd(false);
+			setIdentityVO(vo);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Language selected
+	 * @param event
+	 */
+	public void onLanguageSelected(PersonLangVO vo) {
+		try {
+			setLanguageAdd(false);
+			setPersonLangVO(vo);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Meal selected
+	 * @param event
+	 */
+	public void onMealSelected(PersonMealVO vo) {
+		try {
+			setMealAdd(false);
+			setPersonMealVO(vo);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Contact selected
+	 * @param event
+	 */
+	public void onContactSelected(PersonContactVO vo) {
+		try {
+			setContactAdd(false);
+			setPersonContactVO(vo);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Corporate Contact selected
+	 * @param event
+	 */
+	public void onCorpContactSelected(CorContactVO vo) {
+		try {
+			setContactAdd(false);
+			setCorContactVO(vo);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Remarks selected
+	 * @param event
+	 */
+	public void onRemarksSelected(CustomerRemarksVO vo) {
+		try {
+			setRemarksAdd(false);
+			setRemarksVO(vo);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit customer
+	 */
+	public void editCustomer() {
+		try {
+			CustDetailsVO vo = custDetailsVO;
+			sendRedirect("customerId", vo.getCustId(), vo, "/app/sales/cust");
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Get Financial Period Closed Status
+	 */ 
+	public boolean getFinPeriodClosedStatus() {
+		boolean rtn = false;
+		try {
+			rtn = LookupItemUtils.getFinAndGSTPeriodClosedStatus(this.getSessionInfoBean().getCompanyVO().getId(), invoiceVO.getInvoiceDt(), invPmntAuthVO.isAccountManager());
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		
+		return rtn;
+	}
+	
+	/**
+	 * Single submission
+	 */
+	public void submitEInvoice() {
+		try {
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, invoiceBO, invoiceAndExchangeOrderBO, regionBO, malaysiaStateBO, chartOfAcctBO);
+			CompanyVO companyVO = corporateProfileBO.getCompanyDetails(invoiceVO.getCompanyId());
+			JSONObject submitResponse = eInvoiceUtils.submitCreditNote(invoiceVO, companyVO);
+			eInvoiceUtils.processCreditNoteSubmitResponse(submitResponse, invoiceVO);
+			
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onEInvoice() {
+		try {
+//			System.out.println("CYY EInvoiceProperties.ENV_BASE_URL_SANDBOX: " + EInvoiceProperties.ENV_BASE_URL_SANDBOX);
+			System.out.println("CYY EInvoiceProperties.SYSTEM_API: " + EInvoiceProperties.getSystemApiUrl());
+			
+			if (StringUtils.isBlank(invoiceVO.geteInvoiceDocumentUuid()) && StringUtils.isBlank(invoiceVO.geteInvoiceRnDocumentUuid())) {
+				// if no uuid, means didn't submit before, no need call API
+				return;
+			}
+			
+//			String accessToken = eInvoiceUtils.getAccessToken(getSessionInfoBean().getCompanyVO(), true);            	
+			String accessToken = eInvoiceBO.getAccessToken(getSessionInfoBean().getCompanyVO(), true);            	
+	        
+//	        if (!EInvoiceUtils.validateTaxpayerTin(invoiceVO, accessToken)) {
+//	        	throw new BusinessException(CommonErrConstant.ERR_TAXPAYER_TIN_VALIDATION_FAILED);
+//	        }
+	        
+	        if (StringUtils.isNotBlank(invoiceVO.geteInvoiceDocumentUuid())) {
+	        	EInvoiceDocument eInvoiceDocument = EInvoiceUtils.getDocumentDetails(invoiceVO.geteInvoiceDocumentUuid(), accessToken);
+		        invoiceVO.seteInvoiceDocument(eInvoiceDocument);
+	        }
+	        
+	        if (StringUtils.isNotBlank(invoiceVO.geteInvoiceRnDocumentUuid())) {
+	        	EInvoiceDocument eInvoiceDocument = EInvoiceUtils.getDocumentDetails(invoiceVO.geteInvoiceRnDocumentUuid(), accessToken);
+		        invoiceVO.seteInvoiceRnDocument(eInvoiceDocument);
+	        }
+	        
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onCancelEInvoiceAPI() {
+		
+	}
+	
+	public void cancelEInvoiceAPI(String cancellationReason) {
+		try {
+			
+			if (StringUtils.isBlank(invoiceVO.geteInvoiceDocumentUuid()) && StringUtils.isBlank(invoiceVO.geteInvoiceRnDocumentUuid())) {
+				throw new BusinessException(CommonErrConstant.ERR_DOC_NO_UUID);
+			}
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO);
+			CompanyVO companyVO = corporateProfileBO.getCompanyDetails(invoiceVO.getCompanyId());
+			JSONObject cancelResponse = eInvoiceUtils.cancelDocument(cancellationReason, invoiceVO.geteInvoiceDocumentUuid(), companyVO);
+			eInvoiceUtils.processCancelResponse(cancelResponse);
+			
+			// update sys doc e inv status
+			invoiceVO.seteInvoiceStatus(EInvoiceConstant.E_INV_STATUS_CANCELLED);
+			
+			if (StringUtils.isNotBlank(invoiceVO.geteInvoiceRnDocumentUuid())) {
+				// process refund note cancel
+				eInvoiceUtils.processRefundNoteCancelResponse(
+						eInvoiceUtils.cancelDocument(cancellationReason, invoiceVO.geteInvoiceRnDocumentUuid(), companyVO));
+				
+				// update sys doc e inv status
+				invoiceVO.seteInvoiceRnStatus(EInvoiceConstant.E_INV_STATUS_CANCELLED);
+			}
+			
+            successResult();
+            
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void getEInvoiceDocStatus() {
+		try {
+			
+//			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, invoiceBO, invoiceAndExchangeOrderBO, regionBO, malaysiaStateBO, chartOfAcctBO);
+			
+			if (StringUtils.isBlank(invoiceVO.geteInvoiceDocumentUuid()) && StringUtils.isBlank(invoiceVO.geteInvoiceRnDocumentUuid())) {
+				throw new BusinessException(CommonErrConstant.ERR_DOC_NO_UUID);
+			}
+			
+			String accessToken = eInvoiceBO.getAccessToken(getSessionInfoBean().getCompanyVO(), true);   
+			
+			if (StringUtils.isNotBlank(invoiceVO.geteInvoiceDocumentUuid())) {
+				EInvoiceDocumentVO eInvoiceDocumentVO = eInvoiceBO.updDocumentDetails(invoiceVO.geteInvoiceDocumentUuid(), accessToken);
+				invoiceVO.seteInvoiceStatus(eInvoiceDocumentVO.getStatusCode()); // update existing invoiceVO to show result
+				invoiceVO.seteInvoiceDocumentVO(eInvoiceDocumentVO);
+			}
+			
+			if (StringUtils.isNotBlank(invoiceVO.geteInvoiceRnDocumentUuid())) {
+				EInvoiceDocumentVO eInvoiceRnDocumentVO = eInvoiceBO.updDocumentDetails(invoiceVO.geteInvoiceRnDocumentUuid(), accessToken);
+				invoiceVO.seteInvoiceRnStatus(eInvoiceRnDocumentVO.getStatusCode()); // update existing invoiceVO to show result
+				invoiceVO.seteInvoiceRnDocumentVO(eInvoiceRnDocumentVO);
+			}
+			
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void printEInvoice(String eInvoiceDocumentUuid) {
+		try {
+			HashMap<String, Object> map = corporateProfileBO.getReportTitle(getSessionInfoBean().getCompanyVO());
+			
+			if (StringUtils.isNotBlank(eInvoiceDocumentUuid)) {
+				EInvoiceDocumentVO eInvoiceDocumentVO = eInvoiceBO.getEInvoiceByUUID(eInvoiceDocumentUuid);
+				eInvoiceBO.getEInvoiceDetails(eInvoiceDocumentVO);
+				EInvoiceUtils.printEInvoice(eInvoiceDocumentVO, map);
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onSubmitMultipleEInvoice() {
+		
+	}
+	
+	public void submitMultipleEInvoice() {
+		TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+		trackingLogUtils.startLogs();
+		try {
+			
+			if (savedSelectedInvoiceList.size() > CommonConstant.E_INV_MAX_DOC_CNT) {
+				throw new BusinessException(CommonErrConstant.ERR_E_INV_ERR_MSG, null,
+						new String[] { "Maximum document count in a submission is 15."
+								+ savedSelectedInvoiceList.size() + " is selected." });
+			}
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, invoiceBO, invoiceAndExchangeOrderBO, regionBO, malaysiaStateBO, chartOfAcctBO, corporateProfileBO);
+			eInvoiceUtils.setMessageSource(messageSource);
+			CompanyVO companyVO = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			if (isEInvSubm) {
+				JSONObject submitResponse = eInvoiceUtils.submitCreditNotes(savedSelectedInvoiceList, companyVO);
+				eInvoiceUtils.processSubmitResponseCNs(submitResponse, savedSelectedInvoiceList, companyVO.getId());
+			}
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+		
+		isEInvSubm = !isEInvSubm;
+		
+		try {
+			mulpInvSubmRespList = generateCNRNMulpInvSubmRespList(savedSelectedInvoiceList, getSessionInfoBean().getCompanyVO().getId());
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+		
+		resetSelection();
+		
+		trackingLogUtils.endLogs("submitMultipleEInvoice");
+	}
+	
+	private List<InvoiceVO> generateCNRNMulpInvSubmRespList(List<InvoiceVO> savedSelectedInvoiceList, Long idCompany) throws BusinessException {
+		List<InvoiceVO> mulpInvSubmRespList = new ArrayList<InvoiceVO>();
+		for (InvoiceVO vo : savedSelectedInvoiceList) {
+			if (StringUtils.isNotBlank(vo.geteInvoiceStatus()) && !vo.geteInvoiceStatus().equals(EInvoiceConstant.E_INV_STATUS_NOT_SUBMIT)) {
+				vo.setPrefix(LookupItemUtils.getSysNumGenVO(idCompany, CommonConstant.SYS_NUM_CD_CRDT_NOTE).getPrefixid());
+				
+				InvoiceVO tempVO = invoiceBO.getInvoiceById(vo.getId());
+				vo.setAmount(tempVO.getAmtAftRefund());
+				
+				if (tempVO.getAmtAftRefund().compareTo(0D) != 0) {
+					mulpInvSubmRespList.add(vo);
+				}
+			}
+			
+			if (StringUtils.isNotBlank(vo.geteInvoiceRnStatus()) && !vo.geteInvoiceRnStatus().equals(EInvoiceConstant.E_INV_STATUS_NOT_SUBMIT)) {
+				InvoiceVO clonedVO = SerializationUtils.clone(vo);
+				clonedVO.setPrefix(LookupItemUtils.getSysNumGenVO(idCompany, CommonConstant.SYS_NUM_CD_RFND_NOTE).getPrefixid());
+				clonedVO.setCode(vo.getRnNo());
+				
+				InvoiceVO tempVO = invoiceBO.getInvoiceById(vo.getId());
+				clonedVO.setAmount(tempVO.getRefundAmt());
+				
+				if (clonedVO.getRefundAmt().compareTo(0D) != 0) {
+					mulpInvSubmRespList.add(clonedVO);
+				}
+			}
+		}
+		
+		return mulpInvSubmRespList;
+	}
+	
+	public void onSelect(SelectEvent e) {
+		try {
+			savedSelectedInvoiceList.add((InvoiceVO) e.getObject());
+//			setSavedSelectedInvoiceList(Arrays.asList(selectedInvoiceList));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onUnselect(UnselectEvent e) {
+		try {
+			for (InvoiceVO vo : savedSelectedInvoiceList) {
+				if (vo.getId().equals(((InvoiceVO) e.getObject()).getId())) {
+					savedSelectedInvoiceList.remove(vo);
+				}
+			}
+//			savedSelectedInvoiceList.remove((InvoiceVO) e.getObject());
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void enterEInvSubm() {
+		try {
+			isEInvSubm = true;
+			savedSelectedInvoiceList = new ArrayList<InvoiceVO>();
+			selectedInvoiceList = new InvoiceVO[1];
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onToggle(AjaxBehaviorEvent e) {
+		try {
+			List<InvoiceVO> currPageInvList = getCurrentPageData();
+			
+			System.out.println("CreditNoteBean.onToggle()");
+			for (InvoiceVO invoiceVO : currPageInvList) {
+				System.out.println(invoiceVO.getCode());
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onPagination(PageEvent e){
+		try {
+			if(savedSelectedInvoiceList != null && !savedSelectedInvoiceList.isEmpty()){
+//				selectedInvoiceList = (InvoiceVO[]) savedSelectedInvoiceList.toArray();
+				selectedInvoiceList = new InvoiceVO[savedSelectedInvoiceList.size()];
+	            for (int j = 0; j < savedSelectedInvoiceList.size(); j++) {
+//	            	InvoiceVO[] newArray = Arrays.copyOf(selectedInvoiceList, selectedInvoiceList.length + 1);
+	            	selectedInvoiceList[j] = savedSelectedInvoiceList.get(j);
+//	                selectedInvoiceList = newArray;
+	            }
+	        }
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onFilter(FilterEvent e){
+		try {
+			if(savedSelectedInvoiceList != null && !savedSelectedInvoiceList.isEmpty()){
+//				selectedInvoiceList = (InvoiceVO[]) savedSelectedInvoiceList.toArray();
+				selectedInvoiceList = new InvoiceVO[savedSelectedInvoiceList.size()];
+	            for (int j = 0; j < savedSelectedInvoiceList.size(); j++) {
+//	            	InvoiceVO[] newArray = Arrays.copyOf(selectedInvoiceList, selectedInvoiceList.length + 1);
+	            	selectedInvoiceList[j] = savedSelectedInvoiceList.get(j);
+//	                selectedInvoiceList = newArray;
+	            }
+	        }
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public List<InvoiceVO> getCurrentPageData() {
+	    FacesContext facesContext = FacesContext.getCurrentInstance();
+	    DataTable dataTable = (DataTable) facesContext.getViewRoot().findComponent("idInvListForm:idInvListTable");
+
+	    if (dataTable != null) {
+	        List<InvoiceVO> filteredData = (List<InvoiceVO>) dataTable.getFilteredValue();
+	        List<InvoiceVO> dataSource = (filteredData != null) ? filteredData : (List<InvoiceVO>) dataTable.getValue();
+
+	        int first = dataTable.getFirst();  // Start index of the current page
+	        int rows = dataTable.getRows();    // Number of rows per page
+
+	        // Extract the subset of data for the current page
+	        int end = Math.min(first + rows, dataSource.size()); // Prevent IndexOutOfBounds
+	        return dataSource.subList(first, end);
+	    }
+	    return Collections.emptyList();
+	}
+	
+	public String generateReportFileName(String reportName) {
+		String fileName = "";
+		if (reportName != null) {
+			fileName = reportName +  ReportUtils.ft.format(new Date());
+		} else {
+			fileName = "Report" +  ReportUtils.ft.format(new Date());
+		}
+        return fileName;
+    }
+	
+	/**********************
+	 * Lazy loading model *
+	 **********************/
+	class LazyInvoiceDataModel extends LazyDataModel<InvoiceVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#load(int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+		 */
+		@Override
+		public List<InvoiceVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			
+			TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+			
+			try {
+				
+				trackingLogUtils.startLogs();
+				
+				Map<String, Object> params = generateSearchParams();
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", sortField);
+				params.put("sortOrder", sortOrder);
+				params.put("filters", filters);
+				
+				// to load consol e inv
+//				if (invDateFrom != null) params.put("fromDate", invDateFrom);
+//				if (invDateTo != null) params.put("toDate", invDateTo);
+//				if (depDateFrom != null) params.put("depDateFrom", depDateFrom);
+//				if (depDateTo != null) params.put("depDateTo", depDateTo);
+				
+//				if (ArrayUtils.isNotEmpty(eInvoiceStatusList)) params.put("eInvoiceStatusList", eInvoiceStatusList);
+				setRowCount(invoiceBO.getCreditNoteDisplayListSize(params));
+				
+				if (0 < getRowCount()) {
+					invoiceList = invoiceBO.getCreditNoteDisplayList(params);
+					return invoiceList;
+				}
+				
+			} catch (Throwable t) {
+				t.printStackTrace();
+				errorResult(t);
+			} finally {
+				trackingLogUtils.endLogs("LazyInvoiceDataModel");
+			}
+			return new ArrayList<InvoiceVO>();
+		}
+		
+		@Override
+		public void setRowIndex(int rowIndex) {
+			/*
+			 * The following is in ancestor (LazyDataModel):
+			 * this.rowIndex = rowIndex == -1 ? rowIndex : (rowIndex % pageSize);
+			 */
+			if (rowIndex == -1 || getPageSize() == 0) {
+				super.setRowIndex(-1);
+			} else super.setRowIndex(rowIndex % getPageSize());
+		}
+		
+	}
+	
+	/**
+	 * @return the customerList
+	 */
+	public List<CustomerVO> getCustomerList() {
+		return customerList;
+	}
+
+	/**
+	 * @param customerList the customerList to set
+	 */
+	public void setCustomerList(List<CustomerVO> customerList) {
+		this.customerList = customerList;
+	}
+
+	/**
+	 * @return the custDetailsList
+	 */
+	public List<CustDetailsVO> getCustDetailsList() {
+		return custDetailsList;
+	}
+
+	/**
+	 * @param custDetailsList the custDetailsList to set
+	 */
+	public void setCustDetailsList(List<CustDetailsVO> custDetailsList) {
+		this.custDetailsList = custDetailsList;
+	}
+
+	/**
+	 * @return the searchType
+	 */
+	public String getSearchType() {
+		return searchType;
+	}
+
+	/**
+	 * @param searchType the searchType to set
+	 */
+	public void setSearchType(String searchType) {
+		this.searchType = searchType;
+	}
+
+	/**
+	 * @return the searchValueType
+	 */
+	public String getSearchValueType() {
+		return searchValueType;
+	}
+
+	/**
+	 * @param searchValueType the searchValueType to set
+	 */
+	public void setSearchValueType(String searchValueType) {
+		this.searchValueType = searchValueType;
+	}
+
+	/**
+	 * @return the searchValue
+	 */
+	public String getSearchValue() {
+		return searchValue;
+	}
+
+	/**
+	 * @param searchValue the searchValue to set
+	 */
+	public void setSearchValue(String searchValue) {
+		this.searchValue = searchValue;
+	}
+
+	/**
+	 * @return the custDetailsVO
+	 */
+	public CustDetailsVO getCustDetailsVO() {
+		return custDetailsVO;
+	}
+
+	/**
+	 * @param custDetailsVO the custDetailsVO to set
+	 */
+	public void setCustDetailsVO(CustDetailsVO custDetailsVO) {
+		this.custDetailsVO = custDetailsVO;
+	}
+
+	/**
+	 * @return the invoiceVO
+	 */
+	public InvoiceVO getInvoiceVO() {
+		return invoiceVO;
+	}
+
+	/**
+	 * @param invoiceVO the invoiceVO to set
+	 */
+	public void setInvoiceVO(InvoiceVO invoiceVO) {
+		this.invoiceVO = invoiceVO;
+	}
+
+	/**
+	 * @return the companyList
+	 */
+	public List<CompanyVO> getCompanyList() {
+		return companyList;
+	}
+
+	/**
+	 * @param companyList the companyList to set
+	 */
+	public void setCompanyList(List<CompanyVO> companyList) {
+		this.companyList = companyList;
+	}
+
+	/**
+	 * @return the invoiceItemVO
+	 */
+	public InvoiceItemVO getInvoiceItemVO() {
+		return invoiceItemVO;
+	}
+
+	/**
+	 * @param invoiceItemVO the invoiceItemVO to set
+	 */
+	public void setInvoiceItemVO(InvoiceItemVO invoiceItemVO) {
+		this.invoiceItemVO = invoiceItemVO;
+	}
+
+	/**
+	 * @return the invItemAdd
+	 */
+	public boolean isInvItemAdd() {
+		return invItemAdd;
+	}
+
+	/**
+	 * @param invItemAdd the invItemAdd to set
+	 */
+	public void setInvItemAdd(boolean invItemAdd) {
+		this.invItemAdd = invItemAdd;
+	}
+
+	/**
+	 * @return the identityVO
+	 */
+	public IdentityVO getIdentityVO() {
+		return identityVO;
+	}
+
+	/**
+	 * @param identityVO the identityVO to set
+	 */
+	public void setIdentityVO(IdentityVO identityVO) {
+		this.identityVO = identityVO;
+	}
+
+	/**
+	 * @return the personLangVO
+	 */
+	public PersonLangVO getPersonLangVO() {
+		return personLangVO;
+	}
+
+	/**
+	 * @param personLangVO the personLangVO to set
+	 */
+	public void setPersonLangVO(PersonLangVO personLangVO) {
+		this.personLangVO = personLangVO;
+	}
+
+	/**
+	 * @return the personMealVO
+	 */
+	public PersonMealVO getPersonMealVO() {
+		return personMealVO;
+	}
+
+	/**
+	 * @param personMealVO the personMealVO to set
+	 */
+	public void setPersonMealVO(PersonMealVO personMealVO) {
+		this.personMealVO = personMealVO;
+	}
+
+	/**
+	 * @return the personContactVO
+	 */
+	public PersonContactVO getPersonContactVO() {
+		return personContactVO;
+	}
+
+	/**
+	 * @param personContactVO the personContactVO to set
+	 */
+	public void setPersonContactVO(PersonContactVO personContactVO) {
+		this.personContactVO = personContactVO;
+	}
+
+	/**
+	 * @return the remarksVO
+	 */
+	public CustomerRemarksVO getRemarksVO() {
+		return remarksVO;
+	}
+
+	/**
+	 * @param remarksVO the remarksVO to set
+	 */
+	public void setRemarksVO(CustomerRemarksVO remarksVO) {
+		this.remarksVO = remarksVO;
+	}
+
+	/**
+	 * @return the exOrderList
+	 */
+	public List<ExOrderVO> getExOrderList() {
+		return exOrderList;
+	}
+
+	/**
+	 * @param exOrderList the exOrderList to set
+	 */
+	public void setExOrderList(List<ExOrderVO> exOrderList) {
+		this.exOrderList = exOrderList;
+	}
+	
+	/**
+	 * @return the acctViewList
+	 */
+	public List<AcctViewVO> getAcctViewList() {
+		return acctViewList;
+	}
+
+	/**
+	 * @param acctViewList the acctViewList to set
+	 */
+	public void setAcctViewList(List<AcctViewVO> acctViewList) {
+		this.acctViewList = acctViewList;
+	}
+
+	/**
+	 * @return the invoiceItemVOList
+	 */
+	public AddUpdDelVO getInvoiceItemVOList() {
+		return invoiceItemVOList;
+	}
+
+	/**
+	 * @param invoiceItemVOList the invoiceItemVOList to set
+	 */
+	public void setInvoiceItemVOList(AddUpdDelVO invoiceItemVOList) {
+		this.invoiceItemVOList = invoiceItemVOList;
+	}
+
+	/**
+	 * @return the addEdit
+	 */
+	public boolean isAddEdit() {
+		return addEdit;
+	}
+
+	/**
+	 * @param addEdit the addEdit to set
+	 */
+	public void setAddEdit(boolean addEdit) {
+		this.addEdit = addEdit;
+	}
+
+	/**
+	 * @return the acctVO
+	 */
+	public AcctVO getAcctVO() {
+		return acctVO;
+	}
+
+	/**
+	 * @param acctVO the acctVO to set
+	 */
+	public void setAcctVO(AcctVO acctVO) {
+		this.acctVO = acctVO;
+	}
+
+	/**
+	 * @return the invPmntAdd
+	 */
+	public boolean isInvPmntAdd() {
+		return invPmntAdd;
+	}
+
+	/**
+	 * @param invPmntAdd the invPmntAdd to set
+	 */
+	public void setInvPmntAdd(boolean invPmntAdd) {
+		this.invPmntAdd = invPmntAdd;
+	}
+
+	/**
+	 * @return the invoicePaymentVO
+	 */
+	public InvoicePaymentVO getInvoicePaymentVO() {
+		return invoicePaymentVO;
+	}
+
+	/**
+	 * @param invoicePaymentVO the invoicePaymentVO to set
+	 */
+	public void setInvoicePaymentVO(InvoicePaymentVO invoicePaymentVO) {
+		this.invoicePaymentVO = invoicePaymentVO;
+	}
+	
+	/**
+	 * @return the invoicePaymentVOList
+	 */
+	public AddUpdDelVO getInvoicePaymentVOList() {
+		return invoicePaymentVOList;
+	}
+
+	/**
+	 * @param invoicePaymentVOList the invoicePaymentVOList to set
+	 */
+	public void setInvoicePaymentVOList(AddUpdDelVO invoicePaymentVOList) {
+		this.invoicePaymentVOList = invoicePaymentVOList;
+	}
+
+	/**
+	 * @return the employeeList
+	 */
+	public List<EmployeeViewVO> getEmployeeList() {
+		return employeeList;
+	}
+
+	/**
+	 * @param employeeList the employeeList to set
+	 */
+	public void setEmployeeList(List<EmployeeViewVO> employeeList) {
+		this.employeeList = employeeList;
+	}
+
+	/**
+	 * @return the invoiceList
+	 */
+	public List<InvoiceVO> getInvoiceList() {
+		return invoiceList;
+	}
+
+	/**
+	 * @param invoiceList the invoiceList to set
+	 */
+	public void setInvoiceList(List<InvoiceVO> invoiceList) {
+		this.invoiceList = invoiceList;
+	}
+
+	/**
+	 * @return the passangerVO
+	 */
+	public CustomerVO getPassangerVO() {
+		return passangerVO;
+	}
+
+	/**
+	 * @param passangerVO the passangerVO to set
+	 */
+	public void setPassangerVO(CustomerVO passangerVO) {
+		this.passangerVO = passangerVO;
+	}
+
+	/**
+	 * @return the invPassAdd
+	 */
+	public boolean isInvPassAdd() {
+		return invPassAdd;
+	}
+
+	/**
+	 * @param invPassAdd the invPassAdd to set
+	 */
+	public void setInvPassAdd(boolean invPassAdd) {
+		this.invPassAdd = invPassAdd;
+	}
+
+	/**
+	 * @return the identityAdd
+	 */
+	public boolean isIdentityAdd() {
+		return identityAdd;
+	}
+
+	/**
+	 * @param identityAdd the identityAdd to set
+	 */
+	public void setIdentityAdd(boolean identityAdd) {
+		this.identityAdd = identityAdd;
+	}
+
+	/**
+	 * @return the countryList
+	 */
+	public List<CountryVO> getCountryList() {
+		return countryList;
+	}
+
+	/**
+	 * @param countryList the countryList to set
+	 */
+	public void setCountryList(List<CountryVO> countryList) {
+		this.countryList = countryList;
+	}
+
+	/**
+	 * @return the languageAdd
+	 */
+	public boolean isLanguageAdd() {
+		return languageAdd;
+	}
+
+	/**
+	 * @param languageAdd the languageAdd to set
+	 */
+	public void setLanguageAdd(boolean languageAdd) {
+		this.languageAdd = languageAdd;
+	}
+
+	/**
+	 * @return the mealAdd
+	 */
+	public boolean isMealAdd() {
+		return mealAdd;
+	}
+
+	/**
+	 * @param mealAdd the mealAdd to set
+	 */
+	public void setMealAdd(boolean mealAdd) {
+		this.mealAdd = mealAdd;
+	}
+
+	/**
+	 * @return the contactAdd
+	 */
+	public boolean isContactAdd() {
+		return contactAdd;
+	}
+
+	/**
+	 * @param contactAdd the contactAdd to set
+	 */
+	public void setContactAdd(boolean contactAdd) {
+		this.contactAdd = contactAdd;
+	}
+
+	/**
+	 * @return the remarksAdd
+	 */
+	public boolean isRemarksAdd() {
+		return remarksAdd;
+	}
+
+	/**
+	 * @param remarksAdd the remarksAdd to set
+	 */
+	public void setRemarksAdd(boolean remarksAdd) {
+		this.remarksAdd = remarksAdd;
+	}
+
+	/**
+	 * @return the corContactVO
+	 */
+	public CorContactVO getCorContactVO() {
+		return corContactVO;
+	}
+
+	/**
+	 * @param corContactVO the corContactVO to set
+	 */
+	public void setCorContactVO(CorContactVO corContactVO) {
+		this.corContactVO = corContactVO;
+	}
+
+	/**
+	 * @return the passangerDetailsList
+	 */
+	public List<CustDetailsVO> getPassangerDetailsList() {
+		return passangerDetailsList;
+	}
+
+	/**
+	 * @param passangerDetailsList the passangerDetailsList to set
+	 */
+	public void setPassangerDetailsList(List<CustDetailsVO> passangerDetailsList) {
+		this.passangerDetailsList = passangerDetailsList;
+	}
+
+	/**
+	 * @return the invoicePaxVOList
+	 */
+	public AddUpdDelVO getInvoicePaxVOList() {
+		return invoicePaxVOList;
+	}
+
+	/**
+	 * @param invoicePaxVOList the invoicePaxVOList to set
+	 */
+	public void setInvoicePaxVOList(AddUpdDelVO invoicePaxVOList) {
+		this.invoicePaxVOList = invoicePaxVOList;
+	}
+
+	/**
+	 * @return the strOnLoad
+	 */
+	public String getStrOnLoad() {
+		return strOnLoad;
+	}
+
+	/**
+	 * @param strOnLoad the strOnLoad to set
+	 */
+	public void setStrOnLoad(String strOnLoad) {
+		this.strOnLoad = strOnLoad;
+	}
+
+	/**
+	 * @return the bookingList
+	 */
+	public List<BookingVO> getBookingList() {
+		return bookingList;
+	}
+
+	/**
+	 * @param bookingList the bookingList to set
+	 */
+	public void setBookingList(List<BookingVO> bookingList) {
+		this.bookingList = bookingList;
+	}
+
+	/**
+	 * @return the fromBooking
+	 */
+	public boolean isFromBooking() {
+		return fromBooking;
+	}
+
+	/**
+	 * @param fromBooking the fromBooking to set
+	 */
+	public void setFromBooking(boolean fromBooking) {
+		this.fromBooking = fromBooking;
+	}
+
+	/**
+	 * @return the invoicePaxVO
+	 */
+	public InvoicePaxVO getInvoicePaxVO() {
+		return invoicePaxVO;
+	}
+
+	/**
+	 * @param invoicePaxVO the invoicePaxVO to set
+	 */
+	public void setInvoicePaxVO(InvoicePaxVO invoicePaxVO) {
+		this.invoicePaxVO = invoicePaxVO;
+	}
+
+	/**
+	 * @return the invPaxAdd
+	 */
+	public boolean isInvPaxAdd() {
+		return invPaxAdd;
+	}
+
+	/**
+	 * @param invPaxAdd the invPaxAdd to set
+	 */
+	public void setInvPaxAdd(boolean invPaxAdd) {
+		this.invPaxAdd = invPaxAdd;
+	}
+
+	/**
+	 * @return the invPmntAuthVO
+	 */
+	public InvPmntAuthVO getInvPmntAuthVO() {
+		return invPmntAuthVO;
+	}
+
+	/**
+	 * @param invPmntAuthVO the invPmntAuthVO to set
+	 */
+	public void setInvPmntAuthVO(InvPmntAuthVO invPmntAuthVO) {
+		this.invPmntAuthVO = invPmntAuthVO;
+	}
+
+	/**
+	 * @return the tourDepViewList
+	 */
+	public List<TourDepartureViewVO> getTourDepViewList() {
+		return tourDepViewList;
+	}
+
+	/**
+	 * @param tourDepViewList the tourDepViewList to set
+	 */
+	public void setTourDepViewList(List<TourDepartureViewVO> tourDepViewList) {
+		this.tourDepViewList = tourDepViewList;
+	}
+	
+	/**
+	 * @return the invEOItemViewList
+	 */
+	public List<InvoiceAndExchangeOrderViewVO> getInvEOItemViewList() {
+		return invEOItemViewList;
+	}
+
+	/**
+	 * @param invEOItemViewList the invEOItemViewList to set
+	 */
+	public void setInvEOItemViewList(
+			List<InvoiceAndExchangeOrderViewVO> invEOItemViewList) {
+		this.invEOItemViewList = invEOItemViewList;
+	}
+	
+	/**
+	 * @return the travelInsPolicyS
+	 */
+	public String getTravelInsPolicyS() {
+		return travelInsPolicyS;
+	}
+
+	/**
+	 * @param travelInsPolicyS the travelInsPolicyS to set
+	 */
+	public void setTravelInsPolicyS(String travelInsPolicyS) {
+		this.travelInsPolicyS = travelInsPolicyS;
+	}
+
+	/**
+	 * @return the travelInsPolicyF
+	 */
+	public String getTravelInsPolicyF() {
+		return travelInsPolicyF;
+	}
+
+	/**
+	 * @param travelInsPolicyF the travelInsPolicyF to set
+	 */
+	public void setTravelInsPolicyF(String travelInsPolicyF) {
+		this.travelInsPolicyF = travelInsPolicyF;
+	}
+	
+	/**
+	 * @return the eoInvVOList
+	 */
+	public AddUpdDelVO getEoInvVOList() {
+		return eoInvVOList;
+	}
+
+	/**
+	 * @param eoInvVOList the eoInvVOList to set
+	 */
+	public void setEoInvVOList(AddUpdDelVO eoInvVOList) {
+		this.eoInvVOList = eoInvVOList;
+	}
+
+	/**
+	 * @return the eoInvVO
+	 */
+	public EOInvoiceVO getEoInvVO() {
+		return eoInvVO;
+	}
+
+	/**
+	 * @param eoInvVO the eoInvVO to set
+	 */
+	public void setEoInvVO(EOInvoiceVO eoInvVO) {
+		this.eoInvVO = eoInvVO;
+	}
+
+	/**
+	 * @return the docTypeCd
+	 */
+	public String getDocTypeCd() {
+		return docTypeCd;
+	}
+
+	/**
+	 * @param docTypeCd the docTypeCd to set
+	 */
+	public void setDocTypeCd(String docTypeCd) {
+		this.docTypeCd = docTypeCd;
+	}
+
+	/**
+	 * @return the prefixValue
+	 */
+	public String getPrefixValue() {
+		return prefixValue;
+	}
+
+	/**
+	 * @param prefixValue the prefixValue to set
+	 */
+	public void setPrefixValue(String prefixValue) {
+		this.prefixValue = prefixValue;
+	}
+
+	/**
+	 * @return the docTypeDesc
+	 */
+	public String getDocTypeDesc() {
+		return docTypeDesc;
+	}
+
+	/**
+	 * @param docTypeDesc the docTypeDesc to set
+	 */
+	public void setDocTypeDesc(String docTypeDesc) {
+		this.docTypeDesc = docTypeDesc;
+	}
+	
+	/**
+	 * @return the availableTourDepList
+	 */
+	public List<TourDepartureVO> getAvailableTourDepList() {
+		return availableTourDepList;
+	}
+
+	/**
+	 * @param availableTourDepList the availableTourDepList to set
+	 */
+	public void setAvailableTourDepList(List<TourDepartureVO> availableTourDepList) {
+		this.availableTourDepList = availableTourDepList;
+	}
+	
+	/**
+	 * @return the availableTourDepVO
+	 */
+	public TourDepartureVO getAvailableTourDepVO() {
+		return availableTourDepVO;
+	}
+
+	/**
+	 * @param availableTourDepVO the availableTourDepVO to set
+	 */
+	public void setAvailableTourDepVO(TourDepartureVO availableTourDepVO) {
+		this.availableTourDepVO = availableTourDepVO;
+	}
+
+	/**
+	 * @return the cnInvoiceList
+	 */
+	public List<InvoiceVO> getCnInvoiceList() {
+		return cnInvoiceList;
+	}
+
+	/**
+	 * @param cnInvoiceList the cnInvoiceList to set
+	 */
+	public void setCnInvoiceList(List<InvoiceVO> cnInvoiceList) {
+		this.cnInvoiceList = cnInvoiceList;
+	}
+
+	/**
+	 * @return the airlineList
+	 */
+	public List<AirlineVO> getAirlineList() {
+		return airlineList;
+	}
+
+	/**
+	 * @param airlineList the airlineList to set
+	 */
+	public void setAirlineList(List<AirlineVO> airlineList) {
+		this.airlineList = airlineList;
+	}
+
+	/**
+	 * @return the invoiceItemOrgVO
+	 */
+	public InvoiceItemVO getInvoiceItemOrgVO() {
+		return invoiceItemOrgVO;
+	}
+
+	/**
+	 * @param invoiceItemOrgVO the invoiceItemOrgVO to set
+	 */
+	public void setInvoiceItemOrgVO(InvoiceItemVO invoiceItemOrgVO) {
+		this.invoiceItemOrgVO = invoiceItemOrgVO;
+	}
+
+	/**
+	 * @return the invoicePaymentOrgVO
+	 */
+	public InvoicePaymentVO getInvoicePaymentOrgVO() {
+		return invoicePaymentOrgVO;
+	}
+
+	/**
+	 * @param invoicePaymentOrgVO the invoicePaymentOrgVO to set
+	 */
+	public void setInvoicePaymentOrgVO(InvoicePaymentVO invoicePaymentOrgVO) {
+		this.invoicePaymentOrgVO = invoicePaymentOrgVO;
+	}
+
+	/**
+	 * @return the inputTaxCodeVOList
+	 */
+	public List<TaxCodeVO> getInputTaxCodeVOList() {
+		return inputTaxCodeVOList;
+	}
+
+	/**
+	 * @param inputTaxCodeVOList the inputTaxCodeVOList to set
+	 */
+	public void setInputTaxCodeVOList(List<TaxCodeVO> inputTaxCodeVOList) {
+		this.inputTaxCodeVOList = inputTaxCodeVOList;
+	}
+
+	/**
+	 * @return the outputTaxCodeVOList
+	 */
+	public List<TaxCodeVO> getOutputTaxCodeVOList() {
+		return outputTaxCodeVOList;
+	}
+
+	/**
+	 * @param outputTaxCodeVOList the outputTaxCodeVOList to set
+	 */
+	public void setOutputTaxCodeVOList(List<TaxCodeVO> outputTaxCodeVOList) {
+		this.outputTaxCodeVOList = outputTaxCodeVOList;
+	}
+	
+	/**
+	 * @return the gSTPeriod
+	 */
+	public boolean isGSTPeriod() {
+		return GSTPeriod;
+	}
+
+	/**
+	 * @param gSTPeriod the gSTPeriod to set
+	 */
+	public void setGSTPeriod(boolean gSTPeriod) {
+		GSTPeriod = gSTPeriod;
+	}
+
+	public boolean getEditablePOSUploaded() {
+		return editablePOSUploaded;
+	}
+
+	public void setEditablePOSUploaded(boolean editablePOSUploaded) {
+		this.editablePOSUploaded = editablePOSUploaded;
+	}
+
+	public boolean getLockAmountChanges() {
+		return lockAmountChanges;
+	}
+
+	public void setLockAmountChanges(boolean lockAmountChanges) {
+		this.lockAmountChanges = lockAmountChanges;
+	}
+
+	public double getPosTotalAmountLocked() {
+		return posTotalAmountLocked;
+	}
+
+	public void setPosTotalAmountLocked(double posTotalAmountLocked) {
+		this.posTotalAmountLocked = posTotalAmountLocked;
+	}
+
+	public String getPrefixValueRN() {
+		return prefixValueRN;
+	}
+
+	public void setPrefixValueRN(String prefixValueRN) {
+		this.prefixValueRN = prefixValueRN;
+	}
+	
+	public String getCancellationReason() {
+		return cancellationReason;
+	}
+
+	public void setCancellationReason(String cancellationReason) {
+		this.cancellationReason = cancellationReason;
+	}
+
+	public boolean isSaveAccCodeOnly() {
+		return saveAccCodeOnly;
+	}
+
+	public void setSaveAccCodeOnly(boolean saveAccCodeOnly) {
+		this.saveAccCodeOnly = saveAccCodeOnly;
+	}
+
+	public Boolean getIsEInvSubm() {
+		return isEInvSubm;
+	}
+
+	public void setIsEInvSubm(Boolean isEInvSubm) {
+		this.isEInvSubm = isEInvSubm;
+	}
+
+	public List<InvoiceVO> getMulpInvSubmRespList() {
+		return mulpInvSubmRespList;
+	}
+
+	public void setMulpInvSubmRespList(List<InvoiceVO> mulpInvSubmRespList) {
+		this.mulpInvSubmRespList = mulpInvSubmRespList;
+	}
+
+	public InvoiceVO[] getSelectedInvoiceList() {
+		return selectedInvoiceList;
+	}
+
+	public void setSelectedInvoiceList(InvoiceVO[] selectedInvoiceList) {
+		if (savedSelectedInvoiceList == null) savedSelectedInvoiceList = new ArrayList<InvoiceVO>();
+    	if (selectedInvoiceList != null) {
+    		boolean existed = false;
+    		for (Object obj : selectedInvoiceList) {
+    			InvoiceVO custVO = (InvoiceVO) obj;
+        		existed = false;
+        		for (InvoiceVO selectedVO : savedSelectedInvoiceList) {
+        			if (selectedVO.getId().equals(custVO.getId())) {
+        				existed = true;
+        				break;
+        			}
+        		}
+        		if (!existed) savedSelectedInvoiceList.add(custVO);
+        	}
+    	}
+    	
+    	List<InvoiceVO> dataList = (List<InvoiceVO>) lazyDataModel.getWrappedData();
+    	if (dataList != null && dataList.size() > 0 && selectedInvoiceList != null) {
+    		List<InvoiceVO> removeList = new ArrayList<InvoiceVO>();
+    		for (InvoiceVO data : dataList) {
+    			for (Object obj : selectedInvoiceList) {
+    				InvoiceVO custVO = (InvoiceVO) obj;
+    	    		if (data.getId().equals(custVO.getId())) {
+    	    			removeList.add(data);
+    	    			break;
+    	    		}
+    	    	}
+    		}
+    		if(removeList.size() > 0) dataList.removeAll(removeList);
+    		removeList = new ArrayList<InvoiceVO>();
+    		for (InvoiceVO data : dataList) {
+    			for (InvoiceVO selectedVO : savedSelectedInvoiceList) {
+    	    		if (data.getId().equals(selectedVO.getId())) {
+    	    			removeList.add(selectedVO);
+    	    			break;
+    	    		}
+    	    	}
+    		}
+    		if(removeList.size() > 0) savedSelectedInvoiceList.removeAll(removeList);
+    	}
+    	this.selectedInvoiceList = savedSelectedInvoiceList.toArray(new InvoiceVO[savedSelectedInvoiceList.size()]);
+	}
+
+	public List<InvoiceVO> getSavedSelectedInvoiceList() {
+		return savedSelectedInvoiceList;
+	}
+
+	public void setSavedSelectedInvoiceList(List<InvoiceVO> savedSelectedInvoiceList) {
+		this.savedSelectedInvoiceList = savedSelectedInvoiceList;
+	}
+
+	public Date getFromDate() {
+		return fromDate;
+	}
+
+	public void setFromDate(Date fromDate) {
+		this.fromDate = fromDate;
+	}
+
+	public Date getToDate() {
+		return toDate;
+	}
+
+	public void setToDate(Date toDate) {
+		this.toDate = toDate;
+	}
+
+	public String getOrderSourceCode() {
+		return orderSourceCode;
+	}
+
+	public void setOrderSourceCode(String orderSourceCode) {
+		this.orderSourceCode = orderSourceCode;
+	}
+	
+	public String geteInvoiceStatus() {
+		return eInvoiceStatus;
+	}
+
+	public void seteInvoiceStatus(String eInvoiceStatus) {
+		this.eInvoiceStatus = eInvoiceStatus;
+	}
+
+	public String[] geteInvoiceStatusList() {
+		return eInvoiceStatusList;
+	}
+
+	public void seteInvoiceStatusList(String[] eInvoiceStatusList) {
+		this.eInvoiceStatusList = eInvoiceStatusList;
+	}
+
+	public String getPaymentStatus() {
+		return paymentStatus;
+	}
+
+	public void setPaymentStatus(String paymentStatus) {
+		this.paymentStatus = paymentStatus;
+	}
+
+	public String[] getPaymentStatusList() {
+		return paymentStatusList;
+	}
+
+	public void setPaymentStatusList(String[] paymentStatusList) {
+		this.paymentStatusList = paymentStatusList;
+	}
+
+	public LazyDataModel<InvoiceVO> getLazyDataModel() {
+		return lazyDataModel;
+	}
+
+	public void setLazyDataModel(LazyDataModel<InvoiceVO> lazyDataModel) {
+		this.lazyDataModel = lazyDataModel;
+	}
+
+	public Date getDepartureDateFr() {
+		return departureDateFr;
+	}
+
+	public void setDepartureDateFr(Date departureDateFr) {
+		this.departureDateFr = departureDateFr;
+	}
+
+	public Date getDepartureDateTo() {
+		return departureDateTo;
+	}
+
+	public void setDepartureDateTo(Date departureDateTo) {
+		this.departureDateTo = departureDateTo;
+	}
+
+	public Boolean getShowSubmittedInvOnly() {
+		return showSubmittedInvOnly;
+	}
+
+	public void setShowSubmittedInvOnly(Boolean showSubmittedInvOnly) {
+		this.showSubmittedInvOnly = showSubmittedInvOnly;
+	}
+	
+}

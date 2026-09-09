@@ -1,0 +1,164 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddInvoicePaymentsDialog.show();
+		} else {
+			varAddInvoicePaymentsDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid id="idInvPaymentPenal">
+	<p:row>
+		<p:column style="width:150px;">
+			<h:outputLabel for="idPmntDt">Payment Date <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:calendar id="idPmntDt" label="Payment Date" value="#{salesBean.invoicePaymentVO.pmntDt}" readonlyInput="true" pattern="dd-MMM-yyyy" 
+				mindate="#{salesBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart, 'dd-MMM-yyyy')}" navigator="true" showButtonPanel="true"
+				maxdate="#{salesBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd, 'dd-MMM-yyyy')}" required="true"
+				disabled="#{salesBean.disabledEditPayment}"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idOrgRcptNo">Original Receipt No</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idOrgRcptNo" label="Original Receipt No" value="#{salesBean.invoicePaymentVO.code}" maxlength="100" readonly="true" style="background:#ccc" disabled="#{salesBean.disabledEditPayment}"/>
+		</p:column>
+	</p:row> 
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idPmntType">Payment Type <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idPmntType" label="Payment Type" value="#{salesBean.invoicePaymentVO.pmntTypeCd}" required="true" disabled="#{salesBean.disabledEditPayment}">  
+	        	<f:selectItem itemLabel="Select One" itemValue=""/>
+	        	<f:selectItems value="#{bterp:lookupItemList('pymt_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        	<p:ajax process="@this" update="idRefNo" global="false"/>
+		    </h:selectOneMenu>
+		</p:column>
+	</p:row> 
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idRefNo">Payment Reference No</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idRefNo" label="Payment Reference No" value="#{salesBean.invoicePaymentVO.refNo}" maxlength="#{(salesBean.invoicePaymentVO.pmntTypeCd eq 'crd_card') ? '10' : '20'}" disabled="#{salesBean.disabledEditPayment}"/>
+		</p:column>
+	</p:row> 
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idPmntFor">Being Payment For <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idPmntFor" label="Being Payment For" value="#{salesBean.invoicePaymentVO.pmntFor}" required="true" maxlength="255" disabled="#{salesBean.disabledEditPayment}"/>
+		</p:column>
+	</p:row>  
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idAmtPaid">Amount Paid <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<!--p:inputText id="idAmtPaid" label="Amount Paid" value="#{salesBean.invoicePaymentVO.amount}" required="true"/-->
+			<p:inputText id="idAmtPaid" label="Amount Paid" value="#{salesBean.invoicePaymentVO.amount}" required="true" maxlength="10" disabled="#{salesBean.disabledEditPayment}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idIssuedBy">Issued By <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idIssuedBy" label="Issued By" value="#{(salesBean.invoicePaymentVO.pmntIssuedBy eq NULL or salesBean.invoicePaymentVO.pmntIssuedBy eq '') ? 'SYSTEM' : salesBean.invoicePaymentVO.pmntIssuedBy}" readonly="true" style="background:#ccc"
+				disabled="#{salesBean.disabledEditPayment}"/>
+			<!--h:selectOneMenu id="idIssuedBy" label="Issued By" value="#{salesBean.invoicePaymentVO.issuerId}" effect="fade" required="true">
+				<f:selectItem itemLabel="Select One" itemValue=""/>
+				<f:selectItems value="#{salesBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+			</h:selectOneMenu-->
+		</p:column>
+	</p:row>
+	<!--p:row>
+		<p:column>
+			<h:outputLabel for="idCustNo">Customer No</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCustNo" label="Customer No" value="salesBean.invoicePaymentVO." readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row-->
+	 
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idReceivedFr">Received From</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idReceivedFr" label="Received From" value="#{salesBean.invoicePaymentVO.recievedFr}" required="true" maxlength="255" disabled="#{salesBean.disabledEditPayment}"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2" style="vertical-align: top;">
+			<p:fileUpload id="idAttachmentScannedCopy"
+				fileUploadListener="#{salesBean.handlePaymentFileUpload}"
+				mode="advanced" auto="true" sizeLimit="10000000" label="Choose a file or drag"
+				allowTypes="/(\.|\/)(pdf|jpg|jpeg|png)$/"
+				description="*.pdf;*.jpg;*.jpeg,*.png"
+				update="msg, :idAddInvoicePaymentsForm:idInvPmntAttachmentListPanel" oncomplete="varStatusDialog.hide()"
+				disabled="#{salesBean.invoicePaymentVO.id eq null}"/>
+			<p:outputLabel rendered="#{empty salesBean.invoicePaymentVO.id}"><span class="required">**</span> Please save this invoice, return here again for the payment receipt upload.</p:outputLabel>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{salesBean.invoicePaymentVO.id ne null}">
+		<p:column colspan="2" style="vertical-align: top;">
+			<p:panel id="idInvPmntAttachmentListPanel" header="Payment Attacment" toggleable="true" toggleSpeed="500">
+				<p:dataTable id="idInvPmntAttachmentListTable" value="#{salesBean.invoicePaymentVO.invoicePaymentAttachmentList}" var="invAttachVO"
+					paginator="true" rows="5" 
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+					rendered="#{not empty salesBean.invoicePaymentVO.invoicePaymentAttachmentList}"><!-- rendered="#{not empty salesBean.invoicePaymentVO.invoicePaymentAttachmentList}" -->
+					<p:column headerText="Delete" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.setInvoicePaymentAttachmentVO(invAttachVO)}" oncomplete="varDelPaymentAttachmentDialog.show()" process="@this"/>
+					</p:column>
+					
+					<p:column headerText="File Path">
+						<h:outputLink target="_blank" value="#{request.contextPath}#{salesBean.destinationPaymentAttachmentPath}/#{invAttachVO.filePath}"
+							style="color: #db3333;text-decoration: underline;margin-right: 10px;"
+							rendered="#{not empty invAttachVO.scannedPath and not empty invAttachVO.filePath}">
+							<h:outputText value="#{invAttachVO.scannedPath}"/>
+						</h:outputLink>
+					</p:column>
+					
+					<p:column headerText="Created Date">
+						<h:outputText value="#{invAttachVO.updatedDate}">
+							<f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss a"/>
+						</h:outputText>
+					</p:column>
+				</p:dataTable>
+			</p:panel>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{salesBean.addInvPmnt}" update="@form,:idAddInvoiceForm:idInvDetailsTab:idInvPmntListTable,:idAddInvoiceForm:idAmtPaid,:idAddInvoiceForm:idAmtDue,:idAddInvoiceForm:idEmailPayment"
+		disabled="#{not salesBean.invPmntAuthVO.pmntAdd}" rendered="#{salesBean.invPmntAuthVO.pmntAdd and salesBean.invPmntAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{salesBean.updateInvPmnt}" update="@form,:idAddInvoiceForm:idInvDetailsTab:idInvPmntListTable,:idAddInvoiceForm:idAmtPaid,:idAddInvoiceForm:idAmtDue,:idAddInvoiceForm:idEmailPayment" oncomplete="onValidation(xhr, status, args)"
+		rendered="#{not salesBean.invPmntAdd and not salesBean.disabledEditPayment}"/>
+	<p:commandButton value="#{msg['common.button.label.close']}" actionListener="#{salesBean.resetInvPmntForm}" update="@form,:idAddInvoiceForm:idInvDetailsTab:idInvPmntListTable" process="@this" oncomplete="varAddInvoicePaymentsDialog.hide()" global="false">
+		<pe:resetEditableValues for="idAddInvoicePaymentsForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

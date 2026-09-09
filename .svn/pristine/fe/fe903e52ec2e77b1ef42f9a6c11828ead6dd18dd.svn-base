@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version last-->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="monthly_sales_ticketing_rpt" pageWidth="966" pageHeight="595" orientation="Landscape" whenNoDataType="AllSectionsNoDetail" columnWidth="828" leftMargin="7" rightMargin="7" topMargin="20" bottomMargin="20" whenResourceMissingType="Empty" uuid="78182573-a563-484d-9d55-5781194bb148">
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<subDataset name="Dataset1" uuid="ac7146fe-a696-47d5-ad74-88403a9b2fca">
+		<property name="com.jaspersoft.studio.data.defaultdataadapter" value="AWSDB"/>
+		<queryString>
+			<![CDATA[SELECT INV.id, INV.SELLER_NAME, INV.dt_inv, INV.id_tour_dep, INV.airline_no, INV.code, INV.tour_code,
+(SELECT COUNT(1) FROM invoice_pax invPax WHERE INV.id = invPax.id_inv) AS totalPax,
+	INV.SELL, INV.NETT, (INV.SELL - INV.NETT) AS PROFIT,
+ 	concat(ps.salutation_cd, ' ', ps.first_name, ' ', ps.last_name) AS CUST_NAME,
+ 	cust.corporate_name as company_name,
+ 	(SELECT GROUP_CONCAT(DISTINCT (CASE WHEN ticket_no = '' THEN NULL ELSE ticket_no END) ORDER BY
+ticket_no SEPARATOR ', ')
+		FROM invoice_pax invPax WHERE INV.id = invPax.id_inv) AS tickets FROM ( SELECT inv.id, inv.code, inv.dt_inv,
+inv.id_tour_dep, tdp.code AS tour_code, inv.id_customer, usr.user_name as SELLER_NAME,
+ 	GROUP_CONCAT(DISTINCT (CASE WHEN airflight.code = '' THEN NULL ELSE airflight.code END)
+	 			ORDER BY airflight.code SEPARATOR ', ') AS airline_no,
+ 	SUM( CASE WHEN invItem.amount < 0.00 THEN 0.00 ELSE invItem.amount END) AS SELL,
+ 	SUM( invItem.quantity * IFNULL(invItem.net_price, 0.00)) AS NETT FROM invoice inv INNER JOIN (
+	tour_dep tdp INNER JOIN tour_pkg tourpkg 		ON tdp.id_tour_pkg = tourpkg.id AND tourpkg.status_cd = 'AC'
+ 	) ON inv.id_tour_dep = tdp.id AND inv.cat_cd = 'ti'
+	INNER JOIN invoice_item invItem ON inv.id = invItem.id_inv
+	LEFT JOIN airline airflight ON invItem.id_airline = airflight.id
+	INNER JOIN employee ep ON inv.id_saler = ep.id 	INNER JOIN sec_user usr ON ep.u_sec_user = usr.uuid
+ WHERE inv.id_company = 1	AND inv.id_saler = 50
+	AND YEAR(inv.dt_inv) = '2014' AND MONTH(inv.dt_inv) = '03' AND inv.id_saler =50 GROUP BY inv.id )
+INV INNER JOIN customer cust ON INV.id_customer = cust.id 	JOIN person ps ON cust.id_pc = ps.id
+ ORDER BY airline_no ASC]]>
+		</queryString>
+	</subDataset>
+	<parameter name="companyName" class="java.lang.String"/>
+	<parameter name="salesPerson" class="java.lang.String"/>
+	<parameter name="idAirline" class="java.lang.String"/>
+	<parameter name="tourCode" class="java.lang.String"/>
+	<parameter name="monthYear" class="java.lang.String"/>
+	<parameter name="monthlyTicketingSalesList" class="java.lang.List"/>
+	<parameter name="invPrefixVal" class="java.lang.String"/>
+	<parameter name="psPrefixVal" class="java.lang.String"/>
+	<queryString language="SQL">
+		<![CDATA[]]>
+	</queryString>
+	<field name="totalPax" class="java.lang.Integer">
+		<fieldDescription><![CDATA[totalPax]]></fieldDescription>
+	</field>
+	<field name="airlineNo" class="java.lang.String">
+		<fieldDescription><![CDATA[airlineNo]]></fieldDescription>
+	</field>
+	<field name="companyName" class="java.lang.String">
+		<fieldDescription><![CDATA[companyName]]></fieldDescription>
+	</field>
+	<field name="customerName" class="java.lang.String">
+		<fieldDescription><![CDATA[customerName]]></fieldDescription>
+	</field>
+	<field name="dtInvoice" class="java.util.Date">
+		<fieldDescription><![CDATA[dtInvoice]]></fieldDescription>
+	</field>
+	<field name="idInvoice" class="java.lang.Long">
+		<fieldDescription><![CDATA[idInvoice]]></fieldDescription>
+	</field>
+	<field name="invoiceCode" class="java.lang.String">
+		<fieldDescription><![CDATA[invoiceCode]]></fieldDescription>
+	</field>
+	<field name="psNo" class="java.lang.String">
+		<fieldDescription><![CDATA[psNo]]></fieldDescription>
+	</field>
+	<field name="nettAmount" class="java.lang.Double">
+		<fieldDescription><![CDATA[nettAmount]]></fieldDescription>
+	</field>
+	<field name="profitAmount" class="java.lang.Double">
+		<fieldDescription><![CDATA[profitAmount]]></fieldDescription>
+	</field>
+	<field name="rowNumber" class="java.lang.Integer">
+		<fieldDescription><![CDATA[rowNumber]]></fieldDescription>
+	</field>
+	<field name="salesPerson" class="java.lang.String">
+		<fieldDescription><![CDATA[salesPerson]]></fieldDescription>
+	</field>
+	<field name="sellAmount" class="java.lang.Double">
+		<fieldDescription><![CDATA[sellAmount]]></fieldDescription>
+	</field>
+	<field name="statusCode" class="java.lang.String">
+		<fieldDescription><![CDATA[statusCode]]></fieldDescription>
+	</field>
+	<field name="ticketNo" class="java.lang.String">
+		<fieldDescription><![CDATA[ticketNo]]></fieldDescription>
+	</field>
+	<field name="tourCode" class="java.lang.String">
+		<fieldDescription><![CDATA[tourCode]]></fieldDescription>
+	</field>
+	<field name="referenceNoList" class="java.lang.String"/>
+	<variable name="SUM_SELL" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{sellAmount}]]></variableExpression>
+	</variable>
+	<variable name="SUM_NETT" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{nettAmount}]]></variableExpression>
+	</variable>
+	<variable name="SUM_PROFIT" class="java.lang.Double">
+		<variableExpression><![CDATA[$V{SUM_SELL} - $V{SUM_NETT}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="101" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="-7" y="19" width="958" height="25" uuid="235ce4bd-774a-4970-84d7-e0c00a35b5ee"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="18" isBold="true" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Monthly Ticketing Sales Report - " + $P{monthYear}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="-7" y="44" width="460" height="18" uuid="9c2b6d44-8649-41e1-9329-5efec8d48501"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="12" isBold="true" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{companyName}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="-7" y="74" width="289" height="18" uuid="f44049f4-e7ed-4f56-bab6-c2f76fae8670"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="12" isBold="true" isPdfEmbedded="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Sales Person: " + $P{salesPerson}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="282" y="74" width="171" height="18" uuid="d658e883-b393-4362-9c4b-5865e1d11815"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="11" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Airline No: " + ($P{idAirline} == null ? "" : $P{idAirline})]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="567" y="74" width="384" height="18" uuid="74a4f644-a676-4d90-bb26-856420910f2c"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="11" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Tour Code: " + ($P{tourCode} == null ? "" : $P{tourCode})]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="453" y="-1" width="498" height="20" uuid="f9f2cd0d-c25a-4d3c-a58f-d6fae4db40d9">
+					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Report Print On " + new SimpleDateFormat("dd-MMM-yyyy@hh:mm a").format(new Date())]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<columnHeader>
+		<band height="20">
+			<line>
+				<reportElement positionType="Float" x="-7" y="19" width="958" height="1" uuid="7dc4c615-c1bd-4776-88a0-bdb4b1321dd6"/>
+			</line>
+			<staticText>
+				<reportElement x="18" y="0" width="68" height="19" uuid="28ca7653-ecaf-4825-a7c0-db754969f44e"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Sales Person]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="86" y="0" width="52" height="19" uuid="1a853adf-de1f-4d51-807b-3b2ace5ee7df">
+					<property name="local_mesure_unitwidth" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Airline No]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="138" y="0" width="66" height="19" uuid="253fabac-c9b2-4808-94e4-30eba538ca5c"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Tour Code]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="204" y="0" width="78" height="19" uuid="5fff4456-ebcf-4692-9a0c-a2aa659c64d5"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Reference No(s)]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="282" y="0" width="68" height="19" uuid="b3a97492-0790-4dca-86f0-3b630365927e"/>
+				<textElement textAlignment="Center">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Sales Date]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="350" y="0" width="103" height="19" uuid="9e9cbdc9-8895-42b9-9276-262f5691e006"/>
+				<textElement textAlignment="Center">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Invoice No]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="541" y="0" width="26" height="19" uuid="77a3d376-3c44-4e79-ba32-fb6fbbbbb812"/>
+				<textElement textAlignment="Center">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Pax]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="825" y="0" width="58" height="19" uuid="92b554b5-dc67-42da-8397-9f617c53e4a1"/>
+				<textElement textAlignment="Center">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Nett]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="883" y="0" width="68" height="19" uuid="bf7bacca-b040-4a86-8abf-f65eb5cf88bf">
+					<property name="local_mesure_unitwidth" value="pixel"/>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Profit]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="-7" y="0" width="25" height="19" uuid="1790422f-e791-4115-b0a9-d29863a9cfff">
+					<property name="local_mesure_unitwidth" value="pixel"/>
+				</reportElement>
+				<textElement textAlignment="Left">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[No.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="567" y="0" width="100" height="19" uuid="8b969b77-6aca-4cee-b533-93c2cf54c2cd">
+					<property name="local_mesure_unitwidth" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Customer Name]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="667" y="0" width="100" height="19" uuid="35f65508-d768-4a6c-8bb8-fabab458a592">
+					<property name="local_mesure_unitwidth" value="pixel"/>
+				</reportElement>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Company Name]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="767" y="0" width="58" height="19" uuid="b35bc472-1022-4661-a0eb-660a8bf739b9"/>
+				<textElement textAlignment="Center">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Sell]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="453" y="0" width="88" height="19" uuid="e6ddd837-2663-455d-8ebd-d051fdeb542f"/>
+				<textElement textAlignment="Center">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Pax Statement No.]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="37" splitType="Prevent">
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="-7" y="0" width="25" height="21" uuid="9af6ca48-3c09-4613-87ce-c7da505ab51c">
+					<property name="local_mesure_unity" value="pixel"/>
+				</reportElement>
+				<textFieldExpression><![CDATA[$F{rowNumber}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="18" y="0" width="68" height="21" uuid="661ac50c-20e0-4040-8c5e-1a1cae2aae62"/>
+				<textFieldExpression><![CDATA[$F{salesPerson}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="86" y="0" width="52" height="21" uuid="f324c7ca-d5f7-4f5d-b36c-787762a7607f">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+					<property name="local_mesure_unity" value="pixel"/>
+				</reportElement>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[$F{airlineNo}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="138" y="0" width="66" height="21" uuid="4b610298-bc0c-4c62-9907-6320cf217f33"/>
+				<textFieldExpression><![CDATA[($F{tourCode}).trim()]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true">
+				<reportElement positionType="Float" isPrintRepeatedValues="false" x="204" y="0" width="78" height="21" isRemoveLineWhenBlank="true" uuid="d0ee7efe-629f-4867-96eb-235f1a4241f0">
+					<property name="local_mesure_unitheight" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Left" verticalAlignment="Top">
+					<paragraph lineSpacingSize="0.0" tabStopWidth="0"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{referenceNoList}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="282" y="0" width="68" height="21" uuid="7b90e64f-1daa-4e99-9a22-4370705d2531"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[new java.text.SimpleDateFormat("dd-MMM-yyyy").format($F{dtInvoice})]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="350" y="0" width="103" height="21" uuid="22fa6fc4-15cc-43b5-88b5-17f3e0b64b89"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[($F{invoiceCode} == null || $F{invoiceCode}.trim().isEmpty())
+				        ? ""
+				        : (($P{invPrefixVal} == null ? "" : $P{invPrefixVal} + " ")
+				           + $F{invoiceCode})]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="541" y="0" width="26" height="21" uuid="4809c7ea-b823-4b80-b193-2e1539cdad10">
+					<property name="local_mesure_unitwidth" value="pixel"/>
+				</reportElement>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[$F{totalPax}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="667" y="0" width="100" height="21" uuid="9d05294e-e4bc-4972-967b-90c7af2b7e91"/>
+				<textFieldExpression><![CDATA[$F{companyName}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="567" y="0" width="100" height="21" uuid="7253a552-3996-4095-b51a-bb3f81a44357">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<textFieldExpression><![CDATA[$F{customerName}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="767" y="0" width="58" height="21" uuid="ef9c1c5f-5ac7-4c9c-8f83-841dae57d215">
+					<property name="local_mesure_unitwidth" value="pixel"/>
+				</reportElement>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$F{sellAmount}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="825" y="0" width="58" height="21" uuid="0d754de9-76e5-425c-bd63-aeb13aab60f4"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$F{nettAmount}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="883" y="0" width="68" height="21" uuid="ebf43704-f3d0-4708-a1ff-cf6810faf07d"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$F{profitAmount}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" stretchType="RelativeToTallestObject" x="453" y="0" width="88" height="21" uuid="10c54142-8dba-462b-8667-dbb5795ccb80"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[($F{psNo} == null || $F{psNo}.trim().isEmpty())
+				        ? ""
+				        : $P{psPrefixVal} + " " + $F{psNo}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band height="16" splitType="Stretch">
+			<line>
+				<reportElement positionType="Float" x="-7" y="15" width="958" height="1" uuid="cad1ade7-13b3-4922-93b1-ce3c3b1c2692">
+					<property name="local_mesure_unity" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.y" value="px"/>
+					<property name="local_mesure_unitx" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				</reportElement>
+			</line>
+		</band>
+	</columnFooter>
+	<pageFooter>
+		<band height="20">
+			<textField>
+				<reportElement x="667" y="1" width="216" height="18" uuid="48f11bfe-d69f-4f2d-99da-565834121353"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{PAGE_NUMBER} + "  of  "]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="883" y="1" width="68" height="18" uuid="887cf4f6-49ba-4a83-951a-4a39d46621e7"/>
+				<textElement textAlignment="Left"/>
+				<textFieldExpression><![CDATA[$V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<summary>
+		<band height="33" splitType="Stretch">
+			<staticText>
+				<reportElement x="667" y="8" width="100" height="18" uuid="5eee4719-38cd-45e9-95ba-af92851693db">
+					<property name="local_mesure_unity" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.y" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="11" isBold="true"/>
+					<paragraph rightIndent="2"/>
+				</textElement>
+				<text><![CDATA[Grand Total]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="883" y="8" width="68" height="18" uuid="6d342f54-bb48-4f3d-995b-eaa5ca857f00">
+					<property name="local_mesure_unity" value="pixel"/>
+				</reportElement>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{SUM_PROFIT}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="825" y="8" width="58" height="18" uuid="9c9da209-88f9-46de-8167-4045305f7555"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{SUM_NETT}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true">
+				<reportElement x="767" y="8" width="58" height="18" uuid="585cfa20-1d7d-48b1-becf-378aceb998e8">
+					<property name="local_mesure_unity" value="pixel"/>
+				</reportElement>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{SUM_SELL}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement positionType="Float" x="-7" y="0" width="958" height="1" uuid="3b5a6d11-8078-439f-b849-b159c225cd4e">
+					<property name="local_mesure_unity" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.y" value="px"/>
+				</reportElement>
+			</line>
+			<line>
+				<reportElement positionType="Float" x="-7" y="26" width="958" height="1" uuid="91c33394-23f9-4ce5-825e-1fbc7eb8f012">
+					<property name="local_mesure_unity" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.y" value="px"/>
+					<property name="local_mesure_unitx" value="pixel"/>
+				</reportElement>
+			</line>
+		</band>
+	</summary>
+</jasperReport>

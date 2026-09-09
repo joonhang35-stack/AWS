@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.springframework.org/schema/webflow http://www.springframework.org/schema/webflow/spring-webflow.xsd"
+      start-state="tour_list">
+
+	<!-- backing bean, extends com.bcs.zsg.component.common.web.swf.bean.AppBackingBean -->
+	<var name="tourPkgBean" class="com.bcs.zsg.product.web.bean.TourCruisePackageBean"/>
+	<var name="custBean" class="com.bcs.zsg.sales.web.bean.CustomerBean"/>
+	<var name="salesInvBean" class="com.bcs.zsg.sales.web.bean.InvoiceBean"/>
+	<var name="purchaseEOBean" class="com.bcs.zsg.purchase.web.bean.PurchaseEOBean"/>
+	
+	<view-state id="tour_list">
+		<on-entry>
+			<evaluate expression="tourPkgBean.init(4)"/>
+			<evaluate expression="custBean.init(1)"/>
+			<evaluate expression="salesInvBean.initPopUp()"/>
+			<evaluate expression="purchaseEOBean.initEOPopUp(null)"/>
+		</on-entry>
+		
+		<transition on="REDIRECT_TO_DETAIL" to="tour_details" />
+	</view-state>
+	
+	<view-state id="tour_list_reset" view="/WEB-INF/flows/product/cruise/tour/tour_list.xhtml">
+		<on-entry>
+			<evaluate expression="tourPkgBean.handleTourCatSelect(true)"/>
+			<evaluate expression="tourPkgBean.resetForm()"/>
+		</on-entry>
+		<transition on="REDIRECT_TO_DETAIL" to="tour_details" />
+	</view-state>
+	
+	<view-state id="tour_details" view="/WEB-INF/flows/product/cruise/tour/details/tour_pkg_details.xhtml">
+		<transition on="BACK_TO_LIST" to="tour_list_reset" />
+	</view-state>
+	
+	<end-state id="finish"/>
+	
+</flow>

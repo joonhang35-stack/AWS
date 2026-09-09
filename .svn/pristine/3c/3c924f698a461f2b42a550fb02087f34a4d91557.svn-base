@@ -1,0 +1,515 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	  	<p:growl id="msg" />
+	  	
+			<script type="text/javascript">
+			function onValidationEOSave(xhr, status, args) {  
+				if (!args.validationFailed) {   
+					if(!args.validateError)
+						{ 
+						varEditFuncDialog.hide(); 
+						}
+				} 
+				
+			}
+			</script>
+<div style="height:500px;overflow:auto;">
+		<h:panelGrid columns="6">
+				<p:column colspan="4">
+					<p:fieldset legend="Supplier Details ">
+						<p:panelGrid id="idSupplierDetails">
+						<p:row>
+						<p:column><h:outputLabel for="idShowSuppName">Supplier Name<span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<h:selectOneMenu id="idShowSuppName" value="#{purchaseEOBean.supplierVO.personId}" >  
+						           <f:selectItem itemLabel="Select One" itemValue="" />  
+						           <f:selectItems value="#{purchaseEOBean.supplierList}" var="vo" itemLabel="#{vo.fullName}" itemValue="#{vo.personId}" /> 
+						           <p:ajax update="idSupplierDetails,:idEditExOrderForm:idAddAttn,:idEditExOrderForm:idAddDueDt,:idEditExOrderForm:idAddDepDt" listener="#{purchaseEOBean.handleSupplierChange}" />  
+						    </h:selectOneMenu>
+				        </p:column>
+<!-- 				        <p:column>
+				        	<p:commandButton value="+" actionListener="#{purchaseEOBean.resetForm}" oncomplete="varSuppOptDialog.show()" immediate="true" />
+				        </p:column> -->
+				        </p:row>
+				        <p:row>
+						<p:column><h:outputLabel for="idShowSuppNo">Supplier Number </h:outputLabel></p:column>
+						<p:column><h:outputLabel id="idShowSuppNo" value="#{purchaseEOBean.supplierVO.sysNo}"> </h:outputLabel></p:column>
+						</p:row>
+						<p:row>
+						<p:column><h:outputLabel for="idShowSuppAddr1">Address Line 1 </h:outputLabel></p:column>
+						<p:column><h:outputLabel id="idShowSuppAddr1" value="#{purchaseEOBean.supplierVO.add1}"> </h:outputLabel></p:column>
+						</p:row>
+						<p:row>
+						<p:column><h:outputLabel for="idShowSuppAddr2">Address Line 2 </h:outputLabel></p:column>
+						<p:column><h:outputLabel id="idShowSuppAddr2" value="#{purchaseEOBean.supplierVO.add2}"> </h:outputLabel></p:column>
+						</p:row>
+						<p:row>
+						<p:column><h:outputLabel for="idShowSuppAddr3">Address Line 3 </h:outputLabel></p:column>
+						<p:column><h:outputLabel id="idShowSuppAddr3" value="#{purchaseEOBean.supplierVO.add3}"> </h:outputLabel></p:column>
+						</p:row>
+						<p:row>
+						<p:column><h:outputLabel for="idShowSuppCity">City </h:outputLabel></p:column>
+						<p:column><h:outputLabel id="idShowSuppCity" value="#{purchaseEOBean.supplierVO.city}"> </h:outputLabel></p:column>
+						<p:column><h:outputLabel for="idShowSuppState">State </h:outputLabel></p:column>
+						<p:column><h:outputLabel id="idShowSuppState" value="#{purchaseEOBean.supplierVO.state}"> </h:outputLabel></p:column>
+						</p:row>
+						<p:row>
+						<p:column><h:outputLabel for="idShowSuppPostcode">Postcode </h:outputLabel></p:column>
+						<p:column><h:outputLabel id="idShowSuppPostcode" value="#{purchaseEOBean.supplierVO.postcode}"> </h:outputLabel></p:column>
+						<p:column><h:outputLabel>Country </h:outputLabel></p:column>
+						<p:column><h:outputLabel value="#{purchaseEOBean.supplierVO.country}"> </h:outputLabel></p:column>
+						</p:row>
+						<p:row>
+						<p:column><h:outputLabel for="idShowSuppContact">Contact Number </h:outputLabel></p:column>
+						<p:column><h:outputLabel id="idShowSuppContact" value="#{purchaseEOBean.supplierVO.contactNo}"> </h:outputLabel></p:column>
+						</p:row>
+						</p:panelGrid>
+					</p:fieldset>
+				</p:column>
+				<p:column colspan="2">
+					<p:fieldset legend="Exchange Order Status ">
+						<p:panelGrid>
+						<p:row>
+						<p:column><h:outputLabel for="idAddExOrderNo">Exchange Order No </h:outputLabel></p:column>
+						<p:column>
+							<h:outputLabel id="idAddExOrderNo" label="Exchange Order No" value="#{purchaseEOBean.exOrderVO.code}"> </h:outputLabel>
+					    </p:column>
+						</p:row>
+						<p:row>
+						<p:column><h:outputLabel for="idAddCompCode">Company </h:outputLabel></p:column>
+						<p:column>
+						<h:outputText id="idAddCompCode" value="#{sessionInfoBean.companyVO.name}"/>
+					    </p:column>
+						</p:row>
+						<p:row>
+						<p:column><h:outputLabel>Status </h:outputLabel></p:column>
+						<p:column><h:outputLabel value="#{zsg:referenceDataValue('EO_STATUS', purchaseEOBean.exOrderVO.status)}"> </h:outputLabel></p:column>
+						</p:row>
+						</p:panelGrid>
+					</p:fieldset>
+				</p:column>
+			</h:panelGrid>
+			<p:panelGrid>
+			<p:row>
+				<p:column><h:outputLabel for="idAddAttn">Attn </h:outputLabel></p:column>
+				<p:column><p:inputText id="idAddAttn" label="Attn" value="#{purchaseEOBean.exOrderVO.attn}"/></p:column>
+				<p:column><h:outputLabel for="idAddEODt">EO Date <span class="required">*</span></h:outputLabel></p:column>
+				<p:column><p:calendar pattern="dd-MMM-yyyy" id="idAddEODt" label="EO Date" value="#{purchaseEOBean.exOrderVO.eoDt}" required="true" navigator="true" showButtonPanel="true"/></p:column>
+				<p:column><h:outputLabel for="idAddPayTerms">Payment Term </h:outputLabel></p:column>
+				<p:column>
+				<h:selectOneMenu id="idAddPayTerms" value="#{purchaseEOBean.exOrderVO.paymentTerm}">  
+		            <f:selectItems value="#{purchaseEOBean.pymtTermList}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+		            <p:ajax event="change" listener="#{purchaseEOBean.handlePaymentTerm()}" update=":idEditExOrderForm:idAddDueDt,:idEditExOrderForm:idAddDepDt"/>  
+		        </h:selectOneMenu>
+		        </p:column>
+				<p:column><h:outputLabel for="idAddOrderBy">Ordered By </h:outputLabel></p:column>
+				<p:column>
+					<h:outputLabel id="idAddOrderBy" value="#{purchaseEOBean.employeeVO.employeeName}">
+				</h:outputLabel>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idAddCategory">Category <span class="required">*</span></h:outputLabel></p:column>
+				<p:column>
+					<h:selectOneMenu id="idAddCategory" label="Category" value="#{purchaseEOBean.exOrderVO.category}"  required="true">
+			        	<f:selectItem itemLabel="Select One" itemValue=""/>
+			        	<f:selectItems value="#{bterp:lookupItemList('eo_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+				    </h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idAddDelivMethod">Delivery Method </h:outputLabel></p:column>
+				<p:column>
+				
+					<h:selectOneMenu id="idAddDelivMethod" label="Delivery Method" value="#{purchaseEOBean.exOrderVO.delivery}" >
+			        	<f:selectItem itemLabel="Select One" itemValue=""/>
+			        	<f:selectItems value="#{bterp:lookupItemList('delv_mthd')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+				    </h:selectOneMenu>
+				    </p:column>
+		 		<p:column><h:outputLabel for="idAddDueDt">Due Date </h:outputLabel></p:column>
+				<p:column><p:calendar pattern="dd-MMM-yyyy" id="idAddDueDt" label="Due Date" value="#{purchaseEOBean.exOrderVO.dueDt}" navigator="true" showButtonPanel="true"/></p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel>Tour Code <span class="required">*</span></h:outputLabel>
+			</p:column>
+				<p:column style="width:250px">
+					<p:inputText id="idTourCode" label="Tour Code" value="#{purchaseEOBean.tourCodeDesc}" required="true" maxlength="0" onkeydown="preventBackspace()"/>
+					&nbsp;<p:commandButton icon="ui-icon-search" actionListener="#{purchaseEOBean.loadTour}"  oncomplete="varTourCodeList.show()" process="@this"  />
+					 
+				</p:column>
+				<p:column><h:outputLabel >Departure Date <span class="required">*</span></h:outputLabel></p:column>
+				<p:column>
+					<p:calendar pattern="dd-MMM-yyyy" id="idAddDepDt" label="Departure Date" value="#{purchaseEOBean.depDt}" required="true" navigator="true" showButtonPanel="true"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:panelGrid>
+			<p:row>
+				<p:column><h:outputLabel for="idAddRemarks">RE </h:outputLabel></p:column>
+				<p:column><p:inputText id="idAddRemarks" label="RE" value="#{purchaseEOBean.exOrderVO.reference}" size="120"/>
+				  
+					</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:row>
+			<p:column>
+				<p:commandButton value="Add Invoice"   actionListener="#{purchaseEOBean.loadInvoice()}" update=":idInvNoListForm:idInvNoList" oncomplete="varInvNoDialog.show()" />
+			</p:column>
+		<p:column colspan="3">	 
+				<p:panel id ="idEOInvListPanel" style="border:none"> 
+					<p:dataTable id="idEOInvListTable" widgetVar="purEOInvTable" value="#{purchaseEOBean.EOInvList}" var="purEO" paginator="true" rows="20" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50"  rendered="#{not empty purchaseEOBean.EOInvList}"  >
+						
+						
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{purchaseEOBean.delEOInv(purEO)}" update=":idEditExOrderForm:idEOInvListPanel"/>
+						</p:column>
+						<p:column headerText="Invoice No.">
+							<h:outputText value="#{purchaseEOBean.prefixValue} #{purEO.code}">   
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Invoice Date"> 
+							<h:outputText value="#{purEO.invDateView}">   
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+							</h:outputText> 
+						</p:column>
+						<p:column headerText="Customer ID">
+							<h:outputText value="#{purEO.customerID}">   
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Customer Name">
+							<h:outputText value="#{purEO.customerName}">   
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Sales Amount">
+							<h:outputText value="#{purEO.salesAmount}">    
+								<f:convertNumber pattern="#,##0.00"/>
+							</h:outputText>
+						</p:column>
+					</p:dataTable> 
+				</p:panel> 
+			</p:column>
+		</p:row>  
+			
+			
+		<p:tabView id="idTabExOrder"> 
+			<p:tab id="idTabExOrderDetails" title="Exchange Order Details">  
+				<p:row>
+				<!-- 
+				<p:commandButton value="Add" actionListener="#{purchaseEOBean.addEODetails}" onclick="varAddDetailsDialog.show()" update=":idAddEODetailsForm:idAddForeCur,:idAddEODetailsForm:idAddExRate"  immediate="true" /></p:row> 
+				 -->
+				<p:commandButton value="Add" actionListener="#{purchaseEOBean.addEODetails}" onclick="varAddDetailsDialog.show()" update=":idAddEODetailsForm:idAddForeCur,:idAddEODetailsForm:idAddExRate" process="@this"/></p:row> 
+				 
+				 <p:row>
+				<p:panel id ="idShowEODetails" style="border:none">
+					<p:dataTable id="idExOrderDetailsTable" widgetVar="purEOTable" value="#{purchaseEOBean.exOrderVO.eoDetailsList}" var="purEO" paginator="true" rows="20" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50" emptyMessage="#{msg['cust.tbl.empty.message']}">
+						
+						<p:column headerText="Edit" style="width:60px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseEOBean.onEODetailsSelected(purEO)}" oncomplete="varEditEODtlsDialog.show()" update=":idEditEODtlsForm,:idInvNoListForm:idInvNoList" />
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{purchaseEOBean.delEODetails(purEO)}" update="@form,:idAddExOrderForm:idTabExOrder:idShowEODetails,:idAddExOrderForm:idEOAmt,:idEditExOrderForm:idEOAmt" />
+						</p:column>
+						
+						<p:column headerText="Description" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEO.desc}" />
+						</p:column>
+												
+						<p:column headerText="Price" style="width: 80px;" styleClass="txt_center">
+							<h:outputText value="#{purEO.price}">
+								<f:convertNumber pattern="#,##0.00"/>
+							</h:outputText>
+						</p:column>
+						
+						<p:column headerText="Quantity" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEO.qty}" />
+						</p:column>
+						
+						<p:column headerText="Amount" style="width: 80px;" styleClass="txt_center">
+							<h:outputText value="#{purEO.foreCurAmt}">
+								<f:convertNumber pattern="#,##0.00"/>
+							</h:outputText>
+						</p:column>
+						
+						<p:column headerText="Currency" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEO.currency}" />
+						</p:column>
+						
+						<p:column headerText="Exchange Rate" style="width: 80px;" styleClass="txt_center">
+							<h:outputText value="#{purEO.exRate}">
+								<f:convertNumber pattern="#,##0.000000"/>
+							</h:outputText>
+						</p:column>
+												
+						<p:column headerText="Local Amount (RM)" style="width: 80px;" styleClass="txt_center">
+							<h:outputText value="#{purEO.amount}">
+								<f:convertNumber pattern="#,##0.00"/>
+							</h:outputText>
+						</p:column>
+						
+						<p:columnGroup type="footer">
+							<p:row>
+								<p:column colspan="5" footerText="Total" style="text-align:right"/>
+								<p:column footerText="#{purchaseEOBean.getDoubleDecimalFormat('#,##0.00', purchaseEOBean.exOrderDetailsVO.totalForeCurAmt)}" />
+								<p:column colspan="2" footerText="Total" style="text-align:right"/>
+								<p:column footerText="#{purchaseEOBean.getDoubleDecimalFormat('#,##0.00', purchaseEOBean.exOrderDetailsVO.totalAmt)}" />
+							</p:row>
+						</p:columnGroup>
+					
+					</p:dataTable>
+					</p:panel>
+				</p:row>
+			</p:tab>
+			<p:tab id="idTabPaxName" title="Pax Name">  
+				<p:row><p:commandButton value="Add" onclick="varAddPaxNameDialog.show()" immediate="true" /></p:row>
+				<p:row>
+				<p:panel id ="idShowPaxName" style="border:none">
+					<p:dataTable id="idPaxNameTable" widgetVar="purEOTable" value="#{purchaseEOBean.paxNameList}" var="purPaxName" paginator="true" rows="20" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50" emptyMessage="#{msg['cust.tbl.empty.message']}" rendered="#{not empty purchaseEOBean.paxNameList}">
+						
+						<p:column headerText="Edit" style="width:60px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseEOBean.onPaxNameSelected(purPaxName)}" oncomplete="varEditPaxNameDialog.show()" update=":idEditEOPaxNameForm" />
+						</p:column>
+						
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{purchaseEOBean.delPaxName(purPaxName)}" update="@form,:idAddExOrderForm:idTabExOrder:idShowEODetails"/>
+						</p:column>
+						<!-- 
+						<p:column headerText="No" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purPaxName.no}" />
+						</p:column> -->
+							
+						<p:column headerText="Pax Name" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purPaxName.paxName}" />
+						</p:column>
+						
+						<p:column headerText="No of Pax" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purPaxName.pnr}" />
+						</p:column>
+						<!-- 
+						<p:column headerText="Aircode" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purPaxName.airCode}" />
+						</p:column> -->
+						
+						<p:column headerText="Ticket No" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purPaxName.ticketNo}" />
+						</p:column>
+						
+						<p:column headerText="Payable Amount" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purPaxName.payableAmt}">
+								<f:convertNumber pattern="#,##0.00"/>
+								</h:outputText>
+						</p:column>
+						
+					</p:dataTable>
+					</p:panel>
+				</p:row>
+			</p:tab>
+			<p:tab id="tabAirLine" title="Airline Details">  
+				<p:row><p:commandButton value="Add" onclick="varAddAirlineDialog.show()" immediate="true" /></p:row>
+				<p:row>
+				<p:panel id ="idShowAirLine" style="border:none">
+					<p:dataTable id="idAirlineTable" widgetVar="purEOTable" value="#{purchaseEOBean.airLineList}" var="purAirLine" paginator="true" rows="20" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50" emptyMessage="#{msg['cust.tbl.empty.message']}" rendered="#{not empty purchaseEOBean.airLineList}">
+						
+						<p:column headerText="Edit" style="width:60px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseEOBean.onAirLineSelected(purAirLine)}" oncomplete="varEditAirlineDialog.show()" update=":idEditEOAirlineForm" />
+						</p:column>
+						
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{purchaseEOBean.delAirLine(purAirLine)}" update="@form,:idAddExOrderForm:idTabExOrder:idShowEODetails"/>
+						</p:column>
+						<!-- 
+						<p:column headerText="No" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purAirLine.airLineNo}" />
+						</p:column> -->
+							
+						<p:column headerText="Sector" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purAirLine.point}" />
+						</p:column>
+						
+						<p:column headerText="Flight No" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purAirLine.flightNo}" />
+						</p:column>
+						
+						<p:column headerText="Date" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purAirLine.strAirLineDt}" />
+						</p:column>
+						
+						<p:column headerText="Time" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purAirLine.time}" />
+						</p:column>
+						
+						<p:column headerText="Class" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purAirLine.airClass}" />
+						</p:column>
+						
+						<p:column headerText="Status" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purAirLine.status}" />
+						</p:column>
+						
+						<p:column headerText="PNR" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purAirLine.airLinePnr}" />
+						</p:column>
+						
+					</p:dataTable>
+					</p:panel>
+				</p:row>
+			</p:tab>
+			<p:tab id="tabHotelTour" title="Hotel and Tour Details">  
+				<p:row><p:commandButton value="Add" onclick="varAddHotelTourDialog.show()" immediate="true" /></p:row>
+				<p:row>
+				<p:panel id ="idShowHotelTour" style="border:none">  
+					<p:dataTable id="idHotelTourTable" widgetVar="purEOTable" value="#{purchaseEOBean.hotelTourList}" var="purEOHotelTour" paginator="true" rows="20" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50" emptyMessage="#{msg['cust.tbl.empty.message']}" rendered="#{not empty purchaseEOBean.hotelTourList}">
+						
+						<p:column headerText="Edit" style="width:60px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseEOBean.onHotelTourSelected(purEOHotelTour)}" oncomplete="varEditHotelTourDialog.show()" update=":idEditEOHotelTourForm"/>
+						</p:column>
+						
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{purchaseEOBean.delHotelTour(purEOHotelTour)}" update="@form,:idAddExOrderForm:idTabExOrder:idShowEODetails"/>
+						</p:column>
+						
+						<p:column headerText="Check In Date" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEOHotelTour.strChkInDt}" />
+						</p:column>
+							
+						<p:column headerText="Check Out Date" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEOHotelTour.strChkOutDt}" />
+						</p:column>
+						
+						<p:column headerText="Total Nights" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEOHotelTour.totalNight}" />
+						</p:column>
+						
+						<p:column headerText="Arrival Flight" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEOHotelTour.arrFlight}" />
+						</p:column>
+						
+						<p:column headerText="Departure Flight" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEOHotelTour.depFlight}" />
+						</p:column>
+						
+						<p:column headerText="No of Pax" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEOHotelTour.noOfPax}" />
+						</p:column>
+						
+						<p:column headerText="Meal Provide" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEOHotelTour.mealProvide}" />
+						</p:column>
+						
+						<p:column headerText="Type of Rooms" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEOHotelTour.typeOfRoom}" />
+						</p:column>
+						
+						<p:column headerText="Hotel Resort Usage" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purEOHotelTour.hotelUsage}" />
+						</p:column>
+						
+					</p:dataTable>
+					</p:panel>
+				</p:row>
+			</p:tab>
+			
+			<p:tab id="tabPayment" title="Payment">   
+				<p:row>
+				<p:panel id ="idShowPayment" style="border:none">
+					<p:dataTable id="idPaymentTable" widgetVar="purEOPaymentTable" value="#{purchaseEOBean.eoBillVO.billPmntList}" var="purEOBill" paginator="true" rows="20" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50" rendered="#{not empty purchaseEOBean.eoBillVO}">
+						<p:column headerText="Bill No" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="#{purchaseEOBean.eoBillVO.code}" />
+						</p:column>
+						<p:column headerText="Payment No" style="width: 80px;" styleClass="txt_center">
+								<h:outputText value="BP-#{purEOBill.code}" />
+						</p:column>
+						<p:column headerText="Bill Date" style="width: 80px;" styleClass="txt_center">
+							<h:outputText value="#{purchaseEOBean.eoBillVO.billDt}" > 
+								<f:convertDateTime pattern="dd-MMM-yyyy" />
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Payment Date" style="width: 80px;" styleClass="txt_center">
+							<h:outputText value="#{purEOBill.pymtDt}"  >
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Cheque No" style="width: 80px;" styleClass="txt_center">
+							<h:outputText value="#{purEOBill.refNum}" />
+						</p:column>
+						<p:column headerText="Payment Amount" style="width: 80px;" styleClass="txt_center">
+							<h:outputText value="#{purEOBill.pmntAmount}"  > 
+								<f:convertNumber pattern="#,##0.00"/>
+							</h:outputText>
+						</p:column>
+					</p:dataTable>	
+					</p:panel> 
+				</p:row> 
+			</p:tab>
+		</p:tabView>
+
+		<p:panelGrid id="idEOAmt">
+			<p:row>
+				<p:column><h:outputLabel for="idComments">Additional Remarks </h:outputLabel></p:column>
+				<p:column>
+				<p:inputTextarea id="idComments" value="#{purchaseEOBean.exOrderVO.eoComments}" rows="10" cols="70"/> 
+				</p:column>
+				<p:column>
+					<p:panelGrid>
+						<p:row>
+							<p:column>
+								<h:outputLabel for="idTtlAmt">Total Amount:</h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:inputText id="idTtlAmt" value="#{purchaseEOBean.totalAmt}" readonly="true" style="text-align:right;background:#ccc">
+									<f:convertNumber pattern="#,##0.00"/>
+								</p:inputText>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column>
+								<h:outputLabel for="idAmtPaid">Amount Paid:</h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:inputText id="idAmtPaid" value="#{purchaseEOBean.amtPaid}" readonly="true" style="text-align:right;background:#ccc"> 
+									<f:convertNumber pattern="#,##0.00"/>
+								</p:inputText>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column>
+								<h:outputLabel for="idAmtDue">Amount Due:</h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:inputText id="idAmtDue" value="#{purchaseEOBean.amtDue}" readonly="true" style="text-align:right;background:#ccc">
+									<f:convertNumber pattern="#,##0.00"/>
+								</p:inputText>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	</div>
+		
+	<h:panelGrid column="6">
+		<p:row>
+			<p:column><p:commandButton value="Save" actionListener="#{purchaseEOBean.updateExOrder}" update="@form,:idEditExOrderForm,:idShowExOrderForm" oncomplete="onValidationEOSave(xhr, status, args)" rendered="#{purchaseEOBean.exOrderVO.status ne 'CC'}"/></p:column>
+			<p:column><p:commandButton icon="ui-icon-print" value="Exchange Order" actionListener="#{purchaseEOBean.printReport('EO')}" ajax="false"/></p:column>
+			<p:column><p:commandButton value="Cancel" actionListener="#{purchaseEOBean.resetForm}" oncomplete="varEditFuncDialog.hide()" update=":idShowExOrderForm" /></p:column>
+		</p:row>
+	</h:panelGrid> 
+</ui:composition>

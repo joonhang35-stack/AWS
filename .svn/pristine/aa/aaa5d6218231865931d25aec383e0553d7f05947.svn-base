@@ -1,0 +1,76 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<p:growl id="msg" />
+
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varMultipleEInvSubmitRespDialog.show();
+			} else {
+				varMultipleEInvSubmitRespDialog.hide();
+			}
+		}
+	</script>
+
+	<p:dataTable id="idResultListTable" value="#{billPymtBean.mulpInvSubmRespList}" var="vo"
+		rows="20"
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+		rowsPerPageTemplate="20, 30, 50" filterEvent="enter"
+		rowKey="#{vo.id}">
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Code" />
+			</f:facet>
+			<h:outputText value="#{vo.code}"></h:outputText>
+		</p:column>
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Supplier Name" />
+			</f:facet>
+			<h:outputText value="#{vo.supplierName}"></h:outputText>
+		</p:column>
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Supplier Country" />
+			</f:facet>
+			<h:outputText value="#{vo.countryVO.country}"></h:outputText>
+		</p:column>
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Status" />
+			</f:facet>
+			<h:outputText value="#{vo.eInvoiceDocument.status}"></h:outputText>
+		</p:column>
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Reason" />
+			</f:facet>
+			<h:outputText value="#{vo.eInvoiceDocument.documentStatusReason}"></h:outputText>
+		</p:column>
+	</p:dataTable>
+	
+	<br/><br/>
+	<h:commandLink>
+		<p:graphicImage value="/img/excel.png" />
+		<p:dataExporter type="csv" target="idResultListTable" exportHeader="true"
+			fileName="#{billPymtBean.generateReportFileName('Bill_Payment_E_Invoice_Submission_List')}"/>
+	</h:commandLink>
+
+	<!-- <h:panelGrid columns="2" style="width: 1px;">
+		<p:commandButton value="OK"
+			actionListener="#{billPymtBean.cancelEInvoiceAPI(billPymtBean.cancellationReason)}"
+			update="@form, :idEInvoiceForm"
+			oncomplete="if (args &amp;&amp; !args.validationFailed) {varCancelEInvoiceDialog.hide();}" />
+		<p:commandButton value="Close" process="@this"
+			oncomplete="varCancelEInvoiceDialog.hide();" />
+	</h:panelGrid> -->
+</ui:composition>

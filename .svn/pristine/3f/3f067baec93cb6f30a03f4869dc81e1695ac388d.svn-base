@@ -1,0 +1,133 @@
+package com.bcs.zsg.sales.web.bean;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.product.service.InvoiceAndExchangeOrderService;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderVO;
+import com.bcs.zsg.sales.service.InvoiceItemReportUsageService;
+
+import net.sf.jasperreports.engine.JasperPrint;
+
+public class InvoiceItemReportUsageBean extends AppBackingBean {
+
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient InvoiceItemReportUsageService invoiceItemReportUsageService;
+
+	@Autowired
+	private transient InvoiceAndExchangeOrderService invoiceAndExchangeOrderService;
+
+	private List<String> selectedItemCodes = new ArrayList<String>();
+	private List<InvoiceAndExchangeOrderVO> invoiceItemList;
+	private String exportFileName;
+
+	@Override
+	public void resetForm() {
+		searchParamVO = new SearchParamVO();
+		searchParamVO.setFromDate(new Date());
+		searchParamVO.setToDate(new Date());
+		if (selectedItemCodes != null) {
+			selectedItemCodes.clear();
+		} else {
+			selectedItemCodes = new ArrayList<String>();
+		}
+		updateExportFileName();
+	}
+
+	public void updateExportFileName() {
+		exportFileName = "Invoice_Item_Code" + new SimpleDateFormat("yyyyMMdd").format(new Date());
+	}
+
+	public void init() throws BusinessException {
+		try {
+			resetForm();
+			loadInvoiceItemList();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void loadInvoiceItemList() {
+		try {
+			Long companyId = this.getSessionInfoBean().getCompanyVO().getId();
+			invoiceItemList = invoiceAndExchangeOrderService.getInvoiceAndExchangeOrderList(companyId, null);
+		} catch (Throwable t) {
+			// System.err.println("[DEBUG] InvoiceItemReportUsageBean -> loadInvoiceItemList() error: " + t.getMessage());
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void printReportExcel() {
+		try {
+			Long companyId = this.getSessionInfoBean().getCompanyVO().getId();
+			List<AcctViewVO> exportList = invoiceItemReportUsageService.getInvoiceItemReportUsageList(
+					companyId, selectedItemCodes, searchParamVO.getFromDate(), searchParamVO.getToDate());
+
+			if (CollectionUtils.isEmpty(exportList)) {
+				throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			}
+
+			updateExportFileName();
+
+			Map<String, Object> map = new HashMap<String, Object>();
+			map.put("list", exportList);
+			map.put("companyName", getSessionInfoBean().getCompanyVO().getName());
+			map.put("fromDate", searchParamVO.getFromDate());
+			map.put("toDate", searchParamVO.getToDate());
+
+			String jasperFileName = CommonConstant.JAS_RPT_INVOICE_ITEM_USAGE;
+			String reportName = exportFileName;
+
+			// System.out.println("[DEBUG] InvoiceItemReportUsageBean -> Generating Jasper Excel report: " + jasperFileName + ", exportName: " + reportName);
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(exportList, map, jasperFileName);
+			ReportUtils.printReportExcel(jasperPrint, reportName);
+
+		} catch (Throwable t) {
+			// System.err.println("[DEBUG] InvoiceItemReportUsageBean -> printReportExcel() error: " + t.getMessage());
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public List<String> getSelectedItemCodes() {
+		return selectedItemCodes;
+	}
+
+	public void setSelectedItemCodes(List<String> selectedItemCodes) {
+		this.selectedItemCodes = selectedItemCodes;
+	}
+
+	public List<InvoiceAndExchangeOrderVO> getInvoiceItemList() {
+		return invoiceItemList;
+	}
+
+	public void setInvoiceItemList(List<InvoiceAndExchangeOrderVO> invoiceItemList) {
+		this.invoiceItemList = invoiceItemList;
+	}
+
+	public String getExportFileName() {
+		return exportFileName;
+	}
+
+	public void setExportFileName(String exportFileName) {
+		this.exportFileName = exportFileName;
+	}
+}

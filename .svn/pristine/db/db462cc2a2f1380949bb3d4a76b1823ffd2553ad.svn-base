@@ -1,0 +1,324 @@
+package com.bcs.zsg.product.web.bean;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.primefaces.event.SelectEvent;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.bo.ChartOfAcctBO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.bank.bo.PaymentBO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.db.bterp.vo.gst.TaxCodeVO;
+import com.bcs.zsg.gst.bo.GSTBO;
+import com.bcs.zsg.gst.helper.GSTType;
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.product.bo.InvoiceAndExchangeOrderBO;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderVO;
+
+public class InvoiceAndExchangeOrderBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+	@Autowired
+	private transient InvoiceAndExchangeOrderBO invoiceAndExchangeOrderBO;
+	@Autowired
+	private transient PaymentBO paymentBO;
+	@Autowired
+	private transient ChartOfAcctBO chartOfAcctBO;
+	@Autowired
+	private transient GSTBO gstBO;
+	
+	private InvoiceAndExchangeOrderVO invoiceAndExchangeOrderVO;
+	
+	private List<InvoiceAndExchangeOrderVO> invoiceAndExchangeOrderList;
+
+	private List<AcctViewVO> acctViewList;
+	private List<AcctVO> acctAutoCompleteList;
+	
+	private List<TaxCodeVO> inputTaxCodeVOList;
+	private List<TaxCodeVO> outputTaxCodeVOList;
+	
+	protected InvoiceAndExchangeOrderVO searchFilter;
+	
+	@Override
+	public void resetForm() {
+		invoiceAndExchangeOrderVO = new InvoiceAndExchangeOrderVO();
+	}
+	
+	public void init() {
+		try {
+			resetForm();
+			loadInvoiceAndExchangeOrder();
+			
+			// GST Code
+			inputTaxCodeVOList = gstBO.getTaxCodeList(GSTType.INPUT);
+			outputTaxCodeVOList = gstBO.getTaxCodeList(GSTType.OUTPUT);
+		
+			searchFilter = new InvoiceAndExchangeOrderVO();
+		}catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void addInvoiceAndExchangeOrder() throws BusinessException {
+		invoiceAndExchangeOrderBO.addInvoiceAndExchangeOrder(invoiceAndExchangeOrderVO);
+		resetForm();
+		loadInvoiceAndExchangeOrder();
+		invoiceAndExchangeOrderVO.setCompanyId(getSessionInfoBean().getCompanyVO().getId());
+		invoiceAndExchangeOrderVO.setAmount(0.00);
+		successResult();
+		
+	}
+	
+	public void loadInvoiceAndExchangeOrder() throws BusinessException {
+		try { 
+//			resetFilteredObjList();
+			invoiceAndExchangeOrderList = invoiceAndExchangeOrderBO.getInvoiceAndExchangeOrderList(getSessionInfoBean().getCompanyVO().getId(), searchFilter);
+			acctViewList = chartOfAcctBO.getAcctViewList(getSessionInfoBean().getCompanyVO().getId(), null);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void reloadInvAndEO() throws BusinessException {
+		try { 
+			invoiceAndExchangeOrderList = invoiceAndExchangeOrderBO.getInvoiceAndExchangeOrderList(getSessionInfoBean().getCompanyVO().getId(), searchFilter);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void onInvoiceAndExchangeOrderSelected(InvoiceAndExchangeOrderVO vo) {
+		try {
+			this.invoiceAndExchangeOrderVO = vo;
+			if (StringUtils.isEmpty(invoiceAndExchangeOrderVO.getAcctSubCode())) invoiceAndExchangeOrderVO.setAcctCode(invoiceAndExchangeOrderVO.getAcctCode());
+			else invoiceAndExchangeOrderVO.setAcctCode(invoiceAndExchangeOrderVO.getAcctCode() + "-" + invoiceAndExchangeOrderVO.getAcctSubCode());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void deleteInvoiceAndExchangeOrder() {
+		try {
+			invoiceAndExchangeOrderBO.deleteSystemNumberGeneration(invoiceAndExchangeOrderVO);
+			loadInvoiceAndExchangeOrder();
+			
+		} catch (Throwable t){
+			errorResult(t);
+		}
+	}
+	
+	public void editInvoiceAndExchangeOrder() {
+		try {
+			invoiceAndExchangeOrderBO.updateInvoiceAndExchangeOrder(invoiceAndExchangeOrderVO);
+			loadInvoiceAndExchangeOrder();
+			resetForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleAcctSelect(SelectEvent event) {
+		try {
+			AcctViewVO acctViewVO = (AcctViewVO) event.getObject();
+			if (StringUtils.isEmpty(acctViewVO.getSubCode())) {
+				invoiceAndExchangeOrderVO.setAcctCode(acctViewVO.getCode());
+				invoiceAndExchangeOrderVO.setAcctDesc(acctViewVO.getDesc());
+			} else {		
+				invoiceAndExchangeOrderVO.setAcctCode(acctViewVO.getCode() + "-" + acctViewVO.getSubCode());
+				invoiceAndExchangeOrderVO.setAcctDesc(acctViewVO.getDesc() + ", " + acctViewVO.getSubDesc());
+			}
+			invoiceAndExchangeOrderVO.setAcctId(acctViewVO.getId());
+			invoiceAndExchangeOrderVO.setTaxCode(acctViewVO.getTaxCode());
+			invoiceAndExchangeOrderVO.setTaxRate(getTaxRate(acctViewVO.getTaxCode()));
+
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void search() throws BusinessException {
+		loadInvoiceAndExchangeOrder();
+	}
+	
+	public void onAddInvEODetails() throws BusinessException {
+		invoiceAndExchangeOrderVO.setCompanyId(getSessionInfoBean().getCompanyVO().getId());
+		invoiceAndExchangeOrderVO.setAmount(0.00);
+	}
+	
+	public void changeDesc() {
+		try {
+			acctViewList = chartOfAcctBO.getAcctViewList(invoiceAndExchangeOrderVO.getCompanyId(), null);
+			for(AcctViewVO vo:acctViewList) {
+				if(invoiceAndExchangeOrderVO.getAcctCode().toString().equalsIgnoreCase(vo.getCode().toString())) {
+					invoiceAndExchangeOrderVO.setAcctDesc(vo.getDesc());
+					invoiceAndExchangeOrderVO.setAcctId(vo.getId());
+					
+				} else if(invoiceAndExchangeOrderVO.getAcctCode().toString().equalsIgnoreCase(vo.getCode().toString() + "-" + vo.getSubCode().toString())) {
+					if(vo.getSubDesc().toString().isEmpty()) {
+						invoiceAndExchangeOrderVO.setAcctDesc(vo.getDesc());
+						invoiceAndExchangeOrderVO.setAcctId(vo.getId());
+						
+					} else {	
+						invoiceAndExchangeOrderVO.setAcctDesc(vo.getDesc() + ", " + vo.getSubDesc());
+						invoiceAndExchangeOrderVO.setAcctId(vo.getId());
+					}
+				}
+			}
+		} catch(Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public List<String> complete(String query) {  
+		List<String> results = new ArrayList<String>();   
+        try { 
+        	acctAutoCompleteList=paymentBO.getAcctList(invoiceAndExchangeOrderVO.getCompanyId(),query);
+			for (int i = 0; i <acctAutoCompleteList.size(); i++) {
+				if(acctAutoCompleteList.get(i).getSubCode().isEmpty()) { 
+					results.add(acctAutoCompleteList.get(i).getCode());
+				} else {
+					results.add(acctAutoCompleteList.get(i).getCode() + "-" + acctAutoCompleteList.get(i).getSubCode() );  
+				}
+			 }
+        } catch(Exception e) {
+        	e.printStackTrace() ;
+        }
+        return results;  
+    }  
+	
+	public void changeAcct() throws BusinessException {
+		try {
+			acctViewList=chartOfAcctBO.getAcctViewList(invoiceAndExchangeOrderVO.getCompanyId(), null);
+			
+		}catch(Throwable t) {
+			errorResult(t);
+		}
+		
+	}
+	
+	public void cancel() throws BusinessException {
+		try {
+			resetForm();
+			loadInvoiceAndExchangeOrder();
+			
+		}catch(Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleGSTSelect(SelectEvent event) {
+		try {
+			TaxCodeVO vo = (TaxCodeVO) event.getObject();
+			invoiceAndExchangeOrderVO.setTaxCode(vo.getCode());
+			invoiceAndExchangeOrderVO.setTaxRate(vo.getRate());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleInvCatChange() {
+		invoiceAndExchangeOrderVO.setInvCatDesc("");
+		if (CollectionUtils.isNotEmpty(invoiceAndExchangeOrderVO.getInvCatList())) {
+			for (String cat : invoiceAndExchangeOrderVO.getInvCatList()) {
+				if (StringUtils.isEmpty(invoiceAndExchangeOrderVO.getInvCatDesc())) {
+					invoiceAndExchangeOrderVO.setInvCatDesc(LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_INV_CAT, cat));
+				} else {
+					invoiceAndExchangeOrderVO.setInvCatDesc(invoiceAndExchangeOrderVO.getInvCatDesc() + ", " +
+							LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_INV_CAT, cat));
+				}
+			}
+			
+			invoiceAndExchangeOrderVO.setInvCat(StringUtils.join(invoiceAndExchangeOrderVO.getInvCatList(), ','));
+		} else {
+			invoiceAndExchangeOrderVO.setInvCat(null);
+		}
+	}
+	
+	/**********
+	 * HELPER *
+	 **********/
+	
+	private float getTaxRate(String taxCode) {
+		for (TaxCodeVO vo : outputTaxCodeVOList) {
+			if (vo.getCode().equals(taxCode)) return vo.getRate();
+		}
+		return 0;
+	}
+	
+	/*******************
+	 * GETTER & SETTER *
+	 *******************/
+	
+	/**
+	 * @return the acctAutoCompleteList
+	 */
+	public List<AcctVO> getAcctAutoCompleteList() {
+		return acctAutoCompleteList;
+	}
+
+	/**
+	 * @param acctAutoCompleteList the acctAutoCompleteList to set
+	 */
+	public void setAcctAutoCompleteList(List<AcctVO> acctAutoCompleteList) {
+		this.acctAutoCompleteList = acctAutoCompleteList;
+	}
+
+	public InvoiceAndExchangeOrderVO getInvoiceAndExchangeOrderVO() {
+		return invoiceAndExchangeOrderVO;
+	}
+	
+	public void setInvoiceAndExchangeOrderVO(InvoiceAndExchangeOrderVO invoiceAndExchangeOrderVO) {
+		this.invoiceAndExchangeOrderVO = invoiceAndExchangeOrderVO;
+	}
+
+	public List<AcctViewVO> getAcctViewList() {
+		return acctViewList;
+	}
+
+	public void setAcctViewList(List<AcctViewVO> acctViewList) {
+		this.acctViewList = acctViewList;
+	}
+
+	public List<InvoiceAndExchangeOrderVO> getInvoiceAndExchangeOrderList() {
+		return invoiceAndExchangeOrderList;
+	}
+
+	public void setInvoiceAndExchangeOrderList(
+			List<InvoiceAndExchangeOrderVO> invoiceAndExchangeOrderList) {
+		this.invoiceAndExchangeOrderList = invoiceAndExchangeOrderList;
+	}
+
+	/**
+	 * @return the inputTaxCodeVOList
+	 */
+	public List<TaxCodeVO> getInputTaxCodeVOList() {
+		return inputTaxCodeVOList;
+	}
+
+	/**
+	 * @return the outputTaxCodeVOList
+	 */
+	public List<TaxCodeVO> getOutputTaxCodeVOList() {
+		return outputTaxCodeVOList;
+	}
+
+	public InvoiceAndExchangeOrderVO getSearchFilter() {
+		return searchFilter;
+	}
+
+	public void setSearchFilter(InvoiceAndExchangeOrderVO searchFilter) {
+		this.searchFilter = searchFilter;
+	}
+}

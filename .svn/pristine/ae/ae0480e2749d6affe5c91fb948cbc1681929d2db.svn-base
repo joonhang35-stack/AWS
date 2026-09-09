@@ -1,0 +1,139 @@
+/*$(document).ready(function() {
+	if (window.screen.availWidth <= 1200) document.body.style.zoom="80%";
+});*/
+
+function getScreenWidth() {
+	return (window.screen.availWidth - 50);
+}
+
+function clearDataTableSort(id) {
+	var a = $("#" + id + " thead tr:nth-child(2) th").siblings();
+	a.removeClass("ui-state-active");
+	a.find('.ui-sortable-column-icon').removeClass('ui-icon-triangle-1-s ui-icon-triangle-1-n');
+}
+function checkDrawDate(date){
+	
+	var invalidDates = document.getElementById('idForm:idDrawDateList').value;
+	var invalidDatesArray = invalidDates.split(",");
+    var day=date.getDate();
+    var month = date.getMonth()+1;
+    var year = date.getFullYear();
+    if(month < 10) {
+    	month = '0' + month;
+    }
+    if(day < 10){
+    	day = '0' + day;
+    }
+    var value =  year + '/' + month+ '/' + day;
+    
+    var result = false;
+    for (var i=0; i<invalidDatesArray.length; i++) {
+    	if (value == invalidDatesArray[i]) {
+    		result=true;
+    	}
+    }
+    	
+    return [result,''];
+};
+
+function rtnAlphaNumeric(evt) {
+	evt = evt || window.event;
+	var charCode = evt.which || evt.keyCode;
+	var charStr = String.fromCharCode(charCode);
+	if (/[a-z0-9]/i.test(charStr)) {
+		return true;
+	}
+	return false;
+};
+
+function rtnNumeric(evt) {
+	evt = evt || window.event;
+	var charCode = evt.which || evt.keyCode;
+	var charStr = String.fromCharCode(charCode);
+	if (/[0-9]/i.test(charStr)) {
+		return true;
+	}
+	return false;
+};
+
+function rtnPhoneNo(evt) {
+	evt = evt || window.event;
+	var charCode = evt.which || evt.keyCode;
+	var charStr = String.fromCharCode(charCode);
+	/*var currStr = evt.target.value;
+	if (charStr == '+' && currStr.includes('+')) return false;
+	if (charStr == '+' && currStr.length > 0) {
+		evt.target.value = '+' + evt.target.value;
+		return false;
+	}*/
+	if (/[0-9]/i.test(charStr)) {
+		return true;
+	}
+	return false;
+};
+
+function rtnUpperCase(evt) {
+	evt = evt || window.event;
+	evt.target.value = evt.target.value.toUpperCase();
+};
+
+function overridePrimeFacesDataTableScroll() {
+	if (window.PrimeFaces && PrimeFaces.widget && PrimeFaces.widget.DataTable) {
+		PrimeFaces.widget.DataTable.prototype.setupScrolling = function() {
+			this.scrollHeader = $(this.jqId + " .ui-datatable-scrollable-header");
+			this.scrollBody = $(this.jqId + " .ui-datatable-scrollable-body");
+			this.scrollFooter = $(this.jqId + " .ui-datatable-scrollable-footer");
+			this.scrollStateHolder = $(this.jqId + "_scrollState");
+			var a = this;
+			this.restoreScrollState();
+			if (this.cfg.liveScroll) {
+				this.scrollOffset = this.cfg.scrollStep;
+				this.shouldLiveScroll = true;
+				this._liveScrollLoading = false;
+			}
+			this.scrollHeader.scroll(function() {
+				a.scrollBody.scrollLeft(a.scrollHeader.scrollLeft());
+				a.scrollFooter.scrollLeft(a.scrollHeader.scrollLeft());
+			});
+			this.scrollBody.scroll(function() {
+				a.scrollHeader.scrollLeft(a.scrollBody.scrollLeft());
+				a.scrollFooter.scrollLeft(a.scrollBody.scrollLeft());
+				if (a.shouldLiveScroll && !a._liveScrollLoading) {
+					var scrollTop = Math.ceil(this.scrollTop),
+						scrollHeight = this.scrollHeight,
+						clientHeight = this.clientHeight;
+					if (scrollTop + clientHeight >= scrollHeight - 1) {
+						a._liveScrollLoading = true;
+						a.loadLiveRows();
+					}
+				}
+				a.saveScrollState();
+			});
+			if (a.isEmpty()) {
+				a.alignEmptyMessage();
+			}
+		};
+
+		var origLoadLiveRows = PrimeFaces.widget.DataTable.prototype.loadLiveRows;
+		PrimeFaces.widget.DataTable.prototype.loadLiveRows = function() {
+			var a = this;
+			var origOnSuccess = null;
+			var result = origLoadLiveRows.apply(this, arguments);
+			setTimeout(function() { a._liveScrollLoading = false; }, 500);
+			return result;
+		};
+
+		return true;
+	}
+	return false;
+}
+
+if (!overridePrimeFacesDataTableScroll()) {
+	var _pfScrollPollCount = 0;
+	var _pfScrollPollTimer = setInterval(function() {
+		_pfScrollPollCount++;
+		if (overridePrimeFacesDataTableScroll() || _pfScrollPollCount > 50) {
+			clearInterval(_pfScrollPollTimer);
+		}
+	}, 200);
+}

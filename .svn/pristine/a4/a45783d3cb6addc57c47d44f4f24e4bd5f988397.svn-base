@@ -1,0 +1,33 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+<h:panelGrid columns="2">
+	<h:outputLabel for="idAcctCat" rendered="#{empty chartOfAcctBean.acctSubCatVO.id}">Type <span class="required">*</span></h:outputLabel>
+	<h:selectOneMenu id="idAcctCat" label="Type" value="#{chartOfAcctBean.acctSubCatVO.idAcctCat}" effect="fade" required="true" rendered="#{empty chartOfAcctBean.acctSubCatVO.id}">
+		<f:selectItems value="#{chartOfAcctBean.acctCatList}" var="acctCatVO" itemLabel="#{acctCatVO.desc}" itemValue="#{acctCatVO.id}"/>
+	</h:selectOneMenu>
+	
+	<h:outputLabel for="idSubAcctCd">Code <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idSubAcctCd" label="Code" value="#{chartOfAcctBean.acctSubCatVO.code}" required="true"/>
+	
+	<h:outputLabel for="idSubAcctDesc">Description <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idSubAcctDesc" label="Description" value="#{chartOfAcctBean.acctSubCatVO.desc}" required="true"/>
+	
+	<h:panelGrid columns="2" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{chartOfAcctBean.addAcctSubCat}" update="@form,:idChartOfAcctForm" rendered="#{empty chartOfAcctBean.acctSubCatVO.id}"/>
+		<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{chartOfAcctBean.updAcctSubCat}" update="@form,:idChartOfAcctForm" oncomplete="varEditGroupAcctDialog.hide()" rendered="#{not empty chartOfAcctBean.acctSubCatVO.id}"/>
+		<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{chartOfAcctBean.resetForm}" onclick="varAddGroupAcctDialog.hide(),varEditGroupAcctDialog.hide()" process="@this" update="@form">
+			<pe:resetEditableValues for="idAddGroupForm,idEditGroupForm"/>
+		</p:commandButton>
+	</h:panelGrid>
+</h:panelGrid>
+</ui:composition>

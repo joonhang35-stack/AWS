@@ -1,0 +1,226 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	template="/WEB-INF/views/layouts/main.xhtml"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<ui:define name="content">
+		<h:form id="idEInvoiceDocumentForm">
+		
+			<p:growl id="msg"/>
+		
+			<p:panel header="E-Invoice" toggleable="true" toggleSpeed="500">
+				<p:panelGrid id="idSearchPanel" style="width:550px;" rendered="#{false}">
+					<p:row>
+						<p:column style="width:100px;">
+							<h:outputLabel>Submission Date</h:outputLabel>
+						</p:column>
+						<p:column style="width:10px;">
+							<p:separator style="width:2px;height:20px" />
+						</p:column>
+						<p:column style="width:80px;">
+							<p:calendar id="idInvoiceDateFr" label="Submission Date From"
+								pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" />
+							<p:watermark for="idInvoiceDateFr" value="Submission Date From" />
+						</p:column>
+						<p:column style="width:80px;">
+							<p:calendar id="idInvoiceDateTo" label="Submission Date To"
+								pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" />
+							<p:watermark for="idInvoiceDateTo" value="Submission Date To" />
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Search"
+								actionListener="#{salesBean.searchDocuments}" update="@form"></p:commandButton>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+
+				<p:dataTable id="idEInvoiceTable" widgetVar="varDocumentTable"
+					value="#{salesBean.eInvoiceList}" var="vo" paginator="true"
+					rows="20" rowIndexVar="rowIndex" filteredValue="#{salesBean.filteredList}"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="3, 20, 30, 50, 100, 300, 500, 1000, 1500" filterEvent="enter"
+					rowKey="#{vo.id}">
+					
+					<p:column headerText="Refresh" style="text-align:center;">
+						<p:commandButton icon="ui-icon-refresh"
+							actionListener="#{salesBean.updDocumentDetails(vo)}"
+							process="@this"	update=":idEInvoiceDocumentForm:idEInvoiceTable :idEInvoiceDocumentForm:msg" />
+					</p:column>
+					<p:column headerText="View" style="text-align:center;">
+						<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.handleEInvoiceSelected(vo)}" oncomplete="varEInvDetailsDialog.show()" update=":idEInvDetailsDialog :idEInvoiceDocumentForm:msg" />
+					</p:column>
+					<p:column headerText="eCN" style="text-align:center;" rendered="#{salesBean.eCNIssueRole}">
+						<p:commandButton icon="ui-icon-transfer-e-w" actionListener="#{salesBean.seteInvoiceDocumentVO(vo)}" oncomplete="varIssueECNDialog.show()" update=":idIssueECNDialog" 
+							rendered="#{(vo.sysDocType eq 'purc_bill' or vo.sysDocType eq 'invc') and vo.statusCode eq 'Valid' and not vo.isConsolEInv}" />
+							<!-- rendered="#{vo.sysDocType ne 'crdt_note' and vo.sysDocType ne 'rfnd_note' and vo.statusCode eq 'Valid'}" /> -->
+							
+					</p:column>
+					<!-- <p:column headerText="View" style="text-align:center;">
+						<p:commandButton icon="ui-icon-search" rendered="#{vo.isConsolEInv}" actionListener="#{salesBean.loadConsolidateDetailsList(vo)}" oncomplete="varConsolDetailsDialog.show()" update=":idConsolDetailsDialog"/>						
+					</p:column> -->
+					<p:column headerText="UUID" sortBy="#{vo.documentUuid}" filterBy="#{vo.documentUuid}" filterMatchMode="contains">
+						<h:outputText value="#{vo.documentUuid}"></h:outputText>
+					</p:column>
+					<p:column headerText="Status" sortBy="#{vo.statusCode}" filterBy="#{vo.statusCode}" filterOptions="#{salesBean.statusListItems}">
+						<h:outputText value="#{vo.statusCode}"></h:outputText> 
+						<p:graphicImage id="idInfo" rendered="#{vo.statusCode eq 'Invalid' or vo.statusCode eq 'Cancelled'}" value="/img/more.png"/>
+						<pe:tooltip for="idInfo">
+							<h:outputText value="#{vo.docStatusReason}" escape="true" style="white-space: pre-wrap"/>
+						</pe:tooltip>
+					</p:column>
+					<p:column headerText="E-Invoice Document Type" sortBy="#{vo.eInvoiceDocTypeCd}" filterBy="#{vo.eInvoiceDocTypeCd}" filterOptions="#{salesBean.eInvDocTypeListItems}">
+						<!-- <h:outputText value="#{vo.eInvoiceDocType}"></h:outputText> -->
+						<h:outputText value="#{bterp:lookupItemDesc('e_inv_doc_type', vo.eInvoiceDocTypeCd)}"></h:outputText>
+					</p:column>
+					<p:column headerText="Consolidated" styleClass="txt_center">
+						<p:commandLink 
+       						style="color: #db3333; text-decoration: underline;" 
+       						rendered="#{vo.isConsolEInv}"
+       						actionListener="#{salesBean.loadConsolidateDetailsList(vo)}" 
+       						oncomplete="varConsolDetailsDialog.show()" 
+       						update=":idConsolDetailsDialog"
+							>
+							<h:outputText value="Y"></h:outputText>
+						</p:commandLink>
+					</p:column>
+					<p:column headerText="Ref No." sortBy="#{vo.refNo}" filterBy="#{vo.refNo}" filterMatchMode="contains">
+						<h:outputText rendered="#{not vo.isConsolEInv}" value="#{vo.sysPrefix} #{vo.refNo}"></h:outputText> 
+						<h:outputText rendered="#{vo.isConsolEInv}" value="#{vo.refNo}"></h:outputText> <!-- consol inv stored prefix along with code -->
+					</p:column>
+					<p:column headerText="System Document Type" sortBy="#{vo.sysDocType}" filterBy="#{vo.sysDocType}" filterMatchMode="contains">
+						<h:outputText value="#{vo.sysDocType}"></h:outputText>
+					</p:column>
+					<p:column headerText="Created Date">
+						<h:outputText value="#{vo.createdDate}">
+							<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Created By" sortBy="#{vo.createdBy}" filterBy="#{vo.createdBy}" filterMatchMode="contains">
+						<h:outputText value="#{vo.createdBy}"></h:outputText>
+					</p:column>
+
+				</p:dataTable>
+			</p:panel>
+			
+			<p:panel header="E-Invoice APIs" toggleable="true" toggleSpeed="500" rendered="#{salesBean.isEInvSubmissionRole}">
+				<p:panelGrid style="width:550px;">
+					<p:row>
+						<p:column style="width:100px;">
+							<p:commandButton value="Get Recent Documents" actionListener="#{salesBean.onGetRecentDocuments}"
+								oncomplete="varGetRecentDocDialog.show()" process="@this"
+								update=":idGetRecentDocDialog" ></p:commandButton>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+					
+				<p:dataTable id="idEInvApiDailySnapshotTable" widgetVar="varEInvApiDailySnapshotTable"
+					value="#{salesBean.eInvApiDailySnapshotList}" var="vo" paginator="true"
+					rows="20" rowIndexVar="rowIndex"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" filterEvent="enter"
+					rowKey="#{vo.id}" style="width: 100px;">
+					<p:column headerText="View" style="width: 30px" styleClass="txt_center">
+						<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.handleSnapshotSelected(vo)}" oncomplete="varRecentDocListDialog.show()" update=":idRecentDocListDialog"/>
+					</p:column>
+					<p:column headerText="Date" style="width: 40px" styleClass="txt_center">
+						<h:outputText value="#{vo.dtTrans}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Total Count" style="width: 40px" styleClass="txt_center">
+						<h:outputText value="#{vo.totalCount}"></h:outputText>
+					</p:column>
+				</p:dataTable>
+				
+				<p:panelGrid style="width:550px;">
+					<p:row>
+						<p:column style="width:100px;">
+							<p:commandButton value="Display Scheduler List" actionListener="#{salesBean.loadSchedulerList}"
+								oncomplete="varSchedulerListDialog.show()" process="@this" update=":idSchedulerListDialog" ></p:commandButton>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</h:form>
+		
+		<!-- DIALOG - E INVOICE DETAILS -->
+		<p:dialog id="idEInvDetailsDialog" header="E-Invoice Details"
+			widgetVar="varEInvDetailsDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="true">
+			<h:form id="idEInvDetailsForm">
+				<ui:include src="e_invoice_details.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<!-- DIALOG - CONSOLIDATE DETAILS -->
+		<p:dialog id="idConsolDetailsDialog" header="Consolidate Details"
+			widgetVar="varConsolDetailsDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="true" style="height: 80%">
+			<h:form id="idConsolDetailsForm">
+				<ui:include src="consolidate_details.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<!-- DIALOG - GET RECENT DOCUMENTS (E-INVOICE API) -->
+		<p:dialog id="idGetRecentDocDialog" header="Get Recent Documents"
+			widgetVar="varGetRecentDocDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="true" style="height: 80%">
+			<h:form id="idGetRecentDocForm">
+				<ui:include src="api_get_recent_documents.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<!-- DIALOG - GET RECENT DOCUMENTS (E-INVOICE API) LIST (BY DATE) -->
+		<p:dialog id="idRecentDocListDialog" header="Document List"
+			widgetVar="varRecentDocListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="true">
+			<h:form id="idRecentDocListForm">
+				<ui:include src="api_get_recent_documents_list_by_date.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<!-- DIALOG - SCHEDULER LIST -->
+		<p:dialog id="idSchedulerListDialog" header="Scheduler List"
+			widgetVar="varSchedulerListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="true">
+			<h:form id="idSchedulerListForm">
+				<ui:include src="scheduler_list.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<!-- DIALOG - Issue eCN CONFIRMATION -->
+		<p:confirmDialog id="idIssueECNDialog" widgetVar="varIssueECNDialog"
+			header="Confirmation"
+			message="This action will issue an E-Invoice Credit Note/Self-billed Credit Note to this document." closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="Confirm" actionListener="#{salesBean.submitCreditNoteType(salesBean.eInvoiceDocumentVO)}"
+					update="msg :idResubmitEInvDialog" oncomplete="if (args &amp;&amp; !args.validationFailed) {varIssueECNDialog.hide(); varResubmitEInvDialog.show()}" />
+				<p:commandButton value="Cancel" onclick="varIssueECNDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+		
+		<!-- DIALOG - RESUBMIT EINVOICE CONFIRMATION -->
+		<p:confirmDialog id="idResubmitEInvDialog" widgetVar="varResubmitEInvDialog"
+			header="Confirmation"
+			message="Do you want to resubmit E-Invoice for #{salesBean.eInvoiceDocumentVO.sysPrefix} #{salesBean.eInvoiceDocumentVO.refNo}?" closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="Yes" actionListener="#{salesBean.resubmitEInvoiceDocument(salesBean.eInvoiceDocumentVO, billPymtBean)}"
+					update="msg" oncomplete="if (args &amp;&amp; !args.validationFailed) varResubmitEInvDialog.hide()" />
+				<p:commandButton value="No" onclick="varResubmitEInvDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+		
+	</ui:define>
+</ui:composition>

@@ -1,0 +1,185 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:c="http://java.sun.com/jsp/jstl/core"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="User List" toggleable="true" toggleSpeed="100">
+	<h:form id="idDataForm">
+		<p:growl id="msg"/>
+		
+		<h:panelGrid columns="2" style="margin-bottom:5px">
+			<p:commandButton value="Add" oncomplete="varAddUserDialog.show()" update=":idAddUserDialog"/>
+		</h:panelGrid>
+		
+		<p:dataTable id="idUserList" value="#{userBean.userList}" var="vo" paginator="true" rows="10" rowsPerPageTemplate="10,50,100"
+			filteredValue="#{userBean.filteredUserList}" filterEvent="enter">
+			<p:column style="width:80px; text-align:center">
+				<p:panelGrid columns="2">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{userBean.setUserVO(vo)}" update=":idAddUserDialog" oncomplete="varAddUserDialog.show()"/>
+					<p:commandButton icon="ui-icon-close" actionListener="#{userBean.setUserVO(vo)}" oncomplete="varDelUserDialog.show()"/>
+				</p:panelGrid>
+			</p:column>
+			
+			<p:column headerText="Login ID" sortBy="#{vo.loginId}" filterBy="#{vo.loginId}" filterMatchMode="contains">
+				<h:outputText value="#{vo.loginId}"/>
+			</p:column>
+			<p:column headerText="Status" sortBy="#{vo.statusCode}" filterBy="#{vo.statusCode}" style="text-align:center">
+				<h:outputText value="#{vo.statusCode}"/>
+			</p:column>
+			<p:column headerText="User Name" sortBy="#{vo.name}" filterBy="#{vo.name}" filterMatchMode="contains">
+				<h:outputText value="#{vo.name}"/>
+			</p:column>
+			
+			<p:column headerText="Name as IC" sortBy="#{userBean.getEmployeeVOForUser(vo).fullName}" filterBy="#{userBean.getEmployeeVOForUser(vo).fullName}" filterMatchMode="contains">
+				<h:outputText value="#{userBean.getEmployeeVOForUser(vo).fullName}"/>
+			</p:column>	
+						
+			<p:column headerText="NRIC" sortBy="#{userBean.getEmployeeVOForUser(vo).idNo}" filterBy="#{userBean.getEmployeeVOForUser(vo).idNo}" filterMatchMode="contains">
+				<h:outputText value="#{userBean.getEmployeeVOForUser(vo).idNo}"/>
+			</p:column>
+
+			<p:column headerText="Department" sortBy="#{userBean.getEmployeeVOForUser(vo).department}" 
+			          filterBy="#{userBean.getEmployeeVOForUser(vo).department}" filterMatchMode="contains">
+				<h:outputText value="#{userBean.getEmployeeVOForUser(vo).department}"/>
+			</p:column>
+			<p:column headerText="Role(s)" sortBy="#{vo.roleList}">
+				<ui:repeat value="#{vo.roleList}" var="roleList">  
+			    	<p:commandLink actionListener="#{userBean.onUserRoleSelected(vo)}" oncomplete="varUserRoleDialog.show()" update=":idUserRoleForm:idUserRolePickList">
+			    		 <h:outputText value="#{roleList.roleName}"/><br/>
+			    	</p:commandLink>
+				</ui:repeat> 
+			</p:column>
+			<p:column headerText="Contact Number" sortBy="#{vo.mobileNumber}" filterBy="#{vo.mobileNumber}" filterMatchMode="contains">
+				<h:outputText value="#{vo.mobileNumber}"/>
+			</p:column>
+			<p:column headerText="E-mail Address" sortBy="#{vo.emailAddress}" filterBy="#{vo.emailAddress}" filterMatchMode="contains">
+				<h:outputText value="#{vo.emailAddress}"/>
+			</p:column>
+			<p:column headerText="First Login" sortBy="#{vo.firstLoginDate}">
+				<h:outputText value="#{vo.firstLoginDate}">
+					<f:convertDateTime pattern="yyyy-MM-dd HH:mm:ss"/>
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Last Login" sortBy="#{vo.lastLoginDate}">
+				<h:outputText value="#{vo.lastLoginDate}">
+					<f:convertDateTime pattern="yyyy-MM-dd HH:mm:ss"/>
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Last Password Change" sortBy="#{vo.lastPasswordChangeDate}">
+				<h:outputText value="#{vo.lastPasswordChangeDate}">
+					<f:convertDateTime pattern="yyyy-MM-dd HH:mm:ss"/>
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Successful Login(s)" sortBy="#{vo.loginSuccessCount}" style="text-align:center">
+				<h:outputText value="#{vo.loginSuccessCount}"/>
+			</p:column>
+			<p:column headerText="Invalid Login(s)" sortBy="#{vo.loginInvalidCount}" style="text-align:center">
+				<p:commandButton value="Reset (#{vo.loginInvalidCount})"  actionListener="#{userBean.setUserVO(vo)}" oncomplete="varResetUserDialog.show()" rendered="#{vo.loginInvalidCount ge userBean.maxLoginInvalidCount}"/>
+				<h:outputText value="#{vo.loginInvalidCount}" rendered="#{vo.loginInvalidCount lt userBean.maxLoginInvalidCount}"/>
+			</p:column>
+		</p:dataTable>
+		
+		<h:panelGrid columns="2" style="margin-top:5px">
+			<p:commandButton value="Add" oncomplete="varAddUserDialog.show()" update=":idAddUserDialog"/>
+			
+	   		<p:commandButton icon="ui-icon-print" value="#{msg['common.button.label.print']} Excel" 
+				actionListener="#{userBean.printUserList()}" ajax="false" style="margin-left:10px"/>
+	    						
+		
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<!-- DIALOG - USER-ROLE MAPPING -->
+<p:dialog widgetVar="varUserRoleDialog" header="User-Role Mapping" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idUserRoleForm">
+		<ui:include src="user_role_list.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - ADD ROLE -->
+<p:dialog id="idAddUserDialog" widgetVar="varAddUserDialog" header="Add User" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddUserForm">
+		<ui:include src="user_add_form.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idCustListDialogDialog" header="Customer List" widgetVar="varCustListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idCustListForm">
+		<p:dataTable widgetVar="varCustListTable" value="#{userBean.lazyCustDataModel}" var="custVO" paginator="true" rows="10" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			filterEvent="enter" lazy="true" rowKey="#{custVO.id}" selectionMode="single">
+			<p:ajax event="rowSelect" listener="#{userBean.handleCustSelect}" update=":idAddUserForm:idCustomer" oncomplete="varCustListDialog.hide();" process="@this"/>
+			
+			<p:column headerText="Customer No" sortBy="#{custVO.code}" filterBy="#{custVO.code}">
+				<h:outputText value="#{custVO.code}" />
+			</p:column>
+			
+			<p:column headerText="Customer Name" sortBy="#{custVO.custName}" filterBy="#{custVO.custName}" filterMatchMode="contains">
+				<h:outputText value="#{bterp:lookupItemDesc('salutatn', custVO.salutationCd)} #{custVO.custName}" />
+			</p:column>
+			
+			<p:column headerText="NickName" sortBy="#{custVO.nickName}" filterBy="#{custVO.nickName}" filterMatchMode="contains">
+				<h:outputText value="#{custVO.nickName}" />
+			</p:column>
+			
+			<p:column headerText="Company Name" sortBy="#{custVO.corporateName}" filterBy="#{custVO.corporateName}" filterMatchMode="contains">
+				<h:outputText value="#{custVO.corporateName}" />
+			</p:column>
+			
+			<p:column headerText="Contact" sortBy="#{custVO.perContacts}" filterBy="#{custVO.perContacts}">
+		        <ui:repeat value="#{custVO.perContacts.split(',')}" var="cntc" rendered="#{not empty custVO.perContacts}">
+		            <h:outputText value="#{custBean.getContactStr(cntc)}"/><br/>
+		        </ui:repeat>
+			</p:column>
+			
+			<p:column headerText="Identity" sortBy="#{custVO.identities}" filterBy="#{custVO.identities}" filterMatchMode="contains">
+		        <ui:repeat value="#{custVO.identities.split(',')}" var="identity" rendered="#{not empty custVO.identities}">
+		            <h:outputText value="#{custBean.getIdentityStr(identity)}"/><br/>
+		        </ui:repeat>
+			</p:column>
+		</p:dataTable>
+		
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varCustListDialog.hide();"/>
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - DELETE ACCOUNT -->
+<p:confirmDialog widgetVar="varDelUserDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{userBean.deleteUser}" update="@form,:idDataForm" oncomplete="varDelUserDialog.hide()"/>
+		<p:commandButton value="Cancel" actionListener="#{userBean.resetForm}" oncomplete="varDelUserDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!-- DIALOG - RESET INVALID LOGIN -->
+<p:confirmDialog widgetVar="varResetUserDialog" message="Are you sure want to reset invalid login this record?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{userBean.resetInvalidLogin}" update="@form,:idDataForm" oncomplete="varResetUserDialog.hide()"/>
+		<p:commandButton value="Cancel" actionListener="#{userBean.resetForm}" oncomplete="varResetUserDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<p:dialog id="idCompanyDialog" widgetVar="varCompanyDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Company"/>
+	</f:facet>
+	<h:form id="idCompanyForm">
+		<ui:include src="user_add_company.xhtml"/>
+	</h:form>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

@@ -1,0 +1,4146 @@
+package com.bcs.zsg.sales.service;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.cfg.sec.service.UserService;
+import com.bcs.zsg.cfg.sec.vo.EmployeeVO;
+import com.bcs.zsg.common.dao.HomeDAO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.component.security.vo.UserVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.core.vo.BaseVO;
+import com.bcs.zsg.gst.service.GSTService;
+import com.bcs.zsg.history.vo.TourDepHistoryVO;
+import com.bcs.zsg.maintenance.helper.ConstantAppSetting;
+import com.bcs.zsg.maintenance.helper.MaintConstant;
+import com.bcs.zsg.maintenance.service.AppSettingService;
+import com.bcs.zsg.product.dao.CruiseDAO;
+import com.bcs.zsg.product.dao.SalesCommConfigDAO;
+import com.bcs.zsg.product.dao.TourCruiseCabinDAO;
+import com.bcs.zsg.product.dao.TourPackageDAO;
+import com.bcs.zsg.product.helper.ProductConstant;
+import com.bcs.zsg.product.service.TourCruiseCabinService;
+import com.bcs.zsg.product.service.TourPackageService;
+import com.bcs.zsg.product.vo.CruiseScheduleVO;
+import com.bcs.zsg.product.vo.FeedbackVO;
+import com.bcs.zsg.product.vo.SalesCommConfigDetailVO;
+import com.bcs.zsg.product.vo.TourCruiseCabinDiscountVO;
+import com.bcs.zsg.product.vo.TourCruiseCabinVO;
+import com.bcs.zsg.product.vo.TourDepItemVO;
+import com.bcs.zsg.product.vo.TourDepartureDiscountVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.product.vo.TourPackageVO;
+import com.bcs.zsg.sales.dao.BookingDAO;
+import com.bcs.zsg.sales.dao.InvoiceDAO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.BookingChargeItemVO;
+import com.bcs.zsg.sales.vo.BookingSalesCommVO;
+import com.bcs.zsg.sales.vo.BookingVO;
+import com.bcs.zsg.sales.vo.BookingViewVO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.sales.vo.SurveyVO;
+
+public class BookingServiceImpl implements BookingService {
+
+	@Autowired
+	private BookingDAO bookingDAO;
+	@Autowired
+	private TourPackageDAO tourPkgDAO;
+	@Autowired
+	private HomeDAO homeDAO;
+	@Autowired
+	private UserService userService;
+	@Autowired
+	private TourPackageService tourPkgService;
+	@Autowired
+	private CustomerService custService;
+	@Autowired
+	private GSTService gstService;
+	@Autowired
+	private SalesCommConfigDAO salesCommConfigDAO;
+	@Autowired
+	private TourCruiseCabinService tourCruiseCabinService;
+	@Autowired
+	private InvoiceDAO invoiceDAO;
+	@Autowired
+	private AppSettingService appSettingService;
+	@Autowired
+	private CruiseDAO cruiseDAO;
+	@Autowired
+	private TourCruiseCabinDAO tourCruiseCabinDAO;
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#insertVO(com.bcs.zsg.core.vo.BaseVO)
+	 */
+	@Override
+	public void insertVO(BaseVO vo) throws BusinessException {
+		bookingDAO.insert(vo);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#updateVO(com.bcs.zsg.core.vo.BaseVO)
+	 */
+	@Override
+	public void updateVO(BaseVO vo) throws BusinessException {
+		bookingDAO.update(vo);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#deleteVO(com.bcs.zsg.core.vo.BaseVO)
+	 */
+	@Override
+	public void deleteVO(BaseVO vo) throws BusinessException {
+		bookingDAO.delete(vo);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#addBooking(com.bcs.zsg.sales.vo.BookingVO, java.util.List)
+	 */
+	@Override
+	public synchronized void addBooking(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		int limitedSeatAllotment = Integer.parseInt(LookupItemUtils.getGlobalConfigValue(MaintConstant.GLOBAL_CD_GLOBAL, MaintConstant.GLOBAL_CD_SEAT_ALLOTMENT_LIMITED_STATUS));
+		int balance = 0;
+
+		if (tourDepVO.getSeatAllot().intValue() > 0) {
+			int totalBook = bookingDAO.getTotalBookByTourDep(tourDepVO.getId(), null);
+			balance = tourDepVO.getSeatAllot() - tourDepVO.getReservedSeat() - tourDepVO.getTourManagerPax() - totalBook - bookingVO.getPaxFullCeb() -
+					bookingVO.getPaxFullCnb() - bookingVO.getPaxFullCtw() - bookingVO.getPaxFullSgl() - bookingVO.getPaxFullTwn();
+			if (balance < 0) throw new BusinessException(CommonErrConstant.ERR_BOOKING_OVER_SEAT_BALANCE);
+		}
+		// set booking pax quantity
+		bookingVO.setQuantity(bookingVO.getPaxFullCeb() + bookingVO.getPaxFullCnb() + bookingVO.getPaxFullCtw() + bookingVO.getPaxFullInft() + bookingVO.getPaxFullSgl() + bookingVO.getPaxFullTwn() +
+				bookingVO.getPaxGrndCeb() + bookingVO.getPaxGrndCnb() + bookingVO.getPaxGrndCtw() + bookingVO.getPaxGrndInft() + bookingVO.getPaxGrndSgl() + bookingVO.getPaxGrndTwn());
+
+		if (bookingVO.getQuantity() == 0) throw new BusinessException(CommonErrConstant.ERR_BOOKING_PAX_EMPTY);
+
+		// add booking
+		bookingVO.setPmntStatusCd(SalesConstant.BOOKING_PMNT_STATUS_KIV);
+		bookingVO.setStatusCode(CommonConstant.STATUS_CD_BOOKED);
+
+		/*boolean isNotTfairSp = true;
+		for (String orderType : SalesConstant.BOOKING_ORDER_TYPE_TFAIR_SP) {
+			if (bookingVO.getOrderTypeCd().startsWith(orderType)) {
+				isNotTfairSp = false;
+				break;
+			}
+		}
+		if (isNotTfairSp) bookingVO.setIdSalerTfair(null);*/
+		insertVO(bookingVO);
+
+		// Add booking survey
+		if(CollectionUtils.isNotEmpty(bookingVO.getIdSurveyList())) {
+			for(String code : bookingVO.getIdSurveyList()) {
+				SurveyVO vo = new SurveyVO();
+				vo.setBookingId(bookingVO.getId());
+				vo.setCode(code);
+				insertVO(vo);
+			}
+		}
+
+		// add booking charge item
+		addBookingChargeItemList(bookingVO, tourDepVO);
+
+		// add booking sales commission
+		addBookingSalesComm(bookingVO, tourDepVO);
+
+		if (balance > 0 && limitedSeatAllotment > 0 && balance <= limitedSeatAllotment)
+			tourPkgDAO.updateTourStatus(ProductConstant.TOUR_STATUS_CD_LIMITED, tourDepVO.getId());
+		else tourPkgDAO.updateTourStatus(ProductConstant.TOUR_STATUS_CD_FULL, tourDepVO.getId());
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#updBooking(com.bcs.zsg.sales.vo.BookingVO, com.bcs.zsg.common.vo.AddUpdDelVO)
+	 */
+	@Override
+	public synchronized void updBooking(BookingVO bookingVO, AddUpdDelVO bookItemAUDVO, TourDepartureVO tourDepVO) throws BusinessException {
+		int limitedSeatAllotment = Integer.parseInt(LookupItemUtils.getGlobalConfigValue(MaintConstant.GLOBAL_CD_GLOBAL, MaintConstant.GLOBAL_CD_SEAT_ALLOTMENT_LIMITED_STATUS));
+		int balance = 0;
+
+		if (tourDepVO.getSeatAllot().intValue() > 0) {
+			int totalBook = bookingDAO.getTotalBookByTourDep(tourDepVO.getId(), bookingVO.getId());
+			balance = tourDepVO.getSeatAllot() - tourDepVO.getReservedSeat() - tourDepVO.getTourManagerPax() - totalBook - bookingVO.getPaxFullCeb() -
+					bookingVO.getPaxFullCnb() - bookingVO.getPaxFullCtw() - bookingVO.getPaxFullSgl() - bookingVO.getPaxFullTwn();
+			if (balance < 0) throw new BusinessException(CommonErrConstant.ERR_BOOKING_OVER_SEAT_BALANCE);
+			//if (balance == 0) flag = 1;
+			//else if (balance > 0) flag = 2;
+		}
+		// set booking pax quantity
+		bookingVO.setQuantity(bookingVO.getPaxFullCeb() + bookingVO.getPaxFullCnb() + bookingVO.getPaxFullCtw() + bookingVO.getPaxFullInft() + bookingVO.getPaxFullSgl() + bookingVO.getPaxFullTwn() +
+				bookingVO.getPaxGrndCeb() + bookingVO.getPaxGrndCnb() + bookingVO.getPaxGrndCtw() + bookingVO.getPaxGrndInft() + bookingVO.getPaxGrndSgl() + bookingVO.getPaxGrndTwn());
+
+		if (bookingVO.getQuantity() == 0) throw new BusinessException(CommonErrConstant.ERR_BOOKING_PAX_EMPTY);
+		/*boolean isNotTfairSp = true;
+		for (String orderType : SalesConstant.BOOKING_ORDER_TYPE_TFAIR_SP) {
+			if (bookingVO.getOrderTypeCd().startsWith(orderType)) {
+				isNotTfairSp = false;
+				break;
+			}
+		}
+		if (isNotTfairSp) bookingVO.setIdSalerTfair(null);*/
+
+		// update booking
+		updateVO(bookingVO);
+		// update booking charge items
+		updBookingChargeItemList(bookingVO);
+		// update status to full status
+
+		if (tourDepVO.getSeatAllot().intValue() > 0) {
+			if (balance > 0) {
+				if (limitedSeatAllotment > 0 && balance <= limitedSeatAllotment) {
+					if (ProductConstant.TOUR_STATUS_CD_FULL.equals(tourDepVO.getTourStatusCd())) {
+						tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_LIMITED);
+						updateVO(tourDepVO);
+					}
+				} else {
+					if (ProductConstant.TOUR_STATUS_CD_FULL.equals(tourDepVO.getTourStatusCd())) {
+						tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+						updateVO(tourDepVO);
+					}
+				}
+			} else {
+				if (ProductConstant.TOUR_STATUS_CD_AVAILABLE.equals(tourDepVO.getTourStatusCd()) ||
+						ProductConstant.TOUR_STATUS_CD_LIMITED.equals(tourDepVO.getTourStatusCd())) {
+					tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_FULL);
+					updateVO(tourDepVO);
+				}
+			}
+		}
+
+		// Add booking survey
+		if(CollectionUtils.isNotEmpty(bookingVO.getIdSurveyList())) {
+			bookingDAO.deleteSurveyList(bookingVO.getId());
+
+			for(String code : bookingVO.getIdSurveyList()) {
+				SurveyVO vo = new SurveyVO();
+				vo.setBookingId(bookingVO.getId());
+				vo.setCode(code);
+				insertVO(vo);
+			}
+		}
+
+		// Update booking sync the order type code (Order source) on invoice
+		if (bookingVO.getId() != null && StringUtils.isNotBlank(bookingVO.getOrderTypeCd()))
+			bookingDAO.updateInvoiceOrderSource(bookingVO.getId(), bookingVO.getOrderTypeCd());
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#cancelBooking(com.bcs.zsg.sales.vo.BookingVO, com.bcs.zsg.product.vo.TourDepartureVO)
+	 */
+	@Override
+	public void cancelBooking(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		if (CommonConstant.STATUS_CD_CONFIRMED.equals(bookingVO.getStatusCode())) bookingVO.setStatusCode(CommonConstant.STATUS_CD_CANCELLED); //throw new BusinessException(CommonErrConstant.ERR_BOOKING_ISSUED_INV);
+		else if (CommonConstant.STATUS_CD_BOOKED.equals(bookingVO.getStatusCode())) {
+			//if (tourPkgService.isInvEOIssued(null, bookingVO)) throw new BusinessException(CommonErrConstant.ERR_BOOKING_ISSUED_INV);
+			if (SalesConstant.BOOKING_PMNT_STATUS_KIV.equals(bookingVO.getPmntStatusCd())) bookingVO.setStatusCode(CommonConstant.STATUS_CD_VOID);
+			else bookingVO.setStatusCode(CommonConstant.STATUS_CD_CANCELLED);
+		}
+		if(bookingVO.getLockStatus()) {
+			bookingVO.setLockStatus(false);
+			bookingDAO.updateIndividualBookingLockStatus(bookingVO.getId(), false);
+		}
+		updateVO(bookingVO);
+
+		if (tourDepVO.getSeatAllot().intValue() > 0) {
+			int totalBook = bookingDAO.getTotalBookByTourDep(tourDepVO.getId(), bookingVO.getId());
+			int balance = tourDepVO.getSeatAllot() - tourDepVO.getReservedSeat() - tourDepVO.getTourManagerPax() - totalBook;
+			if (balance > 0) {
+				if (ProductConstant.TOUR_STATUS_CD_FULL.equals(tourDepVO.getTourStatusCd())) {
+					tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+					updateVO(tourDepVO);
+				}
+			}
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#getBookingList(java.lang.Long)
+	 */
+	@Override
+	public List<BookingVO> getBookingList(TourDepartureVO tourDepVO) throws BusinessException {
+		List<BookingVO> bookingList = bookingDAO.getBookingList(tourDepVO.getId());
+
+		if (CollectionUtils.isNotEmpty(bookingList)) {
+			int totPaxFullSgl = 0;
+			int totPaxFullTwn = 0;
+			int totPaxFullCtw = 0;
+			int totPaxFullCwb = 0;
+			int totPaxFullCnb = 0;
+			int totPaxFullInft = 0;
+			int totPaxGrndSgl = 0;
+			int totPaxGrndTwn = 0;
+			int totPaxGrndCtw = 0;
+			int totPaxGrndCwb = 0;
+			int totPaxGrndCnb = 0;
+			int totPaxGrndInft = 0;
+			String feedbackStatus = "";
+			
+			for (BookingVO bookingVO : bookingList) {
+				feedbackStatus = bookingDAO.getFeedbackStatus(bookingVO.getId());
+				bookingVO.setFeedbackStatus(feedbackStatus);
+				
+				bookingVO.setEmployeeViewVO(userService.getEmployeeView(bookingVO.getIdEmployee()));
+				bookingVO.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>(bookingVO.getBookingChargeItemSet()));
+				bookingVO.setBookingChargeItemSet(null);
+				bookingVO.setCustomerVO(custService.getCustomerSimpleDetail(bookingVO.getIdCust()));
+				bookingVO.setCustName(bookingVO.getCustomerVO().getCustName());
+				InvoiceVO invVO = bookingDAO.getInvoiceInfo(bookingVO.getId());
+				bookingVO.setInvId(invVO.getId());
+				bookingVO.setInvCode(invVO.getCode());
+				bookingVO.setPsNo(invVO.getPsNo());
+				bookingVO.setInternalRemarks(invVO.getInternalRemarks());
+				bookingVO.setValidPassportStatus(invVO.getValidPassportStatus());
+				bookingVO.setVisaCopiesStatus(invVO.getVisaCopiesStatus());
+				bookingVO.setTransferredDate(invVO.getTransferredDate()); // for transferred badge use
+				bookingVO.setAmtPaid(invVO.getAmtPaid()); // for payment badge use
+				bookingVO.setInvPmntStatusCd(invVO.getStatusCd()); // for payment badge use
+
+				bookingVO.setInvList(bookingDAO.getSubDocInfo(bookingVO.getId()));
+				if (bookingVO.getInvList() == null)	bookingVO.setInvList(new ArrayList<InvoiceVO>());
+				bookingVO.setPaxStmtList(new ArrayList<InvoiceVO>());
+				Iterator<InvoiceVO> iterator = bookingVO.getInvList().iterator();
+				// take out pax stmt from inv list and insert into pax stmt list
+		        while (iterator.hasNext()) {
+		        	InvoiceVO invoiceVO = iterator.next();
+		            if (invoiceVO.getDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_PAX_STMT)) {
+		            	// won't show converted stmt
+		            	// 2/4/2025 Booking Made Page - Display PS No. although already converted to INV (You Yuan)
+//		            	if (!invoiceVO.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_CONVERTED)) {
+		            		bookingVO.getPaxStmtList().add(invoiceVO);
+//		            	}
+		            	iterator.remove();
+		            }
+		        }
+
+		        if (invVO != null) {
+		        	if (invVO.getDocTypeCd() != null) {
+		        		if (invVO.getDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_INVC)) {
+		        			// if is invc, is old record before pax stmt, no need check doc type status
+		        			bookingVO.getInvList().add(invVO);
+		        		} else {
+		        			// if is not invc, then is pax stmt, will carry doc type status
+//		        			if (!invVO.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_CONVERTED)
+//		        					&& !invVO.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_SPLIT)) {
+//				        		bookingVO.getPaxStmtList().add(invVO);
+//				        	}
+
+		        			if (!invVO.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_SPLIT)) {
+				        		bookingVO.getPaxStmtList().add(invVO);
+				        	}
+		        		}
+
+		        	} else {
+		        		if (invVO.getId() != null) {
+		        			System.out.println("BookingServiceImpl.getBookingList() " + bookingVO.getId());
+			        		System.out.println("invVO.getId(): " + invVO.getId());
+			        		System.out.println("CYY invVO.getDocTypeCd() IS NULL !!!");
+		        		}
+		        	}
+
+		        }
+
+//				for (InvoiceVO vo : bookingVO.getInvList()) {
+//					System.out.println("CYY bookingVO.getInvList(): " + vo.getId() + " " + vo.getCode() + " " + vo.getPsNo());
+//				}
+
+				for (BookingChargeItemVO itemVO : bookingVO.getBookingChargeItemList()) {
+					if (ProductConstant.TOUR_DEP_ITM_CD_FT_SGL.equals(itemVO.getCode())) {
+						totPaxFullSgl += itemVO.getQuantity();
+						bookingVO.setPaxFullSgl(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_TWN.equals(itemVO.getCode())) {
+						totPaxFullTwn += itemVO.getQuantity();
+						bookingVO.setPaxFullTwn(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CTW.equals(itemVO.getCode())) {
+						totPaxFullCtw += itemVO.getQuantity();
+						bookingVO.setPaxFullCtw(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CWB.equals(itemVO.getCode())) {
+						totPaxFullCwb += itemVO.getQuantity();
+						bookingVO.setPaxFullCeb(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CNB.equals(itemVO.getCode())) {
+						totPaxFullCnb += itemVO.getQuantity();
+						bookingVO.setPaxFullCnb(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_INFT.equals(itemVO.getCode())) {
+						totPaxFullInft += itemVO.getQuantity();
+						bookingVO.setPaxFullInft(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_SGL.equals(itemVO.getCode())) {
+						totPaxGrndSgl += itemVO.getQuantity();
+						bookingVO.setPaxGrndSgl(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_TWN.equals(itemVO.getCode())) {
+						totPaxGrndTwn += itemVO.getQuantity();
+						bookingVO.setPaxGrndTwn(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CTW.equals(itemVO.getCode())) {
+						totPaxGrndCtw += itemVO.getQuantity();
+						bookingVO.setPaxGrndCtw(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CWB.equals(itemVO.getCode())) {
+						totPaxGrndCwb += itemVO.getQuantity();
+						bookingVO.setPaxGrndCeb(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CNB.equals(itemVO.getCode())) {
+						totPaxGrndCnb += itemVO.getQuantity();
+						bookingVO.setPaxGrndCnb(itemVO.getQuantity());
+
+					} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_INFT.equals(itemVO.getCode())) {
+						totPaxGrndInft += itemVO.getQuantity();
+						bookingVO.setPaxGrndInft(itemVO.getQuantity());
+					}
+				}
+			}
+			bookingList.get(0).setTotPaxFullSgl(totPaxFullSgl);
+			bookingList.get(0).setTotPaxFullTwn(totPaxFullTwn);
+			bookingList.get(0).setTotPaxFullCtw(totPaxFullCtw);
+			bookingList.get(0).setTotPaxFullCeb(totPaxFullCwb);
+			bookingList.get(0).setTotPaxFullCnb(totPaxFullCnb);
+			bookingList.get(0).setTotPaxFullInft(totPaxFullInft);
+			bookingList.get(0).setTotPaxGrndSgl(totPaxGrndSgl);
+			bookingList.get(0).setTotPaxGrndTwn(totPaxGrndTwn);
+			bookingList.get(0).setTotPaxGrndCtw(totPaxGrndCtw);
+			bookingList.get(0).setTotPaxGrndCeb(totPaxGrndCwb);
+			bookingList.get(0).setTotPaxGrndCnb(totPaxGrndCnb);
+			bookingList.get(0).setTotPaxGrndInft(totPaxGrndInft);
+		}
+		return bookingList;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#getBookingViewList(com.bcs.zsg.common.vo.SearchParamVO, java.lang.String, java.lang.String, java.lang.Boolean)
+	 */
+	@Override
+	public List<BookingViewVO> getBookingViewList(SearchParamVO searchParamVO, String searchBookingName, String searchBookingNumber, Boolean isPersonal, UserVO userVO) throws BusinessException {
+		Boolean noValue = false;
+
+		List<BookingViewVO> bookingViewList = bookingDAO.getBookingViewList(searchParamVO, searchBookingNumber);
+		List<BookingViewVO> bookingViewListBySearch = new ArrayList<BookingViewVO>();
+		List<BookingViewVO> bookingViewListClone = new ArrayList<BookingViewVO>();
+		if (CollectionUtils.isNotEmpty(bookingViewList)) {
+			bookingViewListClone.addAll(bookingViewList);
+			EmployeeVO employee = homeDAO.getEmployeeInfo(userVO.getUuid(), null);
+			if (isPersonal) {
+				for (BookingViewVO vo : bookingViewList) {
+					if(!vo.getEmployeeViewVO().getUserVO().getLoginId().equals(userVO.getLoginId())) {
+						bookingViewListClone.remove(vo);
+					}
+				}
+			} else {
+				for (BookingViewVO vo : bookingViewList) {
+					if(!vo.getEmployeeViewVO().getDepartment().equals(employee.getDepartment()) && employee.getDepartment().toLowerCase().startsWith("sale")) {
+						bookingViewListClone.remove(vo);
+					}
+				}
+			}
+
+			if (CollectionUtils.isNotEmpty(bookingViewListClone)) {
+				for (BookingViewVO bookingViewVO : bookingViewListClone) {
+					bookingViewVO.setCustomerVO(custService.getCustomerInfo(bookingViewVO.getIdCust()));
+					bookingViewVO.setCustName(bookingViewVO.getCustomerVO().getPersonVO().getLastName() + " " + bookingViewVO.getCustomerVO().getPersonVO().getGivenName());
+				}
+			}
+		}
+		return (bookingViewListBySearch.size() > 0 || noValue) ? bookingViewListBySearch : bookingViewListClone;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#getBookingViewList(com.bcs.zsg.common.vo.SearchParamVO, java.lang.String, java.lang.Boolean, com.bcs.zsg.cfg.sec.vo.EmployeeVO)
+	 */
+	@Override
+	public List<BookingViewVO> getBookingViewList(SearchParamVO searchParamVO, Boolean isPersonal, EmployeeVO employeeVO) throws BusinessException {
+		List<BookingViewVO> bookingViewList = bookingDAO.getBookingViewList(searchParamVO, isPersonal, employeeVO);
+		return bookingViewList;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#updBookingTourDepHistId(com.bcs.zsg.history.vo.TourDepHistoryVO)
+	 */
+	@Override
+	public void updBookingTourDepHistId(TourDepHistoryVO tourDepHistoryVO) throws BusinessException {
+		bookingDAO.updBookingTourDepHistId(tourDepHistoryVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#getBooking(java.lang.Long)
+	 */
+	@Override
+	public BookingViewVO getBookingView(Long bookingId) throws BusinessException {
+		return bookingDAO.getBookingView(bookingId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#getBooking(java.lang.Long)
+	 */
+	@Override
+	public BookingVO getBooking(Long bookingId) throws BusinessException {
+		return bookingDAO.getBooking(bookingId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#transferBooking(java.lang.Long, java.lang.Long, boolean)
+	 */
+	@Override
+	public InvoiceVO transferBooking(Long idBooking, Long idTourDep, Date invDate, TourDepartureVO tourDepVO, boolean isReturnValue) throws BusinessException {
+		if (idTourDep.equals(tourDepVO.getId())) throw new BusinessException(CommonErrConstant.ERR_BOOKING_TRANSFER_SAME_TOUR_DEP);
+		tourDepVO = tourPkgService.getTourDepById(tourDepVO.getId());
+
+		// update current booking to cancel
+		BookingVO bookingVO = bookingDAO.getBooking(idBooking);
+		if (!CommonConstant.STATUS_CD_CANCELLED.equals(bookingVO.getStatusCode()) && !CommonConstant.STATUS_CD_VOID.equals(bookingVO.getStatusCode())) {
+			bookingVO.setStatusCode(CommonConstant.STATUS_CD_CANCELLED);
+			updateVO(bookingVO);
+		}
+
+		// add new booking
+		BookingVO vo = new BookingVO();
+		vo.setIdTourDep(tourDepVO.getId());
+		vo.setIdCompany(bookingVO.getIdCompany());
+		vo.setIdEmployee(bookingVO.getIdEmployee());
+		vo.setIdCust(bookingVO.getIdCust());
+		vo.setOrderTypeCd(bookingVO.getOrderTypeCd());
+		vo.setQuantity(bookingVO.getQuantity());
+		vo.setPmntStatusCd(bookingVO.getPmntStatusCd());
+		if (SalesConstant.BOOKING_PMNT_STATUS_DEPOSIT.equals(bookingVO.getPmntStatusCd()) ||
+				SalesConstant.BOOKING_PMNT_STATUS_FULL.equals(bookingVO.getPmntStatusCd()))
+			vo.setStatusCode(CommonConstant.STATUS_CD_CONFIRMED);
+		else if (SalesConstant.BOOKING_PMNT_STATUS_KIV.equals(bookingVO.getPmntStatusCd()))
+			vo.setStatusCode(CommonConstant.STATUS_CD_BOOKED);
+		else vo.setStatusCode(bookingVO.getStatusCode());
+		vo.setDtExp(bookingVO.getDtExp());
+		for (BookingChargeItemVO itemVO : bookingVO.getBookingChargeItemSet()) {
+			if (ProductConstant.TOUR_DEP_ITM_CD_FT_SGL.equals(itemVO.getCode())) { vo.setPaxFullSgl(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_TWN.equals(itemVO.getCode())) { vo.setPaxFullTwn(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CTW.equals(itemVO.getCode())) { vo.setPaxFullCtw(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CWB.equals(itemVO.getCode())) { vo.setPaxFullCeb(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CNB.equals(itemVO.getCode())) { vo.setPaxFullCnb(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_INFT.equals(itemVO.getCode())) { vo.setPaxFullInft(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_SGL.equals(itemVO.getCode())) { vo.setPaxGrndSgl(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_TWN.equals(itemVO.getCode())) { vo.setPaxGrndTwn(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CTW.equals(itemVO.getCode())) { vo.setPaxGrndCtw(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CWB.equals(itemVO.getCode())) { vo.setPaxGrndCeb(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CNB.equals(itemVO.getCode())) { vo.setPaxGrndCnb(itemVO.getQuantity()); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_INFT.equals(itemVO.getCode())) { vo.setPaxGrndInft(itemVO.getQuantity()); }
+		}
+
+		// if seat balance is 0, throw error msg
+		int totalBook = 0;
+		int balance = 0;
+		if (tourDepVO.getSeatAllot().intValue() > 0) {
+			totalBook = bookingDAO.getTotalBookByTourDep(tourDepVO.getId(), null);
+			balance = tourDepVO.getSeatAllot() - tourDepVO.getTourManagerPax() - tourDepVO.getReservedSeat() - totalBook -
+					vo.getPaxFullCeb() - vo.getPaxFullCnb() - vo.getPaxFullCtw() - vo.getPaxFullSgl() - vo.getPaxFullTwn();
+			if (balance < 0) throw new BusinessException(CommonErrConstant.ERR_BOOKING_OVER_SEAT_BALANCE);
+			if (balance == 0) {
+				tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_FULL);
+				updateVO(tourDepVO);
+			}
+		}
+		insertVO(vo);
+
+		// add new booking item
+		tourDepVO.setTourDepItemList(tourPkgService.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany()));
+		addBookingChargeItemList(vo, tourDepVO);
+
+		// add booking sales commission
+		addBookingSalesComm(vo, tourDepVO);
+
+		// update previous tour dep status
+		TourDepartureVO prevTourDepVO =  tourPkgService.getTourDepById(bookingVO.getIdTourDep());
+		if (prevTourDepVO.getSeatAllot().intValue() > 0) {
+			if (ProductConstant.TOUR_STATUS_CD_FULL.equals(prevTourDepVO.getTourStatusCd())) {
+				prevTourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+				updateVO(prevTourDepVO);
+
+				/*totalBook = bookingDAO.getTotalBookByTourDep(prevTourDepVO.getId(), null);
+				balance = prevTourDepVO.getSeatAllot() - prevTourDepVO.getTourManagerPax() - prevTourDepVO.getReservedSeat() - totalBook;
+				if (balance > 0) {
+					prevTourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+					updateVO(prevTourDepVO);
+				}*/
+			}
+		}
+
+		// return invoice object
+		if (isReturnValue) {
+			boolean isGSTPeriod = gstService.isGSTPeriod(bookingVO.getIdCompany(), invDate);
+			List<TourDepItemVO> tourDepItemVOList = null;
+			if (isGSTPeriod) {
+				tourDepItemVOList = tourPkgService.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany());
+			}
+
+			TourPackageVO tourPkgVO = tourPkgService.getTourPackageById(tourDepVO.getIdTourPkg());
+			InvoiceVO invVO = new InvoiceVO();
+			invVO.setInvoiceDt(invDate);
+			invVO.setCustomerId(vo.getIdCust());
+			invVO.setBookingId(vo.getId());
+			invVO.setTourCd(tourDepVO.getCode());
+			invVO.setTourDepId(tourDepVO.getId());
+			invVO.setSubjLine(tourDepVO.getDesc());
+			invVO.setDepartureDt(tourDepVO.getDtDep());
+			invVO.setOrderCd(vo.getOrderTypeCd());
+			invVO.setCatCd(CommonConstant.LOOKUP_ITM_INV_CAT_TOUR);
+			StringBuilder sb = new StringBuilder();
+			sb.append(tourDepVO.getNumDays() + "Days " + tourDepVO.getNumNights() + "Nights ");
+			if (!StringUtils.isEmpty(tourPkgVO.getNameEn())) sb.append(tourPkgVO.getNameEn());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameZh())) sb.append(" " + tourPkgVO.getNameZh());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameOther())) sb.append(" " + tourPkgVO.getNameOther());
+			invVO.setSubjLine(sb.toString());
+			if (StringUtils.isNotEmpty(tourDepVO.getLangCode())) {
+				invVO.setSubjLine(invVO.getSubjLine() + " [" +
+					LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_PRODUCT_LANG, tourDepVO.getLangCode()) +
+				"]");
+			}
+
+			invVO.setInvoiceItemList(new ArrayList<InvoiceItemVO>());
+			for (BookingChargeItemVO itemVO : vo.getBookingChargeItemList()) {
+				if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0) {
+					InvoiceItemVO invItemVO = new InvoiceItemVO();
+					invItemVO.setAcctId(itemVO.getIdAcct());
+					invItemVO.setInvEOItemId(itemVO.getIdInvEoItem());
+					invItemVO.setInvItemCd(itemVO.getCode());
+					invItemVO.setCode(itemVO.getCode());
+					invItemVO.setDesc(itemVO.getDesc());
+					invItemVO.setQty(itemVO.getQuantity());
+					invItemVO.setUnitPrice(itemVO.getAmount());
+					invItemVO.setAmount(itemVO.getAmount() * itemVO.getQuantity());
+					invItemVO.setAirfare(itemVO.getAirfare());
+					if(itemVO.getIsLock() != null) invItemVO.setIsLock(itemVO.getIsLock()); else itemVO.setIsLock(false);
+					// set GST info
+					if (CollectionUtils.isNotEmpty(tourDepItemVOList)) {
+						for (TourDepItemVO tourDepItemVO : tourDepItemVOList) {
+							if (tourDepItemVO.getCode().equals(itemVO.getCode())) {
+								invItemVO.setTaxCode(tourDepItemVO.getTaxCode());
+								invItemVO.setTaxRate(tourDepItemVO.getTaxRate());
+								tourDepItemVOList.remove(tourDepItemVO);
+								break;
+							}
+						}
+					} else {
+						invItemVO.setTaxCode(null);
+						invItemVO.setTaxRate(null);
+					}
+					invVO.getInvoiceItemList().add(invItemVO);
+				}
+			}
+			return invVO;
+		}
+
+		InvoiceVO invVO = new InvoiceVO();
+		invVO.setBookingId(vo.getId());
+		return invVO;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#getBookingViewList(com.bcs.zsg.common.vo.SearchParamVO, int, int, java.util.Map)
+	 */
+	@Override
+	public List<BookingViewVO> getBookingViewList(SearchParamVO searchParamVO, Boolean isPersonal, EmployeeVO employeeVO, int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters, Map<String, Object> params) throws BusinessException {
+		return bookingDAO.getBookingViewList(searchParamVO, isPersonal, employeeVO, first, pageSize, sortField, sortOrder, filters, params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#getBookingIdList(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@Override
+	public List<Long> getBookingIdList(SearchParamVO searchParamVO) throws BusinessException {
+		return bookingDAO.getBookingIdList(searchParamVO);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#getBookingListSize(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@Override
+	public int getBookingListSize(SearchParamVO searchParamVO, Boolean isPersonal, EmployeeVO employeeVO, Map<String, String> filters, Map<String, Object> params) throws BusinessException {
+		return bookingDAO.getBookingListSize(searchParamVO, isPersonal, employeeVO, filters, params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.BookingService#getTotalBookByTourDep(java.lang.Long, java.lang.Long)
+	 */
+	@Override
+	public int getTotalBookByTourDep(Long idTourDep, Long idBooking) throws BusinessException {
+		return bookingDAO.getTotalBookByTourDep(idTourDep, idBooking);
+	}
+
+	/**********
+	 * HELPER *
+	 **********/
+
+	private void addBookingChargeItemList(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		List<TourDepItemVO> tourDepItemList = tourDepVO.getTourDepItemList();
+
+		if (CollectionUtils.isNotEmpty(tourDepItemList)) {
+			if (bookingVO.getBookingChargeItemList() == null) bookingVO.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>());
+
+			BookingChargeItemVO itemVO = null;
+			int totFullAdultPax = bookingVO.getPaxFullTwn() + bookingVO.getPaxFullSgl();
+			int totFullChildPax = bookingVO.getPaxFullCeb() + bookingVO.getPaxFullCnb() + bookingVO.getPaxFullCtw();
+			int totGrndPax = bookingVO.getPaxGrndCeb() + bookingVO.getPaxGrndCnb() + bookingVO.getPaxGrndCtw() + bookingVO.getPaxGrndSgl() + bookingVO.getPaxGrndTwn();
+
+			for (TourDepItemVO vo : tourDepItemList) {
+				itemVO = new BookingChargeItemVO();
+
+				itemVO.setIdBooking(bookingVO.getId());
+				itemVO.setIdAcct(vo.getAcctId());
+				itemVO.setIdInvEoItem(vo.getIdInvEoItem());
+				itemVO.setCode(vo.getCode());
+				itemVO.setDesc(vo.getDesc());
+				itemVO.setAmount(vo.getAmount());
+				itemVO.setTypeCd(vo.getTypeCd());
+				if(vo.getIsLock() != null) itemVO.setIsLock(vo.getIsLock()); else itemVO.setIsLock(false);
+				if(vo.getIsMisc() != null) itemVO.setIsMisc(vo.getIsMisc()); else itemVO.setIsMisc(false);
+				if (ProductConstant.TOUR_DEP_ITM_CD_FT_SGL.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxFullSgl()); itemVO.setAirfare(vo.getAirfare()); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_FT_TWN.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxFullTwn()); itemVO.setAirfare(vo.getAirfare()); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CTW.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxFullCtw()); itemVO.setAirfare(vo.getAirfare()); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CWB.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxFullCeb()); itemVO.setAirfare(vo.getAirfare()); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CNB.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxFullCnb()); itemVO.setAirfare(vo.getAirfare()); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_FT_INFT.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxFullInft()); itemVO.setAirfare(vo.getAirfare()); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_GA_SGL.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxGrndSgl()); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_GA_TWN.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxGrndTwn()); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CTW.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxGrndCtw()); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CWB.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxGrndCeb()); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CNB.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxGrndCnb()); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.TOUR_DEP_ITM_CD_GA_INFT.equals(vo.getCode())) { itemVO.setQuantity(bookingVO.getPaxGrndInft()); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.AIRLINE_ITM_CD_APT_ADT.equals(vo.getCode())) { itemVO.setQuantity(totFullAdultPax); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.AIRLINE_ITM_CD_APT_CHD.equals(vo.getCode())) { itemVO.setQuantity(totFullChildPax); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.AIRLINE_ITM_CD_FUEL_ADT.equals(vo.getCode())) { itemVO.setQuantity(totFullAdultPax); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.AIRLINE_ITM_CD_FUEL_CHD.equals(vo.getCode())) { itemVO.setQuantity(totFullChildPax); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.AIRLINE_ITM_CD_AC.equals(vo.getCode())) { itemVO.setQuantity(totFullAdultPax + totFullChildPax); itemVO.setAirfare(0.0); insertVO(itemVO); bookingVO.getBookingChargeItemList().add(itemVO); }
+				else if (ProductConstant.AIRLINE_ITM_CD_DEVIATION.equals(vo.getCode())) {
+					if (vo.getAcctId() != null) {
+						itemVO.setQuantity(totFullAdultPax + totFullChildPax);
+						itemVO.setAirfare(0.0);
+						insertVO(itemVO);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+					}
+				} else {
+					if (vo.getAcctId() != null) {
+						if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) {
+							List<TourDepartureDiscountVO> tourDepDiscountList = tourPkgDAO.getTourDepDiscount(tourDepVO.getId());
+
+							int remainingPax = totFullAdultPax + totFullChildPax;
+							for (TourDepartureDiscountVO discountVO : tourDepDiscountList) {
+								itemVO = new BookingChargeItemVO();
+
+								itemVO.setIdBooking(bookingVO.getId());
+								itemVO.setIdAcct(vo.getAcctId());
+								itemVO.setIdInvEoItem(vo.getIdInvEoItem());
+								itemVO.setCode(vo.getCode());
+								itemVO.setDesc(vo.getDesc());
+								itemVO.setAmount(vo.getAmount());
+								itemVO.setTypeCd(vo.getTypeCd());
+								if(vo.getIsLock() != null) itemVO.setIsLock(vo.getIsLock()); else itemVO.setIsLock(false);
+
+								itemVO.setAmount(discountVO.getDiscountAmt() > 0 ? -discountVO.getDiscountAmt() : discountVO.getDiscountAmt());
+
+								if (remainingPax <= 0) {
+									itemVO.setQuantity(0);
+									itemVO.setAirfare(0.0);
+									insertVO(itemVO);
+									bookingVO.getBookingChargeItemList().add(itemVO);
+									break;
+								}
+
+								int availableDiscountPax = discountVO.getDiscountPax();
+
+								if (availableDiscountPax <= 0) {
+									itemVO.setQuantity(0);
+									itemVO.setAirfare(0.0);
+									insertVO(itemVO);
+									bookingVO.getBookingChargeItemList().add(itemVO);
+									continue;
+								}
+
+								if (availableDiscountPax >= remainingPax) {
+									discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+									itemVO.setQuantity(remainingPax);
+									itemVO.setAirfare(0.0);
+
+									remainingPax = 0;
+								} else {
+									remainingPax = remainingPax - availableDiscountPax;
+
+									discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+									itemVO.setQuantity(availableDiscountPax);
+									itemVO.setAirfare(0.0);
+								}
+
+								updateVO(discountVO);
+								insertVO(itemVO);
+								bookingVO.getBookingChargeItemList().add(itemVO);
+							}
+						} else {
+							itemVO.setQuantity(totFullAdultPax + totFullChildPax + totGrndPax);
+							itemVO.setAirfare(0.0);
+
+							insertVO(itemVO);
+							bookingVO.getBookingChargeItemList().add(itemVO);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/*
+	 *
+	 * @param bookingVO
+	 */
+	private void updBookingChargeItemList(BookingVO bookingVO) throws BusinessException {
+		//List<BookingChargeItemVO> bookingChargeItemList = new ArrayList<BookingChargeItemVO>();
+		//int totPax = 0;
+		int totFullAdultPax = bookingVO.getPaxFullTwn() + bookingVO.getPaxFullSgl();
+		int totFullChildPax = bookingVO.getPaxFullCeb() + bookingVO.getPaxFullCnb() + bookingVO.getPaxFullCtw();
+		int totGrndPax = bookingVO.getPaxGrndCeb() + bookingVO.getPaxGrndCnb() + bookingVO.getPaxGrndCtw() + bookingVO.getPaxGrndSgl() + bookingVO.getPaxGrndTwn();
+
+		int totalDiscountPax = 0;
+		for (BookingChargeItemVO vo : bookingVO.getBookingChargeItemList()) {
+			if (ProductConstant.TOUR_DEP_ITM_CD_FT_SGL.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxFullSgl()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_TWN.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxFullTwn()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CTW.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxFullCtw()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CWB.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxFullCeb()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CNB.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxFullCnb()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_FT_INFT.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxFullInft()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_SGL.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxGrndSgl()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_TWN.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxGrndTwn()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CTW.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxGrndCtw()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CWB.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxGrndCeb()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CNB.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxGrndCnb()); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_GA_INFT.equals(vo.getCode())) { vo.setQuantity(bookingVO.getPaxGrndInft()); updateVO(vo); }
+			//else if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) { vo.setQuantity(totFullAdultPax + totFullChildPax); updateVO(vo); }
+			else if (ProductConstant.AIRLINE_ITM_CD_APT_ADT.equals(vo.getCode())) { vo.setQuantity(totFullAdultPax); updateVO(vo); }
+			else if (ProductConstant.AIRLINE_ITM_CD_APT_CHD.equals(vo.getCode())) { vo.setQuantity(totFullChildPax); updateVO(vo); }
+			else if (ProductConstant.AIRLINE_ITM_CD_FUEL_ADT.equals(vo.getCode())) { vo.setQuantity(totFullAdultPax); updateVO(vo); }
+			else if (ProductConstant.AIRLINE_ITM_CD_FUEL_CHD.equals(vo.getCode())) { vo.setQuantity(totFullChildPax); updateVO(vo); }
+			else if (ProductConstant.AIRLINE_ITM_CD_AC.equals(vo.getCode())) { vo.setQuantity(totFullAdultPax + totFullChildPax); updateVO(vo); }
+			else if (ProductConstant.AIRLINE_ITM_CD_DEVIATION.equals(vo.getCode())) { vo.setQuantity(totFullAdultPax + totFullChildPax); updateVO(vo); }
+			else if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) {
+				totalDiscountPax += vo.getQuantity();
+
+				if (vo.getId() != null)
+					updateVO(vo);
+				else
+					insertVO(vo);
+
+			} else { vo.setQuantity(totFullAdultPax + totFullChildPax + totGrndPax); updateVO(vo); }
+			/*else {
+				vo.setQuantity(0);
+				bookingChargeItemList.add(vo);
+			}
+			totPax += vo.getQuantity();*/
+		}
+
+		// If user deduct booking pax -START-
+		int totalBookingPax = totFullAdultPax + totFullChildPax;
+		int count = 1;
+		int remainingPax = 0;
+		if (totalDiscountPax > totalBookingPax) {
+			int paxToDeduct = totalDiscountPax - totalBookingPax;
+
+			// Reverse deduct
+			for (int i = bookingVO.getBookingChargeItemList().size() - 1; i >= 0; i--) {
+				BookingChargeItemVO vo = bookingVO.getBookingChargeItemList().get(i);
+
+				if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) {
+					if (count == 1) {
+						remainingPax += paxToDeduct;
+						if (paxToDeduct > vo.getQuantity()) {
+							remainingPax -= vo.getQuantity();
+							vo.setQuantity(0);
+						} else {
+							vo.setQuantity(vo.getQuantity() - paxToDeduct);
+							count = 3;
+						}
+					} else if (count == 2) {
+						if (remainingPax > vo.getQuantity()) {
+							vo.setQuantity(0);
+							vo.setAmount(0.0);
+						} else {
+							vo.setQuantity(vo.getQuantity() - remainingPax);
+						}
+					}
+					count++;
+				}
+				updateVO(vo);
+			}
+		}
+		// If user deduct booking pax -END-
+
+		/*if (CollectionUtils.isNotEmpty(bookingChargeItemList)) {
+			for (BookingChargeItemVO vo : bookingChargeItemList) {
+				vo.setQuantity(totPax);
+				updateVO(vo);
+			}
+		}*/
+	}
+
+	@Override
+	public void updateBookingLockStatus(Long idTourDep, boolean isLock) throws BusinessException {
+		bookingDAO.updateBookingLockStatus(idTourDep, isLock);
+	}
+
+	@Override
+	public void updateIndividualBookingLockStatus(Long id, boolean isLock) throws BusinessException {
+		bookingDAO.updateIndividualBookingLockStatus(id, isLock);
+	}
+
+	@Override
+	public List<String> getSurveyList(Long bookingId) throws BusinessException{
+		return bookingDAO.getSurveyList(bookingId);
+	}
+
+	@Override
+	public List<BookingVO> getPassengerListWithNricByidTourDep(Long idTourDep) throws BusinessException {
+		return bookingDAO.getPassengerListWithNricByidTourDep(idTourDep);
+	}
+
+	private void addBookingSalesComm(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		Double fullTwnAmt = 0.00, grndTwnAmt = 0.00;
+		for (BookingChargeItemVO vo : bookingVO.getBookingChargeItemList()) {
+			if (ProductConstant.TOUR_DEP_ITM_CD_FT_TWN.equals(vo.getCode())) {
+				fullTwnAmt = vo.getAmount();
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_TWN.equals(vo.getCode())) {
+				grndTwnAmt = vo.getAmount();
+			}
+		}
+
+		List<SalesCommConfigDetailVO> salesCommConfigDetailList = salesCommConfigDAO.getSalesCommConfigDetailListByIdTourPkg(tourDepVO.getIdTourPkg());
+
+		if (CollectionUtils.isNotEmpty(salesCommConfigDetailList)) {
+			boolean setFTComm = false;
+			boolean setGAComm = false;
+			for (SalesCommConfigDetailVO dtlVO : salesCommConfigDetailList) {
+				setFTComm = false;
+				if (ProductConstant.TOUR_FARE_RANGE_TYPE_LT.equals(dtlVO.getFareRangetype()) && (Double.compare(fullTwnAmt, dtlVO.getFrAmt()) < 0 || Double.compare(fullTwnAmt, dtlVO.getFrAmt()) == 0)) {
+					setFTComm = true;
+				} else if (ProductConstant.TOUR_FARE_RANGE_TYPE_RG.equals(dtlVO.getFareRangetype()) &&
+					((Double.compare(fullTwnAmt, dtlVO.getFrAmt()) > 0 || Double.compare(fullTwnAmt, dtlVO.getFrAmt()) == 0)  &&
+					(Double.compare(fullTwnAmt, dtlVO.getToAmt()) < 0 || Double.compare(fullTwnAmt, dtlVO.getToAmt()) == 0))) {
+					setFTComm = true;
+				} else if (ProductConstant.TOUR_FARE_RANGE_TYPE_GT.equals(dtlVO.getFareRangetype()) && (Double.compare(fullTwnAmt, dtlVO.getFrAmt()) > 0 || Double.compare(fullTwnAmt, dtlVO.getFrAmt()) == 0)) {
+					setFTComm = true;
+				}
+
+				if (setFTComm) {
+					BookingSalesCommVO bookingSalesCommVO = new BookingSalesCommVO();
+					bookingSalesCommVO.setIdTourBooking(bookingVO.getId());
+					bookingSalesCommVO.setIdSalesCommConfDtl(dtlVO.getId());
+					bookingSalesCommVO.setFareRangetype(dtlVO.getFareRangetype());
+					bookingSalesCommVO.setTourType(ProductConstant.TOUR_TYPE_FULL_TOUR);
+					bookingSalesCommVO.setFrAmt(dtlVO.getFrAmt());
+					bookingSalesCommVO.setToAmt(dtlVO.getToAmt());
+					bookingSalesCommVO.setTourFare(fullTwnAmt);
+					bookingSalesCommVO.setSpComm(dtlVO.getSpComm());
+					bookingSalesCommVO.setRefSpComm(dtlVO.getRefSpComm());
+					bookingSalesCommVO.setSsComm(dtlVO.getSsComm());
+					bookingSalesCommVO.setHodComm(dtlVO.getHodComm());
+					bookingSalesCommVO.setOpComm(dtlVO.getOpComm());
+					bookingSalesCommVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					insertVO(bookingSalesCommVO);
+					break;
+				}
+			}
+
+			for (SalesCommConfigDetailVO dtlVO : salesCommConfigDetailList) {
+				setGAComm = false;
+				if (ProductConstant.TOUR_FARE_RANGE_TYPE_LT.equals(dtlVO.getFareRangetype()) && (Double.compare(grndTwnAmt, dtlVO.getFrAmt()) < 0 || Double.compare(grndTwnAmt, dtlVO.getFrAmt()) == 0)) {
+					setGAComm = true;
+				} else if (ProductConstant.TOUR_FARE_RANGE_TYPE_RG.equals(dtlVO.getFareRangetype()) &&
+					((Double.compare(grndTwnAmt, dtlVO.getFrAmt()) > 0 || Double.compare(grndTwnAmt, dtlVO.getFrAmt()) == 0)  &&
+					(Double.compare(grndTwnAmt, dtlVO.getToAmt()) < 0 || Double.compare(grndTwnAmt, dtlVO.getToAmt()) == 0))) {
+					setGAComm = true;
+				} else if (ProductConstant.TOUR_FARE_RANGE_TYPE_GT.equals(dtlVO.getFareRangetype()) && (Double.compare(grndTwnAmt, dtlVO.getFrAmt()) > 0 || Double.compare(grndTwnAmt, dtlVO.getFrAmt()) == 0)) {
+					setGAComm = true;
+				}
+
+				if (setGAComm) {
+					BookingSalesCommVO bookingSalesCommVO = new BookingSalesCommVO();
+					bookingSalesCommVO.setIdTourBooking(bookingVO.getId());
+					bookingSalesCommVO.setIdSalesCommConfDtl(dtlVO.getId());
+					bookingSalesCommVO.setFareRangetype(dtlVO.getFareRangetype());
+					bookingSalesCommVO.setTourType(ProductConstant.TOUR_TYPE_GROUND_ONLY);
+					bookingSalesCommVO.setFrAmt(dtlVO.getFrAmt());
+					bookingSalesCommVO.setToAmt(dtlVO.getToAmt());
+					bookingSalesCommVO.setTourFare(grndTwnAmt);
+					bookingSalesCommVO.setSpComm(dtlVO.getSpComm());
+					bookingSalesCommVO.setRefSpComm(dtlVO.getRefSpComm());
+					bookingSalesCommVO.setSsComm(dtlVO.getSsComm());
+					bookingSalesCommVO.setHodComm(dtlVO.getHodComm());
+					bookingSalesCommVO.setOpComm(dtlVO.getOpComm());
+					bookingSalesCommVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					insertVO(bookingSalesCommVO);
+					break;
+				}
+			}
+		}
+	}
+
+	@Override
+	public void insertBookingHistory(Long id, String actionCd, String reason) throws BusinessException {
+		bookingDAO.insertBookingHistory(id, actionCd, reason);
+	}
+
+	@Override
+	public synchronized void addCruiseBooking(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		if (bookingVO.getTourCruiseCabinList().size() > 0) {
+
+			// check if cabin has available quantity
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+				int cabinAllot = 0;
+				for (TourCruiseCabinVO vo2 : tourDepVO.getTourCruiseCabinList()) {
+					if (vo2.getId().equals(vo.getIdTourCruiseCabin())) {
+						cabinAllot = vo2.getCabinAllotment();
+						break;
+					}
+				}
+				if (cabinAllot > 0) {
+					// // calculate total booking of the cabin by sum of related bookings
+					// calculate total booking of the cabin by looping through all bookings and sum booking with matched cabin id
+					int totalBook = bookingDAO.getTotalCabinByTourDep(tourDepVO.getId(), vo.getIdTourCruiseCabin(),
+							null);
+					int balance = cabinAllot - totalBook - vo.getTtlCabin();
+					if (balance < 0)
+						throw new BusinessException(CommonErrConstant.ERR_BOOKING_OVER_CABIN_BALANCE, null,
+								new String[] { vo.getCruiseCabinCd() });
+
+				}
+			}
+		}
+
+		// set booking pax quantity
+		bookingVO.setQuantity(bookingVO.getTotalHeadCount());
+		bookingVO.setCabinQty(bookingVO.getTotalCabin());
+
+		if (bookingVO.getQuantity() == 0)
+			throw new BusinessException(CommonErrConstant.ERR_BOOKING_PAX_EMPTY);
+		if (bookingVO.getCabinQty() == 0)
+			throw new BusinessException(CommonErrConstant.ERR_BOOKING_CABIN_EMPTY);
+
+		// add booking
+		bookingVO.setPmntStatusCd(SalesConstant.BOOKING_PMNT_STATUS_KIV);
+		bookingVO.setStatusCode(CommonConstant.STATUS_CD_BOOKED);
+		insertVO(bookingVO);
+
+		// Add booking survey
+		if (CollectionUtils.isNotEmpty(bookingVO.getIdSurveyList())) {
+			for (String code : bookingVO.getIdSurveyList()) {
+				SurveyVO vo = new SurveyVO();
+				vo.setBookingId(bookingVO.getId());
+				vo.setCode(code);
+				insertVO(vo);
+			}
+		}
+
+		// add booking charge item
+		addCruiseBookingChargeItemList(bookingVO, tourDepVO);
+
+		updateVO(bookingVO);
+
+		// update status to full status
+		int flag = 0;
+		// 1: cabin full (balance == 0)
+		// 2: cabin not full (balance > 0)
+
+		int isExisted = 0;
+		for (TourCruiseCabinVO vo : tourDepVO.getTourCruiseCabinList()) {
+			flag = 0;
+			isExisted = 0;
+			int cabinAllot = vo.getCabinAllotment();
+			if (cabinAllot == 0) {
+				flag = 2;
+			} else {
+				int totalBook = bookingDAO.getTotalCabinByTourDep(tourDepVO.getId(), vo.getId(), bookingVO.getId());
+				for (TourCruiseCabinVO vo2 : bookingVO.getTourCruiseCabinList()) {
+					if (vo.getId().equals(vo2.getIdTourCruiseCabin())) {
+						int balance = cabinAllot - totalBook - vo2.getTtlCabin();
+						if (balance == 0)
+							flag = 1;
+						else if (balance > 0)
+							flag = 2;
+						isExisted = 1;
+						break;
+					}
+				}
+				if (isExisted == 0) {
+					int balance = cabinAllot - totalBook;
+					if (balance == 0)
+						flag = 1;
+					else if (balance > 0)
+						flag = 2;
+				}
+			}
+
+			if (flag == 1) {
+				if (ProductConstant.TOUR_STATUS_CD_AVAILABLE.equals(vo.getTourStatusCd())
+						|| ProductConstant.TOUR_STATUS_CD_LIMITED.equals(vo.getTourStatusCd())) {
+					vo.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_FULL);
+					updateVO(vo);
+				}
+			} else if (flag == 2) {
+				if (ProductConstant.TOUR_STATUS_CD_FULL.equals(vo.getTourStatusCd())) {
+					vo.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+					updateVO(vo);
+				}
+			}
+		}
+	}
+
+	@Override
+	public synchronized void addCruiseBookingForQuote(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		if (bookingVO.getTourCruiseCabinList().size() > 0) {
+
+			// check if cabin has available quantity
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+				int cabinAllot = 0;
+				for (TourCruiseCabinVO vo2 : tourDepVO.getTourCruiseCabinList()) {
+					if (vo2.getId().equals(vo.getIdTourCruiseCabin())) {
+						cabinAllot = vo2.getCabinAllotment();
+						break;
+					}
+				}
+				if (cabinAllot > 0) {
+					// // calculate total booking of the cabin by sum of related bookings
+					// calculate total booking of the cabin by looping through all bookings and sum booking with matched cabin id
+					int totalBook = bookingDAO.getTotalCabinByTourDep(tourDepVO.getId(), vo.getIdTourCruiseCabin(),
+							null);
+					int balance = cabinAllot - totalBook - vo.getTtlCabin();
+					if (balance < 0)
+						throw new BusinessException(CommonErrConstant.ERR_BOOKING_OVER_CABIN_BALANCE, null,
+								new String[] { vo.getCruiseCabinCd() });
+
+				}
+			}
+		}
+
+		// set booking pax quantity
+		bookingVO.setQuantity(bookingVO.getTotalHeadCount());
+		bookingVO.setCabinQty(bookingVO.getTotalCabin());
+
+		if (bookingVO.getQuantity() == 0)
+			throw new BusinessException(CommonErrConstant.ERR_BOOKING_PAX_EMPTY);
+		if (bookingVO.getCabinQty() == 0)
+			throw new BusinessException(CommonErrConstant.ERR_BOOKING_CABIN_EMPTY);
+
+		// add booking
+		bookingVO.setPmntStatusCd(SalesConstant.BOOKING_PMNT_STATUS_KIV);
+		bookingVO.setStatusCode(CommonConstant.STATUS_CD_BOOKED);
+
+		// Add booking survey
+		if (CollectionUtils.isNotEmpty(bookingVO.getIdSurveyList())) {
+			for (String code : bookingVO.getIdSurveyList()) {
+				SurveyVO vo = new SurveyVO();
+				vo.setBookingId(bookingVO.getId());
+				vo.setCode(code);
+			}
+		}
+
+		// add booking charge item
+		addCruiseBookingChargeItemListForQuote(bookingVO, tourDepVO);
+
+		// update status to full status
+		int flag = 0;
+		// 1: cabin full (balance == 0)
+		// 2: cabin not full (balance > 0)
+
+		int isExisted = 0;
+		for (TourCruiseCabinVO vo : tourDepVO.getTourCruiseCabinList()) {
+			flag = 0;
+			isExisted = 0;
+			int cabinAllot = vo.getCabinAllotment();
+			if (cabinAllot == 0) {
+				flag = 2;
+			} else {
+				int totalBook = bookingDAO.getTotalCabinByTourDep(tourDepVO.getId(), vo.getId(), bookingVO.getId());
+				for (TourCruiseCabinVO vo2 : bookingVO.getTourCruiseCabinList()) {
+					if (vo.getId().equals(vo2.getIdTourCruiseCabin())) {
+						int balance = cabinAllot - totalBook - vo2.getTtlCabin();
+						if (balance == 0)
+							flag = 1;
+						else if (balance > 0)
+							flag = 2;
+						isExisted = 1;
+						break;
+					}
+				}
+				if (isExisted == 0) {
+					int balance = cabinAllot - totalBook;
+					if (balance == 0)
+						flag = 1;
+					else if (balance > 0)
+						flag = 2;
+				}
+			}
+
+			if (flag == 1) {
+				if (ProductConstant.TOUR_STATUS_CD_AVAILABLE.equals(vo.getTourStatusCd())
+						|| ProductConstant.TOUR_STATUS_CD_LIMITED.equals(vo.getTourStatusCd())) {
+					vo.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_FULL);
+					updateVO(vo);
+				}
+			} else if (flag == 2) {
+				if (ProductConstant.TOUR_STATUS_CD_FULL.equals(vo.getTourStatusCd())) {
+					vo.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+					updateVO(vo);
+				}
+			}
+		}
+	}
+
+	@Override
+	public synchronized void addNewCruiseBooking(BookingVO bookingVO, TourDepartureVO tourDepVO)
+			throws BusinessException {
+
+		List<BookingChargeItemVO> prevBookingChargeItemList = new ArrayList<BookingChargeItemVO>();
+		for (BookingChargeItemVO vo : bookingVO.getBookingChargeItemList()) {
+			BookingChargeItemVO newVO = new BookingChargeItemVO();
+			BeanUtils.copyProperties(vo, newVO);
+			prevBookingChargeItemList.add(newVO);
+		}
+		bookingDAO.insert(bookingVO);
+		Long newBookingId = bookingVO.getId();
+
+		// add booking charge item
+		List<TourDepItemVO> tourDepItemList = tourDepVO.getTourDepItemList();
+
+		if (tourDepItemList == null) {
+			tourDepItemList = tourPkgDAO.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany(), null);
+		}
+
+		double total = 0.0;
+		if (CollectionUtils.isNotEmpty(bookingVO.getTourCruiseCabinList())) {
+			bookingVO.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>());
+
+			BookingChargeItemVO itemVO = null;
+			TourDepItemVO tourDepItemVO = new TourDepItemVO();
+
+			int count = 0;
+			for (TourDepItemVO vo : tourDepItemList) {
+				itemVO = new BookingChargeItemVO();
+				itemVO.setIdBooking(bookingVO.getId());
+				itemVO.setIdAcct(vo.getAcctId());
+				itemVO.setIdInvEoItem(vo.getIdInvEoItem());
+				itemVO.setCode(vo.getCode());
+				itemVO.setDesc(vo.getDesc());
+				itemVO.setAmount(vo.getAmount());
+				itemVO.setTypeCd(vo.getTypeCd());
+				if (vo.getAmount().doubleValue() > 0) {
+					itemVO.setQuantity(bookingVO.getTotalHeadCount());
+					total += itemVO.getQuantity() * itemVO.getAmount();
+					insertVO(itemVO);
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				}
+				if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) {
+					tourDepItemVO = vo;
+				}
+			}
+
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+
+				itemVO = new BookingChargeItemVO();
+				itemVO.setIdBooking(bookingVO.getId());
+				itemVO.setIdAcct(vo.getIdAcct());
+				itemVO.setIdInvEoItem(null);
+				itemVO.setCode(vo.getCruiseCabinCd());
+				itemVO.setDesc(vo.getCruiseCabinDesc());
+				itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_TOUR);
+
+				itemVO.setAmount(vo.getPriceTwn());
+				itemVO.setAmount3(vo.getPrice3());
+				itemVO.setAmount4(vo.getPrice4());
+				itemVO.setAmountSgl(vo.getPriceSgl());
+				itemVO.setAmount3Chd(vo.getPrice3Chd());
+				itemVO.setAmount4Chd(vo.getPrice4Chd());
+				itemVO.setAmountInf(vo.getPriceInf());
+				itemVO.setIdTourCruiseCabin(vo.getId());
+
+				for (BookingChargeItemVO bciVO : prevBookingChargeItemList) {
+					if (bciVO.getCode().equals(vo.getCruiseCabinCd())) {
+						itemVO.setQuantity(bciVO.getQuantity());
+						itemVO.setQuantity3(bciVO.getQuantity3());
+						itemVO.setQuantity4(bciVO.getQuantity4());
+						itemVO.setQuantitySgl(bciVO.getQuantitySgl());
+						itemVO.setQuantity3Chd(bciVO.getQuantity3Chd());
+						itemVO.setQuantity4Chd(bciVO.getQuantity4Chd());
+						itemVO.setQuantityInf(bciVO.getQuantityInf());
+						itemVO.setCabinQty(bciVO.getCabinQty());
+						total += (itemVO.getQuantity() * itemVO.getAmount()
+								+ itemVO.getQuantity3() * itemVO.getAmount3()
+								+ itemVO.getQuantity4() * itemVO.getAmount4()
+								+ itemVO.getQuantitySgl() * itemVO.getAmountSgl()
+								+ itemVO.getQuantity3Chd() * itemVO.getAmount3Chd()
+								+ itemVO.getQuantity4Chd() * itemVO.getAmount4Chd()
+								+ itemVO.getQuantityInf() * itemVO.getAmountInf());
+						insertVO(itemVO);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+					}
+				}
+
+				// tour cabin discount logic
+				List<TourCruiseCabinDiscountVO> discountList = tourCruiseCabinDAO
+						.getTourCruiseCabinDiscountList(vo.getIdTourCruiseCabin());
+//				List<TourCruiseCabinDiscountVO> discountList = new ArrayList<TourCruiseCabinDiscountVO>();
+				int remainingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPax3Chd() + vo.getPax4Chd() + vo.getPaxInf();
+
+				for (TourCruiseCabinDiscountVO discountVO : discountList) {
+					itemVO = new BookingChargeItemVO();
+
+					itemVO.setIdBooking(bookingVO.getId());
+					itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+					itemVO.setIdAcct(tourDepItemVO.getAcctId());
+					itemVO.setIdInvEoItem(null);
+					itemVO.setCode(ProductConstant.TOUR_DEP_ITM_CD_DISC + "_" + vo.getCruiseCabinCd());
+					itemVO.setDesc("DISCOUNT " + vo.getCruiseCabinDesc());
+					itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_AIRLINE);
+					itemVO.setAmount(0.0);
+
+					if (remainingPax <= 0) {
+						itemVO.setQuantity(0);
+						insertVO(itemVO);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+						break;
+					}
+
+					int availableDiscountPax = discountVO.getDiscountPax();
+					double availableDiscountAmt = discountVO.getDiscountAmt();
+
+					if (availableDiscountPax <= 0 || availableDiscountAmt <= 0) {
+						itemVO.setQuantity(0);
+						insertVO(itemVO);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+						continue;
+					}
+
+					itemVO.setAmount(
+							availableDiscountAmt > 0 ? -discountVO.getDiscountAmt() : discountVO.getDiscountAmt());
+
+					total += itemVO.getAmount();
+
+					if (availableDiscountPax >= remainingPax) {
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+						itemVO.setQuantity(remainingPax);
+
+						remainingPax = 0;
+					} else {
+						remainingPax = remainingPax - availableDiscountPax;
+
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+						itemVO.setQuantity(availableDiscountPax);
+					}
+					// }
+
+					updateVO(discountVO);
+					insertVO(itemVO);
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				}
+			}
+		}
+
+		bookingVO.setAmount(total);
+		bookingDAO.update(bookingVO);
+	}
+
+	// used when transferring invoices and want to retain the invoice item details of the previous tour code
+	public synchronized void addNewCruiseBookingFromTsfrRemainPrevBkg(BookingVO bookingVO, TourDepartureVO tourDepVO)
+			throws BusinessException {
+		bookingDAO.insert(bookingVO);
+
+		// add booking charge item
+		List<TourDepItemVO> tourDepItemList = tourDepVO.getTourDepItemList();
+
+		if (tourDepItemList == null) {
+			tourDepItemList = tourPkgDAO.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany(), null);
+		}
+
+
+		if (CollectionUtils.isNotEmpty(bookingVO.getTourCruiseCabinList())) {
+
+			BookingChargeItemVO itemVO = null;
+			TourDepItemVO tourDepItemVO = new TourDepItemVO();
+
+
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+
+				itemVO = new BookingChargeItemVO();
+				itemVO.setIdBooking(bookingVO.getId());
+				itemVO.setIdAcct(vo.getIdAcct());
+				itemVO.setIdInvEoItem(null);
+				itemVO.setCode(vo.getCruiseCabinCd());
+				itemVO.setDesc(vo.getCruiseCabinDesc());
+				itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_TOUR);
+
+				itemVO.setAmount(vo.getPriceTwn());
+				itemVO.setAmount3(vo.getPrice3());
+				itemVO.setAmount4(vo.getPrice4());
+				itemVO.setAmountSgl(vo.getPriceSgl());
+				itemVO.setAmount3Chd(vo.getPrice3Chd());
+				itemVO.setAmount4Chd(vo.getPrice4Chd());
+				itemVO.setAmountInf(vo.getPriceInf());
+
+				itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+				itemVO.setQuantity(vo.getPaxTwn());
+				itemVO.setQuantity3(vo.getPax3());
+				itemVO.setQuantity4(vo.getPax4());
+				itemVO.setQuantitySgl(vo.getPaxSgl());
+				itemVO.setQuantity3Chd(vo.getPax3Chd());
+				itemVO.setQuantity4Chd(vo.getPax4Chd());
+				itemVO.setQuantityInf(vo.getPaxInf());
+				itemVO.setCabinQty(vo.getTtlCabin());
+
+				// tour cabin discount logic
+				List<TourCruiseCabinDiscountVO> discountList = tourCruiseCabinService
+						.getTourCruiseCabinDiscountList(vo.getIdTourCruiseCabin());
+				int remainingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPax3Chd() + vo.getPax4Chd() + vo.getPaxInf();
+
+				for (TourCruiseCabinDiscountVO discountVO : discountList) {
+					itemVO = new BookingChargeItemVO();
+
+					itemVO.setIdBooking(bookingVO.getId());
+					itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+					itemVO.setIdAcct(tourDepItemVO.getAcctId());
+					itemVO.setIdInvEoItem(null);
+					itemVO.setCode(ProductConstant.TOUR_DEP_ITM_CD_DISC + "_" + vo.getCruiseCabinCd());
+					itemVO.setDesc("DISCOUNT " + vo.getCruiseCabinDesc());
+					itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_AIRLINE);
+					itemVO.setAmount(0.0);
+
+					if (remainingPax <= 0) {
+						itemVO.setQuantity(0);
+						break;
+					}
+
+					int availableDiscountPax = discountVO.getDiscountPax();
+					double availableDiscountAmt = discountVO.getDiscountAmt();
+
+					if (availableDiscountPax <= 0 || availableDiscountAmt <= 0) {
+						itemVO.setQuantity(0);
+						continue;
+					}
+
+					itemVO.setAmount(
+							availableDiscountAmt > 0 ? -discountVO.getDiscountAmt() : discountVO.getDiscountAmt());
+
+					if (availableDiscountPax >= remainingPax) {
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+						itemVO.setQuantity(remainingPax);
+
+						remainingPax = 0;
+					} else {
+						remainingPax = remainingPax - availableDiscountPax;
+
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+						itemVO.setQuantity(availableDiscountPax);
+					}
+
+				}
+			}
+		}
+	}
+
+	@Override
+	public void updBookingForQuote(BookingVO bookingVO, AddUpdDelVO bookItemAUDVO, TourDepartureVO tourDepVO)
+			throws BusinessException {
+
+		int flag = 0;
+		if (tourDepVO.getSeatAllot().intValue() > 0) {
+			int totalBook = bookingDAO.getTotalBookByTourDep(tourDepVO.getId(), bookingVO.getId(),
+					bookingVO.getTypeCd());
+			int balance = tourDepVO.getSeatAllot() - tourDepVO.getReservedSeat() - tourDepVO.getTourManagerPax()
+					- totalBook - bookingVO.getPaxFullCeb() - bookingVO.getPaxFullCnb() - bookingVO.getPaxFullCtw()
+					- bookingVO.getPaxFullTrpl() - bookingVO.getPaxFullSgl() - bookingVO.getPaxFullTwn();
+
+			if (balance < 0) {
+				tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_FULL);
+				throw new BusinessException(CommonErrConstant.ERR_BOOKING_OVER_SEAT_BALANCE);
+			}
+			if (balance == 0) {
+				flag = 1;
+			} else if (balance > 0) {
+				flag = 2;
+			}
+		}
+
+		// set booking pax quantity
+		bookingVO.setQuantity(bookingVO.getPaxFullCeb() + bookingVO.getPaxFullCnb() + bookingVO.getPaxFullCtw()
+				+ bookingVO.getPaxFullInft() + bookingVO.getPaxFullSgl() + bookingVO.getPaxFullTwn()
+				+ bookingVO.getPaxGrndCeb() + bookingVO.getPaxGrndCnb() + bookingVO.getPaxGrndCtw()
+				+ bookingVO.getPaxGrndInft() + bookingVO.getPaxGrndSgl() + bookingVO.getPaxGrndTwn()
+				+ bookingVO.getPaxFullTrpl()
+				+ bookingVO.getPaxGrndTrpl()
+				);
+
+		if (bookingVO.getQuantity() == 0)
+			throw new BusinessException(CommonErrConstant.ERR_BOOKING_PAX_EMPTY);
+
+		// update booking charge items
+		updBookingChargeItemListForQuote(bookingVO, tourDepVO);
+
+		// update status to full status
+		if (flag == 1) {
+			if (ProductConstant.TOUR_STATUS_CD_AVAILABLE.equals(tourDepVO.getTourStatusCd())
+					|| ProductConstant.TOUR_STATUS_CD_LIMITED.equals(tourDepVO.getTourStatusCd())) {
+				tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_FULL);
+			}
+		} else if (flag == 2) {
+			if (ProductConstant.TOUR_STATUS_CD_FULL.equals(tourDepVO.getTourStatusCd())) {
+				tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+			}
+		}
+
+		// Add booking survey
+		if (CollectionUtils.isNotEmpty(bookingVO.getIdSurveyList())) {
+			bookingDAO.deleteSurveyList(bookingVO.getId());
+
+			for (String code : bookingVO.getIdSurveyList()) {
+				SurveyVO vo = new SurveyVO();
+				vo.setBookingId(bookingVO.getId());
+				vo.setCode(code);
+			}
+		}
+	}
+
+	@Override
+	public synchronized void updCruiseBooking(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		if (bookingVO.getTourCruiseCabinList().size() > 0) {
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+				int cabinAllot = 0;
+				for (TourCruiseCabinVO vo2 : tourDepVO.getTourCruiseCabinList()) {
+					if (vo2.getId().equals(vo.getIdTourCruiseCabin())) {
+						cabinAllot = vo2.getCabinAllotment();
+						break;
+					}
+				}
+				if (cabinAllot > 0) {
+					int totalBook = bookingDAO.getTotalCabinByTourDep(tourDepVO.getId(), vo.getIdTourCruiseCabin(),
+							bookingVO.getId());
+					int balance = cabinAllot - totalBook - vo.getTtlCabin();
+					if (balance < 0)
+						throw new BusinessException(CommonErrConstant.ERR_BOOKING_OVER_CABIN_BALANCE, null,
+								new String[] { vo.getCruiseCabinCd() });
+
+				}
+			}
+		}
+
+		// set booking pax quantity
+		bookingVO.setQuantity(bookingVO.getTotalHeadCount());
+		bookingVO.setCabinQty(bookingVO.getTotalCabin());
+
+		if (bookingVO.getQuantity() == 0)
+			throw new BusinessException(CommonErrConstant.ERR_BOOKING_PAX_EMPTY);
+		if (bookingVO.getCabinQty() == 0)
+			throw new BusinessException(CommonErrConstant.ERR_BOOKING_CABIN_EMPTY);
+
+		// update booking
+		updateVO(bookingVO);
+		// update booking charge items
+		updCruiseBookingChargeItemList(bookingVO, tourDepVO);
+
+		// update status to full status
+		int flag = 0;
+		int isExisted = 0;
+		for (TourCruiseCabinVO vo : tourDepVO.getTourCruiseCabinList()) {
+			flag = 0;
+			isExisted = 0;
+			int cabinAllot = vo.getCabinAllotment();
+			if (cabinAllot == 0) {
+				flag = 2;
+			} else {
+				int totalBook = bookingDAO.getTotalCabinByTourDep(tourDepVO.getId(), vo.getId(), bookingVO.getId());
+				for (TourCruiseCabinVO vo2 : bookingVO.getTourCruiseCabinList()) {
+					if (vo.getId().equals(vo2.getIdTourCruiseCabin())) {
+						int balance = cabinAllot - totalBook - vo2.getTtlCabin();
+						if (balance == 0)
+							flag = 1;
+						else if (balance > 0)
+							flag = 2;
+						isExisted = 1;
+						break;
+					}
+				}
+				if (isExisted == 0) {
+					int balance = cabinAllot - totalBook;
+					if (balance == 0)
+						flag = 1;
+					else if (balance > 0)
+						flag = 2;
+				}
+			}
+
+			if (flag == 1) {
+				if (ProductConstant.TOUR_STATUS_CD_AVAILABLE.equals(vo.getTourStatusCd())
+						|| ProductConstant.TOUR_STATUS_CD_LIMITED.equals(vo.getTourStatusCd())) {
+					vo.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_FULL);
+					updateVO(vo);
+				}
+			} else if (flag == 2) {
+				if (ProductConstant.TOUR_STATUS_CD_FULL.equals(vo.getTourStatusCd())) {
+					vo.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+					updateVO(vo);
+				}
+			}
+		}
+
+		// Add booking survey
+		if (CollectionUtils.isNotEmpty(bookingVO.getIdSurveyList())) {
+			bookingDAO.deleteSurveyList(bookingVO.getId());
+
+			for (String code : bookingVO.getIdSurveyList()) {
+				SurveyVO vo = new SurveyVO();
+				vo.setBookingId(bookingVO.getId());
+				vo.setCode(code);
+				insertVO(vo);
+			}
+		}
+	}
+
+	@Override
+	public synchronized void cancelCruiseBooking(BookingVO bookingVO, TourDepartureVO tourDepVO)
+			throws BusinessException {
+		if (CommonConstant.STATUS_CD_CONFIRMED.equals(bookingVO.getStatusCode()))
+			bookingVO.setStatusCode(CommonConstant.STATUS_CD_CANCELLED); // throw new
+																			// BusinessException(CommonErrConstant.ERR_BOOKING_ISSUED_INV);
+		else if (CommonConstant.STATUS_CD_BOOKED.equals(bookingVO.getStatusCode())) {
+			if (SalesConstant.BOOKING_PMNT_STATUS_KIV.equals(bookingVO.getPmntStatusCd()))
+				bookingVO.setStatusCode(CommonConstant.STATUS_CD_VOID);
+			else
+				bookingVO.setStatusCode(CommonConstant.STATUS_CD_CANCELLED);
+		}
+		if (bookingVO.getLockStatus()) {
+			bookingVO.setLockStatus(false);
+			bookingDAO.updateIndividualBookingLockStatus(bookingVO.getId(), false);
+		}
+		updateVO(bookingVO);
+
+		int cabinAllot = 0;
+		for (TourCruiseCabinVO vo : tourDepVO.getTourCruiseCabinList()) {
+			cabinAllot = vo.getCabinAllotment();
+			if (cabinAllot > 0) {
+				int totalBook = bookingDAO.getTotalCabinByTourDep(tourDepVO.getId(), vo.getId(), bookingVO.getId());
+				int balance = cabinAllot - totalBook;
+				if (balance > 0) {
+					if (ProductConstant.TOUR_STATUS_CD_FULL.equals(vo.getTourStatusCd())) {
+						vo.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+						updateVO(vo);
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	@Override
+	public void reactivateBooking(BookingVO bookingVO) throws BusinessException {
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("idTourBooking", bookingVO.getId());
+		params.put("simpleInvoice", BaseConstant.YES);
+		List<InvoiceVO> invoiceList = invoiceDAO.getInvoiceList(params);
+		InvoiceVO invoiceVO = null;
+
+		if (invoiceList.size() > 0) {
+			if (invoiceList.size() > 1)
+				throw new BusinessException(CommonErrConstant.ERR_BOOKING_INVOICE_EXCEPTION, "",
+						new String[] { bookingVO.getId().toString() });
+			invoiceVO = invoiceList.get(0);
+		}
+
+		if (SalesConstant.BOOKING_PMNT_STATUS_KIVEXP.equals(bookingVO.getPmntStatusCd())) {
+			bookingVO.setPmntStatusCd(SalesConstant.BOOKING_PMNT_STATUS_KIV);
+			bookingVO.setStatusCode(CommonConstant.STATUS_CD_BOOKED);
+
+		} else if (CommonConstant.STATUS_CD_CANCELLED.equals(bookingVO.getStatusCode())
+				|| CommonConstant.STATUS_CD_VOID.equals(bookingVO.getStatusCode())) {
+			if (SalesConstant.BOOKING_PMNT_STATUS_KIV.equals(bookingVO.getPmntStatusCd()))
+				bookingVO.setStatusCode(CommonConstant.STATUS_CD_BOOKED);
+			else
+				bookingVO.setStatusCode(CommonConstant.STATUS_CD_CONFIRMED);
+		}
+
+		String kivExp = LookupItemUtils.getGlobalConfigValue(MaintConstant.GLOBAL_CD_GLOBAL, MaintConstant.GLOBAL_CD_KIV_EXP);
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(new Date());
+		cal.add(Calendar.DAY_OF_MONTH, Integer.parseInt(kivExp));
+		bookingVO.setDtExp(cal.getTime());
+
+		bookingDAO.update(bookingVO);
+
+		if (invoiceVO != null && ((CommonConstant.STATUS_CD_CANCELLED.equals(invoiceVO.getStatusCd())
+				|| CommonConstant.STATUS_CD_VOID.equals(invoiceVO.getStatusCd())))) {
+			if (SalesConstant.BOOKING_PMNT_STATUS_KIV.equals(bookingVO.getPmntStatusCd()))
+				invoiceVO.setStatusCd(CommonConstant.STATUS_CD_INVOICED);
+			else {
+				if (SalesConstant.BOOKING_PMNT_STATUS_DEPOSIT.equals(bookingVO.getPmntStatusCd()))
+					invoiceVO.setStatusCd(CommonConstant.STATUS_CD_DEPOSIT_PAID);
+				else if (SalesConstant.BOOKING_PMNT_STATUS_FULL.equals(bookingVO.getPmntStatusCd()))
+					invoiceVO.setStatusCd(CommonConstant.STATUS_CD_FULL_PAYMENT);
+				else
+					invoiceVO.setStatusCd(CommonConstant.STATUS_CD_INVOICED);
+			}
+			invoiceDAO.updateStatus(invoiceVO);
+			invoiceDAO.insertInvoiceHistory(invoiceVO.getId(), CommonConstant.ACTION_CD_UPD,
+					"Reactivate Booking ID " + bookingVO.getId());
+
+			invoiceVO = null;
+			invoiceList = null;
+		}
+
+		String allotmentIncludeInft = appSettingService.getAppSettingByCode(ConstantAppSetting.ADMIN_INCL_INFT_IN_ALLOTMENT_CALC_IN_OUTBOUND).getValue();
+		System.out.println("CYY allotmentIncludeInft: " + allotmentIncludeInft);
+
+		TourDepartureVO tourDepVO = tourPkgService.getTourDepById(bookingVO.getIdTourDep());
+		int flag = 0;
+		if (tourDepVO.getSeatAllot().intValue() > 0) {
+			int totalBook = bookingDAO.getTotalBookByTourDep(tourDepVO.getId(), bookingVO.getId(),
+					bookingVO.getTypeCd());
+			int balance = tourDepVO.getSeatAllot() - tourDepVO.getReservedSeat() - tourDepVO.getTourManagerPax()
+					- totalBook - bookingVO.getPaxFullCeb() - bookingVO.getPaxFullCnb() - bookingVO.getPaxFullCtw()
+					- bookingVO.getPaxFullTrpl() - bookingVO.getPaxFullSgl() - bookingVO.getPaxFullTwn();
+
+			if (allotmentIncludeInft.equals("Y"))	balance -= bookingVO.getPaxFullInft();
+
+			if (balance < 0) {
+				throw new BusinessException(CommonErrConstant.ERR_BOOKING_OVER_SEAT_BALANCE);
+			}
+
+			if (balance == 0) {
+				flag = 1;
+			} else if (balance > 0) {
+				flag = 2;
+			}
+		}
+
+		// update status to full status
+		if (flag == 1) {
+			if (ProductConstant.TOUR_STATUS_CD_AVAILABLE.equals(tourDepVO.getTourStatusCd())
+					|| ProductConstant.TOUR_STATUS_CD_LIMITED.equals(tourDepVO.getTourStatusCd())) {
+				tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_FULL);
+				updateVO(tourDepVO);
+			}
+		} else if (flag == 2) {
+			if (ProductConstant.TOUR_STATUS_CD_FULL.equals(tourDepVO.getTourStatusCd())) {
+				tourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+				updateVO(tourDepVO);
+			}
+		}
+	}
+
+	@Override
+	public List<BookingVO> getBookingCuiseList(TourDepartureVO tourDepVO) throws BusinessException {
+		List<BookingVO> bookingList = bookingDAO.getBookingList(tourDepVO.getId());
+
+		if (CollectionUtils.isNotEmpty(bookingList)) {
+			for (BookingVO bookingVO : bookingList) {
+				bookingVO.setEmployeeViewVO(userService.getEmployeeView(bookingVO.getIdEmployee()));
+				bookingVO.setBookingChargeItemList(
+						new ArrayList<BookingChargeItemVO>(bookingVO.getBookingChargeItemSet()));
+				bookingVO.setBookingChargeItemSet(null);
+				bookingVO.setCustomerVO(custService.getCustomerSimpleDetail(bookingVO.getIdCust()));
+				bookingVO.setCustName(bookingVO.getCustomerVO().getCustName());
+				InvoiceVO invVO = bookingDAO.getInvoiceInfo(bookingVO.getId());
+				if (invVO!=null && invVO.getId()!=null) {
+					bookingVO.setInvId(invVO.getId());
+					bookingVO.setPsNo(invVO.getPsNo());
+					if (invVO.getDocTypeCd().equals("I")) {
+						bookingVO.setInvCode(invVO.getCode());
+					} else if (invVO.getDocTypeCd().equals("P")) {
+						bookingVO.setInvCode("");
+					}
+				}
+				
+				bookingVO.setInvList(bookingDAO.getSubDocInfo(bookingVO.getId()));
+				if (bookingVO.getInvList() == null)	bookingVO.setInvList(new ArrayList<InvoiceVO>());
+				bookingVO.setPaxStmtList(new ArrayList<InvoiceVO>());
+				Iterator<InvoiceVO> iterator = bookingVO.getInvList().iterator();
+				// take out pax stmt from inv list and insert into pax stmt list
+		        while (iterator.hasNext()) {
+		        	InvoiceVO invoiceVO = iterator.next();
+		            if (invoiceVO.getDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_PAX_STMT)) {
+		            	// won't show converted stmt
+		            	// 2/4/2025 Booking Made Page - Display PS No. although already converted to INV (You Yuan)
+//		            	if (!invoiceVO.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_CONVERTED)) {
+		            		bookingVO.getPaxStmtList().add(invoiceVO);
+//		            	}
+		            	iterator.remove();
+		            }
+		        }
+
+		        if (invVO != null) {
+		        	if (invVO.getDocTypeCd() != null) {
+		        		if (invVO.getDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_INVC)) {
+		        			// if is invc, is old record before pax stmt, no need check doc type status
+		        			bookingVO.getInvList().add(invVO);
+		        		} else {
+		        			// if is not invc, then is pax stmt, will carry doc type status
+//		        			if (!invVO.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_CONVERTED)
+//		        					&& !invVO.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_SPLIT)) {
+//				        		bookingVO.getPaxStmtList().add(invVO);
+//				        	}
+
+		        			if (!invVO.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_SPLIT)) {
+				        		bookingVO.getPaxStmtList().add(invVO);
+				        	}
+		        		}
+
+		        	} else {
+		        		if (invVO.getId() != null) {
+		        			System.out.println("BookingServiceImpl.getBookingCuiseList() " + bookingVO.getId());
+			        		System.out.println("invVO.getId(): " + invVO.getId());
+			        		System.out.println("CYY invVO.getDocTypeCd() IS NULL !!!");
+		        		}
+		        	}
+
+		        }
+
+//				for (InvoiceVO vo : bookingVO.getInvList()) {
+//					System.out.println("CYY bookingVO.getInvList(): " + vo.getId() + " " + vo.getCode() + " " + vo.getPsNo());
+//				}
+
+				List<TourCruiseCabinVO> cabinList = tourDepVO.getTourCruiseCabinList();
+				bookingVO.setTourCruiseCabinList(new ArrayList<TourCruiseCabinVO>());
+				TourCruiseCabinVO cabinVO = null;
+
+				for (TourCruiseCabinVO ccVO : cabinList) {
+					for (BookingChargeItemVO itemVO : bookingVO.getBookingChargeItemList()) {
+						if (ProductConstant.TOUR_DEP_ITM_TYPE_TOUR.equals(itemVO.getTypeCd())
+								&& ccVO.getId().equals(itemVO.getIdTourCruiseCabin())
+								&& itemVO.getCabinQty().intValue() > 0) {
+							cabinVO = new TourCruiseCabinVO();
+							cabinVO.setCruiseCabinCd(ccVO.getCruiseCabinCd());
+							cabinVO.setCabinAllotment(itemVO.getCabinQty());
+							bookingVO.getTourCruiseCabinList().add(cabinVO);
+							break;
+						}
+					}
+				}
+			}
+		}
+		return bookingList;
+	}
+
+	private void updBookingChargeItemListForQuote(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+
+		int totFullAdultPax = bookingVO.getPaxFullTwn() + bookingVO.getPaxFullSgl() + bookingVO.getPaxFullTrpl();
+		int totFullChildPax = bookingVO.getPaxFullCeb() + bookingVO.getPaxFullCnb() + bookingVO.getPaxFullCtw();
+		int totGrndPax = bookingVO.getPaxGrndCeb() + bookingVO.getPaxGrndCnb() + bookingVO.getPaxGrndCtw()
+				+ bookingVO.getPaxGrndSgl() + bookingVO.getPaxGrndTwn() + bookingVO.getPaxGrndTrpl();
+		int totBizAdultPax = 0;
+		int totBizChildPax = 0;
+
+		int totalDiscountPax = 0;
+		double totalAmount = 0;
+
+		for (BookingChargeItemVO vo : bookingVO.getBookingChargeItemList()) {
+			if (ProductConstant.TOUR_DEP_ITM_CD_FT_SGL.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxFullSgl());
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_TWN.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxFullTwn());
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CTW.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxFullCtw());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CWB.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxFullCeb());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CNB.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxFullCnb());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_INFT.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxFullInft());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_TRIPLE.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxFullTrpl());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_SGL.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxGrndSgl());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_TWN.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxGrndTwn());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CTW.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxGrndCtw());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CWB.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxGrndCeb());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CNB.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxGrndCnb());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_INFT.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxGrndInft());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_TRIPLE.equals(vo.getCode())) {
+				vo.setQuantity(bookingVO.getPaxGrndTrpl());
+
+				if (vo.getQuantity() > 0)
+					totalAmount += (vo.getAmount() * vo.getQuantity());
+			}
+			else if (ProductConstant.AIRLINE_ITM_CD_APT_ADT.equals(vo.getCode())) {
+				vo.setQuantity(totFullAdultPax + totBizAdultPax);
+
+			} else if (ProductConstant.AIRLINE_ITM_CD_APT_CHD.equals(vo.getCode())) {
+				vo.setQuantity(totFullChildPax + totBizChildPax);
+
+			} else if (ProductConstant.AIRLINE_ITM_CD_FUEL_ADT.equals(vo.getCode())) {
+				vo.setQuantity(totFullAdultPax + totBizAdultPax);
+
+			} else if (ProductConstant.AIRLINE_ITM_CD_FUEL_CHD.equals(vo.getCode())) {
+				vo.setQuantity(totFullChildPax + totBizChildPax);
+
+			} else if (ProductConstant.AIRLINE_ITM_CD_AC.equals(vo.getCode())) {
+				vo.setQuantity(totFullAdultPax + totFullChildPax + totBizAdultPax + totBizChildPax);
+
+			} else if (ProductConstant.AIRLINE_ITM_CD_DEVIATION.equals(vo.getCode())) {
+				vo.setQuantity(totFullAdultPax + totFullChildPax + totBizAdultPax + totBizChildPax);
+
+			} else if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) {
+				totalDiscountPax += vo.getQuantity();
+
+			} else {
+				vo.setQuantity(totFullAdultPax + totFullChildPax + totGrndPax + totBizAdultPax + totBizChildPax);
+
+			}
+		}
+
+		// If user deduct booking pax -START-
+		int totalBookingPax = totFullAdultPax + totFullChildPax + totBizAdultPax + totBizChildPax;
+		int count = 1;
+		int remainingPax = 0;
+
+		if (totalDiscountPax > totalBookingPax) {
+			int paxToDeduct = totalDiscountPax - totalBookingPax;
+
+			// Reverse deduct
+			for (int i = bookingVO.getBookingChargeItemList().size() - 1; i >= 0; i--) {
+				BookingChargeItemVO vo = bookingVO.getBookingChargeItemList().get(i);
+
+				if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) {
+					if (count == 1) {
+						remainingPax += paxToDeduct;
+						if (paxToDeduct > vo.getQuantity()) {
+							remainingPax -= vo.getQuantity();
+							vo.setQuantity(0);
+						} else {
+							vo.setQuantity(vo.getQuantity() - paxToDeduct);
+							count = 3;
+						}
+					} else if (count == 2) {
+						if (remainingPax > vo.getQuantity()) {
+							vo.setQuantity(0);
+							vo.setAmount(0.0);
+						} else {
+							vo.setQuantity(vo.getQuantity() - remainingPax);
+						}
+					}
+					count++;
+				}
+			}
+		}
+		// If user deduct booking pax -END-
+	}
+
+	private void addCruiseBookingChargeItemList(BookingVO bookingVO, TourDepartureVO tourDepVO)
+			throws BusinessException {
+		List<TourDepItemVO> tourDepItemList = tourDepVO.getTourDepItemList();
+
+		if (tourDepItemList == null) {
+			tourDepItemList = tourPkgDAO.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany(), null);
+		}
+
+		if (CollectionUtils.isNotEmpty(bookingVO.getTourCruiseCabinList())) {
+//			if (bookingVO.getBookingChargeItemList() == null) {
+			bookingVO.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>());
+//			}
+
+			BookingChargeItemVO itemVO = null;
+			TourDepItemVO tourDepItemVO = new TourDepItemVO();
+
+			double totalAmount = 0.0;
+			boolean isMisc = false;
+
+			int count = 0;
+			for (TourDepItemVO vo : tourDepItemList) {
+				isMisc = false;
+				System.out.println("vo.getCode: " + vo.getCode());
+				System.out.println("vo.getDesc: " + vo.getDesc());
+				System.out.println("vo.getAmount: " + vo.getAmount());
+				System.out.println("vo.getAcctId: " + vo.getAcctId());
+				itemVO = new BookingChargeItemVO();
+				isMisc = vo.getIsMisc();
+
+				itemVO.setIdBooking(bookingVO.getId());
+				itemVO.setIdAcct(vo.getAcctId());
+				itemVO.setIdInvEoItem(vo.getIdInvEoItem());
+				itemVO.setCode(vo.getCode());
+				itemVO.setDesc(vo.getDesc());
+				itemVO.setAmount(vo.getAmount());
+				itemVO.setTypeCd(vo.getTypeCd());
+				itemVO.setIsMisc(isMisc);
+				if (vo.getAmount().doubleValue() > 0) {
+					itemVO.setQuantity(bookingVO.getTotalHeadCount());
+					insertVO(itemVO);
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					totalAmount += vo.getAmount() * itemVO.getQuantity();
+				}
+				if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) {
+					tourDepItemVO = vo;
+				}
+			}
+
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+
+				itemVO = new BookingChargeItemVO();
+
+				itemVO.setIdBooking(bookingVO.getId());
+				itemVO.setIdAcct(vo.getIdAcct());
+				itemVO.setIdInvEoItem(null);
+				itemVO.setCode(vo.getCruiseCabinCd());
+				itemVO.setDesc(vo.getCruiseCabinDesc());
+				itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_TOUR);
+
+				itemVO.setAmount(vo.getPriceTwn());
+				itemVO.setAmount3(vo.getPrice3());
+				itemVO.setAmount4(vo.getPrice4());
+				itemVO.setAmountSgl(vo.getPriceSgl());
+				itemVO.setAmount3Chd(vo.getPrice3Chd());
+				itemVO.setAmount4Chd(vo.getPrice4Chd());
+				itemVO.setAmountInf(vo.getPriceInf());
+
+				itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+				itemVO.setQuantity(vo.getPaxTwn());
+				itemVO.setQuantity3(vo.getPax3());
+				itemVO.setQuantity4(vo.getPax4());
+				itemVO.setQuantitySgl(vo.getPaxSgl());
+				itemVO.setQuantity3Chd(vo.getPax3Chd());
+				itemVO.setQuantity4Chd(vo.getPax4Chd());
+				itemVO.setQuantityInf(vo.getPaxInf());
+				itemVO.setCabinQty(vo.getTtlCabin());
+				insertVO(itemVO);
+				bookingVO.getBookingChargeItemList().add(itemVO);
+
+				totalAmount += (itemVO.getAmount()*itemVO.getQuantity())
+						+ (itemVO.getAmount3()*itemVO.getQuantity3())
+						+ (itemVO.getAmount4()*itemVO.getQuantity4())
+						+ (itemVO.getAmountSgl()*itemVO.getQuantitySgl())
+						+ (itemVO.getAmount3Chd()*itemVO.getQuantity3Chd())
+						+ (itemVO.getAmount4Chd()*itemVO.getQuantity4Chd())
+						+ (itemVO.getAmountInf()*itemVO.getQuantityInf());
+
+				// tour cabin discount logic
+				List<TourCruiseCabinDiscountVO> discountList = tourCruiseCabinService
+						.getTourCruiseCabinDiscountList(vo.getIdTourCruiseCabin());
+				int remainingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPax3Chd() + vo.getPax4Chd() + vo.getPaxInf();
+
+				for (TourCruiseCabinDiscountVO discountVO : discountList) {
+					itemVO = new BookingChargeItemVO();
+
+					itemVO.setIdBooking(bookingVO.getId());
+					itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+					itemVO.setIdAcct(tourDepItemVO.getAcctId());
+//					itemVO.setIdAcct(vo.getIdAcct());
+					itemVO.setIdInvEoItem(null);
+					itemVO.setCode(ProductConstant.TOUR_DEP_ITM_CD_DISC + "_" + vo.getCruiseCabinCd());
+					itemVO.setDesc("DISCOUNT " + vo.getCruiseCabinDesc());
+					itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE);
+					itemVO.setAmount(0.0);
+
+					if (remainingPax <= 0) {
+						itemVO.setQuantity(0);
+						insertVO(itemVO);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+						break;
+					}
+
+					int availableDiscountPax = discountVO.getDiscountPax();
+					double availableDiscountAmt = discountVO.getDiscountAmt();
+
+					if (availableDiscountPax <= 0 || availableDiscountAmt <= 0) {
+						itemVO.setQuantity(0);
+						insertVO(itemVO);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+						continue;
+					}
+
+					itemVO.setAmount(
+							availableDiscountAmt > 0 ? -discountVO.getDiscountAmt() : discountVO.getDiscountAmt());
+
+					if (availableDiscountPax >= remainingPax) {
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+						itemVO.setQuantity(remainingPax);
+
+						remainingPax = 0;
+					} else {
+						remainingPax = remainingPax - availableDiscountPax;
+
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+						itemVO.setQuantity(availableDiscountPax);
+					}
+					// }
+
+					updateVO(discountVO);
+					insertVO(itemVO);
+					bookingVO.getBookingChargeItemList().add(itemVO);
+
+					totalAmount += itemVO.getAmount() * itemVO.getQuantity();
+				}
+			}
+
+			bookingVO.setAmount(totalAmount);
+		}
+	}
+
+	private void addCruiseBookingChargeItemListForQuote(BookingVO bookingVO, TourDepartureVO tourDepVO)
+			throws BusinessException {
+		List<TourDepItemVO> tourDepItemList = tourDepVO.getTourDepItemList();
+
+		if (tourDepItemList == null) {
+			tourDepItemList = tourPkgDAO.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany(), null);
+		}
+
+		if (CollectionUtils.isNotEmpty(bookingVO.getTourCruiseCabinList())) {
+//			if (bookingVO.getBookingChargeItemList() == null) {
+			bookingVO.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>());
+//			}
+
+			BookingChargeItemVO itemVO = null;
+			TourDepItemVO tourDepItemVO = new TourDepItemVO();
+
+			int count = 0;
+			for (TourDepItemVO vo : tourDepItemList) {
+				itemVO = new BookingChargeItemVO();
+
+				itemVO.setIdBooking(bookingVO.getId());
+				System.out.println("tourDepItemList vo.getAcctId(): " + vo.getAcctId());
+				System.out.println("tourDepItemList vo.getAmount(): " + vo.getAmount());
+				System.out.println("tourDepItemList vo.getCode(): " + vo.getCode());
+				itemVO.setIdAcct(vo.getAcctId());
+				itemVO.setIdInvEoItem(vo.getIdInvEoItem());
+				itemVO.setCode(vo.getCode());
+				itemVO.setDesc(vo.getDesc());
+				itemVO.setAmount(vo.getAmount());
+				itemVO.setTypeCd(vo.getTypeCd());
+				if (vo.getAmount().doubleValue() > 0) {
+					itemVO.setQuantity(bookingVO.getTotalHeadCount());
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				}
+				if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) {
+					tourDepItemVO = vo;
+				}
+			}
+
+//			System.out.println("\n\nCYY BookingServiceImpl.addCruiseBookingChargeItemListForQuote()");
+
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+
+				itemVO = new BookingChargeItemVO();
+
+				itemVO.setIdBooking(bookingVO.getId());
+				System.out.println("getTourCruiseCabinList vo.getIdAcct(): " + vo.getIdAcct());
+				System.out.println("tourDepItemList vo.getCruiseCabinCd(): " + vo.getCruiseCabinCd());
+				System.out.println("tourDepItemList vo.getIdTourCruiseCabin(): " + vo.getIdTourCruiseCabin());
+				itemVO.setIdAcct(vo.getIdAcct());
+				itemVO.setIdInvEoItem(null);
+				itemVO.setCode(vo.getCruiseCabinCd());
+				itemVO.setDesc(vo.getCruiseCabinDesc());
+				itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_TOUR);
+
+				itemVO.setAmount(vo.getPriceTwn());
+				itemVO.setAmount3(vo.getPrice3());
+				itemVO.setAmount4(vo.getPrice4());
+				itemVO.setAmountSgl(vo.getPriceSgl());
+				itemVO.setAmount3Chd(vo.getPrice3Chd());
+				itemVO.setAmount4Chd(vo.getPrice4Chd());
+				itemVO.setAmountInf(vo.getPriceInf());
+
+				itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+				itemVO.setQuantity(vo.getPaxTwn());
+				itemVO.setQuantity3(vo.getPax3());
+				itemVO.setQuantity4(vo.getPax4());
+				itemVO.setQuantitySgl(vo.getPaxSgl());
+				itemVO.setQuantity3Chd(vo.getPax3Chd());
+				itemVO.setQuantity4Chd(vo.getPax4Chd());
+				itemVO.setQuantityInf(vo.getPaxInf());
+				itemVO.setCabinQty(vo.getTtlCabin());
+
+//				System.out.println("CYY " + itemVO.getQuantity() + " " + itemVO.getQuantity3() + " " + itemVO.getQuantity4() + " " + itemVO.getQuantitySgl());
+				bookingVO.getBookingChargeItemList().add(itemVO);
+
+				// tour cabin discount logic
+				System.out.println("before discountList vo.getIdTourCruiseCabin(): " + vo.getIdTourCruiseCabin());
+				List<TourCruiseCabinDiscountVO> discountList = tourCruiseCabinService
+						.getTourCruiseCabinDiscountList(vo.getIdTourCruiseCabin());
+				int remainingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPax3Chd() + vo.getPax4Chd() + vo.getPaxInf();
+
+				for (TourCruiseCabinDiscountVO discountVO : discountList) {
+					itemVO = new BookingChargeItemVO();
+
+
+					itemVO.setIdBooking(bookingVO.getId());
+					itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+					System.out.println("discountList tourDepItemVO.getAcctId(): " + tourDepItemVO.getAcctId());
+					System.out.println("tourDepItemList vo.getCruiseCabinCd(): " + vo.getCruiseCabinCd());
+//					itemVO.setIdAcct(tourDepItemVO.getAcctId());
+					itemVO.setIdAcct(vo.getIdAcct());
+					itemVO.setIdInvEoItem(null);
+					itemVO.setCode(ProductConstant.TOUR_DEP_ITM_CD_DISC + "_" + vo.getCruiseCabinCd());
+					itemVO.setDesc("DISCOUNT " + vo.getCruiseCabinDesc());
+					itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE);
+					itemVO.setAmount(0.0);
+
+					if (remainingPax <= 0) {
+						itemVO.setQuantity(0);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+						break;
+					}
+
+					int availableDiscountPax = discountVO.getDiscountPax();
+					double availableDiscountAmt = discountVO.getDiscountAmt();
+
+					if (availableDiscountPax <= 0 || availableDiscountAmt <= 0) {
+						itemVO.setQuantity(0);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+						continue;
+					}
+
+					itemVO.setAmount(
+							availableDiscountAmt > 0 ? -discountVO.getDiscountAmt() : discountVO.getDiscountAmt());
+
+					if (availableDiscountPax >= remainingPax) {
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+						itemVO.setQuantity(remainingPax);
+
+						remainingPax = 0;
+					} else {
+						remainingPax = remainingPax - availableDiscountPax;
+
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+						itemVO.setQuantity(availableDiscountPax);
+					}
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				}
+			}
+		}
+	}
+
+	private void addCruiseBookingChargeItemListForAPI(BookingVO bookingVO, TourDepartureVO tourDepVO)
+			throws BusinessException {
+		List<TourDepItemVO> tourDepItemList = tourDepVO.getTourDepItemList();
+		if (tourDepItemList == null)
+			tourDepItemList = tourPkgDAO.getTourDepItemList(tourDepVO.getId(), tourDepVO.getIdCompany(), null);
+
+		if (CollectionUtils.isNotEmpty(bookingVO.getTourCruiseCabinList())) {
+			bookingVO.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>());
+
+			BookingChargeItemVO itemVO = null;
+			TourDepItemVO tourDepItemVO = new TourDepItemVO();
+
+			for (TourDepItemVO vo : tourDepItemList) {
+				itemVO = new BookingChargeItemVO();
+
+				itemVO.setIdBooking(bookingVO.getId());
+				itemVO.setIdAcct(vo.getAcctId());
+				itemVO.setIdInvEoItem(vo.getIdInvEoItem());
+				itemVO.setCode(vo.getCode());
+				itemVO.setDesc(vo.getDesc());
+				itemVO.setAmount(vo.getAmount());
+				itemVO.setTypeCd(vo.getTypeCd());
+				if (vo.getAmount().doubleValue() > 0) {
+					itemVO.setQuantity(bookingVO.getQuantity());
+					bookingDAO.insert(itemVO, getUserInfo());
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				}
+				if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode()))
+					tourDepItemVO = vo;
+			}
+
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+				itemVO = new BookingChargeItemVO();
+
+				itemVO.setIdBooking(bookingVO.getId());
+				itemVO.setIdAcct(vo.getIdAcct());
+				itemVO.setIdInvEoItem(null);
+				itemVO.setCode(vo.getCruiseCabinCd());
+				itemVO.setDesc(vo.getCruiseCabinDesc());
+				itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_TOUR);
+
+				itemVO.setAmount(vo.getPriceTwn());
+				itemVO.setAmount3(vo.getPrice3());
+				itemVO.setAmount4(vo.getPrice4());
+				itemVO.setAmountSgl(vo.getPriceSgl());
+				itemVO.setAmount3Chd(vo.getPrice3Chd());
+				itemVO.setAmount4Chd(vo.getPrice4Chd());
+				itemVO.setAmountInf(vo.getPriceInf());
+
+				itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+				itemVO.setQuantity(vo.getPaxTwn());
+				itemVO.setQuantity3(vo.getPax3());
+				itemVO.setQuantity4(vo.getPax4());
+				itemVO.setQuantitySgl(vo.getPaxSgl());
+				itemVO.setQuantity3Chd(vo.getPax3Chd());
+				itemVO.setQuantity4Chd(vo.getPax4Chd());
+				itemVO.setQuantityInf(vo.getPaxInf());
+				itemVO.setCabinQty(vo.getTtlCabin());
+				bookingDAO.insert(itemVO, getUserInfo());
+				bookingVO.getBookingChargeItemList().add(itemVO);
+
+				// tour cabin discount logic
+				List<TourCruiseCabinDiscountVO> discountList = tourCruiseCabinService
+						.getTourCruiseCabinDiscountList(vo.getIdTourCruiseCabin());
+				int remainingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPax3Chd() + vo.getPax4Chd() + vo.getPaxInf();
+
+				for (TourCruiseCabinDiscountVO discountVO : discountList) {
+					itemVO = new BookingChargeItemVO();
+
+					itemVO.setIdBooking(bookingVO.getId());
+					itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+					itemVO.setIdAcct(tourDepItemVO.getAcctId());
+					itemVO.setIdInvEoItem(null);
+					itemVO.setCode(ProductConstant.TOUR_DEP_ITM_CD_DISC + "_" + vo.getCruiseCabinCd());
+					itemVO.setDesc("DISCOUNT " + vo.getCruiseCabinDesc());
+					itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE);
+					itemVO.setAmount(0.0);
+
+					if (remainingPax <= 0) {
+						itemVO.setQuantity(0);
+						bookingDAO.insert(itemVO, getUserInfo());
+						bookingVO.getBookingChargeItemList().add(itemVO);
+						break;
+					}
+
+					int availableDiscountPax = discountVO.getDiscountPax();
+					double availableDiscountAmt = discountVO.getDiscountAmt();
+
+					if (availableDiscountPax <= 0 || availableDiscountAmt <= 0) {
+						itemVO.setQuantity(0);
+						bookingDAO.insert(itemVO, getUserInfo());
+						bookingVO.getBookingChargeItemList().add(itemVO);
+						continue;
+					}
+
+					itemVO.setAmount(
+							availableDiscountAmt > 0 ? -discountVO.getDiscountAmt() : discountVO.getDiscountAmt());
+
+					if (availableDiscountPax >= remainingPax) {
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+						itemVO.setQuantity(remainingPax);
+
+						remainingPax = 0;
+					} else {
+						remainingPax = remainingPax - availableDiscountPax;
+
+						discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+						itemVO.setQuantity(availableDiscountPax);
+					}
+
+					bookingDAO.update(discountVO, getUserInfo());
+					bookingDAO.insert(itemVO, getUserInfo());
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				}
+			}
+		}
+	}
+
+	private void updCruiseBookingChargeItemList(BookingVO bookingVO, TourDepartureVO tourDepVO)
+			throws BusinessException {
+		List<TourDepItemVO> tourDepItemList = tourDepVO.getTourDepItemList();
+		if (tourDepItemList == null) tourDepItemList = tourPkgDAO.getTourDepItemList(tourDepVO.getId(), tourDepVO.getIdCompany(), null);
+
+		if (CollectionUtils.isNotEmpty(bookingVO.getTourCruiseCabinList())) {
+			if (bookingVO.getBookingChargeItemList() == null)
+				bookingVO.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>());
+
+			double totalAmount = 0.0;
+
+			for (BookingChargeItemVO vo : bookingVO.getBookingChargeItemList()) {
+
+				if (ProductConstant.TOUR_DEP_ITM_TYPE_TOUR.equals(vo.getTypeCd())) {
+					vo.setQuantity(0);
+					vo.setQuantity3(0);
+					vo.setQuantity4(0);
+					vo.setQuantitySgl(0);
+					vo.setQuantity3Chd(0);
+					vo.setQuantity4Chd(0);
+					vo.setQuantityInf(0);
+					vo.setCabinQty(0);
+					updateVO(vo);
+				} else {
+					if (vo.getAmount().doubleValue() > 0) {
+						vo.setQuantity(bookingVO.getTotalHeadCount());
+						updateVO(vo);
+						totalAmount += vo.getAmount() * vo.getQuantity();
+					}
+				}
+			}
+
+			BookingChargeItemVO itemVO = null;
+			boolean isExited = false;
+			int totalBookingPax = 0;
+			int totalDiscountPax = 0;
+			TourDepItemVO tourDepItemVO = new TourDepItemVO();
+
+			for (TourDepItemVO depItemVO : tourDepItemList) {
+				if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(depItemVO.getCode())) {
+					tourDepItemVO = depItemVO;
+					break;
+				}
+			}
+
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+				isExited = false;
+				totalBookingPax = 0;
+				totalDiscountPax = 0;
+
+				for (BookingChargeItemVO vo2 : bookingVO.getBookingChargeItemList()) {
+					if (vo.getIdTourCruiseCabin().equals(vo2.getIdTourCruiseCabin())) {
+						if (ProductConstant.TOUR_DEP_ITM_TYPE_TOUR.equals(vo2.getTypeCd())) {
+							vo2.setQuantity(vo.getPaxTwn());
+							vo2.setQuantity3(vo.getPax3());
+							vo2.setQuantity4(vo.getPax4());
+							vo2.setQuantitySgl(vo.getPaxSgl());
+							vo2.setQuantity3Chd(vo.getPax3Chd());
+							vo2.setQuantity4Chd(vo.getPax4Chd());
+							vo2.setQuantityInf(vo.getPaxInf());
+							vo2.setCabinQty(vo.getTtlCabin());
+							isExited = true;
+							updateVO(vo2);
+							totalBookingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPax3Chd() + vo.getPax4Chd()
+									+ vo.getPaxInf();
+
+							totalAmount += (vo2.getAmount()*vo2.getQuantity())
+									+ (vo2.getAmount3()*vo2.getQuantity3())
+									+ (vo2.getAmount4()*vo2.getQuantity4())
+									+ (vo2.getAmountSgl()*vo2.getQuantitySgl())
+									+ (vo2.getAmount3Chd()*vo2.getQuantity3Chd())
+									+ (vo2.getAmount4Chd()*vo2.getQuantity4Chd())
+									+ (vo2.getAmountInf()*vo2.getQuantityInf());
+							// break;
+						} else if (ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE.equals(vo2.getTypeCd())
+								&& vo2.getCode().startsWith(ProductConstant.TOUR_DEP_ITM_CD_DISC)) {
+							totalDiscountPax += vo2.getQuantity();
+						}
+					}
+				}
+
+				if (isExited) {
+					// If user deduct booking pax -START-
+					int count = 1;
+					int remainingPax = 0;
+					if (totalDiscountPax > totalBookingPax) {
+						int paxToDeduct = totalDiscountPax - totalBookingPax;
+
+						// Reverse deduct
+						for (int i = bookingVO.getBookingChargeItemList().size() - 1; i >= 0; i--) {
+							BookingChargeItemVO iVO = bookingVO.getBookingChargeItemList().get(i);
+
+							if (ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE.equals(iVO.getTypeCd())
+									&& iVO.getCode().startsWith(ProductConstant.TOUR_DEP_ITM_CD_DISC)) {
+								if (count == 1) {
+									remainingPax += paxToDeduct;
+									if (paxToDeduct > iVO.getQuantity()) {
+										remainingPax -= iVO.getQuantity();
+										iVO.setQuantity(0);
+									} else {
+										iVO.setQuantity(iVO.getQuantity() - paxToDeduct);
+										count = 3;
+									}
+								} else if (count == 2) {
+									if (remainingPax > iVO.getQuantity()) {
+										iVO.setQuantity(0);
+										iVO.setAmount(0.0);
+									} else {
+										iVO.setQuantity(iVO.getQuantity() - remainingPax);
+									}
+								}
+								count++;
+							}
+							updateVO(iVO);
+
+							totalAmount += (iVO.getAmount()*iVO.getQuantity())
+									+ (iVO.getAmount3()*iVO.getQuantity3())
+									+ (iVO.getAmount4()*iVO.getQuantity4())
+									+ (iVO.getAmountSgl()*iVO.getQuantitySgl())
+									+ (iVO.getAmount3Chd()*iVO.getQuantity3Chd())
+									+ (iVO.getAmount4Chd()*iVO.getQuantity4Chd())
+									+ (iVO.getAmountInf()*iVO.getQuantityInf());
+						}
+					}
+
+					System.out.println("33 CCL totalAmount: " + totalAmount);
+					// If user deduct booking pax -END-
+
+				} else {
+					itemVO = new BookingChargeItemVO();
+
+					itemVO.setIdBooking(bookingVO.getId());
+					itemVO.setIdAcct(vo.getIdAcct());
+					itemVO.setIdInvEoItem(null);
+					itemVO.setCode(vo.getCruiseCabinCd());
+					itemVO.setDesc(vo.getCruiseCabinDesc());
+					itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_TOUR);
+
+					itemVO.setAmount(vo.getPriceTwn());
+					itemVO.setAmount3(vo.getPrice3());
+					itemVO.setAmount4(vo.getPrice4());
+					itemVO.setAmountSgl(vo.getPriceSgl());
+					itemVO.setAmount3Chd(vo.getPrice3Chd());
+					itemVO.setAmount4Chd(vo.getPrice4Chd());
+					itemVO.setAmountInf(vo.getPriceInf());
+
+					itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+					itemVO.setQuantity(vo.getPaxTwn());
+					itemVO.setQuantity3(vo.getPax3());
+					itemVO.setQuantity4(vo.getPax4());
+					itemVO.setQuantitySgl(vo.getPaxSgl());
+					itemVO.setQuantity3Chd(vo.getPax3Chd());
+					itemVO.setQuantity4Chd(vo.getPax4Chd());
+					itemVO.setQuantityInf(vo.getPaxInf());
+					itemVO.setCabinQty(vo.getTtlCabin());
+					insertVO(itemVO);
+					bookingVO.getBookingChargeItemList().add(itemVO);
+
+					totalAmount += (itemVO.getAmount()*itemVO.getQuantity())
+							+ (itemVO.getAmount3()*itemVO.getQuantity3())
+							+ (itemVO.getAmount4()*itemVO.getQuantity4())
+							+ (itemVO.getAmountSgl()*itemVO.getQuantitySgl())
+							+ (itemVO.getAmount3Chd()*itemVO.getQuantity3Chd())
+							+ (itemVO.getAmount4Chd()*itemVO.getQuantity4Chd())
+							+ (itemVO.getAmountInf()*itemVO.getQuantityInf());
+
+					System.out.println("44 CCL totalAmount: " + totalAmount);
+
+					// tour cabin discount logic
+					List<TourCruiseCabinDiscountVO> discountList = tourCruiseCabinService
+							.getTourCruiseCabinDiscountList(vo.getIdTourCruiseCabin());
+					int remainingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPax3Chd() + vo.getPax4Chd() + vo.getPaxInf();
+
+					for (TourCruiseCabinDiscountVO discountVO : discountList) {
+						itemVO = new BookingChargeItemVO();
+
+						itemVO.setIdBooking(bookingVO.getId());
+						itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+						itemVO.setIdAcct(tourDepItemVO.getAcctId());
+						itemVO.setIdInvEoItem(null);
+						itemVO.setCode(ProductConstant.TOUR_DEP_ITM_CD_DISC + "_" + vo.getCruiseCabinCd());
+						itemVO.setDesc("DISCOUNT " + vo.getCruiseCabinDesc());
+						itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE);
+						itemVO.setAmount(0.0);
+
+						if (remainingPax <= 0) {
+							itemVO.setQuantity(0);
+							insertVO(itemVO);
+							bookingVO.getBookingChargeItemList().add(itemVO);
+							break;
+						}
+
+						int availableDiscountPax = discountVO.getDiscountPax();
+						double availableDiscountAmt = discountVO.getDiscountAmt();
+
+						if (availableDiscountPax <= 0 || availableDiscountAmt <= 0) {
+							itemVO.setQuantity(0);
+							insertVO(itemVO);
+							bookingVO.getBookingChargeItemList().add(itemVO);
+							continue;
+						}
+
+						itemVO.setAmount(
+								availableDiscountAmt > 0 ? -discountVO.getDiscountAmt() : discountVO.getDiscountAmt());
+
+						if (availableDiscountPax >= remainingPax) {
+							discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+							itemVO.setQuantity(remainingPax);
+
+							remainingPax = 0;
+						} else {
+							remainingPax = remainingPax - availableDiscountPax;
+
+							discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+							itemVO.setQuantity(availableDiscountPax);
+						}
+
+						updateVO(discountVO);
+						insertVO(itemVO);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+
+						totalAmount += itemVO.getAmount() * itemVO.getQuantity();
+					}
+
+					System.out.println("55 CCL totalAmount: " + totalAmount);
+				}
+			}
+
+			bookingVO.setAmount(totalAmount);
+		}
+	}
+
+	private void updCruiseBookingChargeItemListQuote(BookingVO bookingVO, TourDepartureVO tourDepVO)
+			throws BusinessException {
+		List<TourDepItemVO> tourDepItemList = tourDepVO.getTourDepItemList();
+		if (tourDepItemList == null) tourDepItemList = tourPkgDAO.getTourDepItemList(tourDepVO.getId(), tourDepVO.getIdCompany(), null);
+
+		if (CollectionUtils.isNotEmpty(bookingVO.getTourCruiseCabinList())) {
+			if (bookingVO.getBookingChargeItemList() == null)
+				bookingVO.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>());
+
+			for (BookingChargeItemVO vo : bookingVO.getBookingChargeItemList()) {
+
+				if (ProductConstant.TOUR_DEP_ITM_TYPE_TOUR.equals(vo.getTypeCd())) {
+					vo.setQuantity(0);
+					vo.setQuantity3(0);
+					vo.setQuantity4(0);
+					vo.setQuantitySgl(0);
+					vo.setQuantity3Chd(0);
+					vo.setQuantity4Chd(0);
+					vo.setQuantityInf(0);
+					vo.setCabinQty(0);
+					updateVO(vo);
+				} else {
+					if (vo.getAmount().doubleValue() > 0) {
+						vo.setQuantity(bookingVO.getTotalHeadCount());
+						updateVO(vo);
+					}
+				}
+			}
+
+			BookingChargeItemVO itemVO = null;
+			boolean isExited = false;
+			int totalBookingPax = 0;
+			int totalDiscountPax = 0;
+			TourDepItemVO tourDepItemVO = new TourDepItemVO();
+
+			for (TourDepItemVO depItemVO : tourDepItemList) {
+				if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(depItemVO.getCode())) {
+					tourDepItemVO = depItemVO;
+					break;
+				}
+			}
+
+			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+				isExited = false;
+				totalBookingPax = 0;
+				totalDiscountPax = 0;
+
+				for (BookingChargeItemVO vo2 : bookingVO.getBookingChargeItemList()) {
+					if (vo.getIdTourCruiseCabin().equals(vo2.getIdTourCruiseCabin())) {
+						if (ProductConstant.TOUR_DEP_ITM_TYPE_TOUR.equals(vo2.getTypeCd())) {
+							vo2.setQuantity(vo.getPaxTwn());
+							vo2.setQuantity3(vo.getPax3());
+							vo2.setQuantity4(vo.getPax4());
+							vo2.setQuantitySgl(vo.getPaxSgl());
+							vo2.setQuantity3Chd(vo.getPax3Chd());
+							vo2.setQuantity4Chd(vo.getPax4Chd());
+							vo2.setQuantityInf(vo.getPaxInf());
+							vo2.setCabinQty(vo.getTtlCabin());
+							isExited = true;
+							updateVO(vo2);
+							totalBookingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPax3Chd() + vo.getPax4Chd()
+									+ vo.getPaxInf();
+							// break;
+						} else if (ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE.equals(vo2.getTypeCd())
+								&& vo2.getCode().startsWith(ProductConstant.TOUR_DEP_ITM_CD_DISC)) {
+							totalDiscountPax += vo2.getQuantity();
+						}
+					}
+				}
+
+				if (isExited) {
+					// If user deduct booking pax -START-
+					int count = 1;
+					int remainingPax = 0;
+					if (totalDiscountPax > totalBookingPax) {
+						int paxToDeduct = totalDiscountPax - totalBookingPax;
+
+						// Reverse deduct
+						for (int i = bookingVO.getBookingChargeItemList().size() - 1; i >= 0; i--) {
+							BookingChargeItemVO iVO = bookingVO.getBookingChargeItemList().get(i);
+
+							if (ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE.equals(iVO.getTypeCd())
+									&& iVO.getCode().startsWith(ProductConstant.TOUR_DEP_ITM_CD_DISC)) {
+								if (count == 1) {
+									remainingPax += paxToDeduct;
+									if (paxToDeduct > iVO.getQuantity()) {
+										remainingPax -= iVO.getQuantity();
+										iVO.setQuantity(0);
+									} else {
+										iVO.setQuantity(iVO.getQuantity() - paxToDeduct);
+										count = 3;
+									}
+								} else if (count == 2) {
+									if (remainingPax > iVO.getQuantity()) {
+										iVO.setQuantity(0);
+										iVO.setAmount(0.0);
+									} else {
+										iVO.setQuantity(iVO.getQuantity() - remainingPax);
+									}
+								}
+								count++;
+							}
+							updateVO(iVO);
+						}
+					}
+					// If user deduct booking pax -END-
+
+				} else {
+					itemVO = new BookingChargeItemVO();
+
+					itemVO.setIdBooking(bookingVO.getId());
+					itemVO.setIdAcct(vo.getIdAcct());
+					itemVO.setIdInvEoItem(null);
+					itemVO.setCode(vo.getCruiseCabinCd());
+					itemVO.setDesc(vo.getCruiseCabinDesc());
+					itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_TOUR);
+
+					itemVO.setAmount(vo.getPriceTwn());
+					itemVO.setAmount3(vo.getPrice3());
+					itemVO.setAmount4(vo.getPrice4());
+					itemVO.setAmountSgl(vo.getPriceSgl());
+					itemVO.setAmount3Chd(vo.getPrice3Chd());
+					itemVO.setAmount4Chd(vo.getPrice4Chd());
+					itemVO.setAmountInf(vo.getPriceInf());
+
+					itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+					itemVO.setQuantity(vo.getPaxTwn());
+					itemVO.setQuantity3(vo.getPax3());
+					itemVO.setQuantity4(vo.getPax4());
+					itemVO.setQuantitySgl(vo.getPaxSgl());
+					itemVO.setQuantity3Chd(vo.getPax3Chd());
+					itemVO.setQuantity4Chd(vo.getPax4Chd());
+					itemVO.setQuantityInf(vo.getPaxInf());
+					itemVO.setCabinQty(vo.getTtlCabin());
+					insertVO(itemVO);
+					bookingVO.getBookingChargeItemList().add(itemVO);
+
+					// tour cabin discount logic
+					List<TourCruiseCabinDiscountVO> discountList = tourCruiseCabinService
+							.getTourCruiseCabinDiscountList(vo.getIdTourCruiseCabin());
+					int remainingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPax3Chd() + vo.getPax4Chd() + vo.getPaxInf();
+
+					for (TourCruiseCabinDiscountVO discountVO : discountList) {
+						itemVO = new BookingChargeItemVO();
+
+						itemVO.setIdBooking(bookingVO.getId());
+						itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+						itemVO.setIdAcct(tourDepItemVO.getAcctId());
+						itemVO.setIdInvEoItem(null);
+						itemVO.setCode(ProductConstant.TOUR_DEP_ITM_CD_DISC + "_" + vo.getCruiseCabinCd());
+						itemVO.setDesc("DISCOUNT " + vo.getCruiseCabinDesc());
+						itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE);
+						itemVO.setAmount(0.0);
+
+						if (remainingPax <= 0) {
+							itemVO.setQuantity(0);
+							insertVO(itemVO);
+							bookingVO.getBookingChargeItemList().add(itemVO);
+							break;
+						}
+
+						int availableDiscountPax = discountVO.getDiscountPax();
+						double availableDiscountAmt = discountVO.getDiscountAmt();
+
+						if (availableDiscountPax <= 0 || availableDiscountAmt <= 0) {
+							itemVO.setQuantity(0);
+							insertVO(itemVO);
+							bookingVO.getBookingChargeItemList().add(itemVO);
+							continue;
+						}
+
+						itemVO.setAmount(
+								availableDiscountAmt > 0 ? -discountVO.getDiscountAmt() : discountVO.getDiscountAmt());
+
+						if (availableDiscountPax >= remainingPax) {
+							discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+							itemVO.setQuantity(remainingPax);
+
+							remainingPax = 0;
+						} else {
+							remainingPax = remainingPax - availableDiscountPax;
+
+							discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+							itemVO.setQuantity(availableDiscountPax);
+						}
+
+						updateVO(discountVO);
+						insertVO(itemVO);
+						bookingVO.getBookingChargeItemList().add(itemVO);
+					}
+				}
+			}
+		}
+	}
+
+	public synchronized void addBookingForQuote(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		// int flag = 0;
+		int ecoBalance = 99;
+		int bizBalance = 99;
+
+		if (!ProductConstant.TYPE_MICE_INBOUND.equals(bookingVO.getTypeCd())
+				&& !ProductConstant.TYPE_MICE_OUTBOUND.equals(bookingVO.getTypeCd())
+				&& !ProductConstant.TYPE_MICE_DOMESTIC.equals(bookingVO.getTypeCd())) {
+
+			String allotmentIncludeInft = appSettingService.getAppSettingByCode(ConstantAppSetting.ADMIN_INCL_INFT_IN_ALLOTMENT_CALC_IN_OUTBOUND).getValue();
+
+			if (tourDepVO.getSeatAllot().intValue() > 0) {
+				int totalBook = bookingDAO.getTotalBookByTourDep(tourDepVO.getId(), null, tourDepVO.getTourTypeCode());
+				int balance = tourDepVO.getSeatAllot() - tourDepVO.getReservedSeat() - tourDepVO.getTourManagerPax()
+						- totalBook - bookingVO.getPaxFullCeb() - bookingVO.getPaxFullCnb() - bookingVO.getPaxFullCtw()
+						- bookingVO.getPaxFullTrpl() - bookingVO.getPaxFullSgl() - bookingVO.getPaxFullTwn();
+
+				if (allotmentIncludeInft.equals("Y"))	balance -= bookingVO.getPaxFullInft();
+
+				ecoBalance = balance;
+
+				if (balance < 0)
+					throw new BusinessException(CommonErrConstant.ERR_BOOKING_OVER_SEAT_BALANCE);
+				// if (balance == 0) flag = 1;
+			}
+
+			// set booking pax quantity
+			int totalQty = bookingVO.getPaxFullCeb() + bookingVO.getPaxFullCnb() + bookingVO.getPaxFullCtw()
+						+ bookingVO.getPaxFullInft() + bookingVO.getPaxFullSgl() + bookingVO.getPaxFullTwn()
+						+ bookingVO.getPaxGrndCeb() + bookingVO.getPaxGrndCnb() + bookingVO.getPaxGrndCtw()
+						+ bookingVO.getPaxGrndInft() + bookingVO.getPaxGrndSgl() + bookingVO.getPaxGrndTwn()
+						+ bookingVO.getPaxFullTrpl()
+						+ bookingVO.getPaxGrndTrpl();
+			bookingVO.setQuantity(totalQty);
+
+			if (bookingVO.getQuantity() == 0)
+				throw new BusinessException(CommonErrConstant.ERR_BOOKING_PAX_EMPTY);
+
+		}
+
+		// add booking
+		bookingVO.setPmntStatusCd(SalesConstant.BOOKING_PMNT_STATUS_KIV);
+		bookingVO.setStatusCode(CommonConstant.STATUS_CD_BOOKED);
+
+		// add booking charge item
+		addBookingChargeItemListForQuote(bookingVO, tourDepVO);
+	}
+
+	/**********
+	 * HELPER *
+	 **********/
+
+	private void addBookingChargeItemListForQuote(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		List<TourDepItemVO> tourDepItemList = tourDepVO.getTourDepItemList();
+
+		if (tourDepItemList == null) {
+			tourDepItemList = tourPkgDAO.getTourDepItemList(tourDepVO.getId(), tourDepVO.getIdCompany(), null);
+		}
+
+		if (CollectionUtils.isNotEmpty(tourDepItemList)) {
+			if (bookingVO.getBookingChargeItemList() == null) {
+				bookingVO.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>());
+			}
+
+			BookingChargeItemVO itemVO = null;
+			int totFullAdultPax = bookingVO.getPaxFullTwn() + bookingVO.getPaxFullSgl() + bookingVO.getPaxFullTrpl();
+			int totFullChildPax = bookingVO.getPaxFullCeb() + bookingVO.getPaxFullCnb() + bookingVO.getPaxFullCtw();
+			int totGrndPax = bookingVO.getPaxGrndCeb() + bookingVO.getPaxGrndCnb() + bookingVO.getPaxGrndCtw()
+					+ bookingVO.getPaxGrndSgl() + bookingVO.getPaxGrndTwn() + bookingVO.getPaxGrndTrpl();
+			int totBizAdultPax = 0;
+			int totBizChildPax = 0;
+
+			double totalAmount = 0;
+
+			for (TourDepItemVO vo : tourDepItemList) {
+				itemVO = new BookingChargeItemVO();
+
+				itemVO.setIdBooking(bookingVO.getId());
+				itemVO.setIdAcct(vo.getAcctId());
+				itemVO.setIdInvEoItem(vo.getIdInvEoItem());
+				itemVO.setCode(vo.getCode());
+				itemVO.setDesc(vo.getDesc());
+				itemVO.setAmount(vo.getAmount());
+				itemVO.setTypeCd(vo.getTypeCd());
+				if (ProductConstant.TOUR_DEP_ITM_CD_FT_SGL.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxFullSgl());
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_TWN.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxFullTwn());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CTW.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxFullCtw());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CWB.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxFullCeb());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_CNB.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxFullCnb());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_INFT.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxFullInft());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_FT_TRIPLE.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxFullTrpl());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_SGL.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxGrndSgl());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_TWN.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxGrndTwn());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CTW.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxGrndCtw());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CWB.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxGrndCeb());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_CNB.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxGrndCnb());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_INFT.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxGrndInft());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.TOUR_DEP_ITM_CD_GA_TRIPLE.equals(vo.getCode())) {
+					itemVO.setQuantity(bookingVO.getPaxGrndTrpl());
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+					if (itemVO.getQuantity() > 0)
+						totalAmount += (itemVO.getAmount() * itemVO.getQuantity());
+				} else if (ProductConstant.AIRLINE_ITM_CD_APT_ADT.equals(vo.getCode())) {
+					itemVO.setQuantity(totFullAdultPax + totBizAdultPax);
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				} else if (ProductConstant.AIRLINE_ITM_CD_APT_CHD.equals(vo.getCode())) {
+					itemVO.setQuantity(totFullChildPax + totBizChildPax);
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				} else if (ProductConstant.AIRLINE_ITM_CD_FUEL_ADT.equals(vo.getCode())) {
+					itemVO.setQuantity(totFullAdultPax + totBizAdultPax);
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				} else if (ProductConstant.AIRLINE_ITM_CD_FUEL_CHD.equals(vo.getCode())) {
+					itemVO.setQuantity(totFullChildPax + totBizChildPax);
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				} else if (ProductConstant.AIRLINE_ITM_CD_AC.equals(vo.getCode())) {
+					itemVO.setQuantity(totFullAdultPax + totFullChildPax + totBizAdultPax + totBizChildPax);
+
+					bookingVO.getBookingChargeItemList().add(itemVO);
+				} else if (ProductConstant.AIRLINE_ITM_CD_DEVIATION.equals(vo.getCode())) {
+					if (vo.getAcctId() != null) {
+						itemVO.setQuantity(totFullAdultPax + totFullChildPax + totBizAdultPax + totBizChildPax);
+
+						bookingVO.getBookingChargeItemList().add(itemVO);
+					}
+				} else {
+					if (vo.getAcctId() != null) {
+						if (ProductConstant.TOUR_DEP_ITM_CD_DISC.equals(vo.getCode())) {
+							List<TourDepartureDiscountVO> tourDepDiscountList = tourPkgDAO
+									.getTourDepDiscount(tourDepVO.getId());
+
+							if (!tourDepVO.isDiscountPercent()) {
+								int remainingPax = totFullAdultPax + totFullChildPax + totBizAdultPax + totBizChildPax;
+								for (TourDepartureDiscountVO discountVO : tourDepDiscountList) {
+									itemVO = new BookingChargeItemVO();
+
+									itemVO.setIdBooking(bookingVO.getId());
+									itemVO.setIdAcct(vo.getAcctId());
+									itemVO.setIdInvEoItem(vo.getIdInvEoItem());
+									itemVO.setCode(vo.getCode());
+									itemVO.setDesc(vo.getDesc());
+									itemVO.setAmount(vo.getAmount());
+									itemVO.setTypeCd(vo.getTypeCd());
+
+									itemVO.setAmount(discountVO.getDiscountAmt() > 0 ? -discountVO.getDiscountAmt()
+											: discountVO.getDiscountAmt());
+
+									if (remainingPax <= 0) {
+										itemVO.setQuantity(0);
+
+										bookingVO.getBookingChargeItemList().add(itemVO);
+										break;
+									}
+
+									int availableDiscountPax = discountVO.getDiscountPax();
+
+									if (availableDiscountPax <= 0) {
+										itemVO.setQuantity(0);
+										bookingVO.getBookingChargeItemList().add(itemVO);
+										continue;
+									}
+
+									if (availableDiscountPax >= remainingPax) {
+										discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+										itemVO.setQuantity(remainingPax);
+
+										remainingPax = 0;
+									} else {
+										remainingPax = remainingPax - availableDiscountPax;
+
+										discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+										itemVO.setQuantity(availableDiscountPax);
+									}
+
+									bookingVO.getBookingChargeItemList().add(itemVO);
+								}
+							} else {
+								if (CollectionUtils.isNotEmpty(tourDepDiscountList)) {
+									TourDepartureDiscountVO discountVO = tourDepDiscountList.get(0);
+
+									if (discountVO.getDiscountPax() > 0) {
+										itemVO = new BookingChargeItemVO();
+
+										itemVO.setIdBooking(bookingVO.getId());
+										itemVO.setIdAcct(vo.getAcctId());
+										itemVO.setIdInvEoItem(vo.getIdInvEoItem());
+										itemVO.setCode(vo.getCode());
+										itemVO.setDesc(vo.getDesc());
+										itemVO.setAmount(totalAmount * discountVO.getDiscountAmt() / 100 * -1);
+										itemVO.setQuantity(1);
+										itemVO.setTypeCd(vo.getTypeCd());
+
+										bookingVO.getBookingChargeItemList().add(itemVO);
+									}
+								}
+							}
+						} else {
+							itemVO.setQuantity(
+									totFullAdultPax + totFullChildPax + totBizAdultPax + totBizChildPax + totGrndPax);
+
+							bookingVO.getBookingChargeItemList().add(itemVO);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	public InvoiceVO transferCruiseInvoice(InvoiceVO invoiceVO,
+			BookingVO bookingVO, TourDepartureVO tourDepVO, boolean isReturnValue, boolean keepInvItem) throws BusinessException {
+
+		Date invDate = invoiceVO.getInvoiceDt();
+//		Long idBooking = invoiceVO.getBookingId();
+		Long idTourDep = invoiceVO.getTourDepId();
+
+		// return invoice object
+		if (isReturnValue) {
+			boolean isGSTPeriod = gstService.isGSTPeriod(bookingVO.getIdCompany(), invDate);
+			List<TourDepItemVO> tourDepItemVOList = null;
+			if (isGSTPeriod) {
+				tourDepItemVOList = tourPkgService.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany());
+			}
+
+			TourPackageVO tourPkgVO = tourPkgService.getTourPackageById(tourDepVO.getIdTourPkg());
+			InvoiceVO invVO = new InvoiceVO();
+			invVO.setInvoiceDt(invDate);
+			invVO.setCustomerId(invoiceVO.getCustomerId());
+			invVO.setBookingId(bookingVO.getId());
+			invVO.setTourDepId(tourDepVO.getId());
+			invVO.setDepartureDt(tourDepVO.getDtDep());
+			invVO.setOrderCd(bookingVO.getOrderTypeCd());
+			invVO.setCatCd(CommonConstant.LOOKUP_ITM_INV_CAT_CRUISE);
+			StringBuilder sb = new StringBuilder();
+			sb.append(tourDepVO.getNumDays() + "Days " + tourDepVO.getNumNights() + "Nights ");
+			if (!StringUtils.isEmpty(tourPkgVO.getNameEn()))
+				sb.append(tourPkgVO.getNameEn());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameZh()))
+				sb.append(" " + tourPkgVO.getNameZh());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameOther()))
+				sb.append(" " + tourPkgVO.getNameOther());
+			invVO.setSubjLine(sb.toString());
+
+			invVO.setInvoiceItemList(new ArrayList<InvoiceItemVO>());
+			for (BookingChargeItemVO itemVO : bookingVO.getBookingChargeItemList()) {
+				InvoiceItemVO invItemVO = new InvoiceItemVO();
+				invItemVO.setAcctId(itemVO.getIdAcct());
+				invItemVO.setInvEOItemId(itemVO.getIdInvEoItem());
+				invItemVO.setInvItemCd(itemVO.getCode());
+				invItemVO.setDesc(itemVO.getDesc());
+				invItemVO.setQty(itemVO.getQuantity());
+				invItemVO.setUnitPrice(itemVO.getAmount());
+				invItemVO.setAmount((new BigDecimal(String.valueOf(itemVO.getAmount())))
+						.multiply(new BigDecimal(String.valueOf(itemVO.getQuantity()))).doubleValue());
+				invItemVO.setTaxAmount(0.00);
+				if (isGSTPeriod) {
+					for (TourDepItemVO tourDepItemVO : tourDepItemVOList) {
+						if (tourDepItemVO.getCode().equals(itemVO.getCode())) {
+							invItemVO.setTaxCode(tourDepItemVO.getTaxCode());
+							invItemVO.setTaxRate(tourDepItemVO.getTaxRate());
+							tourDepItemVOList.remove(tourDepItemVO);
+							break;
+						}
+					}
+				} else {
+					invItemVO.setTaxCode(null);
+					invItemVO.setTaxRate(null);
+				}
+
+				if (itemVO.getCabinQty() > 0 && ProductConstant.TOUR_DEP_ITM_TYPE_TOUR.equals(itemVO.getTypeCd())) {
+					InvoiceItemVO cabinItemVO = new InvoiceItemVO();
+					if (itemVO.getQuantity() > 0) {
+						cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+						cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_TWN);
+						cabinItemVO.setQty(itemVO.getQuantity());
+						cabinItemVO.setUnitPrice(itemVO.getAmount());
+						cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+								.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+						cabinItemVO.setShowInInv(true);
+						invVO.getInvoiceItemList().add(cabinItemVO);
+					}
+					if (itemVO.getQuantity3() > 0) {
+						cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+						cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_3RD);
+						cabinItemVO.setQty(itemVO.getQuantity3());
+						cabinItemVO.setUnitPrice(itemVO.getAmount3());
+						cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+								.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+						cabinItemVO.setShowInInv(true);
+						invVO.getInvoiceItemList().add(cabinItemVO);
+					}
+					if (itemVO.getQuantity4() > 0) {
+						cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+						cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_4TH);
+						cabinItemVO.setQty(itemVO.getQuantity4());
+						cabinItemVO.setUnitPrice(itemVO.getAmount4());
+						cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+								.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+						cabinItemVO.setShowInInv(true);
+						invVO.getInvoiceItemList().add(cabinItemVO);
+					}
+					if (itemVO.getQuantitySgl() > 0) {
+						cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+						cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_SGL);
+						cabinItemVO.setQty(itemVO.getQuantitySgl());
+						cabinItemVO.setUnitPrice(itemVO.getAmountSgl());
+						cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+								.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+						cabinItemVO.setShowInInv(true);
+						invVO.getInvoiceItemList().add(cabinItemVO);
+					}
+					if (itemVO.getQuantity3Chd() > 0) {
+						cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+						cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_3RD_CHD);
+						cabinItemVO.setQty(itemVO.getQuantity3Chd());
+						cabinItemVO.setUnitPrice(itemVO.getAmount3Chd());
+						cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+								.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+						cabinItemVO.setShowInInv(true);
+						invVO.getInvoiceItemList().add(cabinItemVO);
+					}
+					if (itemVO.getQuantity4Chd() > 0) {
+						cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+						cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_4TH_CHD);
+						cabinItemVO.setQty(itemVO.getQuantity4Chd());
+						cabinItemVO.setUnitPrice(itemVO.getAmount4Chd());
+						cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+								.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+						cabinItemVO.setShowInInv(true);
+						invVO.getInvoiceItemList().add(cabinItemVO);
+					}
+					if (itemVO.getQuantityInf() > 0) {
+						cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+						cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_INFT);
+						cabinItemVO.setQty(itemVO.getQuantityInf());
+						cabinItemVO.setUnitPrice(itemVO.getAmountInf());
+						cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+								.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+						cabinItemVO.setShowInInv(true);
+						invVO.getInvoiceItemList().add(cabinItemVO);
+					}
+				} else if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0
+						&& ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE.equals(itemVO.getTypeCd())) {
+
+					CruiseScheduleVO vvvo = cruiseDAO.getCruiseSchedule(tourDepVO.getIdCruiseSchedule());
+					if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_PORT_CHARGES))	invItemVO.setShowInInv(!vvvo.isSumAmtApt());
+					else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_APT_ADT))	invItemVO.setShowInInv(!vvvo.isSumAmtApt());
+					else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_APT_CHD))	invItemVO.setShowInInv(!vvvo.isSumAmtApt());
+					else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_FUEL_ADT))	invItemVO.setShowInInv(!vvvo.isSumAmtFuel());
+					else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_FUEL_CHD))	invItemVO.setShowInInv(!vvvo.isSumAmtFuel());
+					else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_DEVIATION))	invItemVO.setShowInInv(!vvvo.isSumAmtDeviation());
+					else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_TRVL_INS))	invItemVO.setShowInInv(!vvvo.isSumAmtTrvlIns());
+					else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_VISA))		invItemVO.setShowInInv(!vvvo.isSumAmtVisa());
+					else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_AC))			invItemVO.setShowInInv(!vvvo.isSumAmtAC());
+					else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_TIPPING))	invItemVO.setShowInInv(!vvvo.isSumAmtTipping());
+					else {
+						System.out.println("CYY tourDepVO.getId(): " + tourDepVO.getId());
+						System.out.println("CYY itemVO.getCode(): " + itemVO.getCode());
+						System.out.println("CYY tourDepVO.getCompanyVO(): " + tourDepVO.getCompanyVO());
+						System.out.println("CYY tourDepVO.getCompanyVO(): " + tourDepVO.getCompanyVO().getId());
+						// this is cruise extra charges item
+//							 invItemVO.setShowInInv(
+//									 tourPkgDAO.getTourDepItem(
+//											 tourDepVO.getId(),
+//											 itemVO.getCode(),
+//											 purchaseEODAO.getCompany(tourDepVO.getIdCompany()))
+//									 .isShowInInv());
+					}
+
+					invVO.getInvoiceItemList().add(invItemVO);
+				} else if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0
+						&& ProductConstant.TOUR_DEP_ITM_TYPE_TOTAL_MISC_CHARGE.equals(itemVO.getTypeCd())) {
+					System.out.println("itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0 && ProductConstant.TOUR_DEP_ITM_TYPE_TOTAL_MISC_CHARGE.equals(itemVO.getTypeCd())");
+					System.out.println("invItemVO.isShowInInv(): " + invItemVO.isShowInInv());
+					CruiseScheduleVO vvvo = cruiseDAO.getCruiseSchedule(tourDepVO.getIdCruiseSchedule());
+					invItemVO.setDesc(vvvo.getGroupingChargeLabel());
+					invItemVO.setShowInInv(true);
+					invVO.getInvoiceItemList().add(invItemVO);
+				}
+			}
+
+//			for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+//
+//				itemVO = new BookingChargeItemVO();
+//				itemVO.setIdBooking(bookingVO.getId());
+//				itemVO.setIdAcct(vo.getIdAcct());
+//				itemVO.setIdInvEoItem(null);
+//				itemVO.setCode(vo.getCruiseCabinCd());
+//				itemVO.setDesc(vo.getCruiseCabinDesc());
+//				itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_TOUR);
+//
+//				itemVO.setAmount(vo.getPriceTwn());
+//				itemVO.setAmount3(vo.getPrice3());
+//				itemVO.setAmount4(vo.getPrice4());
+//				itemVO.setAmountSgl(vo.getPriceSgl());
+//				itemVO.setAmountInf(vo.getPriceInf());
+//				itemVO.setIdTourCruiseCabin(vo.getId());
+//
+//				for (BookingChargeItemVO bciVO : prevBookingChargeItemList) {
+//					if (bciVO.getCode().equals(vo.getCruiseCabinCd())) {
+//						itemVO.setQuantity(bciVO.getQuantity());
+//						itemVO.setQuantity3(bciVO.getQuantity3());
+//						itemVO.setQuantity4(bciVO.getQuantity4());
+//						itemVO.setQuantitySgl(bciVO.getQuantitySgl());
+//						itemVO.setQuantityInf(bciVO.getQuantityInf());
+//						itemVO.setCabinQty(bciVO.getCabinQty());
+//						total += (itemVO.getQuantity() * itemVO.getAmount()
+//								+ itemVO.getQuantity3() * itemVO.getAmount3()
+//								+ itemVO.getQuantity4() * itemVO.getAmount4()
+//								+ itemVO.getQuantitySgl() * itemVO.getAmountSgl()
+//								+ itemVO.getQuantityInf() * itemVO.getAmountInf());
+//						insertVO(itemVO);
+//						bookingVO.getBookingChargeItemList().add(itemVO);
+//					}
+//				}
+//
+//				// tour cabin discount logic
+//				List<TourCruiseCabinDiscountVO> discountList = tourCruiseCabinDAO
+//						.getTourCruiseCabinDiscountList(vo.getIdTourCruiseCabin());
+////				List<TourCruiseCabinDiscountVO> discountList = new ArrayList<TourCruiseCabinDiscountVO>();
+//				int remainingPax = vo.getPaxTwn() + vo.getPax3() + vo.getPax4() + vo.getPaxSgl() + vo.getPaxInf();
+//
+//				for (TourCruiseCabinDiscountVO discountVO : discountList) {
+//					itemVO = new BookingChargeItemVO();
+//
+//					itemVO.setIdBooking(bookingVO.getId());
+//					itemVO.setIdTourCruiseCabin(vo.getIdTourCruiseCabin());
+//					itemVO.setIdAcct(tourDepItemVO.getAcctId());
+//					itemVO.setIdInvEoItem(null);
+//					itemVO.setCode(ProductConstant.TOUR_DEP_ITM_CD_DISC + "_" + vo.getCruiseCabinCd());
+//					itemVO.setDesc("DISCOUNT " + vo.getCruiseCabinDesc());
+//					itemVO.setTypeCd(ProductConstant.TOUR_DEP_ITM_TYPE_AIRLINE);
+//					itemVO.setAmount(0.0);
+//
+//					if (remainingPax <= 0) {
+//						itemVO.setQuantity(0);
+//						insertVO(itemVO);
+//						bookingVO.getBookingChargeItemList().add(itemVO);
+//						break;
+//					}
+//
+//					int availableDiscountPax = discountVO.getDiscountPax();
+//					double availableDiscountAmt = discountVO.getDiscountAmt();
+//
+//					if (availableDiscountPax <= 0 || availableDiscountAmt <= 0) {
+//						itemVO.setQuantity(0);
+//						insertVO(itemVO);
+//						bookingVO.getBookingChargeItemList().add(itemVO);
+//						continue;
+//					}
+//
+//					itemVO.setAmount(
+//							availableDiscountAmt > 0 ? -discountVO.getDiscountAmt() : discountVO.getDiscountAmt());
+//
+//					total += itemVO.getAmount();
+//
+//					if (availableDiscountPax >= remainingPax) {
+//						discountVO.setDiscountPax(discountVO.getDiscountPax() - remainingPax);
+//						itemVO.setQuantity(remainingPax);
+//
+//						remainingPax = 0;
+//					} else {
+//						remainingPax = remainingPax - availableDiscountPax;
+//
+//						discountVO.setDiscountPax(discountVO.getDiscountPax() - availableDiscountPax);
+//						itemVO.setQuantity(availableDiscountPax);
+//					}
+//					// }
+//
+//					updateVO(discountVO);
+//					insertVO(itemVO);
+//					bookingVO.getBookingChargeItemList().add(itemVO);
+//				}
+//			}
+
+			return invVO;
+		}
+		return null;
+	}
+
+	public synchronized InvoiceVO transferCruiseBooking(Long idBooking, Long idTourDep, Date invDate,
+			TourDepartureVO tourDepVO, boolean isReturnValue, boolean keepInvItem) throws BusinessException {
+		if (idTourDep.equals(tourDepVO.getId()))
+			throw new BusinessException(CommonErrConstant.ERR_BOOKING_TRANSFER_SAME_TOUR_DEP);
+
+		tourDepVO = tourPkgService.getTourDepById(tourDepVO.getId());
+
+		BookingViewVO bookingViewVO = bookingDAO.getBookingView(idBooking);
+		BookingVO theBookingVO = new BookingVO();
+		BeanUtils.copyProperties(bookingViewVO, theBookingVO);
+
+		calculateCabin(theBookingVO, tourDepVO);
+
+		theBookingVO
+				.setBookingChargeItemList(getBookingChargeItemList(theBookingVO.getId()));
+
+		BookingVO bookingVO = new BookingVO();
+		bookingVO.setIdCompany(theBookingVO.getIdCompany());
+		bookingVO.setIdTourDep(tourDepVO.getId());
+		bookingVO.setIdEmployee(theBookingVO.getEmployeeViewVO().getId());
+		bookingVO.setIdCust(theBookingVO.getIdCust());
+		bookingVO.setIdSalerTfair(theBookingVO.getIdSalerTfair());
+		bookingVO.setOrderTypeCd(theBookingVO.getOrderTypeCd());
+		bookingVO.setTypeCd(theBookingVO.getTypeCd());
+		bookingVO.setQuantity(theBookingVO.getQuantity());
+		bookingVO.setCabinQty(theBookingVO.getCabinQty());
+		bookingVO.setOrderTypeCd(theBookingVO.getOrderTypeCd());
+		bookingVO.setLockStatus(theBookingVO.getLockStatus());
+		bookingVO.setPmntStatusCd(theBookingVO.getPmntStatusCd());
+		bookingVO.setStatusCode(theBookingVO.getStatusCode());
+		bookingVO.setTourCruiseCabinList(tourCruiseCabinService.getTourCruiseCabinList(tourDepVO.getId(),theBookingVO.getIdCompany()));
+		bookingVO.setDtExp(theBookingVO.getDtExp());
+
+		bookingVO.setTotalAmount(theBookingVO.getTotalAmount());
+		bookingVO.setDiscountAmount(theBookingVO.getDiscountAmount());
+		bookingVO.setDepositAmount(theBookingVO.getDepositAmount());
+		bookingVO.setAmountPayable(theBookingVO.getAmountPayable());
+		bookingVO.setTotalCabin(theBookingVO.getTotalCabin());
+		bookingVO.setTotalHeadCount(theBookingVO.getTotalHeadCount());
+		bookingVO.setBookingChargeItemList(theBookingVO.getBookingChargeItemList());
+		bookingVO.setBookingChargeItemSet(theBookingVO.getBookingChargeItemSet());
+
+		tourDepVO.setTourDepItemList(tourPkgService.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany()));
+
+		addNewCruiseBooking(bookingVO, tourDepVO);
+
+		if(!keepInvItem) {
+			// add new booking item
+			cancelCruiseBooking(bookingViewVO, tourDepVO);
+		}
+
+		// update current booking to cancel
+		if (!CommonConstant.STATUS_CD_CANCELLED.equals(bookingViewVO.getStatusCode())
+				&& !CommonConstant.STATUS_CD_VOID.equals(bookingViewVO.getStatusCode())) {
+			bookingViewVO.setStatusCode(CommonConstant.STATUS_CD_CANCELLED);
+			updateVO(bookingViewVO);
+		}
+
+		// add new booking item
+//		tourDepVO.setTourDepItemList(tourPkgService.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany()));
+//		addCruiseBookingChargeItemList(vo, tourDepVO);
+
+		// update previous tour dep status
+		TourDepartureVO prevTourDepVO = tourPkgService.getTourDepById(bookingVO.getIdTourDep());
+		if (prevTourDepVO.getSeatAllot().intValue() > 0) {
+			if (ProductConstant.TOUR_STATUS_CD_FULL.equals(prevTourDepVO.getTourStatusCd())) {
+				prevTourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+				updateVO(prevTourDepVO);
+
+				/*
+				 * totalBook = bookingDAO.getTotalBookByTourDep(prevTourDepVO.getId(), null);
+				 * balance = prevTourDepVO.getSeatAllot() - prevTourDepVO.getTourManagerPax() -
+				 * prevTourDepVO.getReservedSeat() - totalBook; if (balance > 0) {
+				 * prevTourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+				 * updateVO(prevTourDepVO); }
+				 */
+			}
+		}
+
+		// return invoice object
+		if (isReturnValue) {
+			boolean isGSTPeriod = gstService.isGSTPeriod(bookingVO.getIdCompany(), invDate);
+			List<TourDepItemVO> tourDepItemVOList = null;
+			if (isGSTPeriod) {
+				tourDepItemVOList = tourPkgService.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany());
+			}
+
+			TourPackageVO tourPkgVO = tourPkgService.getTourPackageById(tourDepVO.getIdTourPkg());
+			InvoiceVO invVO = new InvoiceVO();
+			invVO.setInvoiceDt(invDate);
+			invVO.setCustomerId(bookingVO.getIdCust());
+			invVO.setBookingId(bookingVO.getId());
+			invVO.setTourCd(tourDepVO.getCode());
+			invVO.setTourDepId(tourDepVO.getId());
+			invVO.setSubjLine(tourDepVO.getDesc());
+			invVO.setDepartureDt(tourDepVO.getDtDep());
+			invVO.setOrderCd(bookingVO.getOrderTypeCd());
+			invVO.setCatCd(CommonConstant.LOOKUP_ITM_INV_CAT_CRUISE);
+			StringBuilder sb = new StringBuilder();
+			sb.append(tourDepVO.getNumDays() + "Days " + tourDepVO.getNumNights() + "Nights ");
+			if (!StringUtils.isEmpty(tourPkgVO.getNameEn()))
+				sb.append(tourPkgVO.getNameEn());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameZh()))
+				sb.append(" " + tourPkgVO.getNameZh());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameOther()))
+				sb.append(" " + tourPkgVO.getNameOther());
+			invVO.setSubjLine(sb.toString());
+
+			invVO.setInvoiceItemList(new ArrayList<InvoiceItemVO>());
+			for (BookingChargeItemVO itemVO : bookingVO.getBookingChargeItemList()) {
+				if (ProductConstant.TYPE_CRUISE.equals(bookingVO.getTypeCd())) {
+					InvoiceItemVO invItemVO = new InvoiceItemVO();
+					invItemVO.setAcctId(itemVO.getIdAcct());
+					invItemVO.setInvEOItemId(itemVO.getIdInvEoItem());
+					invItemVO.setInvItemCd(itemVO.getCode());
+					invItemVO.setDesc(itemVO.getDesc());
+					invItemVO.setQty(itemVO.getQuantity());
+					invItemVO.setUnitPrice(itemVO.getAmount());
+					invItemVO.setAmount((new BigDecimal(String.valueOf(itemVO.getAmount())))
+							.multiply(new BigDecimal(String.valueOf(itemVO.getQuantity()))).doubleValue());
+					invItemVO.setTaxAmount(0.00);
+					if (isGSTPeriod) {
+						for (TourDepItemVO tourDepItemVO : tourDepItemVOList) {
+							if (tourDepItemVO.getCode().equals(itemVO.getCode())) {
+								invItemVO.setTaxCode(tourDepItemVO.getTaxCode());
+								invItemVO.setTaxRate(tourDepItemVO.getTaxRate());
+								tourDepItemVOList.remove(tourDepItemVO);
+								break;
+							}
+						}
+					} else {
+						invItemVO.setTaxCode(null);
+						invItemVO.setTaxRate(null);
+					}
+
+					if (itemVO.getCabinQty() > 0 && ProductConstant.TOUR_DEP_ITM_TYPE_TOUR.equals(itemVO.getTypeCd())) {
+						InvoiceItemVO cabinItemVO = new InvoiceItemVO();
+						if (itemVO.getQuantity() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_TWN);
+							cabinItemVO.setQty(itemVO.getQuantity());
+							cabinItemVO.setUnitPrice(itemVO.getAmount());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantity3() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_3RD);
+							cabinItemVO.setQty(itemVO.getQuantity3());
+							cabinItemVO.setUnitPrice(itemVO.getAmount3());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantity4() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_4TH);
+							cabinItemVO.setQty(itemVO.getQuantity4());
+							cabinItemVO.setUnitPrice(itemVO.getAmount4());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantitySgl() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_SGL);
+							cabinItemVO.setQty(itemVO.getQuantitySgl());
+							cabinItemVO.setUnitPrice(itemVO.getAmountSgl());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantity3Chd() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_3RD_CHD);
+							cabinItemVO.setQty(itemVO.getQuantity3Chd());
+							cabinItemVO.setUnitPrice(itemVO.getAmount3Chd());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantity4Chd() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_4TH_CHD);
+							cabinItemVO.setQty(itemVO.getQuantity4Chd());
+							cabinItemVO.setUnitPrice(itemVO.getAmount4Chd());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantityInf() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_INFT);
+							cabinItemVO.setQty(itemVO.getQuantityInf());
+							cabinItemVO.setUnitPrice(itemVO.getAmountInf());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+					} else if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0
+							&& ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE.equals(itemVO.getTypeCd())) {
+
+						CruiseScheduleVO vvvo = cruiseDAO.getCruiseSchedule(tourDepVO.getIdCruiseSchedule());
+						if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_PORT_CHARGES))	invItemVO.setShowInInv(!vvvo.isSumAmtApt());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_APT_ADT))	invItemVO.setShowInInv(!vvvo.isSumAmtApt());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_APT_CHD))	invItemVO.setShowInInv(!vvvo.isSumAmtApt());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_FUEL_ADT))	invItemVO.setShowInInv(!vvvo.isSumAmtFuel());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_FUEL_CHD))	invItemVO.setShowInInv(!vvvo.isSumAmtFuel());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_DEVIATION))	invItemVO.setShowInInv(!vvvo.isSumAmtDeviation());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_TRVL_INS))	invItemVO.setShowInInv(!vvvo.isSumAmtTrvlIns());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_VISA))		invItemVO.setShowInInv(!vvvo.isSumAmtVisa());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_AC))			invItemVO.setShowInInv(!vvvo.isSumAmtAC());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_TIPPING))	invItemVO.setShowInInv(!vvvo.isSumAmtTipping());
+						else {
+							System.out.println("CYY tourDepVO.getId(): " + tourDepVO.getId());
+							System.out.println("CYY itemVO.getCode(): " + itemVO.getCode());
+							System.out.println("CYY tourDepVO.getCompanyVO(): " + tourDepVO.getCompanyVO());
+							System.out.println("CYY tourDepVO.getCompanyVO(): " + tourDepVO.getCompanyVO().getId());
+							// this is cruise extra charges item
+//							 invItemVO.setShowInInv(
+//									 tourPkgDAO.getTourDepItem(
+//											 tourDepVO.getId(),
+//											 itemVO.getCode(),
+//											 purchaseEODAO.getCompany(tourDepVO.getIdCompany()))
+//									 .isShowInInv());
+						}
+
+						invVO.getInvoiceItemList().add(invItemVO);
+					} else if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0
+							&& ProductConstant.TOUR_DEP_ITM_TYPE_TOTAL_MISC_CHARGE.equals(itemVO.getTypeCd())) {
+						System.out.println("itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0 && ProductConstant.TOUR_DEP_ITM_TYPE_TOTAL_MISC_CHARGE.equals(itemVO.getTypeCd())");
+						System.out.println("invItemVO.isShowInInv(): " + invItemVO.isShowInInv());
+						CruiseScheduleVO vvvo = cruiseDAO.getCruiseSchedule(tourDepVO.getIdCruiseSchedule());
+						invItemVO.setDesc(vvvo.getGroupingChargeLabel());
+						invItemVO.setShowInInv(true);
+						invVO.getInvoiceItemList().add(invItemVO);
+					}
+				} else {
+					if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0) {
+						InvoiceItemVO invItemVO = new InvoiceItemVO();
+						invItemVO.setAcctId(itemVO.getIdAcct());
+						invItemVO.setInvEOItemId(itemVO.getIdInvEoItem());
+						invItemVO.setInvItemCd(itemVO.getCode());
+						invItemVO.setDesc(itemVO.getDesc());
+						invItemVO.setQty(itemVO.getQuantity());
+						invItemVO.setUnitPrice(itemVO.getAmount());
+						// invItemVO.setAmount(itemVO.getAmount() * itemVO.getQuantity());
+						invItemVO.setAmount((new BigDecimal(String.valueOf(itemVO.getAmount())))
+								.multiply(new BigDecimal(String.valueOf(itemVO.getQuantity()))).doubleValue());
+						invItemVO.setTaxAmount(0.00);
+						if (isGSTPeriod) {
+							for (TourDepItemVO tourDepItemVO : tourDepItemVOList) {
+								if (tourDepItemVO.getCode().equals(itemVO.getCode())) {
+									invItemVO.setTaxCode(tourDepItemVO.getTaxCode());
+									invItemVO.setTaxRate(tourDepItemVO.getTaxRate());
+									tourDepItemVOList.remove(tourDepItemVO);
+									break;
+								}
+							}
+						} else {
+							invItemVO.setTaxCode(null);
+							invItemVO.setTaxRate(null);
+						}
+						invVO.getInvoiceItemList().add(invItemVO);
+					}
+				}
+			}
+
+			return invVO;
+		}
+		return null;
+	}
+
+	public synchronized InvoiceVO transferCruiseBookingOld(Long idBooking, Long idTourDep, Date invDate,
+			TourDepartureVO tourDepVO, boolean isReturnValue, boolean keepInvItem) throws BusinessException {
+		if (idTourDep.equals(tourDepVO.getId()))
+			throw new BusinessException(CommonErrConstant.ERR_BOOKING_TRANSFER_SAME_TOUR_DEP);
+
+		tourDepVO = tourPkgService.getTourDepById(tourDepVO.getId());
+
+		BookingViewVO bookingViewVO = bookingDAO.getBookingView(idBooking);
+		bookingViewVO
+				.setBookingChargeItemList(new ArrayList<BookingChargeItemVO>(bookingViewVO.getBookingChargeItemSet()));
+		BookingVO tmpBookingVO = bookingDAO.getBooking(idBooking);
+
+		System.out.println();
+		System.out.println("--bookingViewVO.getBookingChargeItemSet()--");
+		for(BookingChargeItemVO vo : bookingViewVO.getBookingChargeItemList()) {
+			System.out.println(vo.getDesc() + " : " + vo.getAmount());
+		}
+		System.out.println();
+
+		int loop = 1;
+		for (BookingChargeItemVO bcvo : bookingViewVO.getBookingChargeItemList()) {
+			System.out.println(loop + " - bcvo.getIdAcct(): " + bcvo.getIdAcct());
+			loop++;
+		}
+
+		// add new booking
+		BookingVO bookingVO = new BookingVO();
+		bookingVO.setIdTourDep(tourDepVO.getId());
+		bookingVO.setIdCompany(tmpBookingVO.getIdCompany());
+		bookingVO.setIdEmployee(tmpBookingVO.getIdEmployee());
+		bookingVO.setIdCust(tmpBookingVO.getIdCust());
+		bookingVO.setIdSalerTfair(tmpBookingVO.getIdSalerTfair());
+		bookingVO.setOrderTypeCd(tmpBookingVO.getOrderTypeCd());
+		bookingVO.setQuantity(tmpBookingVO.getQuantity());
+		bookingVO.setPmntStatusCd(tmpBookingVO.getPmntStatusCd());
+		if (SalesConstant.BOOKING_PMNT_STATUS_DEPOSIT.equals(tmpBookingVO.getPmntStatusCd())
+				|| SalesConstant.BOOKING_PMNT_STATUS_FULL.equals(tmpBookingVO.getPmntStatusCd())) {
+			bookingVO.setStatusCode(CommonConstant.STATUS_CD_CONFIRMED);
+		} else if (SalesConstant.BOOKING_PMNT_STATUS_KIV.equals(tmpBookingVO.getPmntStatusCd())) {
+			bookingVO.setStatusCode(CommonConstant.STATUS_CD_BOOKED);
+		} else {
+			bookingVO.setStatusCode(tmpBookingVO.getStatusCode());
+		}
+		bookingVO.setDtExp(tmpBookingVO.getDtExp());
+		bookingVO.setTypeCd(tmpBookingVO.getTypeCd());
+		bookingVO.setLockStatus(tmpBookingVO.getLockStatus());
+		bookingVO.setCabinQty(tmpBookingVO.getCabinQty());
+		bookingVO.setBookingChargeItemList(bookingViewVO.getBookingChargeItemList());
+		bookingVO.setTourCruiseCabinList(new ArrayList<TourCruiseCabinVO>());
+
+		TourCruiseCabinVO tourCabinVO = null;
+		for (BookingChargeItemVO bookingChrg : bookingVO.getBookingChargeItemList()) {
+			if (ProductConstant.TOUR_DEP_ITM_TYPE_TOUR.equals(bookingChrg.getTypeCd())
+					&& bookingChrg.getCabinQty() != 0) {
+
+				tourCabinVO = new TourCruiseCabinVO();
+				tourCabinVO.setUuid(UUID.randomUUID().toString());
+				tourCabinVO.setIdAcct(bookingChrg.getIdAcct());
+				tourCabinVO.setIdTourCruiseCabin(bookingChrg.getIdTourCruiseCabin());
+				tourCabinVO.setIdTourDep(tourDepVO.getId());
+				tourCabinVO.setCruiseCabinCd(bookingChrg.getCode());
+				tourCabinVO.setCruiseCabinDesc(bookingChrg.getDesc());
+				tourCabinVO.setPriceTwn(bookingChrg.getAmount());
+				tourCabinVO.setPrice3(bookingChrg.getAmount3());
+				tourCabinVO.setPrice4(bookingChrg.getAmount4());
+				tourCabinVO.setPriceSgl(bookingChrg.getAmountSgl());
+				tourCabinVO.setPrice3Chd(bookingChrg.getAmount3Chd());
+				tourCabinVO.setPrice4Chd(bookingChrg.getAmount4Chd());
+				tourCabinVO.setPriceInf(bookingChrg.getAmountInf());
+				tourCabinVO.setPaxTwn(bookingChrg.getQuantity());
+				tourCabinVO.setPax3(bookingChrg.getQuantity3());
+				tourCabinVO.setPax4(bookingChrg.getQuantity4());
+				tourCabinVO.setPaxSgl(bookingChrg.getQuantitySgl());
+				tourCabinVO.setPax3Chd(bookingChrg.getQuantity3Chd());
+				tourCabinVO.setPax4Chd(bookingChrg.getQuantity4Chd());
+				tourCabinVO.setPaxInf(bookingChrg.getQuantityInf());
+				tourCabinVO.setTtlCabin(bookingChrg.getCabinQty());
+				bookingVO.getTourCruiseCabinList().add(tourCabinVO);
+			}
+		}
+
+		calculateCabin(bookingVO, tourDepVO);
+
+		System.out.println();
+		System.out.println("--bookingVO.getBookingChargeItemSet()--");
+		for(BookingChargeItemVO vo : bookingVO.getBookingChargeItemList()) {
+			System.out.println(vo.getDesc() + " : " + vo.getAmount());
+		}
+		System.out.println();
+
+
+		System.out.println("before bookingVO.getId: " + bookingVO.getId());
+		if (tourDepVO.getTourDepItemList() != null) {
+			System.out
+					.println("before tourDepVO.getTourDepItemList().size(): " + tourDepVO.getTourDepItemList().size());
+		}
+		insertVO(bookingVO);
+
+		if(keepInvItem) {
+			addNewCruiseBookingFromTsfrRemainPrevBkg(bookingVO, tourDepVO);
+		}
+		else {
+			// add new booking item
+			addNewCruiseBooking(bookingVO, tourDepVO);
+		}
+
+		System.out.println("after bookingVO.getId: " + bookingVO.getId());
+
+		System.out.println();
+		System.out.println("--addNewCruiseBooking--");
+		for(BookingChargeItemVO vo : bookingVO.getBookingChargeItemList()) {
+			System.out.println(vo.getDesc() + " : " + vo.getAmount());
+		}
+		System.out.println();
+
+		// update current booking to cancel
+		if (!CommonConstant.STATUS_CD_CANCELLED.equals(tmpBookingVO.getStatusCode())
+				&& !CommonConstant.STATUS_CD_VOID.equals(tmpBookingVO.getStatusCode())) {
+			tmpBookingVO.setStatusCode(CommonConstant.STATUS_CD_CANCELLED);
+			updateVO(tmpBookingVO);
+		}
+
+		// add new booking item
+//		tourDepVO.setTourDepItemList(tourPkgService.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany()));
+//		addCruiseBookingChargeItemList(vo, tourDepVO);
+
+		// update previous tour dep status
+		TourDepartureVO prevTourDepVO = tourPkgService.getTourDepById(bookingVO.getIdTourDep());
+		if (prevTourDepVO.getSeatAllot().intValue() > 0) {
+			if (ProductConstant.TOUR_STATUS_CD_FULL.equals(prevTourDepVO.getTourStatusCd())) {
+				prevTourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+				updateVO(prevTourDepVO);
+
+				/*
+				 * totalBook = bookingDAO.getTotalBookByTourDep(prevTourDepVO.getId(), null);
+				 * balance = prevTourDepVO.getSeatAllot() - prevTourDepVO.getTourManagerPax() -
+				 * prevTourDepVO.getReservedSeat() - totalBook; if (balance > 0) {
+				 * prevTourDepVO.setTourStatusCd(ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+				 * updateVO(prevTourDepVO); }
+				 */
+			}
+		}
+
+		// return invoice object
+		if (isReturnValue) {
+			boolean isGSTPeriod = gstService.isGSTPeriod(bookingVO.getIdCompany(), invDate);
+			List<TourDepItemVO> tourDepItemVOList = null;
+			if (isGSTPeriod) {
+				tourDepItemVOList = tourPkgService.getTourDepItemList(tourDepVO.getId(), bookingVO.getIdCompany());
+			}
+
+			TourPackageVO tourPkgVO = tourPkgService.getTourPackageById(tourDepVO.getIdTourPkg());
+			InvoiceVO invVO = new InvoiceVO();
+			invVO.setInvoiceDt(invDate);
+			invVO.setCustomerId(bookingVO.getIdCust());
+			invVO.setBookingId(bookingVO.getId());
+			invVO.setTourCd(tourDepVO.getCode());
+			invVO.setTourDepId(tourDepVO.getId());
+			invVO.setSubjLine(tourDepVO.getDesc());
+			invVO.setDepartureDt(tourDepVO.getDtDep());
+			invVO.setOrderCd(bookingVO.getOrderTypeCd());
+			invVO.setCatCd(CommonConstant.LOOKUP_ITM_INV_CAT_CRUISE);
+			StringBuilder sb = new StringBuilder();
+			sb.append(tourDepVO.getNumDays() + "Days " + tourDepVO.getNumNights() + "Nights ");
+			if (!StringUtils.isEmpty(tourPkgVO.getNameEn()))
+				sb.append(tourPkgVO.getNameEn());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameZh()))
+				sb.append(" " + tourPkgVO.getNameZh());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameOther()))
+				sb.append(" " + tourPkgVO.getNameOther());
+			invVO.setSubjLine(sb.toString());
+
+			invVO.setInvoiceItemList(new ArrayList<InvoiceItemVO>());
+			for (BookingChargeItemVO itemVO : bookingVO.getBookingChargeItemList()) {
+				if (ProductConstant.TYPE_CRUISE.equals(bookingVO.getTypeCd())) {
+					InvoiceItemVO invItemVO = new InvoiceItemVO();
+					invItemVO.setAcctId(itemVO.getIdAcct());
+					invItemVO.setInvEOItemId(itemVO.getIdInvEoItem());
+					invItemVO.setInvItemCd(itemVO.getCode());
+					invItemVO.setDesc(itemVO.getDesc());
+					invItemVO.setQty(itemVO.getQuantity());
+					invItemVO.setUnitPrice(itemVO.getAmount());
+					invItemVO.setAmount((new BigDecimal(String.valueOf(itemVO.getAmount())))
+							.multiply(new BigDecimal(String.valueOf(itemVO.getQuantity()))).doubleValue());
+					invItemVO.setTaxAmount(0.00);
+					if (isGSTPeriod) {
+						for (TourDepItemVO tourDepItemVO : tourDepItemVOList) {
+							if (tourDepItemVO.getCode().equals(itemVO.getCode())) {
+								invItemVO.setTaxCode(tourDepItemVO.getTaxCode());
+								invItemVO.setTaxRate(tourDepItemVO.getTaxRate());
+								tourDepItemVOList.remove(tourDepItemVO);
+								break;
+							}
+						}
+					} else {
+						invItemVO.setTaxCode(null);
+						invItemVO.setTaxRate(null);
+					}
+
+					if (itemVO.getCabinQty() > 0 && ProductConstant.TOUR_DEP_ITM_TYPE_TOUR.equals(itemVO.getTypeCd())) {
+						InvoiceItemVO cabinItemVO = new InvoiceItemVO();
+						if (itemVO.getQuantity() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_TWN);
+							cabinItemVO.setQty(itemVO.getQuantity());
+							cabinItemVO.setUnitPrice(itemVO.getAmount());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantity3() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_3RD);
+							cabinItemVO.setQty(itemVO.getQuantity3());
+							cabinItemVO.setUnitPrice(itemVO.getAmount3());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantity4() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_4TH);
+							cabinItemVO.setQty(itemVO.getQuantity4());
+							cabinItemVO.setUnitPrice(itemVO.getAmount4());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantitySgl() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_SGL);
+							cabinItemVO.setQty(itemVO.getQuantitySgl());
+							cabinItemVO.setUnitPrice(itemVO.getAmountSgl());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantity3Chd() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_3RD_CHD);
+							cabinItemVO.setQty(itemVO.getQuantity3Chd());
+							cabinItemVO.setUnitPrice(itemVO.getAmount3Chd());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantity4Chd() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + " - " + ProductConstant.BOOKING_CHARGE_ITEM_PAX_4TH_CHD);
+							cabinItemVO.setQty(itemVO.getQuantity4Chd());
+							cabinItemVO.setUnitPrice(itemVO.getAmount4Chd());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+						if (itemVO.getQuantityInf() > 0) {
+							cabinItemVO = (InvoiceItemVO) invItemVO.clone();
+							cabinItemVO.setDesc(itemVO.getDesc() + ProductConstant.BOOKING_CHARGE_ITEM_PAX_INFT);
+							cabinItemVO.setQty(itemVO.getQuantityInf());
+							cabinItemVO.setUnitPrice(itemVO.getAmountInf());
+							cabinItemVO.setAmount((new BigDecimal(String.valueOf(cabinItemVO.getUnitPrice())))
+									.multiply(new BigDecimal(String.valueOf(cabinItemVO.getQty()))).doubleValue());
+							cabinItemVO.setShowInInv(true);
+							invVO.getInvoiceItemList().add(cabinItemVO);
+						}
+					} else if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0
+							&& ProductConstant.TOUR_DEP_ITM_TYPE_CRUISE.equals(itemVO.getTypeCd())) {
+
+						CruiseScheduleVO vvvo = cruiseDAO.getCruiseSchedule(tourDepVO.getIdCruiseSchedule());
+						if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_PORT_CHARGES))	invItemVO.setShowInInv(!vvvo.isSumAmtApt());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_APT_ADT))	invItemVO.setShowInInv(!vvvo.isSumAmtApt());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_APT_CHD))	invItemVO.setShowInInv(!vvvo.isSumAmtApt());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_FUEL_ADT))	invItemVO.setShowInInv(!vvvo.isSumAmtFuel());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_FUEL_CHD))	invItemVO.setShowInInv(!vvvo.isSumAmtFuel());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_DEVIATION))	invItemVO.setShowInInv(!vvvo.isSumAmtDeviation());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_TRVL_INS))	invItemVO.setShowInInv(!vvvo.isSumAmtTrvlIns());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_VISA))		invItemVO.setShowInInv(!vvvo.isSumAmtVisa());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_AC))			invItemVO.setShowInInv(!vvvo.isSumAmtAC());
+						else if(itemVO.getCode().equals(ProductConstant.CRUISE_ITM_CD_TIPPING))	invItemVO.setShowInInv(!vvvo.isSumAmtTipping());
+						else {
+							System.out.println("CYY tourDepVO.getId(): " + tourDepVO.getId());
+							System.out.println("CYY itemVO.getCode(): " + itemVO.getCode());
+							System.out.println("CYY tourDepVO.getCompanyVO(): " + tourDepVO.getCompanyVO());
+							System.out.println("CYY tourDepVO.getCompanyVO(): " + tourDepVO.getCompanyVO().getId());
+							// this is cruise extra charges item
+//							 invItemVO.setShowInInv(
+//									 tourPkgDAO.getTourDepItem(
+//											 tourDepVO.getId(),
+//											 itemVO.getCode(),
+//											 purchaseEODAO.getCompany(tourDepVO.getIdCompany()))
+//									 .isShowInInv());
+						}
+
+						invVO.getInvoiceItemList().add(invItemVO);
+					} else if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0
+							&& ProductConstant.TOUR_DEP_ITM_TYPE_TOTAL_MISC_CHARGE.equals(itemVO.getTypeCd())) {
+						System.out.println("itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0 && ProductConstant.TOUR_DEP_ITM_TYPE_TOTAL_MISC_CHARGE.equals(itemVO.getTypeCd())");
+						System.out.println("invItemVO.isShowInInv(): " + invItemVO.isShowInInv());
+						CruiseScheduleVO vvvo = cruiseDAO.getCruiseSchedule(tourDepVO.getIdCruiseSchedule());
+						invItemVO.setDesc(vvvo.getGroupingChargeLabel());
+						invItemVO.setShowInInv(true);
+						invVO.getInvoiceItemList().add(invItemVO);
+					}
+				} else {
+					if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0) {
+						InvoiceItemVO invItemVO = new InvoiceItemVO();
+						invItemVO.setAcctId(itemVO.getIdAcct());
+						invItemVO.setInvEOItemId(itemVO.getIdInvEoItem());
+						invItemVO.setInvItemCd(itemVO.getCode());
+						invItemVO.setDesc(itemVO.getDesc());
+						invItemVO.setQty(itemVO.getQuantity());
+						invItemVO.setUnitPrice(itemVO.getAmount());
+						// invItemVO.setAmount(itemVO.getAmount() * itemVO.getQuantity());
+						invItemVO.setAmount((new BigDecimal(String.valueOf(itemVO.getAmount())))
+								.multiply(new BigDecimal(String.valueOf(itemVO.getQuantity()))).doubleValue());
+						invItemVO.setTaxAmount(0.00);
+						if (isGSTPeriod) {
+							for (TourDepItemVO tourDepItemVO : tourDepItemVOList) {
+								if (tourDepItemVO.getCode().equals(itemVO.getCode())) {
+									invItemVO.setTaxCode(tourDepItemVO.getTaxCode());
+									invItemVO.setTaxRate(tourDepItemVO.getTaxRate());
+									tourDepItemVOList.remove(tourDepItemVO);
+									break;
+								}
+							}
+						} else {
+							invItemVO.setTaxCode(null);
+							invItemVO.setTaxRate(null);
+						}
+						invVO.getInvoiceItemList().add(invItemVO);
+					}
+				}
+			}
+
+			return invVO;
+		}
+		return null;
+	}
+
+	public void calculateCabin(BookingVO bookingVO, TourDepartureVO tourDepVO) throws BusinessException {
+		int totalCabin = 0;
+		int totalCabinBook = 0;
+		int totalPax = 0;
+		int totalHeadCount = 0;
+
+		BigDecimal totalAmt = BigDecimal.ZERO;
+		BigDecimal totalDiscount = BigDecimal.ZERO;
+		BigDecimal totalPortCharges = BigDecimal.ZERO;
+
+		for (TourCruiseCabinVO vo : bookingVO.getTourCruiseCabinList()) {
+			totalCabin = 0;
+			totalPax = 0;
+
+			System.out.println("vo.getPaxTwn(): " + vo.getPaxTwn());
+			System.out.println("vo.getPaxSgl(): " + vo.getPaxSgl());
+			System.out.println("vo.getPax3(): " + vo.getPax3());
+			System.out.println("vo.getPax4(): " + vo.getPax4());
+			if (vo.getPaxTwn() > 0) {
+				totalAmt = totalAmt.add(new BigDecimal(String.valueOf(vo.getPaxTwn()))
+						.multiply(new BigDecimal(String.valueOf(vo.getPriceTwn()))));
+				totalPortCharges = totalPortCharges.add(new BigDecimal(String.valueOf(vo.getPaxTwn()))
+						.multiply(new BigDecimal(tourDepVO.getMiscAdt())));
+				totalPax += vo.getPaxTwn();
+			}
+			if (vo.getPaxSgl() > 0) {
+				totalAmt = totalAmt.add(new BigDecimal(String.valueOf(vo.getPaxSgl()))
+						.multiply(new BigDecimal(String.valueOf(vo.getPriceSgl()))));
+				totalPortCharges = totalPortCharges.add(new BigDecimal(String.valueOf(vo.getPaxSgl()))
+						.multiply(new BigDecimal(tourDepVO.getMiscAdt())));
+				totalPax += vo.getPaxSgl();
+			}
+			if (vo.getPax3() > 0) {
+				totalAmt = totalAmt.add(new BigDecimal(String.valueOf(vo.getPax3()))
+						.multiply(new BigDecimal(String.valueOf(vo.getPrice3()))));
+				totalPortCharges = totalPortCharges.add(
+						new BigDecimal(String.valueOf(vo.getPax3())).multiply(new BigDecimal(tourDepVO.getMiscAdt())));
+				totalPax += vo.getPax3();
+			}
+			if (vo.getPax4() > 0) {
+				totalAmt = totalAmt.add(new BigDecimal(String.valueOf(vo.getPax4()))
+						.multiply(new BigDecimal(String.valueOf(vo.getPrice4()))));
+				totalPortCharges = totalPortCharges.add(
+						new BigDecimal(String.valueOf(vo.getPax4())).multiply(new BigDecimal(tourDepVO.getMiscAdt())));
+				totalPax += vo.getPax4();
+			}
+			if (vo.getPax3Chd() > 0) {
+				totalAmt = totalAmt.add(new BigDecimal(String.valueOf(vo.getPax3Chd()))
+						.multiply(new BigDecimal(String.valueOf(vo.getPrice3Chd()))));
+				totalPortCharges = totalPortCharges.add(
+						new BigDecimal(String.valueOf(vo.getPax3Chd())).multiply(new BigDecimal(tourDepVO.getMiscAdt())));
+				totalPax += vo.getPax3Chd();
+			}
+			if (vo.getPax4Chd() > 0) {
+				totalAmt = totalAmt.add(new BigDecimal(String.valueOf(vo.getPax4Chd()))
+						.multiply(new BigDecimal(String.valueOf(vo.getPrice4Chd()))));
+				totalPortCharges = totalPortCharges.add(
+						new BigDecimal(String.valueOf(vo.getPax4Chd())).multiply(new BigDecimal(tourDepVO.getMiscAdt())));
+				totalPax += vo.getPax4Chd();
+			}
+			if (vo.getPaxInf() > 0) {
+				totalAmt = totalAmt.add(new BigDecimal(String.valueOf(vo.getPaxInf()))
+						.multiply(new BigDecimal(String.valueOf(vo.getPriceInf()))));
+				totalPortCharges = totalPortCharges.add(new BigDecimal(String.valueOf(vo.getPaxInf()))
+						.multiply(new BigDecimal(tourDepVO.getMiscAdt())));
+				totalPax += vo.getPaxInf();
+			}
+
+			if (vo.getPaxTwn() > 0)
+				totalCabin += (int) Math.floor(vo.getPaxTwn() / 2);
+			if (vo.getPaxSgl() > 0)
+				totalCabin += vo.getPaxSgl();
+			vo.setTtlCabin(totalCabin);
+			totalCabinBook += totalCabin;
+			totalHeadCount += totalPax;
+
+			if (vo.getCalcDiscount() != null)
+				totalDiscount = totalDiscount.add(vo.getCalcDiscount());
+			else {
+				if (totalPax > 0) {
+					int remainPax = 0;
+
+					if (vo.getDiscountLvl1() > 0) {
+						if (vo.getDiscountLvl1Pax() > 0) {
+							if (totalPax <= vo.getDiscountLvl1Pax())
+								totalDiscount = totalDiscount
+										.add(new BigDecimal(vo.getDiscountLvl1()).multiply(new BigDecimal(totalPax)));
+							else {
+								remainPax = totalPax - vo.getDiscountLvl1Pax();
+								totalDiscount = totalDiscount.add(new BigDecimal(vo.getDiscountLvl1())
+										.multiply(new BigDecimal(vo.getDiscountLvl1Pax())));
+							}
+						} else
+							remainPax = totalPax;
+					}
+
+					if (remainPax > 0) {
+						if (vo.getDiscountLvl2() > 0 && vo.getDiscountLvl2Pax() > 0) {
+							if (remainPax <= vo.getDiscountLvl2Pax())
+								totalDiscount = totalDiscount
+										.add(new BigDecimal(vo.getDiscountLvl2()).multiply(new BigDecimal(remainPax)));
+							else
+								totalDiscount = totalDiscount.add(new BigDecimal(vo.getDiscountLvl2())
+										.multiply(new BigDecimal(vo.getDiscountLvl2Pax())));
+						}
+					}
+				}
+			}
+		}
+
+		double deposit = 0;
+		bookingVO.setTotalAmount(totalAmt.add(totalPortCharges).doubleValue());
+		bookingVO.setDiscountAmount(totalDiscount.doubleValue());
+		bookingVO.setDepositAmount(deposit);
+		bookingVO.setAmountPayable(totalAmt.add(totalPortCharges).subtract(totalDiscount).doubleValue());
+		bookingVO.setTotalCabin(totalCabinBook);
+		bookingVO.setTotalHeadCount(totalHeadCount);
+	}
+
+	private String getUserInfo() {
+		String updatedBy = BaseContext.getUserFullName();
+
+		// User full name not found, use Login ID
+		if (StringUtils.isBlank(updatedBy))
+			updatedBy = BaseContext.getLoginId();
+
+		if (StringUtils.isBlank(updatedBy))
+			updatedBy = "SYSTEM";
+
+		return updatedBy;
+	}
+
+	public List<BookingChargeItemVO> getBookingChargeItemList(Long idBooking) throws BusinessException {
+		return bookingDAO.getBookingChargeItemList(idBooking);
+	}
+	
+	public List<FeedbackVO> getFeedbackByBookingId(Long idBooking) throws BusinessException {
+		return bookingDAO.getFeedbackByBookingId(idBooking);
+	}
+}

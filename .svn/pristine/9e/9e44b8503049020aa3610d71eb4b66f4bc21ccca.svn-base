@@ -1,0 +1,404 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+
+<script type="text/javascript">
+function monitorExporting(start, complete) {
+	if (start) {
+		start();
+	}
+
+	window.pdfExportingMonitor = setInterval(function() {
+		var exportingComplete = $.cookie('cookie.pdf.exporting');
+
+		if (exportingComplete === 'true') {
+			if (complete) {
+				complete();
+			}
+			$.cookie('cookie.pdf.exporting', null);
+			clearInterval(window.pdfExportingMonitor);
+		}
+	}, 500);
+}
+
+function start() {
+	statusDialog.show();
+}
+
+function stop() {
+	statusDialog.hide();
+}
+</script>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Report Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the report is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+<p:panel header="Account Report" toggleable="true" toggleSpeed="500">
+	<h:form id="idFormAccountReport">
+		<p:growl id="msg"/>
+		<p:panelGrid style="width:600px;">
+			<p:row>
+				<p:column style="width:100px;">
+					<h:outputLabel for="idReportType">Report Type <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idReportType" label="Report Type" value="#{accountReportBean.reportType}" effect="fade">
+						<p:ajax event="change" listener="#{accountReportBean.handleSelectReportType}" update="idFormAccountReport" />
+						<f:selectItem itemLabel="Select One" itemValue=""/>
+						<f:selectItem itemLabel="Trading &amp; Profit &amp; Loss - Others" itemValue="A"/>
+						<f:selectItem itemLabel="Trading &amp; Profit &amp; Loss - Audit" itemValue="N"/>
+						<f:selectItem itemLabel="Trial Balance" itemValue="B"/>
+						<f:selectItem itemLabel="Trial Balance - Year To Date" itemValue="C"/>
+						<f:selectItem itemLabel="Balance Sheet - Audit" itemValue="D"/>
+						<f:selectItem itemLabel="Balance Sheet - Others" itemValue="E"/>
+						<f:selectItem itemLabel="Beginning Balance" itemValue="F"/>
+						<f:selectItem itemLabel="Debtor Ledger - Audit" itemValue="O"/>
+						<f:selectItem itemLabel="Debtor Ledger - Others" itemValue="G"/>
+						<f:selectItem itemLabel="Debtor Summary" itemValue="H"/>
+						<f:selectItem itemLabel="Creditor Ledger - Audit" itemValue="P"/>
+						<f:selectItem itemLabel="Creditor Ledger - Others" itemValue="I"/>
+						<f:selectItem itemLabel="Creditor Summary" itemValue="J"/>
+						<f:selectItem itemLabel="Journal Printing" itemValue="M"/>
+						<f:selectItem itemLabel="Sales In Advance" itemValue="Q"/>
+						<f:selectItem itemLabel="Chart Of Account" itemValue="R"/>
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printProfitnLossRpt('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'A'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printProfitnLossRpt('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'A'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printTrialBalance('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'B'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printTrialBalance('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'B'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printTrialBalanceYearDate('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'C'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printTrialBalanceYearDate('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'C'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printBalanceSheetAudit('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'D'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printBalanceSheetAudit('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'D'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printBalanceSheetOthers('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'E'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printBalanceSheetOthers('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'E'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printBeginningBalance('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'F'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printBeginningBalance('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'F'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printDebtorLedger('PDF', 'others')}" ajax="false" rendered="#{accountReportBean.reportType == 'G'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printDebtorLedger('XLS', 'others')}" ajax="false" rendered="#{accountReportBean.reportType == 'G'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printDebtorSummary('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'H'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printDebtorSummary('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'H'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printCreditorLedger('PDF', 'others')}" ajax="false" rendered="#{accountReportBean.reportType == 'I'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printCreditorLedger('XLS', 'others')}" ajax="false" rendered="#{accountReportBean.reportType == 'I'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printCreditorSummary('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'J'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printCreditorSummary('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'J'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printJournal('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'M'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printJournal('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'M'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printProfitnLossAuditRpt('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'N'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printProfitnLossAuditRpt('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'N'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printDebtorLedger('PDF', 'audit')}" ajax="false" rendered="#{accountReportBean.reportType == 'O'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printDebtorLedger('XLS', 'audit')}" ajax="false" rendered="#{accountReportBean.reportType == 'O'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printCreditorLedger('PDF', 'audit')}" ajax="false" rendered="#{accountReportBean.reportType == 'P'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printCreditorLedger('XLS', 'audit')}" ajax="false" rendered="#{accountReportBean.reportType == 'P'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printSalesInAdvanceRpt('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'Q'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printSalesInAdvanceRpt('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'Q'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{accountReportBean.printChartOfAccount('PDF')}" ajax="false" rendered="#{accountReportBean.reportType == 'R'}" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{accountReportBean.printChartOfAccount('XLS')}" ajax="false" rendered="#{accountReportBean.reportType == 'R'}" onclick="monitorExporting(start,stop)"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:panelGrid id="idSearchTypeA" style="width:750px;">
+			<p:row rendered="#{accountReportBean.reportType == 'A' ||
+				accountReportBean.reportType == 'B' ||
+				accountReportBean.reportType == 'C' ||
+				accountReportBean.reportType == 'D' ||
+				accountReportBean.reportType == 'E' ||
+				accountReportBean.reportType == 'F' ||
+				accountReportBean.reportType == 'G' ||
+				accountReportBean.reportType == 'H' ||
+				accountReportBean.reportType == 'I' ||
+				accountReportBean.reportType == 'J' ||
+				accountReportBean.reportType == 'M' ||
+				accountReportBean.reportType == 'N' ||
+				accountReportBean.reportType == 'O' ||
+				accountReportBean.reportType == 'P'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Select Fiscal Year <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:80px;">
+				 	<h:selectOneMenu id="idFiscalYear" value="#{accountReportBean.searchParamVO.obj1}" effect="fade" required="true">
+			            <p:ajax event="change" listener="#{accountReportBean.handleSelectYear}" update="idFormAccountReport" />
+			            <f:selectItems value="#{accountReportBean.yearList}" var="#{year}" itemLabel="#{year}" itemValue="#{year}"/>
+			        </h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{accountReportBean.reportType == 'A' ||
+				accountReportBean.reportType == 'B' ||
+				accountReportBean.reportType == 'C' ||
+				accountReportBean.reportType == 'D' ||
+				accountReportBean.reportType == 'E' ||
+				accountReportBean.reportType == 'F' ||
+				accountReportBean.reportType == 'G' ||
+				accountReportBean.reportType == 'H' ||
+				accountReportBean.reportType == 'I' ||
+				accountReportBean.reportType == 'J' ||
+				accountReportBean.reportType == 'M' ||
+				accountReportBean.reportType == 'N' ||
+				accountReportBean.reportType == 'O' ||
+				accountReportBean.reportType == 'P' ||
+				accountReportBean.reportType == 'Q'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Report Date <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:80px;" rendered="#{accountReportBean.reportType != 'Q'}">
+					<p:calendar id="idReportDateFr" label="Date From" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{accountReportBean.searchParamVO.obj2}" required="true"/>
+					<p:watermark for="idReportDateFr" value="Date From" />
+				</p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idReportDateTo" label="Date To" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{accountReportBean.searchParamVO.obj3}" required="true"/>
+					<p:watermark for="idReportDateTo" value="Date To" />
+				</p:column>
+				<p:column style="width:150px;">&nbsp;</p:column>
+			</p:row>
+			<p:row rendered="#{accountReportBean.reportType == 'G' ||
+				accountReportBean.reportType == 'H' ||
+				accountReportBean.reportType == 'O'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Customer <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:100px;" colspan="2">
+				<p:panel id="idCustDetails">
+					<p:inputText id="idSoldToC" label="Customer Details" value="#{accountReportBean.custDetailsVO.companyName}" readonly="true" style="background:#ccc;" rendered="#{accountReportBean.custDetailsVO.custType == 'C'}"/>
+					<p:inputText id="idSoldToP" label="Customer Details" value="#{accountReportBean.custDetailsVO.contPersonName}" readonly="true" style="background:#ccc;" rendered="#{accountReportBean.custDetailsVO.custType != 'C'}"/>
+					&nbsp;
+					<p:commandButton icon="ui-icon-search" update=":idCustListForm" oncomplete="varCustListDialog.show()" process="@this" rendered="#{empty accountReportBean.custDetailsVO.custId}"/>
+					<p:commandButton icon="ui-icon-close" actionListener="#{accountReportBean.custClear}" update=":idFormAccountReport:idCustDetails" process="@this" rendered="#{not empty accountReportBean.custDetailsVO.custId}"/>
+				</p:panel>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{accountReportBean.reportType == 'Q'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Tour Code</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+				<p:panel id="idTourCd">
+					 <p:inputText label="Tour Code" value="#{accountReportBean.tourDepVO.code}" readonly="true" size="30"/>
+					 &nbsp;
+			        <p:commandButton icon="ui-icon-search" actionListener="#{accountReportBean.loadTour}" update=":idTourCodeList" oncomplete="varTourCodeList.show()" process="@this" rendered="#{empty accountReportBean.tourDepVO.id}"/>
+					<p:commandButton icon="ui-icon-close" actionListener="#{accountReportBean.clearTourCode}" update=":idFormAccountReport:idTourCd" process="@this" rendered="#{not empty accountReportBean.tourDepVO.id}"/>
+				</p:panel>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{accountReportBean.reportType == 'Q'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Exclude Account Code</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+					<p:selectCheckboxMenu id="idSalesAccount" value="#{accountReportBean.selectedAcct}" label="Sales Account"
+						filter="true" filterMatchMode="contains" panelStyle="width:550px">
+						<f:selectItems value="#{accountReportBean.acctList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.code} #{vo.desc}"/>
+					</p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{accountReportBean.reportType == 'Q'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Sales Only</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+					<p:selectBooleanButton value="#{accountReportBean.salesOnly}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+	        	</p:column>
+			</p:row>
+			<!-- <p:row rendered="#{accountReportBean.reportType == 'Q'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>&gt; Departure Date</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+					<p:selectBooleanButton value="#{accountReportBean.gtDtDep}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+	        	</p:column>
+			</p:row> -->
+			<p:row rendered="#{accountReportBean.reportType == 'I' ||
+				accountReportBean.reportType == 'J' ||
+				accountReportBean.reportType == 'P'}">
+				<p:column>
+					<h:outputLabel>Type of Supplier</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="3">
+					<h:selectOneMenu label="Type of Supplier" value="#{accountReportBean.supplierVO.supplierType}">  
+			            <f:selectItem itemLabel="All" itemValue="" />  
+			            <f:selectItem itemLabel="Trade Creditors" itemValue="TC" /> 
+			            <f:selectItem itemLabel="Sundry Creditors" itemValue="SC" />
+			        </h:selectOneMenu>
+	        	</p:column>
+			</p:row>
+			<p:row rendered="#{accountReportBean.reportType == 'I' ||
+				accountReportBean.reportType == 'J' ||
+				accountReportBean.reportType == 'P'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Supplier</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="3">
+					<h:selectOneMenu Label="Supplier" value="#{accountReportBean.supplierVO.id}">                 
+						<f:selectItem itemLabel="All" itemValue="" />   
+			            <f:selectItems value="#{accountReportBean.supplierList}" var="vo" itemLabel="#{vo.fullName}" itemValue="#{vo.id}" /> 
+				    </h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<!-- <p:row rendered="#{accountReportBean.reportType == 'L'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Bank Account</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="3">
+					<h:selectOneMenu Label="Bank Account" value="#{accountReportBean.searchParamVO.obj4}">                 
+						<f:selectItem itemLabel="All" itemValue="" />   
+			            <f:selectItems value="#{accountReportBean.bankAcctViewList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo}" /> 
+				    </h:selectOneMenu>
+				</p:column>
+			</p:row> -->
+			<p:row rendered="#{accountReportBean.reportType == 'M'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Journal No.</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="3">
+					<h:selectOneMenu Label="Journal No" value="#{accountReportBean.searchParamVO.obj4}">                 
+						<f:selectItem itemLabel="All" itemValue="" />   
+			            <f:selectItems value="#{accountReportBean.journalList}" var="vo" itemLabel="#{vo.sysNo}" itemValue="#{vo.sysNo}" /> 
+				    </h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<!-- <p:row rendered="#{accountReportBean.reportType == 'G' ||
+				accountReportBean.reportType == 'I' ||
+				accountReportBean.reportType == 'O' ||
+				accountReportBean.reportType == 'P'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Outstanding Only</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="3">
+					<p:selectBooleanCheckbox value="#{accountReportBean.searchParamVO.obj5}"
+						rendered="#{accountReportBean.reportType == 'G' || accountReportBean.reportType == 'O'}"/>
+					<p:selectBooleanCheckbox value="#{accountReportBean.searchParamVO.obj6}"
+						rendered="#{accountReportBean.reportType == 'I' || accountReportBean.reportType == 'P'}"/>
+				</p:column>
+			</p:row> -->
+			<p:row rendered="#{accountReportBean.reportType == 'Q'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Group By</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+					<h:selectOneMenu label="Group By" value="#{accountReportBean.groupType}">  
+			            <f:selectItem itemLabel="Invoice Date" itemValue="I" /> 
+			            <f:selectItem itemLabel="Departure Date" itemValue="D" />
+			        </h:selectOneMenu>
+	        	</p:column>
+			</p:row>
+			<p:row rendered="#{accountReportBean.reportType == 'B' || accountReportBean.reportType == 'C'}">
+				<p:column>
+					<h:outputLabel>Cross Year / Begining Balance Check</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectBooleanButton value="#{accountReportBean.crossYearCheck}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>&nbsp;
+	        	</p:column>
+			</p:row>
+		</p:panelGrid>
+	</h:form>
+</p:panel>
+
+<p:dialog id="idCustListDialog" header="Customer List" widgetVar="varCustListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" closable="false" onShow="initializeFilters()">
+	<h:form id="idCustListForm">
+		<ui:include src="customer_list.xhtml" />
+	</h:form>
+	<script type="text/javascript">
+        function initializeFilters() {
+            var filters = document.querySelectorAll('#idCustListDialog input.ui-column-filter');
+            filters.forEach(function(filter) {
+                filter.setAttribute('enterkeyhint', 'enter');
+            });
+        }
+    </script>
+</p:dialog>
+
+<!--
+	DIALOG - TOUR DEPARTURE LIST
+-->
+<p:dialog header="Tour Departure List" id="idTourCodeList" widgetVar="varTourCodeList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true" onShow="initializeFilters()">
+	<div style="overflow:auto; width:800px !important; height:500px !important;">
+	<h:form id="idTourDepListForm">
+		<p:dataTable value="#{accountReportBean.tourList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+			<p:ajax event="rowSelect" listener="#{accountReportBean.handleTourCodeSelect}" oncomplete="varTourCodeList.hide()"  update=":idFormAccountReport:idTourCd" />
+			<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:200px;">
+				<h:outputText value="#{vo.code}" />   
+			</p:column>
+			<p:column headerText="Departure Date" sortBy="#{vo.dtDep}" filterBy="#{accountReportBean.dateFormat(vo.dtDep, 'dd-MMM-yyyy')}" filterMatchMode="contains" style="width:60px;">
+				<h:outputText value="#{vo.dtDep}" >
+					<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+				</h:outputText> 
+			</p:column>
+			<p:column headerText="Package" sortBy="#{vo.packageDesc}" filterBy="#{vo.packageDesc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.packageDesc}" />   
+			</p:column>
+		</p:dataTable> 
+	</h:form>
+	</div>
+	<script type="text/javascript">
+        function initializeFilters() {
+            var filters = document.querySelectorAll('#idTourCodeList input.ui-column-filter');
+            filters.forEach(function(filter) {
+                filter.setAttribute('enterkeyhint', 'enter');
+            });
+        }
+    </script>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

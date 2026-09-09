@@ -1,0 +1,149 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+				xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+	<p:panel header="Journal Entries Config" toggleable="true" toggleSpeed="500">
+		<h:form id="idForm">
+			<p:growl id="msg"/>
+			<p:panel header="Reverse Sales" toggleable="true" rendered="#{journalConfigBean.isJournalConfigRole}">
+				<p:panelGrid>
+					<p:row>
+						<p:column style="width: 350px;">
+							<p:outputLabel value="Scheduler"/>
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<p:selectOneRadio id="idSelIsTest" value="#{journalConfigBean.isScheduled}" style="width: 180px">
+								<f:selectItem itemLabel="On" itemValue="Y"/>
+                				<f:selectItem itemLabel="Off" itemValue="N"/>
+							</p:selectOneRadio>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Process Reverse Sales Journal Entry Schedule Time (Daily)"/>
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<pe:timePicker id="idSelScheduleTime" mode="popup" value="#{journalConfigBean.schedulerTime}" intervalMinutes="1"/>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Save" actionListener="#{journalConfigBean.saveAppSettingData}" update=":idForm"/>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<p:separator />
+				
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Process Reverse Sales Journal Entry Now" actionListener="#{journalConfigBean.processReverseJournal}" update=":idForm"/>
+							<p:commandButton id="idInfoBtn" icon="ui-icon-info" style="margin-left: 5px"></p:commandButton>	
+							<pe:tooltip for="idInfoBtn" value="Process all pending reverse sales journal entries now."></pe:tooltip>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+			
+			<p:dataTable id="idPendingJournalTable" widgetVar="varPendingJournalTable" value="#{journalConfigBean.lazyDataModel}" 
+				var="vo" paginator="true" rows="20" paginatorTemplate="#{bterp:pageTemplate()}" lazy="true" 
+				rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" emptyMessage="#{msg['tbl.empty.message']}" 
+				filterEvent="enter" style="margin-top: 10px;" headerText="">
+				
+				<f:facet name="header">
+        			Pending Reverse Sales Journal Entry List
+    			</f:facet>
+    
+				<!-- <p:column headerText="#{msg['common.label.action.edit']}" style="width:40px; text-align:center;">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{journalBean.handleJournalDetailSelect(vo)}" 
+						oncomplete="varJournalDetailsDialog.show()" update=":idJournalDetailsDialog" process="@this" 
+						immediate="true" />
+				</p:column>
+				<p:column headerText="#{msg['common.label.action.delete']}" style="width:30px; text-align:center;">
+					<p:commandButton icon="ui-icon-close" actionListener="#{journalBean.onJourDeleteSelected(vo)}" 
+						oncomplete="varDelJourDialog.show()" process="@this" immediate="true"
+						rendered="#{vo.typeCd ne 'sales'}" />
+				</p:column>
+				
+				<p:column headerText="Clone" style="width:30px; text-align:center;">
+					<p:commandButton icon="ui-icon-copy" actionListener="#{journalBean.cloneJournalDetail(vo)}" 
+						oncomplete="varJournalDetailsDialog.show()" update=":idJournalDetailsDialog" process="@this" 
+						immediate="true" rendered="#{vo.typeCd ne 'sales'}" />
+				</p:column> -->
+				
+				<p:column headerText="Pax Statement No." style="width: 40px;" styleClass="txt_left" filterBy="#{vo.psNo}" sortBy="#{vo.psNo}">
+					<h:outputText value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'pax_statement').prefixid} #{vo.psNo}" />
+				</p:column>
+				<p:column headerText="Invoice No." style="width: 40px;" styleClass="txt_left" filterBy="#{vo.invNo}" sortBy="#{vo.invNo}">
+					<h:outputText value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'invc').prefixid} #{vo.invNo}" />
+				</p:column>
+				<p:column headerText="Journal No." style="width: 40px;" styleClass="txt_left" filterBy="#{vo.journalNo}" sortBy="#{vo.journalNo}">
+					<h:outputText rendered="#{vo.journalNo ne null}" value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'jrnl').prefixid} #{vo.journalNo}" />
+				</p:column>
+				<p:column headerText="Status" style="width:100px;" filterBy="#{vo.statusCode}" sortBy="#{vo.statusCode}" filterOptions="#{journalConfigBean.statusListItems}">
+					<h:outputText rendered="#{vo.statusCode eq 'P'}" value="Pending"/>
+					<h:outputText rendered="#{vo.statusCode eq 'S'}" value="Success"/>
+					<h:outputText rendered="#{vo.statusCode eq 'F'}" value="Failed"/>
+				</p:column>
+				<p:column headerText="Updated Date" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.updatedDate}" sortBy="#{vo.updatedDate}">
+					<h:outputText value="#{vo.updatedDate}">
+						<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+						<!-- <f:convertDateTime pattern="#{config['date.display.pattern']}" /> -->
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Converted By" style="width: 40px;" styleClass="txt_left" filterBy="#{vo.updatedBy}" sortBy="#{vo.updatedBy}">
+					<h:outputText value="#{vo.updatedBy}" />
+				</p:column>
+				<!-- <p:column headerText="Total Amount" style="width: 80px;" styleClass="txt_right" filterBy="#{vo.totalAmt}">
+						<h:outputText value="#{vo.totalAmt}" >
+						<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+				</p:column> -->
+				
+			</p:dataTable>
+		</h:form>
+	</p:panel>
+	
+	<!-- <p:dialog id="idAccountListDialog" header="Account List" widgetVar="varAccountListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+		<h:form id="idAccountListForm">
+			<p:dataTable id="idAccountListTable" widgetVar="varAccountListTable" value="#{acctBean.lazyAcctDataModel}" var="vo" paginator="true" rows="20" 
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+				filterEvent="enter" lazy="true" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{posUploadConfigBean.handleAccountSelect}" update=":idForm:idTableAccountExcludeList" oncomplete="varAccountListDialog.hide();"/>
+				
+				<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}">
+					<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+					<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+				</p:column>
+				<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}">
+					<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+					<h:outputText value="#{vo.desc}-#{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+				</p:column>
+			</p:dataTable>
+			<h:panelGrid columns="1">
+				<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varAccountListDialog.hide();"/>
+			</h:panelGrid>
+		</h:form>
+	</p:dialog> -->
+
+</ui:define>
+</ui:composition>

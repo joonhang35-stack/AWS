@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<!-- JDBC Data Source -->
+    <bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+        <property name="jndiName" value="${jndi.datasource}"/>
+    </bean>
+
+	<!-- Hibernate Session Factory -->
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="mappingJarLocations">
+        	<list>
+                <value>WEB-INF/lib/zsg-framework.jar</value>
+            </list>
+        </property>
+        <property name="mappingDirectoryLocations">
+            <list>
+            	<!-- value>classpath:com/bcs/zsg/bterp/member/vo/hbm</value -->
+            	<value>classpath:com/bcs/zsg/maintenance/vo/hbm</value>
+            	<value>classpath:com/bcs/zsg/purchase/vo/hbm</value>
+            	<value>classpath:com/bcs/zsg/acct/vo/hbm</value>
+            	<value>classpath:com/bcs/zsg/purchase/vo/hbm</value>
+            	<value>classpath:com/bcs/zsg/sales/vo/hbm</value>
+            	<value>classpath:com/bcs/zsg/bank/vo/hbm</value>
+            	<value>classpath:com/bcs/zsg/product/vo/hbm</value>
+            	<value>classpath:com/bcs/zsg/cfg/sec/vo/hbm</value>
+            	<value>classpath:com/bcs/zsg/history/vo/hbm</value>
+            	<value>classpath:com/bcs/zsg/db/bterp/vo/hbm</value>
+            </list>
+        </property>
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.dialect">${hibernate.dialect}</prop>
+                <prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+                <prop key="hibernate.bytecode.use_reflection_optimizer">true</prop>
+                <prop key="hibernate.cache.provider_class">org.hibernate.cache.HashtableCacheProvider</prop>
+            </props>
+        </property>
+    </bean>
+
+	<!-- JDBC Transaction Manager -->
+	<bean id="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"/>
+        <property name="defaultTimeout" value="${transaction.timeout}"/>
+    </bean>
+
+	<!-- Base Hibernate DAO -->
+	<bean id="baseHibernateDAO" class="com.bcs.zsg.core.dao.BaseHibernateDAO" abstract="true">
+		<property name="sessionFactory" ref="sessionFactory"/>
+		<property name="queryMaxRows" value="${jdbc.query.max.rows}"/>
+        <property name="queryTimeout" value="${jdbc.query.timeout}"/>
+    </bean>
+
+    <!-- Base JDBC DAO -->
+    <bean id="baseJdbcDAO" class="com.bcs.zsg.core.dao.BaseJdbcDAO" abstract="true">
+    	<property name="jdbcTemplate">
+    		<bean class="org.springframework.jdbc.core.JdbcTemplate">
+		    	<constructor-arg ref="dataSource"/>
+		        <property name="queryTimeout" value="${jdbc.query.timeout}"/>
+		        <property name="maxRows" value="${jdbc.query.max.rows}"/>
+	        </bean>
+    	</property>
+    </bean>
+
+</beans>

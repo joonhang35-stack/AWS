@@ -1,0 +1,127 @@
+package com.bcs.zsg.acct.web.bean;
+
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.bo.AccountBO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+
+public class AccountBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+
+	protected AcctVO acctVO;
+
+	@Autowired
+	protected transient AccountBO acctBO;
+	
+	protected boolean restrictNoSubCode = false;
+	
+	private LazyDataModel<AcctVO> lazyAcctDataModel;
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.core.web.swf.bean.BaseBackingBean#resetForm()
+	 */
+	@Override
+	public void resetForm() {
+		acctVO = new AcctVO();
+		acctVO.setAccCodeSubCode(null);
+		acctVO.setCode(null);
+		acctVO.setDesc(null);
+		acctVO.setId(null);
+		acctVO.setIdAcctCat(null);
+		acctVO.setIdAcctSubCat(null);
+		acctVO.setIdCompany(null);
+		acctVO.setRemarks(null);
+		acctVO.setStatusCode(null);
+		acctVO.setSubCode(null);
+		acctVO.setSubDesc(null);
+	}
+
+	/***
+	 * 1 = 
+	 * @param flag
+	 */
+	public void init(int flag, boolean _restrictNoSubCode) {
+		try {
+			this.restrictNoSubCode = _restrictNoSubCode;
+			resetForm();
+			lazyAcctDataModel = new LazyAcctListDataModel();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	
+	class LazyAcctListDataModel extends LazyDataModel<AcctVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#load(int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+		 */
+		@Override
+		public List<AcctVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			try {
+				
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+				params.put("restrictNoSubCode", restrictNoSubCode);
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", (sortField == null) ? "code" : sortField);
+				params.put("sortOrder", sortOrder);
+				params.put("filters", filters);
+				
+				int size = acctBO.getAccountListSize(params);
+				setRowCount(size);
+				if (size > 0) return acctBO.getAccountList(params);
+				
+			} catch (Throwable t) {
+				errorResult(t);
+			}
+			return null;
+		}
+		
+		@Override
+		public void setRowIndex(int rowIndex) {
+			/*
+			 * The following is in ancestor (LazyDataModel):
+			 * this.rowIndex = rowIndex == -1 ? rowIndex : (rowIndex % pageSize);
+			 */
+			if (rowIndex == -1 || getPageSize() == 0) {
+				super.setRowIndex(-1);
+			} else super.setRowIndex(rowIndex % getPageSize());
+		}
+	}
+	
+
+	/*******************
+	 * GETTER & SETTER *
+	 *******************/
+	
+	public AcctVO getAcctVO() {
+		return acctVO;
+	}
+
+	public void setAcctVO(AcctVO acctVO) {
+		this.acctVO = acctVO;
+	}
+
+	public LazyDataModel<AcctVO> getLazyAcctDataModel() {
+		return lazyAcctDataModel;
+	}
+
+	public void setLazyAcctDataModel(LazyDataModel<AcctVO> lazyAcctDataModel) {
+		this.lazyAcctDataModel = lazyAcctDataModel;
+	}
+
+}

@@ -1,0 +1,53 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idDesc">Category Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText label="Category Name" id="idDesc" value="#{tourCatBean.tourCatVO.desc}" required="true"/></p:column>
+	</p:row>
+	<p:row rendered="#{tourCatBean.searchParamVO.obj1 eq 'ALL'}">
+		<p:column><h:outputLabel for="idTypeCd">Type <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idTypeCd" value="#{tourCatBean.tourCatVO.typeCd}" effect="fade" required="true"> 
+				<f:selectItems value="#{zsg:referenceDataList('TOUR_TYPE')}" var="n" itemLabel="#{n.value}" itemValue="#{n.code}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idRegion">Region</h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idRegion" value="#{tourCatBean.tourCatVO.idRegion}" effect="fade">
+				<f:selectItem itemLabel="Select One" />
+				<f:selectItems value="#{tourCatBean.regionList}" var="vo" itemLabel="#{vo.regionname}" itemValue="#{vo.id}" />
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<!--p:row>
+		<p:column><h:outputLabel for="idAcct">Account <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText label="Account" id="idAcct" value="#{tourCatBean.tourCatVO.acctCd}" required="true"/>
+			&nbsp;<p:commandButton icon="ui-icon-search" process="@this" onclick="varAcctListDialog.show()"/>
+		</p:column>
+	</p:row-->
+	<p:row>
+		<p:column><h:outputLabel for="idRemarks">Remarks</h:outputLabel></p:column>
+		<p:column><p:inputTextarea id="idRemarks" value="#{tourCatBean.tourCatVO.remarks}"/></p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{tourCatBean.addTourCat}" update="@form,:idTourCatForm:idTourCatList" rendered="#{empty tourCatBean.tourCatVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{tourCatBean.updTourCat}" update="@form,:idTourCatForm:idTourCatList" oncomplete="varEditTourCatDialog.hide()" rendered="#{not empty tourCatBean.tourCatVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{tourCatBean.resetForm}" onclick="varAddTourCatDialog.hide(),varEditTourCatDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddTourCatForm,idEditTourCatForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

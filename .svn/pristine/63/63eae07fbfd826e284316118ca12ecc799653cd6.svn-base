@@ -1,0 +1,181 @@
+package com.bcs.zsg.product.dao;
+
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.SQLQuery;
+import org.hibernate.criterion.CriteriaQuery;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.transform.Transformers;
+import org.hibernate.type.BooleanType;
+import org.hibernate.type.DateType;
+import org.hibernate.type.DoubleType;
+import org.hibernate.type.LongType;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderVO;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderViewVO;
+
+public class InvoiceAndExchangeOrderDAOImpl extends BaseHibernateDAO implements InvoiceAndExchangeOrderDAO 
+{
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceAndExchangeOrderViewVO> getInvoiceAndExchangeOrderList()
+			throws BusinessException {
+		Criteria criteria = createCriteria(InvoiceAndExchangeOrderViewVO.class);
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceAndExchangeOrderViewVO> getInvoiceAndExchangeOrderSearchList(
+			Long companyId) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceAndExchangeOrderViewVO.class);
+		criteria.add(Restrictions.eq("companyVO.id",companyId));
+		criteria.addOrder(new Order("code", true) {
+			@Override
+			public String toSqlString(Criteria criteria,
+					CriteriaQuery criteriaQuery) throws HibernateException {
+				return "cast(code as decimal) asc";
+			}
+		});
+		return criteria.list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceAndExchangeOrderVO> getInvoiceAndExchangeOrderList(Long companyId, InvoiceAndExchangeOrderVO searchFilter) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("select i.id, i.id_company as companyId, i.code, i.description, i.id_acct as acctId, i.amount, i.acct_mgr_use as acctMgrUse, ").
+			append("i.tax_cd as taxCode, i.tax_rate as taxRate, i.dt_created as createdDate, i.created_by as createdBy, i.dt_upd as updatedDate, i.upd_by as updatedBy, ").
+			append("if(ifnull(a.sub_code, '') != '', concat(a.code, '-', a.sub_code), a.code) as acctCode, ").
+			append("if(ifnull(a.sub_code, '') != '', concat(a.description, ', ', a.sub_description), a.description) as acctDesc, ").
+			append("i.cat_cd AS catCd, i.type_cd AS typeCd, i.is_editable AS isEditable, i.inv_cat as invCat, i.is_def_acct as isDefAcct ").
+//			append("i.cat_cd AS catCd, i.type_cd AS typeCd, li1.description AS catDesc, li2.description AS typeDesc ").
+			append(", li1.description AS catDesc, li2.description AS typeDesc, i.is_show AS isShow ").
+		append("from inv_eo_item i left join account a on i.id_acct = a.id and a.id_company = :companyId ").
+		append("LEFT JOIN lookup_item li1 ON i.cat_cd = li1.code AND li1.lookup_cat_cd = 'inv_items_cat' ").
+		append("LEFT JOIN lookup_item li2 ON i.type_cd = li2.code AND li2.lookup_cat_cd = 'inv_items_type' ").
+		append("where i.id_company = :companyId ");
+		
+		if (searchFilter != null) {
+			if (CollectionUtils.isNotEmpty(searchFilter.getItemCatList())) {
+				sb.append("AND i.cat_cd in (");
+				for (int i = 0; i < searchFilter.getItemCatList().size(); i++) {
+					String s = searchFilter.getItemCatList().get(i);
+					if (i > 0) sb.append(",");
+					sb.append("'").append(s).append("'");
+				}
+				sb.append(") ");
+			}
+			if (CollectionUtils.isNotEmpty(searchFilter.getItemTypeList())) {
+				sb.append("AND i.type_cd in (");
+				for (int i = 0; i < searchFilter.getItemTypeList().size(); i++) {
+					String s = searchFilter.getItemTypeList().get(i);
+					if (i > 0) sb.append(",");
+					sb.append("'").append(s).append("'");
+				}
+				sb.append(") ");
+			}
+			
+			if (searchFilter.getFilterAcctMgrUse() != null) {
+				if (!searchFilter.getFilterAcctMgrUse()) sb.append("AND i.acct_mgr_use = 0 ");
+			}
+			
+			if (searchFilter.getIsShow() == true) {
+				if (!searchFilter.getFilterAcctMgrUse()) sb.append("AND i.is_show = 1 ");
+			}
+		}
+		
+		sb.append("order by cast(i.code as decimal) ");
+		
+		SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+		query.addScalar("id", LongType.INSTANCE);
+		query.addScalar("companyId", LongType.INSTANCE);
+		query.addScalar("code");
+		query.addScalar("description");
+		query.addScalar("acctId", LongType.INSTANCE);
+		query.addScalar("amount", DoubleType.INSTANCE);
+		query.addScalar("acctMgrUse", BooleanType.INSTANCE);
+		query.addScalar("taxCode");
+		query.addScalar("taxRate");
+		query.addScalar("createdDate", DateType.INSTANCE);
+		query.addScalar("createdBy");
+		query.addScalar("updatedDate", DateType.INSTANCE);
+		query.addScalar("updatedBy");
+		query.addScalar("acctCode");
+		query.addScalar("acctDesc");
+		query.addScalar("catCd");
+		query.addScalar("typeCd");
+		query.addScalar("isEditable");
+		query.addScalar("invCat");
+		query.addScalar("isDefAcct");
+		query.addScalar("catDesc");
+		query.addScalar("typeDesc");
+		query.addScalar("isShow");
+		query.setParameter("companyId", companyId);
+		query.setResultTransformer(Transformers.aliasToBean(InvoiceAndExchangeOrderVO.class));
+		
+		List<InvoiceAndExchangeOrderVO> invEoList = query.list();
+		for (InvoiceAndExchangeOrderVO vo : invEoList) {
+			if (vo.getInvCat() != null && vo.getInvCat().length() > 0) {
+				vo.setInvCatList(new ArrayList<String>(Arrays.asList(vo.getInvCat().replaceAll(",$", "").split(",", -1))));
+				
+				if (CollectionUtils.isNotEmpty(vo.getInvCatList())) {
+					for (String cat : vo.getInvCatList()) {
+						if (StringUtils.isEmpty(vo.getInvCatDesc())) {
+							vo.setInvCatDesc(LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_INV_CAT, cat));
+						} else {
+							vo.setInvCatDesc(vo.getInvCatDesc() + ", " + LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_INV_CAT, cat));
+						}
+					}
+				}
+			}
+		}
+		
+		return invEoList;
+	}
+
+	/*@Override
+	public List<InvoiceAndExchangeOrderVO> getInvoiceAndExchangeOrderList(Long id) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceAndExchangeOrderVO.class);
+		criteria.add(Restrictions.eq("companyId",id));
+		criteria.addOrder(new Order("code", true) {
+			@Override
+			public String toSqlString(Criteria criteria,
+					CriteriaQuery criteriaQuery) throws HibernateException {
+				return "cast(code as decimal) asc";
+			}
+		});
+		return criteria.list();
+	}*/
+	
+	@Override
+	public InvoiceAndExchangeOrderVO getInvoiceAndExchangeOrderVO(Long id) {
+		Criteria criteria = getSession().createCriteria(InvoiceAndExchangeOrderVO.class);
+		criteria.add(Restrictions.eq("id", id));
+		
+		return (InvoiceAndExchangeOrderVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public InvoiceAndExchangeOrderVO getInvoiceAndExchangeOrderVO(String code) {
+		Criteria criteria = getSession().createCriteria(InvoiceAndExchangeOrderVO.class);
+		criteria.add(Restrictions.eq("code", code));
+		criteria.setMaxResults(1);
+		
+		return (InvoiceAndExchangeOrderVO) criteria.uniqueResult();
+	}
+	
+}

@@ -1,0 +1,291 @@
+package com.bcs.zsg.sales.web.api;
+
+import java.io.PrintWriter;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.EInvoiceUtils;
+import com.bcs.zsg.common.helper.LookupItemConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.vo.GenAddUpdDelVO;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.maintenance.bo.IpayConfigBO;
+import com.bcs.zsg.maintenance.vo.IpayConfigVO;
+import com.bcs.zsg.purchase.vo.EOInvoiceVO;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.bo.InvoiceEmailPaymentBO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.InvoiceAttachmentVO;
+import com.bcs.zsg.sales.vo.InvoiceEmailPaymentVO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+import com.bcs.zsg.sales.vo.InvoicePaymentVO;
+import com.bcs.zsg.sales.vo.InvoiceReferenceVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+@Controller
+@RequestMapping("/v1")
+public class EmailPaymentController {
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
+	
+	@Autowired
+	private transient InvoiceEmailPaymentBO invoiceEmailPaymentBO;
+	@Autowired
+	private transient InvoiceBO invoiceBO;
+	@Autowired
+	private transient IpayConfigBO ipayConfigBO;
+
+	@RequestMapping(value="/emailPaymentResult", method=RequestMethod.POST, produces="text/plain;")
+	public void getEmailPaymentResult(HttpServletRequest request, HttpServletResponse response) {
+		PrintWriter out = null;
+		
+		try {
+			logger.error("----- Ipay88 Message : " + request.getParameter("ErrDesc"));
+			logger.error("----- Ipay88 Status : " + request.getParameter("Status") + " / " + request.getRemoteAddr());
+			
+			out = response.getWriter();
+			
+			// 0 means unsuccessful, 1 means success
+			if (StringUtils.equals(request.getParameter("Status") , "1")) {
+				String tempRefNo = request.getParameter("RefNo");
+				
+				String idEmailPayment = tempRefNo.substring(tempRefNo.indexOf("_") + 1, tempRefNo.length());
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("id", idEmailPayment);
+				logger.error("----- Ipay88 tempRefNo / idEmailPayment : " + tempRefNo + " / " + idEmailPayment);
+				InvoiceEmailPaymentVO invoiceEmailPaymentVO = invoiceEmailPaymentBO.getInvoiceEmailPayment(params);
+				
+				if (invoiceEmailPaymentVO != null) {
+					if (CommonConstant.EMAIL_PMNT_PENDING.equals(invoiceEmailPaymentVO.getPaymentStatus())
+							|| CommonConstant.EMAIL_PMNT_SUCCESS.equals(invoiceEmailPaymentVO.getPaymentStatus())) {
+						
+						if (CommonConstant.EMAIL_PMNT_PENDING.equals(invoiceEmailPaymentVO.getPaymentStatus())) {
+							invoiceEmailPaymentVO.setPaymentStatus(CommonConstant.EMAIL_PMNT_SUCCESS);
+							invoiceEmailPaymentVO.setTransId(request.getParameter("TransId"));
+							invoiceEmailPaymentVO.setAuthCode(request.getParameter("AuthCode"));
+							invoiceEmailPaymentVO.setCcName(request.getParameter("CCName"));
+							invoiceEmailPaymentVO.setCcNo(request.getParameter("CCNo"));
+							invoiceEmailPaymentVO.setsBankName(request.getParameter("S_bankname"));
+							invoiceEmailPaymentVO.setsCountry(request.getParameter("S_country"));
+							invoiceEmailPaymentBO.updateInvoiceEmailPaymentBySystem(invoiceEmailPaymentVO);
+						}
+						
+						InvoiceVO invoiceVO = invoiceBO.getInvoiceById(invoiceEmailPaymentVO.getIdInvoice());
+						
+						if (invoiceVO != null) {
+							if (StringUtils.equals(invoiceVO.getStatusCd(), CommonConstant.STATUS_CD_VOID) || 
+									StringUtils.equals(invoiceVO.getStatusCd(), CommonConstant.STATUS_CD_CANCELLED)) {
+								logger.error("[Status]" + request.getParameter("Status") + "[RefNo]" + tempRefNo + "[invoice_status]" + invoiceVO.getStatusCd());
+								out.println("FAILED");
+								return;
+							}
+							
+							invoiceBO.getInvoiceDetails(invoiceVO);
+							
+							InvoicePaymentVO paymentVO = new InvoicePaymentVO();
+							paymentVO.setInvId(invoiceEmailPaymentVO.getIdInvoice());
+							paymentVO.setPmntDt(new Date());
+							paymentVO.setPmntTypeCd("ipay88");
+							paymentVO.setRefNo(invoiceEmailPaymentVO.getTransId());
+							paymentVO.setPmntFor(invoiceEmailPaymentVO.getIpayConfigComment());
+							paymentVO.setAmount(invoiceEmailPaymentVO.getTotalPaymentAmt().doubleValue());
+							paymentVO.setPmntIssuedBy("SYSTEM");
+							if (invoiceVO.getCustDetailsVO().getCustType() != null) {
+								if (invoiceVO.getCustDetailsVO().getCustType().equals("P")) {
+									paymentVO.setRecievedFr(invoiceVO.getCustDetailsVO().getContPersonName());
+								} else if (invoiceVO.getCustDetailsVO().getCustType().equals("C")) {
+									paymentVO.setRecievedFr(invoiceVO.getCustDetailsVO().getCompanyName());
+								}
+							}
+							paymentVO.setCreatedBy("SYSTEM");
+							paymentVO.setUpdatedBy("SYSTEM");
+							
+							IpayConfigVO ipayConfigVO = ipayConfigBO.getIpayConfigVO(invoiceEmailPaymentVO.getIdIpayConfig());
+							
+							Boolean financialClosed = getFinPeriodClosedStatus(invoiceVO);
+							
+							// If financial no close then add new invoice item with admin charges account
+							if (!financialClosed) {
+								if (ipayConfigVO != null) {
+									if (invoiceEmailPaymentVO.getAdminCharges().compareTo(BigDecimal.ZERO) > 0) {
+										InvoiceItemVO invoiceItemVO = new InvoiceItemVO();
+										invoiceItemVO.setAcctId(ipayConfigVO.getIdAcct());
+										invoiceItemVO.setCode(SalesConstant.INV_ITM_CD_ADMIN_CHRG);
+										invoiceItemVO.setDesc(ipayConfigVO.getAcctDesc());
+										invoiceItemVO.setInvItemCd("");
+										invoiceItemVO.setQty(1);
+										invoiceItemVO.setUnitPrice(invoiceEmailPaymentVO.getAdminCharges().doubleValue());
+										invoiceItemVO.setAmount(invoiceEmailPaymentVO.getAdminCharges().doubleValue());
+										invoiceItemVO.setInvId(invoiceVO.getId());
+										invoiceVO.getInvoiceItemList().add(invoiceItemVO);
+									}
+								}
+							// Check if financial close then create a new invoice to store admin charges
+							} else {
+								if (invoiceEmailPaymentVO.getAdminCharges().compareTo(BigDecimal.ZERO) > 0) {
+									InvoiceVO tempVO = SerializationUtils.clone(invoiceVO);
+									tempVO.setId(null);
+									tempVO.setInvoiceDt(new Date());
+									tempVO.setBookingId(null);
+									tempVO.setCode(null);
+									tempVO.setInvoiceDue(addInvoiceDueDate(new Date()));
+									tempVO.setInvoicePaymentList(new ArrayList<InvoicePaymentVO>());
+									tempVO.setInvoiceItemList(new ArrayList<InvoiceItemVO>());
+									tempVO.setInvoiceRefVOList(new ArrayList<InvoiceReferenceVO>());
+									tempVO.setEoInvList(new ArrayList<EOInvoiceVO>());
+									tempVO.setInvoiceAttachmentVOList(new ArrayList<InvoiceAttachmentVO>());
+									tempVO.setRemarks(null);
+									tempVO.setInternalRemarks(null);
+									tempVO.setTrvWarrantChecked(false);
+									
+									// Amount will set to admin charges amount
+									InvoicePaymentVO tmpPyVO = new InvoicePaymentVO();
+									tmpPyVO.setPmntDt(new Date());
+									tmpPyVO.setPmntTypeCd("ipay88");
+									tmpPyVO.setRefNo(invoiceEmailPaymentVO.getTransId());
+									tmpPyVO.setPmntFor("Admin Charges - " + invoiceEmailPaymentVO.getIpayConfigComment());
+									tmpPyVO.setAmount(invoiceEmailPaymentVO.getAdminCharges().doubleValue());
+									tmpPyVO.setPmntIssuedBy("SYSTEM");
+									tmpPyVO.setRecievedFr(paymentVO.getRecievedFr());
+									tmpPyVO.setCreatedBy("SYSTEM");
+									tmpPyVO.setUpdatedBy("SYSTEM");
+									
+									// Set original invoice amount without admin charges
+									paymentVO.setAmount(invoiceEmailPaymentVO.getPaymentAmt().doubleValue());
+									tempVO.getInvoicePaymentList().add(tmpPyVO);
+									
+									// Insert Invoice item related to admin charges
+									if (ipayConfigVO != null) {
+										InvoiceItemVO invoiceItemVO = new InvoiceItemVO();
+										invoiceItemVO.setAcctId(ipayConfigVO.getIdAcct());
+										invoiceItemVO.setCode(SalesConstant.INV_ITM_CD_ADMIN_CHRG);
+										invoiceItemVO.setDesc(ipayConfigVO.getAcctDesc());
+										invoiceItemVO.setInvItemCd("");
+										invoiceItemVO.setQty(1);
+										invoiceItemVO.setUnitPrice(invoiceEmailPaymentVO.getAdminCharges().doubleValue());
+										invoiceItemVO.setAmount(invoiceEmailPaymentVO.getAdminCharges().doubleValue());
+										tempVO.getInvoiceItemList().add(invoiceItemVO);
+									}
+									
+									// Insert Invoice Reference to email payment made
+									InvoiceReferenceVO invoiceReferenceVO = new InvoiceReferenceVO();
+									invoiceReferenceVO.setInvRefId(invoiceVO.getId());
+									invoiceReferenceVO.setInvRefCode(invoiceVO.getCode());
+									tempVO.setGenAUDINvoiceRefVOList(new GenAddUpdDelVO<InvoiceReferenceVO>());
+									tempVO.getGenAUDINvoiceRefVOList().getAddList().add(invoiceReferenceVO);
+									
+									calTtlAmt(tempVO);
+									
+									invoiceBO.insertInvoiceByEmailPayment(tempVO, tempVO.getTourDepId());
+									invoiceBO.updInvCd(tempVO);
+									
+									// update email payment admin charges invoice id
+									invoiceEmailPaymentVO.setIdInvoiceAdminCharges(tempVO.getId());
+									invoiceEmailPaymentBO.updateInvoiceEmailPaymentBySystem(invoiceEmailPaymentVO);
+									
+									// add admin charges invoice reference to epl invoice
+									invoiceReferenceVO = new InvoiceReferenceVO();
+									invoiceReferenceVO.setInvRefId(tempVO.getId());
+									invoiceReferenceVO.setInvRefCode(tempVO.getCode());
+									invoiceVO.setGenAUDINvoiceRefVOList(new GenAddUpdDelVO<InvoiceReferenceVO>());
+									invoiceVO.getGenAUDINvoiceRefVOList().getAddList().add(invoiceReferenceVO);
+								}
+							}
+							
+							invoiceVO.getInvoicePaymentList().add(paymentVO);
+							calTtlAmt(invoiceVO);
+							invoiceBO.updateInvoiceForEmailPayment(invoiceVO, invoiceVO.getTourDepId());
+							out.print("RECEIVEOK");
+						} else {
+							logger.error("[Status]" + request.getParameter("Status") + "[RefNo]" + tempRefNo + " | invoiceVO=null");
+							out.print("FAILED");
+						}
+					} else {
+						logger.error("[Status]" + request.getParameter("Status") + "[RefNo]" + tempRefNo + "[email_payment_status]" + invoiceEmailPaymentVO.getPaymentStatus());
+						out.print("FAILED");
+					}
+				} else {
+					logger.error("[Status]" + request.getParameter("Status") + "[RefNo]" + tempRefNo + " | invoiceEmailPaymentVO=null");
+					out.print("FAILED");
+				}
+			} else {
+				logger.error("[Status]" + request.getParameter("Status") + "[ErrDesc]" + request.getParameter("ErrDesc"));
+				out.print("FAILED");
+			}
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+			//return "FAILED";
+			out.print("FAILED");
+		} finally {
+			if (out != null) {
+				out.close();
+				out = null;
+			}
+		}
+	}
+	
+	public boolean getFinPeriodClosedStatus(InvoiceVO invoiceVO) throws Exception {
+		boolean rtn = false;
+		try {
+			rtn = LookupItemUtils.getFinAndGSTPeriodClosedStatus(invoiceVO.getCompanyId(), invoiceVO.getInvoiceDt(), false);
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return rtn;
+	}
+	
+	private void calTtlAmt(InvoiceVO invoiceVO) throws Exception {
+		try {
+			//Manual update the item Amount here
+			AmountCalcViewVO amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(new AmountCalcViewVO(), false, invoiceVO.getInvoiceItemList(),
+																invoiceVO.getInvoicePaymentList(), false);
+			
+			invoiceVO.setTaxAmt(amtCalcViewVO.getTotalTax().doubleValue());
+			invoiceVO.setTaxIncAmt(amtCalcViewVO.getTotalAmountIncludeTax().doubleValue());
+			invoiceVO.setRoundingAmt(amtCalcViewVO.getTotalRounding().doubleValue());
+			invoiceVO.setAmount(amtCalcViewVO.getTotalAmountAfterRounding().doubleValue());
+			invoiceVO.setAmtPaid(amtCalcViewVO.getTotalAmountPaid().doubleValue());
+			invoiceVO.setBalance(amtCalcViewVO.getTotalAmountAfterRounding()
+									.subtract(amtCalcViewVO.getTotalAmountPaid()).doubleValue());
+			
+			BigDecimal taxAmt = new BigDecimal(String.valueOf(invoiceVO.getTaxAmt()));
+			BigDecimal taxIncAmt = new BigDecimal(String.valueOf(invoiceVO.getTaxIncAmt()));
+			BigDecimal taxExcAmt = taxIncAmt.subtract(taxAmt);
+			invoiceVO.setTaxExcAmt(taxExcAmt.doubleValue());
+			
+			EInvoiceUtils.calcEInvItemList(invoiceVO);
+			
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+	
+	public Date addInvoiceDueDate(Date dt) {
+		Calendar invDt = Calendar.getInstance();
+		if (dt == null) {
+			invDt.setTime(new Date());
+		} else {
+			invDt.setTime(dt);
+		}
+		invDt.add(Calendar.DATE, Integer.parseInt(LookupItemUtils.getGlobalConfigValue(LookupItemConstant.GC_CATEGORY, LookupItemConstant.GC_PAID_EXP)));
+		return invDt.getTime();
+	}
+}

@@ -1,0 +1,562 @@
+package com.bcs.zsg.bank.service;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.dao.ChartOfAcctDAO;
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.acct.service.AccountService;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctTransViewVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.bank.dao.DepositDAO;
+import com.bcs.zsg.bank.dao.PaymentDAO;
+import com.bcs.zsg.bank.vo.BankAcctVO;
+import com.bcs.zsg.bank.vo.BankAcctViewVO;
+import com.bcs.zsg.bank.vo.CashBookVO;
+import com.bcs.zsg.bank.vo.InvPmntCBLinkVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.maintenance.dao.SystemNumberGenerationDAO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.service.InvoiceService;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.InvoicePaymentVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+import com.bcs.zsg.zextra.backend.helper.SysNumGenUtil;
+
+public class DepositServiceImpl implements DepositService {
+
+	@Autowired
+	private DepositDAO depositDAO;
+	@Autowired
+	private PaymentDAO paymentDAO;
+	@Autowired
+	private ChartOfAcctDAO chargOfAcctDAO;
+	@Autowired
+	private SystemNumberGenerationDAO sysNumGenDAO;
+	@Autowired
+	private AccountService accountService;
+	@Autowired
+	private PaymentService paymentService;
+	@Autowired
+	private InvoiceService invoiceService;
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#addDeposit(com.bcs.zsg.bank.vo.CashBookVO, java.util.Date, java.lang.Long, com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO, java.util.List, com.bcs.zsg.bank.vo.BankAcctVO, com.bcs.zsg.maintenance.vo.LookupItemVO, com.bcs.zsg.maintenance.vo.LookupItemVO, com.bcs.zsg.acct.vo.AcctVO, com.bcs.zsg.common.vo.AddUpdDelVO)
+	 */
+	@Override
+	public void addDeposit(CashBookVO cashBookVO, Long idCompany,SystemNumberGenerationVO sysNumGenVO1,List<SystemNumberGenerationVO> sysNumGenList,BankAcctVO bankAcctSearchVO,LookupItemVO lookupItemBT, LookupItemVO lookupItemCBT,AcctVO acctVO,AddUpdDelVO invPmntAUDList) throws BusinessException, QueueException {
+		
+		/*SystemNumberGenerationVO sysNumGenVO = new SystemNumberGenerationVO();
+		sysNumGenVO.setCode(CommonConstant.SYS_NUM_CD_BANK_DEPS);
+		sysNumGenVO.setIdCompany(idCompany);
+		sysNumGenVO = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(sysNumGenVO));*/
+		String psPrefix = LookupItemUtils.getPsPrefix(idCompany);
+		String invPrefix = LookupItemUtils.getInvPrefix(idCompany);
+		if (CollectionUtils.isNotEmpty(cashBookVO.getInvPymtList())) {
+		    List<String> depositedDocs = new ArrayList<>();
+		    for (InvoicePaymentVO vo : cashBookVO.getInvPymtList()) {
+		        if (depositDAO.existsInvPmntCBLink(vo.getId())) {
+		        	if(vo.getInvoiceDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_INVC)) {
+		        		depositedDocs.add(invPrefix+""+vo.getInvoiceNo());
+		        	} else if (vo.getInvoiceDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_PAX_STMT)) {
+		        		depositedDocs.add(psPrefix+""+vo.getInvoiceNo());
+		        	}
+		        }
+		    }
+		    if (!depositedDocs.isEmpty()) {
+		        throw new BusinessException(
+		            CommonErrConstant.ERR_INVOICE_BILL_PAYMENTS_EXISTS, null,new String[] { String.join(", ", depositedDocs) });
+		    }
+		}
+		
+		SystemNumberGenerationVO sysNumGenVO =  sysNumGenDAO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_BANK_DEPS, idCompany);
+		String bdNo = FunctionUtils.getUUID(20, "");
+		
+		cashBookVO.setSysCode(sysNumGenVO.getCode());
+		cashBookVO.setSysPrefix(sysNumGenVO.getPrefixid());
+		cashBookVO.setSysNo(bdNo);
+		cashBookVO.setTransTypeCd(lookupItemBT.getCode());
+		cashBookVO.setCredit(0.00);
+		cashBookVO.setIsClear(false);
+		cashBookVO.setIsMark(false);
+		cashBookVO.setTypeCd(lookupItemCBT.getCode());
+		cashBookVO.setGroupNo(cashBookVO.getGroupNo());
+		cashBookVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+		depositDAO.insert(cashBookVO);
+
+		AcctTransVO acctTransVO1=new AcctTransVO();
+		acctTransVO1.setCompanyId(idCompany);
+		acctTransVO1.setAcctId(bankAcctSearchVO.getIdAcct());
+		acctTransVO1.setRefNo(cashBookVO.getRefNo());
+		acctTransVO1.setCredit(0.00);
+		if (StringUtils.isEmpty(acctVO.getSubCode())) acctTransVO1.setCode(acctVO.getCode());
+		else acctTransVO1.setCode(acctVO.getCode() + "-" + acctVO.getSubCode());
+		if (StringUtils.isEmpty(acctVO.getSubDesc())) acctTransVO1.setDesc(acctVO.getDesc());
+		else acctTransVO1.setDesc(acctVO.getDesc()+","+acctVO.getSubDesc());
+		
+		acctTransVO1.setDebit(cashBookVO.getDebit());
+		acctTransVO1.setType(lookupItemBT.getCode());
+		acctTransVO1.setTransDt(cashBookVO.getDtTrans());
+		acctTransVO1.setSysPrefix(sysNumGenVO.getPrefixid());
+		acctTransVO1.setSysCode(sysNumGenVO.getCode());
+		acctTransVO1.setSysNo(bdNo);
+		acctTransVO1.setSource("BD-" + cashBookVO.getSysNo() + "-" + bankAcctSearchVO.getName());
+		acctTransVO1.setDestination(cashBookVO.getRemarks() + " Cust-" + cashBookVO.getPayee() + ((cashBookVO.getCustCode() == null) ? "" : " " + cashBookVO.getCustCode()));
+		accountService.auditAcctTrans(CommonConstant.ACTION_CD_ADD,acctTransVO1);
+
+		if (CollectionUtils.isNotEmpty(cashBookVO.getAcctTransList())) {
+			for(int i = 0 ; i < cashBookVO.getAcctTransList().size() ; i++) {
+				AcctTransVO acctTransVO = new AcctTransVO();
+				acctTransVO.setCompanyId(idCompany);
+				acctTransVO.setAcctId(cashBookVO.getAcctTransList().get(i).getAcctViewVO().getId());
+				acctTransVO.setRefNo(cashBookVO.getRefNo());
+				/*String credit=Double.toString(cashBookVO.getAcctTransList().get(i).getCredit());
+				if(credit.contains("-")) {
+					StringBuffer sb=new StringBuffer(credit);
+					sb.deleteCharAt(0);
+					credit=sb.toString();
+					acctTransVO.setDebit(Double.parseDouble(credit));
+					acctTransVO.setCredit(0.00);
+					
+				} else {
+					acctTransVO.setCredit(cashBookVO.getAcctTransList().get(i).getCredit());
+					acctTransVO.setDebit(0.00);
+				}*/
+				double amount = cashBookVO.getAcctTransList().get(i).getAmount();
+				if (amount < 0) {
+					acctTransVO.setDebit(-amount);
+					acctTransVO.setCredit(0.00);
+					
+				} else {
+					acctTransVO.setCredit(amount);
+					acctTransVO.setDebit(0.00);
+				}
+				
+				if(StringUtils.isEmpty(cashBookVO.getAcctTransList().get(i).getAcctViewVO().getSubCode())) {
+					acctTransVO.setCode(cashBookVO.getAcctTransList().get(i).getAcctViewVO().getCode().toString());
+				} else {
+					acctTransVO.setCode(cashBookVO.getAcctTransList().get(i).getAcctViewVO().getCode()+ "-" +cashBookVO.getAcctTransList().get(i).getAcctViewVO().getSubCode());
+				}
+				acctTransVO.setDesc(cashBookVO.getAcctTransList().get(i).getDesc());
+				acctTransVO.setType(lookupItemCBT.getCode());
+				acctTransVO.setTransDt(cashBookVO.getDtTrans());
+				acctTransVO.setSysPrefix(sysNumGenVO.getPrefixid());
+				acctTransVO.setSysCode(sysNumGenVO.getCode());
+				acctTransVO.setSysNo(bdNo);
+				acctTransVO.setSource("BD-" + cashBookVO.getSysNo() + "-" + bankAcctSearchVO.getName());
+				acctTransVO.setDestination(cashBookVO.getRemarks() + " Cust-" + cashBookVO.getPayee() + ((cashBookVO.getCustCode() == null) ? "" : " " + cashBookVO.getCustCode()));
+				
+				acctTransVO = AccountHelper.updateAcctTransTaxRelated(acctTransVO, cashBookVO.getAcctTransList().get(i));
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_ADD,acctTransVO);
+			}
+			
+			// rounding adjustment and gst account
+			AccountHelper.roundingAndTaxUpdate(cashBookVO.getAmountCalcViewVO(), acctTransVO1, false);
+		}
+		//System.out.println("############cashBookVO.getRefNo(): " + cashBookVO.getRefNo());
+		//depositDAO.addDeposit(invPmntAUDList, cashBookVO.getId().toString(), cashBookVO.getRefNo());
+		if (cashBookVO.getInvPymtList().size() > 0) {
+			for (InvoicePaymentVO vo : cashBookVO.getInvPymtList()) {
+				InvPmntCBLinkVO invPmntCBLinkVO = new InvPmntCBLinkVO();
+				invPmntCBLinkVO.setIdCompany(idCompany);
+				invPmntCBLinkVO.setIdInvoice(vo.getInvoiceId());
+				invPmntCBLinkVO.setInvoiceNo(vo.getInvoiceNo());
+				invPmntCBLinkVO.setIdInvPmnt(vo.getId());
+				invPmntCBLinkVO.setIdCashBook(cashBookVO.getId());
+				invPmntCBLinkVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				depositDAO.insert(invPmntCBLinkVO);
+			}
+		}
+		
+		// Update UUID to auto generate number code
+		SystemNumberGenerationVO bdSNGVO = getSNGVO(CommonConstant.SYS_NUM_CD_BANK_DEPS, idCompany);
+		Long bdCode = bdSNGVO.getNextnumber();
+		depositDAO.updateBankDepositCode(bdNo, Long.toString(bdCode));
+		cashBookVO.setSysNo(Long.toString(bdCode));
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#getAcctTransCashBook(java.lang.String, java.lang.String, java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public AcctTransViewVO getAcctTransCashBook(String sysNo, String transTypeCd, String sysCode, Long CompId) throws BusinessException {
+		return depositDAO.getAcctTransCashBook(sysNo, transTypeCd,sysCode,CompId);
+	}
+
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#getInvoicePaymentListByCashbook(java.lang.Long)
+	 */
+	@Override
+	public List<InvoicePaymentVO> getInvoicePaymentListByCashbook(Long idCashBook) throws BusinessException{
+		return depositDAO.getInvoicePaymentListByCashbook(idCashBook);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#getInvoicePaymentListNoCashbook(java.lang.Long)
+	 */
+	@Override
+	public List<InvoicePaymentVO> getInvoicePaymentListNoCashbook(Long CompId) throws BusinessException{
+		return depositDAO.getInvoicePaymentListNoCashbook(CompId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#getInvoicePaymentListNoCashbook(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@Override
+	public List<InvoicePaymentVO> getInvoicePaymentListNoCashbook(Long compId, SearchParamVO searchParamVO) throws BusinessException {
+		return depositDAO.getInvoicePaymentListNoCashbook(compId, searchParamVO);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#updateDeposit(com.bcs.zsg.common.vo.AddUpdDelVO, java.lang.String)
+	 */
+	@Override
+	public void updateDeposit(AddUpdDelVO invPmntAUDList,String cashBookId) throws BusinessException{
+		depositDAO.updateDeposit(invPmntAUDList,  cashBookId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#deleteDeposit(java.lang.String)
+	 */
+	@Override
+	public void deleteDeposit(String cashBookId, Long idCompany) throws BusinessException{
+		//depositDAO.deleteDeposit(cashBookId);
+		depositDAO.updateInvPmntCBLink(Long.valueOf(cashBookId), idCompany);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#getDepositListSize(java.util.Map)
+	 */
+	@Override
+	public int getDepositListSize(Map<String, Object> params) throws BusinessException {
+		return depositDAO.getDepositListSize(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#getDepositList(java.util.Map)
+	 */
+	@Override
+	public List<CashBookVO> getDepositList(Map<String, Object> params) throws BusinessException {
+		return depositDAO.getDepositList(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.DepositService#updateDeposit(com.bcs.zsg.bank.vo.CashBookVO, com.bcs.zsg.acct.vo.AcctTransViewVO, com.bcs.zsg.bank.vo.BankAcctVO)
+	 */
+	@Override
+	public void updateDeposit(CashBookVO cashBookVO, AcctTransViewVO acctTransCashBookVO, BankAcctVO bankAcctSearchVO, Long CompId) throws BusinessException {
+
+		SystemNumberGenerationVO sysGenCodeVO = sysNumGenDAO.getSystemNumberGeneration(cashBookVO.getSysCode(), bankAcctSearchVO.getIdCompany());
+		// update casch book
+		depositDAO.update(cashBookVO);
+		
+		bankAcctSearchVO = paymentDAO.getBankAcctSearchList(cashBookVO.getIdBank());
+		AcctViewVO acctViewVO = chargOfAcctDAO.getAcctViewVO(bankAcctSearchVO.getIdAcct());
+		
+		acctTransCashBookVO.setTransDt(cashBookVO.getDtTrans());
+		acctTransCashBookVO.setRefNo(cashBookVO.getRefNo());
+		acctTransCashBookVO.setCompanyId(bankAcctSearchVO.getIdCompany());
+		//acctTransCashBookVO.setAcctId(bankAcctSearchVO.getIdAcct());
+		acctTransCashBookVO.setAcctViewVO(acctViewVO);
+		acctTransCashBookVO.setDebit(cashBookVO.getDebit());
+		acctTransCashBookVO.setSource("BD-" + cashBookVO.getSysNo() + "-" + bankAcctSearchVO.getName());
+		acctTransCashBookVO.setDestination(cashBookVO.getRemarks() + " Cust-" + cashBookVO.getPayee() + ((cashBookVO.getCustCode() == null) ? "" : " " + cashBookVO.getCustCode()));
+		if (StringUtils.isEmpty(acctViewVO.getSubCode())) acctTransCashBookVO.setCode(acctViewVO.getCode());
+		else acctTransCashBookVO.setCode(acctViewVO.getCode() + "-" + acctViewVO.getSubCode());
+		if (StringUtils.isEmpty(acctViewVO.getSubDesc())) acctTransCashBookVO.setDesc(acctViewVO.getDesc());
+		else acctTransCashBookVO.setDesc(acctViewVO.getDesc() + "," + acctViewVO.getSubDesc());
+
+		accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD,acctTransCashBookVO);
+		
+		// get account trans list
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("companyId", acctTransCashBookVO.getCompanyId());
+		params.put("sysCode", acctTransCashBookVO.getSysCode());
+		params.put("sysNo", acctTransCashBookVO.getSysNo());
+		params.put("statusCode", BaseConstant.STATUS_ACTIVE);
+		params.put("type", "gnrl_deps");
+		List<AcctTransVO> acctTransList = accountService.getAccountTransList(params);
+		// add / update account trans
+		if (CollectionUtils.isNotEmpty(cashBookVO.getAcctTransList())) {
+			for (AcctTransViewVO vo : cashBookVO.getAcctTransList()) {
+				if (vo.getId() == null) {
+					vo.setAcctId(vo.getAcctViewVO().getId());
+					vo.setTransDt(cashBookVO.getDtTrans());
+					vo.setRefNo(cashBookVO.getRefNo());
+					vo.setSource("BD-" + cashBookVO.getSysNo() + "-" + bankAcctSearchVO.getName());
+					vo.setDestination(cashBookVO.getRemarks() + " Cust-" + cashBookVO.getPayee() + ((cashBookVO.getCustCode() == null) ? "" : " " + cashBookVO.getCustCode()));
+					/*if (vo.getCredit().doubleValue() < 0) {
+						vo.setDebit(-vo.getCredit());
+						vo.setCredit(0.0);
+					}*/
+					if (vo.getAmount() < 0) {
+						vo.setDebit(-vo.getAmount());
+						vo.setCredit(0.00);
+						
+					} else {
+						vo.setCredit(vo.getAmount());
+						vo.setDebit(0.00);
+					}
+					
+					vo.setCompanyId(bankAcctSearchVO.getIdCompany());
+					vo.setSysCode(sysGenCodeVO.getCode());
+					vo.setSysPrefix(cashBookVO.getSysPrefix());
+					vo.setSysNo(cashBookVO.getSysNo());
+					accountService.auditAcctTrans(CommonConstant.ACTION_CD_ADD,vo);
+					
+				} else {
+					if (CollectionUtils.isNotEmpty(acctTransList)) {
+						for (int i = acctTransList.size() - 1 ; i >= 0 ; i--) {
+							AcctTransVO vo1 = acctTransList.get(i);
+							
+							if (vo1.getId().longValue() == vo.getId().longValue()) {
+								vo1.setAcctId(vo.getAcctViewVO().getId());
+								vo1.setTransDt(cashBookVO.getDtTrans());
+								vo1.setRefNo(cashBookVO.getRefNo());
+								vo1.setSource("BD-" + cashBookVO.getSysNo() + "-" + bankAcctSearchVO.getName());
+								vo1.setDestination(cashBookVO.getRemarks() + " Cust-" + cashBookVO.getPayee() + ((cashBookVO.getCustCode() == null) ? "" : " " + cashBookVO.getCustCode()));
+								/*if (vo.getCredit().doubleValue() < 0) {
+									vo1.setDebit(-vo.getCredit());
+									vo1.setCredit(0.0);
+								}*/
+								if (vo.getAmount() < 0) {
+									vo1.setDebit(-vo.getAmount());
+									vo1.setCredit(0.00);
+									
+								} else {
+									vo1.setCredit(vo.getAmount());
+									vo1.setDebit(0.00);
+								}
+								vo1.setCode(vo.getCode());
+								vo1.setDesc(vo.getDesc());
+								
+								vo1 = AccountHelper.updateAcctTransTaxRelated(vo1, vo);
+								accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD,vo1);
+								acctTransList.remove(i);
+								break;
+							}
+						}
+					} else {
+						vo.setAcctId(vo.getAcctViewVO().getId());
+						vo.setTransDt(cashBookVO.getDtTrans());
+						vo.setRefNo(cashBookVO.getRefNo());
+						vo.setSource("BD-" + cashBookVO.getSysNo() + "-" + bankAcctSearchVO.getName());
+						vo.setDestination(cashBookVO.getRemarks() + " Cust-" + cashBookVO.getPayee() + ((cashBookVO.getCustCode() == null) ? "" : " " + cashBookVO.getCustCode()));
+						/*if (vo.getCredit().doubleValue() < 0) {
+							vo.setDebit(-vo.getCredit());
+							vo.setCredit(0.0);
+						}*/
+						if (vo.getAmount() < 0) {
+							vo.setDebit(-vo.getAmount());
+							vo.setCredit(0.00);
+							
+						} else {
+							vo.setCredit(vo.getAmount());
+							vo.setDebit(0.00);
+						}
+						accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD,vo);
+					}
+				}
+			}
+		}
+		
+		if (CollectionUtils.isNotEmpty(acctTransList)) {
+			for (AcctTransVO vo1 : acctTransList) {
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_DEL,vo1);
+			}
+		}
+		
+		// rounding adjustment and gst account
+		AccountHelper.roundingAndTaxUpdate(cashBookVO.getAmountCalcViewVO(), acctTransCashBookVO, false);
+		
+		// update invoice payment
+		//depositDAO.updateInvoicePmnt(cashBookVO);
+		updateInvoicePmnt(cashBookVO, CompId);
+	}
+	
+	@Override
+	public void updateInvoicePmnt(CashBookVO cashBookVO, Long CompId) throws BusinessException {
+		List<InvPmntCBLinkVO> invPmntCBLinkList = depositDAO.getInvPmntCBLinkList(cashBookVO.getId());
+		depositDAO.updateInvPmntCBLink(cashBookVO.getId(), CompId);
+		List<String> depositedDocs = new ArrayList<>();
+		String psPrefix = LookupItemUtils.getPsPrefix(CompId);
+		String invPrefix = LookupItemUtils.getInvPrefix(CompId);
+		boolean update = false;
+		for (InvoicePaymentVO pmnt : cashBookVO.getInvPymtList()) {
+		    if (depositDAO.existsInvPmntCBLink(pmnt.getId())) {
+		        if (pmnt.getInvoiceDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_INVC)) {
+		            depositedDocs.add(invPrefix + pmnt.getInvoiceNo());
+		        } else if (pmnt.getInvoiceDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_PAX_STMT)) {
+		            depositedDocs.add(psPrefix + pmnt.getInvoiceNo());
+		        }
+		    }
+		}
+
+		if (!depositedDocs.isEmpty()) {
+		    throw new BusinessException(CommonErrConstant.ERR_INVOICE_BILL_PAYMENTS_EXISTS, null, new String[]{ String.join(", ", depositedDocs) });
+		}
+
+		for (InvoicePaymentVO pmnt : cashBookVO.getInvPymtList()) {
+			update = false;
+		    for (InvPmntCBLinkVO link : invPmntCBLinkList) {
+		        if (pmnt.getId().equals(link.getIdInvPmnt())) {
+		            link.setStatusCode(BaseConstant.STATUS_ACTIVE);
+		            depositDAO.update(link);
+		            update = true;
+		            break;
+		        }
+		    }
+		    if (!update) {
+		        InvPmntCBLinkVO invPmntCBLinkVO = new InvPmntCBLinkVO();
+		        invPmntCBLinkVO.setIdCompany(CompId);
+		        invPmntCBLinkVO.setIdInvoice(pmnt.getInvoiceId());
+		        invPmntCBLinkVO.setInvoiceNo(pmnt.getInvoiceNo());
+		        invPmntCBLinkVO.setIdInvPmnt(pmnt.getId());
+		        invPmntCBLinkVO.setIdCashBook(cashBookVO.getId());
+		        invPmntCBLinkVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+		        depositDAO.insert(invPmntCBLinkVO);
+		    }
+		}
+	}
+	
+	public SystemNumberGenerationVO getSNGVO(String sysCd, Long companyId) throws BusinessException, QueueException {
+		// example to get system next number
+		SystemNumberGenerationVO vo = new SystemNumberGenerationVO();
+		vo.setCode(sysCd);
+		vo.setIdCompany(companyId);
+		vo = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(vo));
+		
+		return vo;
+	}
+
+	@Override
+	public void updateInvoicePaymentHideStatus(String paymentIDs, int hideStatus) throws BusinessException {
+		depositDAO.updateInvoicePaymentHideStatus(paymentIDs, hideStatus);
+	}
+
+	@Override
+	public void postToDeposit(List<InvoicePaymentVO> invPmntList, List<BankAcctViewVO> bankAcctViewList, CompanyVO companyVO) throws BusinessException, QueueException {
+		InvoicePaymentVO pmntVO = invPmntList.get(0);
+		
+		BankAcctVO bankAcctVO = new BankAcctVO();
+		for (BankAcctViewVO vo : bankAcctViewList) {
+			if (vo.getId().equals(pmntVO.getBankId())) {
+				bankAcctVO.setId(vo.getId());
+				bankAcctVO.setIdAcct(vo.getAcctViewVO().getId());
+				bankAcctVO.setName(vo.getName());
+				break;
+			}
+		}
+
+		AddUpdDelVO invPmntAUDList = new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>());
+		StringBuilder remarks = new StringBuilder();
+		double debit = 0;
+		for (InvoicePaymentVO vo : invPmntList) {
+			remarks.append(vo.getPmntFor()).append("\n");
+			debit += vo.getAmount();
+			invPmntAUDList.getAddList().add(vo);
+		}
+		
+		CashBookVO cashBookVO = new CashBookVO();
+		cashBookVO.setDtTrans(pmntVO.getPmntDt());
+		cashBookVO.setIdBank(pmntVO.getBankId());
+		cashBookVO.setRefNo(pmntVO.getRefNo());
+		cashBookVO.setIdCustomer(pmntVO.getCustId());
+		cashBookVO.setRemarks(remarks.toString().trim());
+		cashBookVO.setDebit(debit);
+		cashBookVO.setInvPymtList(invPmntList);
+		// set invoice payment
+		if (CollectionUtils.isNotEmpty(invPmntList)) {
+			StringBuilder sb = new StringBuilder();
+			for (InvoicePaymentVO vo : invPmntList) {
+//				sb.append(vo.getInvoiceNo()).append(",");
+				if (vo.getInvoiceDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_PAX_STMT)) {
+					sb.append(
+							LookupItemUtils.getSysNumGenVO(companyVO.getId(), CommonConstant.SYS_NUM_CD_PAX_STMT).getPrefixid() 
+							+ vo.getPsNo()
+					);
+				} else {
+					sb.append(
+							LookupItemUtils.getSysNumGenVO(companyVO.getId(), CommonConstant.SYS_NUM_CD_INVC).getPrefixid() 
+							+ vo.getInvoiceNo()
+					);
+				}
+				sb.append(",");
+			}
+			cashBookVO.setInvoices(sb.substring(0, sb.length() - 1));
+		} else cashBookVO.setInvoices(null);
+
+		AcctVO acctVO = accountService.getAcctVO(bankAcctVO.getIdAcct());
+		AcctVO saleAcctVO = accountService.getAcctVO(companyVO.getIdAcctSales());
+		
+		AcctViewVO acctViewVO = new AcctViewVO();
+		acctViewVO.setId(saleAcctVO.getId());
+		acctViewVO.setCode(saleAcctVO.getCode());
+		acctViewVO.setSubCode(saleAcctVO.getSubCode());
+		acctViewVO.setDesc(saleAcctVO.getDesc());
+		acctViewVO.setSubDesc(saleAcctVO.getSubDesc());
+		
+		AcctTransViewVO transVO = new AcctTransViewVO();
+		transVO.setAcctId(saleAcctVO.getId());
+		transVO.setCode(saleAcctVO.getCode());
+		transVO.setDesc(saleAcctVO.getDesc());
+		transVO.setTaxCode(saleAcctVO.getTaxCode());
+		transVO.setTaxRate(saleAcctVO.getTaxRate());
+		transVO.setAcctViewVO(acctViewVO);
+		transVO.setAmount(debit);
+		cashBookVO.setAcctTransList(new ArrayList<AcctTransViewVO>());
+		cashBookVO.getAcctTransList().add(transVO);
+		
+		CustDetailsVO vo = invoiceService.getCustDetails(pmntVO.getCustId());
+		if (vo.getCustType().equals("P")) {
+			cashBookVO.setPayee(vo.getContPersonName());
+			
+		} else if (vo.getCustType().equals("C")) {
+			cashBookVO.setPayee(vo.getCompanyName());
+		}
+		
+		cashBookVO.setIdCustomer(vo.getCustId());
+		cashBookVO.setCustCode(vo.getCode());
+		
+		AmountCalcViewVO amtCalcViewVO = new AmountCalcViewVO();
+		amtCalcViewVO.setIdTaxAcct(companyVO.getIdAcctGST());
+		amtCalcViewVO.setIdTaxNonClaimableAcct(companyVO.getIdAcctNonClaimableGST());
+		amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, false, cashBookVO.getAcctTransList(), null, false);
+		cashBookVO.setAmountCalcViewVO(amtCalcViewVO);
+		
+		LookupItemVO lookupItemBT = paymentService.getlookupItemBT("cash_deps");
+		LookupItemVO lookupItemCBT = paymentService.getlookupItemBT("gnrl_deps");
+		
+		addDeposit(cashBookVO, companyVO.getId(), null, null, bankAcctVO, lookupItemBT, lookupItemCBT, acctVO, invPmntAUDList);
+	}
+}

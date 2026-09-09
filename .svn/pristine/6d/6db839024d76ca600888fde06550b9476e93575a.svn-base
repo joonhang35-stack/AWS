@@ -1,0 +1,135 @@
+package com.bcs.zsg.bank.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import com.bcs.zsg.acct.vo.AcctTransViewVO;
+import com.bcs.zsg.bank.vo.CashBookVO;
+import com.bcs.zsg.bank.vo.InvPmntCBLinkVO;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.sales.vo.InvoicePaymentVO;
+
+public interface DepositDAO extends BaseDAO {
+
+	/**
+	 * 
+	 * @param sysNo
+	 * @param transTypeCd
+	 * @param sysCode
+	 * @param compId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public AcctTransViewVO getAcctTransCashBook(String sysNo, String transTypeCd, String sysCode, Long compId) throws BusinessException;
+
+	
+	/**
+	 * 
+	 * @param idCashBook
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoicePaymentVO> getInvoicePaymentListByCashbook(Long idCashBook) throws BusinessException;
+
+	/**
+	 * 
+	 * @param CompId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoicePaymentVO> getInvoicePaymentListNoCashbook(Long CompId) throws BusinessException;
+
+	/**
+	 * 
+	 * @param compId
+	 * @param searchParamVO
+	 * @return
+	 */
+	public List<InvoicePaymentVO> getInvoicePaymentListNoCashbook(Long compId, SearchParamVO searchParamVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param invPmntAUDList
+	 * @param cashBookId
+	 * @throws BusinessException
+	 */
+	public void addDeposit(AddUpdDelVO invPmntAUDList,String cashBookId, String refNo) throws BusinessException ;
+
+	/**
+	 * 
+	 * @param invPmntAUDList
+	 * @param cashBookId
+	 * @throws BusinessException
+	 */
+	public void updateDeposit( AddUpdDelVO invPmntAUDList,String cashBookId) throws BusinessException;
+
+	/**
+	 * 
+	 * @param cashBookId
+	 * @throws BusinessException
+	 */
+	public void deleteDeposit( String cashBookId) throws BusinessException;
+
+	/**
+	 * 
+	 * @param params
+	 * @return
+	 * @throws BusinessException
+	 */
+	public int getDepositListSize(Map<String, Object> params) throws BusinessException;
+
+	/**
+	 * 
+	 * @param params
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CashBookVO> getDepositList(Map<String, Object> params) throws BusinessException;
+
+	/**
+	 * 
+	 * @param cashBookVO
+	 * @throws BusinessException
+	 */
+	public void updateInvoicePmnt(CashBookVO cashBookVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idCashBook
+	 * @throws BusinessException
+	 */
+	public List<InvPmntCBLinkVO> getInvPmntCBLinkList(Long idCashBook) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idCashBook
+	 * @param CompId
+	 * @throws BusinessException
+	 */
+	public void updateInvPmntCBLink(Long idCashBook, Long CompId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param uuid
+	 * @param code
+	 * @throws BusinessException
+	 */
+	public void updateBankDepositCode(String uuid, String code) throws BusinessException;
+
+	/**
+	 * 
+	 * @param paymentIDs
+	 * @param hideStatus 
+	 * @throws BusinessException
+	 */
+	public void updateInvoicePaymentHideStatus(String paymentIDs, int hideStatus) throws BusinessException;
+
+
+	public InvPmntCBLinkVO getInvPmntCBLinkByIdInvPmnt(Long idInvPmnt);
+
+
+	public boolean existsInvPmntCBLink(Long idInvPmnt);
+}

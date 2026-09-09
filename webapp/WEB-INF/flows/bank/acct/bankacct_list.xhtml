@@ -1,0 +1,191 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<script type="text/javascript">
+	document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+</script>
+<p:panel header="Bank Accounts" toggleable="true" toggleSpeed="500">
+	<h:form id="idBankForm">
+		<h:panelGrid columns="3" style="width:1px;">
+			<p:commandButton id="idAddBankButton" value="Add"  oncomplete="varAddBankDialog.show()" immediate="true" update=":idAddBankDialog"/>
+		</h:panelGrid>
+		
+		<p:dataTable id="idBankList" value="#{bankAcctBean.bankAcctViewList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="20, 30, 50" filterEvent="enter">
+			
+			<p:columnGroup type="header">
+				<p:row>
+					<p:column rowspan="2" headerText="Edit" style="width:50px"/>
+					<p:column rowspan="2" headerText="Delete" style="width:50px"/>
+					<p:column rowspan="2" headerText="Sequence" style="width:50px"/>
+					<p:column rowspan="2" headerText="Account No." style="width:100px" sortBy="#{vo.acctNo}" filterBy="#{vo.acctNo}" filterMatchMode="contains"/>
+					<p:column rowspan="2" headerText="Bank Name" sortBy="#{vo.name}" filterBy="#{vo.name}" filterMatchMode="contains"/>
+					<p:column rowspan="2" headerText="GL Cash Account" style="width:100px" sortBy="#{vo.acctViewVO.code}" filterBy="#{vo.acctViewVO.code}" filterMatchMode="contains"/>
+					<p:column colspan="2" headerText="Current Balance"/>
+				</p:row>
+				<p:row>
+					<p:column style="width:150px" headerText="Debit" sortBy="#{bankAcctBean.getCurrentBalance(vo.acctViewVO.acctBalSet, 'debit')}"/>
+					<p:column style="width:150px" headerText="Credit" sortBy="#{bankAcctBean.getCurrentBalance(vo.acctViewVO.acctBalSet, 'credit')}"/>
+				</p:row>
+			</p:columnGroup>
+			
+			<p:column styleClass="txt_center">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{bankAcctBean.handleBankOnClicked(vo)}" oncomplete="varEditBankDialog.show()" update=":idEditBankDialog"/>
+			</p:column>
+			<p:column styleClass="txt_center">
+				<p:commandButton icon="ui-icon-close" actionListener="#{bankAcctBean.handleBankOnClicked(vo)}" oncomplete="varDelBankDialog.show()"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{vo.seqNo}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{vo.acctNo}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{vo.name}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{vo.acctViewVO.code}" rendered="#{empty vo.acctViewVO.subCode}"/>
+				<h:outputText value="#{vo.acctViewVO.code}-#{vo.acctViewVO.subCode}" rendered="#{not empty vo.acctViewVO.subCode}"/>
+			</p:column>
+			<p:column>
+				<!--h:outputText value="#{bankAcctBean.getCurrentBalance(vo.acctViewVO.acctBalSet, 'debit')}"-->
+				<h:outputText value="#{vo.currentBal}" rendered="#{vo.currentBal ge 0}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+				<h:outputText value="0.00" rendered="#{vo.currentBal lt 0}"/>
+			</p:column>
+			<p:column>
+				<!--h:outputText value="#{bankAcctBean.getCurrentBalance(vo.acctViewVO.acctBalSet, 'credit')}"-->
+				<h:outputText value="#{-vo.currentBal}" rendered="#{vo.currentBal lt 0}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+				<h:outputText value="0.00" rendered="#{vo.currentBal ge 0}"/>
+			</p:column>
+		</p:dataTable>
+		
+		<h:panelGrid columns="3" style="width:1px;">
+			<p:commandButton value="Add" oncomplete="varAddBankDialog.show()" update=":idAddBankDialog" immediate="true"/>
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - ADD BANK
+-->
+<p:dialog id="idAddBankDialog" widgetVar="varAddBankDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Bank Account"/>
+	</f:facet>
+	
+	<h:form id="idAddBankForm">
+		<ui:include src="add_bank.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - EDIT BANK
+-->
+<p:dialog id="idEditBankDialog" widgetVar="varEditBankDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Bank Account"/>
+	</f:facet>
+	
+	<h:form id="idEditBankForm">
+		<ui:include src="add_bank.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - DELETE BANK
+-->
+<p:confirmDialog widgetVar="varDelBankDialog" header="Delete Bank" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{bankAcctBean.delBank}" update="@form,:idBankForm:idBankList" oncomplete="varDelBankDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{bankAcctBean.resetForm}" oncomplete="varDelBankDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - ADD BANK CONTACT
+-->
+<p:dialog id="idAddContactDialog" widgetVar="varAddContactDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Bank Contact" />
+	</f:facet>
+	
+	<h:form id="idAddContactForm">
+		<ui:include src="add_bank_contact.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - EDIT BANK CONTACT
+-->
+<p:dialog id="idEditContactDialog" widgetVar="varEditContactDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Bank Contact" />
+	</f:facet>
+	
+	<h:form id="idEditContactForm">
+		<ui:include src="add_bank_contact.xhtml" />
+	</h:form>
+</p:dialog>
+	
+<!--
+	DIALOG - DELETE BANK CONTACT  
+-->
+<p:confirmDialog widgetVar="varDelContactDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{bankAcctBean.delContact}" update="@form,:idAddBankForm:idContactList,:idEditBankForm:idContactList" oncomplete="varDelContactDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{bankAcctBean.resetContactForm}" oncomplete="varDelContactDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - ACCOUNT LIST
+-->
+<p:dialog id="idAcctListDialog" widgetVar="varAcctListDialog" header="Account List" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form>
+		<p:dataTable value="#{bankAcctBean.acctViewList}" var="vo" paginator="true" rows="10" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="5, 10, 15" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+			<p:ajax event="rowSelect" listener="#{bankAcctBean.handleRowSelect}" update=":idAddBankForm:idGLPart,:idEditBankForm:idGLPart" oncomplete="varAcctListDialog.hide()"/>
+			
+			<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}#{not empty vo.subCode ? vo.subCode : ''}" filterMatchMode="contains">
+				<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+				<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+			</p:column>
+			<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc} #{not empty vo.subDesc ? vo.subDesc : ''}" filterMatchMode="contains">
+				<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+				<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+			</p:column>
+		</p:dataTable>
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varAcctListDialog.hide()"/>
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+</ui:define>
+</ui:composition>

@@ -1,0 +1,118 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<script type="text/javascript">
+	function onAddCustValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddCustDialog.hide();
+		}
+	}
+</script>
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:120px;"><h:outputLabel>Salutation</h:outputLabel></p:column>
+		<p:column style="width:220px;">
+			<h:selectOneMenu value="#{salesBean.customerVO.personVO.salutation}" effect="fade">
+				<f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Customer Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idLastName" label="Surname" value="#{salesBean.customerVO.personVO.lastName}" required="true"/>
+			<p:watermark for="idLastName" value="Surname" />
+		</p:column>
+		<p:column>
+			<p:inputText id="idGivenName" label="Given Name" value="#{salesBean.customerVO.personVO.givenName}" required="true"/>
+			<p:watermark for="idGivenName" value="Given Name" />
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>NickName</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idNickName" label="NickName" value="#{salesBean.customerVO.personVO.nickName}"/>
+			<p:watermark for="idNickName" value="NickName" />
+		</p:column>
+	</p:row>
+	<p:row>
+	    <p:column><h:outputLabel>Contact <span class="required">*</span></h:outputLabel></p:column>
+	    <p:column style="vertical-align: top" styleClass="phone-row">
+	
+	        <!-- Mobile No. -->
+	        <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+	            <p:selectOneMenu id="idMobileCountry" value="#{salesBean.personContactVO.perMobileCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+	                <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+	                <f:selectItems value="#{custBean.countryList}" var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+	            </p:selectOneMenu>
+	            <h:outputLabel> - </h:outputLabel>
+	            <p:inputText id="idNumber" label="Mobile No." value="#{salesBean.personContactVO.number}" required="true" maxlength="14" size="17" onkeypress="return rtnPhoneNo(event);"
+	                validatorMessage="Contact number must contain only digits.">
+	                <p:watermark for="idNumber" value="Mobile No. (required)"/>
+	                <f:validateLength maximum="14"/>
+	                <f:validateRegex pattern="^[0-9]+$" />
+	            </p:inputText>
+	        </div>
+	
+	        <!-- Fax No. -->
+	        <div style="display:flex; align-items:center; gap:6px;">
+	            <p:selectOneMenu id="idFaxCountry" value="#{salesBean.personContactVO.perFaxCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+	                <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+	                <f:selectItems value="#{custBean.countryList}" var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+	            </p:selectOneMenu>
+	            <h:outputLabel> - </h:outputLabel>
+	            <p:inputText id="idFaxNumber" label="Fax No." value="#{salesBean.personContactVO.faxNum}" maxlength="14" size="17" onkeypress="return rtnPhoneNo(event);"
+	                validatorMessage="Contact number must contain only digits.">
+	                <p:watermark for="idFaxNumber" value="Fax No. (optional)"/>
+	                <f:validateLength maximum="14"/>
+	                <f:validateRegex pattern="^[0-9]+$" />
+	            </p:inputText>
+	        </div>
+	
+	    </p:column>
+	</p:row>
+</p:panelGrid>
+
+<p:panelGrid id="idIdDetail">
+	<p:row>
+		<p:column style="width:120px;"><h:outputLabel>Identity</h:outputLabel></p:column>
+		<p:column style="width:220px;">
+			<h:selectOneMenu id="idIdType" label="ID Type" value="#{salesBean.identityVO.idType}" effect="fade" style="width:150px;">
+            	<f:selectItems value="#{bterp:lookupItemList('id_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+            	<p:ajax event="change" update="idIdDetail"/>
+        	</h:selectOneMenu>
+		</p:column>
+		<p:column>
+			<p:inputMask id="idID1" label="ID No." value="#{salesBean.identityVO.idNo}" mask="999999-99-9999" rendered="#{salesBean.identityVO.idType == 'nric' or salesBean.identityVO.idType == null}"/>
+			<p:inputText id="idID2" label="ID No." value="#{salesBean.identityVO.idNo}" onkeypress="return rtnAlphaNumeric(event);" rendered="#{salesBean.identityVO.idType != 'nric' and salesBean.identityVO.idType != null}"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:120px;"><h:outputLabel>Email</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idEmail" label="Email" value="#{salesBean.customerVO.personVO.email}">
+				<pe:keyFilter regEx="/[a-z0-9_\.\-@]/i"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{salesBean.addCustomer}" update="@form,:idAddInvoiceForm:idCustDetails" oncomplete="onAddCustValidation(xhr, status, args)"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetForm}" update="@form" process="@this" oncomplete="varAddCustDialog.hide()">
+		<pe:resetEditableValues for="idAddCustForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

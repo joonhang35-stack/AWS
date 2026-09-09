@@ -1,0 +1,622 @@
+package com.bcs.zsg.maintenance.web.bean;
+
+import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+
+import org.apache.commons.lang.StringUtils;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.CollectionUtils;
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.maintenance.bo.CustomerProfileUpdateBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.vo.CompanyContactVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.CustomerProfileUpdateVO;
+import com.bcs.zsg.sales.bo.CustomerBO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+
+import net.sf.jasperreports.engine.JasperPrint;
+
+public class CustomerDataExportBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+	
+	@Autowired
+	protected transient RegionBO regionBO;
+	@Autowired
+	protected transient CustomerBO customerBO;
+	@Autowired
+	private transient CorporateProfileBO corporateProfileBO;
+	@Autowired
+	private transient CustomerProfileUpdateBO customerProfileUpdateBO;
+	
+	private LazyDataModel<CustomerVO> lazyCustDataModel;
+	
+	protected TrackingLogUtils trackingLogUtils;
+	
+	private List<CustomerVO> selectedCustList;
+	private List<String> columnList;
+	private List<CustomerProfileUpdateVO> customerProfileUpdateList;
+	private List<String> unableSentEmailCustList;
+
+	@Override
+	public void resetForm() {
+		selectedCustList = new ArrayList<CustomerVO>();
+		customerProfileUpdateList = new ArrayList<CustomerProfileUpdateVO>();
+		unableSentEmailCustList = new ArrayList<String>();
+	}
+	
+	public void init() {
+		try {
+			searchParamVO = new SearchParamVO();
+			searchParamVO.setObj1("XLS");
+			searchParamVO.setObj2("");
+			
+			trackingLogUtils = new TrackingLogUtils(this.getClass());
+			
+			loadCustomer();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public String getIdentityStr(String s) {
+		return LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_ID_TYPE, s.substring(0, s.indexOf("|"))) + ": " + s.substring(s.indexOf("|") + 1);
+	}
+	
+	public String getContactStr(String s) {
+		return LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, s.substring(0, s.indexOf("|"))) + ": " + s.substring(s.indexOf("|") + 1);
+	}
+	
+	public String getContactStrWithCountryPair(String contact, String countryCodes) {
+	    if (StringUtils.isNotBlank(contact)) {
+	        int idx = contact.indexOf("|");
+	        if (idx == -1) return contact;
+	        
+	        String contactType = contact.substring(0, idx);
+	        String contactNumber = contact.substring(idx + 1);
+	        String countryCode = "";
+	        
+	        if (StringUtils.isNotBlank(countryCodes)) {
+	            String[] countryArray = countryCodes.split(",");
+	            for (String countryCodeItem : countryArray) {
+	                if (StringUtils.isNotBlank(countryCodeItem)) {
+	                    int idxCountryCode = countryCodeItem.indexOf("|");
+	                    if (idxCountryCode != -1 && contactType.equals(countryCodeItem.substring(0, idxCountryCode))) {
+	                        countryCode = countryCodeItem.substring(idxCountryCode + 1);
+	                        break; 
+	                    }
+	                }
+	            }
+	        }
+	        String phoneNumber = FunctionUtils.phoneNumber(countryCode, contactNumber);
+	        
+	        return LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, contactType) 
+	            + ": " + phoneNumber;
+	    }
+	    return contact;
+	}
+	
+	/**
+	 * Load customer list
+	 * @throws BusinessException
+	 */
+	private void loadCustomer() throws BusinessException {
+		resetForm();
+		lazyCustDataModel = new LazyCustomerDataModel();
+	}
+	
+	/**
+	 * Printing Customer Listing Report
+	 */
+	public void printCustomerListing() {
+		try {
+			trackingLogUtils.startLogs();
+			
+			String xlsOrCsv = (String) searchParamVO.getObj1();
+			
+			if (searchParamVO.getFromDate() == null && searchParamVO.getToDate() == null) {
+				if (selectedCustList.size() == 0) throw new BusinessException("ERR_NO_RECORD_SELECTED");
+			}
+			
+			HashMap<String, Object> map = reportTitle();
+			
+			if (searchParamVO.getFromDate() == null && searchParamVO.getToDate() == null) {
+				StringBuilder custIDs = new StringBuilder();
+				for (CustomerVO vo : selectedCustList) {
+					if (custIDs.length() > 0) custIDs.append(",").append(vo.getId());
+					else custIDs.append(vo.getId());
+				}
+				
+				// select customer
+				searchParamVO.setObj7(custIDs.toString());
+			}
+
+			List<CustomerVO> list = (List<CustomerVO>) customerBO.getCustomerList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			map.put("eplList", list);
+			getShowColumns(map, columnList, searchParamVO.getObj2() == null ? "" : searchParamVO.getObj2().toString());
+			
+			if (CollectionUtils.isEmpty(list)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_CUST_DATA_EXPORT;
+			String reportName = CommonConstant.PDF_RPT_CUST_DATA_EXPORT;
+			
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(list, map, jasperFileName);
+			if (xlsOrCsv.equals("CSV")) {
+				List<Map<String, String>> customerMap = new ArrayList<>();
+				customerMap = getCustomerMap(list, map, (String) searchParamVO.getObj2());
+				ReportUtils.printReportCSV(customerMap, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie("cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printCustomerListing");
+		}
+	}
+	
+	/**
+	 * Prepare Report Title
+	 */
+	public HashMap<String, Object> reportTitle() {
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		try {
+			CompanyVO companyVO = new CompanyVO();
+			companyVO = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+
+			StringBuilder address = new StringBuilder();
+			map.put("companyName", companyVO.getName());
+			map.put("slogan", companyVO.getSlogan());
+
+			if (!companyVO.getCompanyAddressVO().getAddress1().equals(""))
+				address.append(companyVO.getCompanyAddressVO().getAddress1())
+						.append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress2().equals(""))
+				address.append(companyVO.getCompanyAddressVO().getAddress2())
+						.append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress3().equals(""))
+				address.append(companyVO.getCompanyAddressVO().getAddress3())
+						.append(" ");
+			if (!companyVO.getCompanyAddressVO().getCity().equals(""))
+				address.append(companyVO.getCompanyAddressVO().getCity())
+						.append(" ");
+			if (!companyVO.getCompanyAddressVO().getState().equals(""))
+				address.append(companyVO.getCompanyAddressVO().getState())
+						.append(" ");
+			if (!companyVO.getCompanyAddressVO().getPostcode().equals(""))
+				address.append(companyVO.getCompanyAddressVO().getPostcode())
+						.append(" ");
+			String companyName = regionBO.getCountryById(
+					companyVO.getCompanyAddressVO().getCountryid())
+					.getCountry();
+			if (!companyName.equals(""))
+				address.append(companyName);
+			map.put("address", address);
+
+			String contact = "";
+			for (CompanyContactVO vo : companyVO.getCompanyContactList()) {
+				contact += LookupItemUtils.getLookupItemDesc(
+						CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE,
+						vo.getTypecodecontact())
+						+ ": " + vo.getNumber() + "  ";
+			}
+			if (!contact.equals(""))
+				contact = "Tel: " + contact;
+			map.put("contact", contact);
+
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return map;
+	}
+	
+	public void getShowColumns(HashMap<String, Object> map, List<String> columnList, String type) {
+		map.put("Nickname", false);
+		map.put("TIN", false);
+		map.put("Gender", false);
+		map.put("Nationality", false);
+		map.put("Identity", false);
+		map.put("DOB", false);
+		map.put("Age", false);
+		map.put("Spokenlanguage", false);
+		map.put("Mealscode", false);
+		map.put("Contact", false);
+		map.put("Email", false);
+		map.put("Class", false);
+		map.put("Complication", false);
+		map.put("Billingaddress", false);
+		map.put("Mailingaddress", false);
+		map.put("Remarks", false);
+		map.put("Companyname", false);
+		map.put("Registrationno", false);
+		map.put("GSTregistrationno", false);
+		
+		for (String str : columnList) {
+			if ("Nickname".equals(str)) map.put("Nickname", true);
+			if ("TIN".equals(str)) map.put("TIN", true);
+			if ("Gender".equals(str)) map.put("Gender", true);
+			if ("Nationality".equals(str)) map.put("Nationality", true);
+			if ("Contact".equals(str)) map.put("Contact", true);
+			if ("Email".equals(str)) map.put("Email", true);
+			if ("Class".equals(str)) map.put("Class", true);
+			if ("Billingaddress".equals(str)) map.put("Billingaddress", true);
+			if ("Mailingaddress".equals(str)) map.put("Mailingaddress", true);
+			if ("Remarks".equals(str)) map.put("Remarks", true);
+			
+			if ("P".equals(type)) {
+				if ("DOB".equals(str)) map.put("DOB", true);
+				if ("Age".equals(str)) map.put("Age", true);
+				if ("Spokenlanguage".equals(str)) map.put("Spokenlanguage", true);
+				if ("Mealscode".equals(str)) map.put("Mealscode", true);
+				if ("Complication".equals(str)) map.put("Complication", true);
+				if ("Identity".equals(str)) map.put("Identity", true);
+			} else if ("C".equals(type)) {
+				if ("Companyname".equals(str)) map.put("Companyname", true);
+				if ("Registrationno".equals(str)) map.put("Registrationno", true);
+				if ("GSTregistrationno".equals(str)) map.put("GSTregistrationno", true);
+			} else {
+				if ("DOB".equals(str)) map.put("DOB", true);
+				if ("Age".equals(str)) map.put("Age", true);
+				if ("Spokenlanguage".equals(str)) map.put("Spokenlanguage", true);
+				if ("Mealscode".equals(str)) map.put("Mealscode", true);
+				if ("Complication".equals(str)) map.put("Complication", true);
+				if ("Identity".equals(str)) map.put("Identity", true);
+				if ("Companyname".equals(str)) map.put("Companyname", true);
+				if ("Registrationno".equals(str)) map.put("Registrationno", true);
+				if ("GSTregistrationno".equals(str)) map.put("GSTregistrationno", true);
+			}
+		}
+	}
+	
+
+	public List<Map<String, String>> getCustomerMap(List<CustomerVO> custMap, HashMap<String, Object> columns, String type) {
+		List<Map<String, String>> custList = new ArrayList<>();
+		Map<String, String> map = new HashMap<>();
+		SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yy");
+
+		if ("P".equals(type)) {
+			map.put("A", "Customer No");
+			map.put("B", "Customer Name");
+			if ((boolean) columns.get("Nickname")) map.put("C", "Nickname");
+			if ((boolean) columns.get("TIN")) map.put("D", "TIN");
+			if ((boolean) columns.get("Gender")) map.put("E", "Gender");
+			if ((boolean) columns.get("Nationality")) map.put("F", "Nationality");
+			if ((boolean) columns.get("Identity")) map.put("G", "Identity");
+			if ((boolean) columns.get("DOB")) map.put("H", "DOB");
+			if ((boolean) columns.get("Age")) map.put("I", "Age");
+			if ((boolean) columns.get("Spokenlanguage")) map.put("J", "Spoken language");
+			if ((boolean) columns.get("Mealscode")) map.put("k", "Meals code");
+			if ((boolean) columns.get("Contact")) map.put("L", "Contact");
+			if ((boolean) columns.get("Email")) map.put("M", "Email");
+			if ((boolean) columns.get("Class")) map.put("N", "Class");
+			if ((boolean) columns.get("Complication")) map.put("O", "Complication");
+			if ((boolean) columns.get("Billingaddress")) map.put("P", "Billing Address");
+			if ((boolean) columns.get("Mailingaddress")) map.put("Q", "Mailing Address");
+			if ((boolean) columns.get("Remarks")) map.put("R", "Remarks");
+		} else if ("C".equals(type)) {
+			map.put("A", "Customer No");
+			map.put("B", "Company Name");
+			if ((boolean) columns.get("Registrationno")) map.put("C", "Registration");
+			if ((boolean) columns.get("GSTregistrationno")) map.put("D", "GST Registration");
+			map.put("E", "Customer Name");
+			if ((boolean) columns.get("Nickname")) map.put("F", "Nickname");
+			if ((boolean) columns.get("TIN")) map.put("G", "TIN");
+			if ((boolean) columns.get("Gender")) map.put("H", "Gender");
+			if ((boolean) columns.get("Nationality")) map.put("I", "Nationality");
+			if ((boolean) columns.get("Contact")) map.put("J", "Contact");
+			if ((boolean) columns.get("Email")) map.put("K", "Email");
+			if ((boolean) columns.get("Class")) map.put("L", "Class");
+			if ((boolean) columns.get("Billingaddress")) map.put("M", "Billing Address");
+			if ((boolean) columns.get("Mailingaddress")) map.put("N", "Mailing Address");
+			if ((boolean) columns.get("Remarks")) map.put("O", "Remarks");
+		} else {
+			map.put("A", "Customer No");
+			map.put("B", "Company Name");
+			if ((boolean) columns.get("Registrationno")) map.put("C", "Registration");
+		    if ((boolean) columns.get("GSTregistrationno")) map.put("D", "GST Registration");
+		    map.put("E", "Customer Name");
+		    if ((boolean) columns.get("Nickname")) map.put("F", "Nickname");
+		    if ((boolean) columns.get("TIN")) map.put("G", "TIN");
+		    if ((boolean) columns.get("Gender")) map.put("H", "Gender");
+		    if ((boolean) columns.get("Nationality")) map.put("I", "Nationality");
+			if ((boolean) columns.get("Identity")) map.put("J", "Identity");
+		    if ((boolean) columns.get("DOB")) map.put("K", "DOB");
+		    if ((boolean) columns.get("Age")) map.put("L", "Age");
+		    if ((boolean) columns.get("Spokenlanguage")) map.put("M", "Spoken language");
+		    if ((boolean) columns.get("Mealscode")) map.put("N", "Meals code");
+		    if ((boolean) columns.get("Contact")) map.put("O", "Contact");
+		    if ((boolean) columns.get("Email")) map.put("P", "Email");
+		    if ((boolean) columns.get("Class")) map.put("Q", "Class");
+		    if ((boolean) columns.get("Complication")) map.put("R", "Complication");
+		    if ((boolean) columns.get("Billingaddress")) map.put("S", "Billing Address");
+		    if ((boolean) columns.get("Mailingaddress")) map.put("T", "Mailing Address");
+		    if ((boolean) columns.get("Remarks")) map.put("U", "Remarks");
+		}
+		custList.add(map);
+
+		for (CustomerVO vo : custMap) {
+			map = new HashMap<>();
+			if ("P".equals(type)) {
+				map.put("A", escapeSpecialCharacters(vo.getCode()));
+				map.put("B", escapeSpecialCharacters(vo.getCustName()));
+				if ((boolean) columns.get("Nickname")) map.put("C", escapeSpecialCharacters(vo.getNickName()));
+				if ((boolean) columns.get("TIN")) map.put("D", escapeSpecialCharacters(vo.getTaxIdNo()));
+				if ((boolean) columns.get("Gender")) map.put("E", escapeSpecialCharacters(vo.getSexCd()));
+				if ((boolean) columns.get("Nationality")) map.put("F", escapeSpecialCharacters(vo.getNationality()));
+				if ((boolean) columns.get("Identity")) map.put("G", escapeSpecialCharacters(vo.getIdentities()));
+				if ((boolean) columns.get("DOB")) {
+					if (vo.getDtDOB() != null) {
+						map.put("H", "");
+					} else {
+						map.put("H", escapeSpecialCharacters(sdf.format(vo.getDtDOB())));
+					}
+				}
+				if ((boolean) columns.get("Age")) map.put("I", escapeSpecialCharacters(vo.getAge()));
+				if ((boolean) columns.get("Spokenlanguage")) map.put("J", escapeSpecialCharacters(vo.getLanguageName()));
+				if ((boolean) columns.get("Mealscode")) map.put("K", escapeSpecialCharacters(vo.getMealName()));
+				if ((boolean) columns.get("Contact")) map.put("L", escapeSpecialCharacters(vo.getPerContacts()));
+				if ((boolean) columns.get("Email")) map.put("M", escapeSpecialCharacters(vo.getEmail()));
+				if ((boolean) columns.get("Class")) map.put("N", escapeSpecialCharacters(vo.getClassName()));
+				if ((boolean) columns.get("Complication")) map.put("O", escapeSpecialCharacters(vo.getComplicationName()));
+				if ((boolean) columns.get("Billingaddress")) map.put("P", escapeSpecialCharacters(vo.getPerAddress()));
+				if ((boolean) columns.get("Mailingaddress")) map.put("Q", escapeSpecialCharacters(vo.getPerAddress2()));
+				if ((boolean) columns.get("Remarks")) map.put("R", escapeSpecialCharacters(vo.getRemarks()));
+			} else if ("C".equals(type)) {
+				map.put("A", escapeSpecialCharacters(vo.getCode()));
+				map.put("B", escapeSpecialCharacters(vo.getCorporate()));
+				if ((boolean) columns.get("Registrationno")) map.put("C", escapeSpecialCharacters(vo.getRegNo()));
+				if ((boolean) columns.get("GSTregistrationno")) map.put("D", escapeSpecialCharacters(vo.getGstRegNo()));
+				map.put("E", escapeSpecialCharacters(vo.getCustName()));
+				if ((boolean) columns.get("Nickname")) map.put("F", escapeSpecialCharacters(vo.getNickName()));
+				if ((boolean) columns.get("TIN")) map.put("G", escapeSpecialCharacters(vo.getTaxIdNo()));
+				if ((boolean) columns.get("Gender")) map.put("H", escapeSpecialCharacters(vo.getSexCd()));
+				if ((boolean) columns.get("Nationality")) map.put("I", escapeSpecialCharacters(vo.getNationality()));
+				if ((boolean) columns.get("Contact")) map.put("J", escapeSpecialCharacters(vo.getCorContacts()));
+				if ((boolean) columns.get("Email")) map.put("K", escapeSpecialCharacters(vo.getEmail()));
+				if ((boolean) columns.get("Class")) map.put("L", escapeSpecialCharacters(vo.getClassName()));
+				if ((boolean) columns.get("Billingaddress")) map.put("M", escapeSpecialCharacters(vo.getCorAddress()));
+				if ((boolean) columns.get("Mailingaddress")) map.put("N", escapeSpecialCharacters(vo.getCorAddress2()));
+				if ((boolean) columns.get("Remarks")) map.put("O", escapeSpecialCharacters(vo.getRemarks()));
+			} else {
+				map.put("A", escapeSpecialCharacters(vo.getCode()));
+				map.put("B", escapeSpecialCharacters(vo.getCorporate()));
+				if ((boolean) columns.get("Registrationno")) map.put("C", escapeSpecialCharacters(vo.getRegNo()));
+				if ((boolean) columns.get("GSTregistrationno")) map.put("D", escapeSpecialCharacters(vo.getGstRegNo()));
+				map.put("E", escapeSpecialCharacters(vo.getCustName()));
+				if ((boolean) columns.get("Nickname")) map.put("F", escapeSpecialCharacters(vo.getNickName()));
+				if ((boolean) columns.get("TIN")) map.put("G", escapeSpecialCharacters(vo.getTaxIdNo()));
+				if ((boolean) columns.get("Gender")) map.put("H", escapeSpecialCharacters(vo.getSexCd()));
+				if ((boolean) columns.get("Nationality")) map.put("I", escapeSpecialCharacters(vo.getNationality()));
+				if ((boolean) columns.get("Identity")) map.put("J", escapeSpecialCharacters(vo.getIdentities()));
+				if ((boolean) columns.get("DOB")) {
+					if (vo.getDtDOB() != null) {
+						map.put("K", "");
+					} else {
+						map.put("K", escapeSpecialCharacters(sdf.format(vo.getDtDOB())));
+					}
+				}
+				if ((boolean) columns.get("Age")) map.put("L", escapeSpecialCharacters(vo.getAge()));
+				if ((boolean) columns.get("Spokenlanguage")) map.put("M", escapeSpecialCharacters(vo.getLanguageName()));
+				if ((boolean) columns.get("Mealscode")) map.put("N", escapeSpecialCharacters(vo.getMealName()));
+				if ((boolean) columns.get("Contact")) map.put("O", escapeSpecialCharacters(vo.getCorContacts()));
+				if ((boolean) columns.get("Email")) map.put("P", escapeSpecialCharacters(vo.getEmail()));
+				if ((boolean) columns.get("Class")) map.put("Q", escapeSpecialCharacters(vo.getClassName()));
+				if ((boolean) columns.get("Complication")) map.put("R", escapeSpecialCharacters(vo.getComplicationName()));
+				if ((boolean) columns.get("Billingaddress")) map.put("S", escapeSpecialCharacters(vo.getCorAddress()));
+				if ((boolean) columns.get("Mailingaddress")) map.put("T", escapeSpecialCharacters(vo.getCorAddress2()));
+				if ((boolean) columns.get("Remarks")) map.put("U", escapeSpecialCharacters(vo.getRemarks()));
+			}
+			custList.add(map);
+		}
+		return custList;
+	}
+	
+	public void processEmailCustomerProfileUpdate() {
+		try {
+			if (CollectionUtils.isNotEmpty(customerProfileUpdateList)) {
+				customerProfileUpdateBO.updateCustomerProfiles(customerProfileUpdateList, getSessionInfo().getUserVO());
+				// Show warning if there are customers without email
+		        if (CollectionUtils.isNotEmpty(unableSentEmailCustList)) {
+		            String unableToSendMessage = "Unable to send emails to the following customers: " + 
+		                String.join(", ", unableSentEmailCustList);
+		            FacesMessage facesMessage = new FacesMessage(FacesMessage.SEVERITY_WARN, unableToSendMessage, unableToSendMessage);
+		            FacesContext.getCurrentInstance().addMessage(null, facesMessage);
+		        } else {
+		        	successResult();
+		        }
+			}
+			resetForm();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+		
+	}
+	
+	public void customerEmailProfileUpdate() {
+		if (CollectionUtils.isNotEmpty(selectedCustList)) {
+			for (CustomerVO selectedCustomerVO : selectedCustList) {
+				if (StringUtils.isNotBlank(selectedCustomerVO.getEmail())) {
+					CustomerProfileUpdateVO customerProfileUpdateVO = new CustomerProfileUpdateVO();
+					customerProfileUpdateVO.setIdCustomer(selectedCustomerVO.getId());
+					customerProfileUpdateVO.setUuid(UUID.randomUUID().toString());
+					customerProfileUpdateVO.setEmail(selectedCustomerVO.getEmail());
+					customerProfileUpdateList.add(customerProfileUpdateVO);
+				} else {
+					unableSentEmailCustList.add(selectedCustomerVO.getLastName() + " " + selectedCustomerVO.getFirstName());
+				}
+			}
+		}
+	}
+	
+	public String escapeSpecialCharacters(String data) {
+		if (data == null) data = "";
+		
+	    String escapedData = data.replaceAll("\\R", " ");
+	    if (data.contains(",") || data.contains("\"") || data.contains("'")) {
+	        data = data.replace("\"", "\"\"");
+	        escapedData = "\"" + data + "\"";
+	    }
+	    return escapedData;
+	}
+	
+	class LazyCustomerDataModel extends LazyDataModel<CustomerVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+
+		List<CustomerVO> datasource;
+		
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#load(int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+		 */
+		@Override
+		public List<CustomerVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			List<CustomerVO> data = new ArrayList<CustomerVO>();
+			try {
+				trackingLogUtils.startLogs();
+				
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+				params.put("classes", true);
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", sortField);
+				params.put("sortOrder", sortOrder);
+				params.put("filters", filters);
+				params.put("removeInactive", true);
+				params.put("custType", searchParamVO.getObj2());
+				
+				int size = customerBO.getCustomerListSize(params);
+//				if (CommonConstant.LAZY_ROW_COUNT < size) {
+//					size = CommonConstant.LAZY_ROW_COUNT;
+//				}
+//				System.out.println("################size: " + size);
+				setRowCount(size);
+				if (size > 0) {
+					data = customerBO.getCustomerList(params);
+					datasource = data;
+				}
+				
+				if (selectedCustList != null && selectedCustList.size() > 0) {
+					selectedObjs = selectedCustList.toArray(new Object[selectedCustList.size()]);
+				}
+				
+			} catch (Throwable t) {
+				t.printStackTrace();
+				errorResult(t);
+			} finally {
+				trackingLogUtils.endLogs("LazyCustomerDataModel");
+			}
+			return data;
+		}
+		
+		@Override
+		public void setRowIndex(int rowIndex) {
+			if (rowIndex == -1 || getPageSize() == 0) {
+				super.setRowIndex(-1);
+			} else super.setRowIndex(rowIndex % getPageSize());
+		}
+	}
+    
+    @Override
+    public void setSelectedObjs(Object[] selectedObjs) {
+		this.selectedObjs = selectedObjs;
+		if (selectedCustList == null) selectedCustList = new ArrayList<CustomerVO>();
+    	if (selectedObjs != null) {
+    		boolean existed = false;
+    		for (Object obj : selectedObjs) {
+        		CustomerVO custVO = (CustomerVO) obj;
+        		existed = false;
+        		for (CustomerVO selectedVO : selectedCustList) {
+        			if (selectedVO.getId().equals(custVO.getId())) {
+        				existed = true;
+        				break;
+        			}
+        		}
+        		if (!existed) selectedCustList.add(custVO);
+        	}
+    	}
+    	List<CustomerVO> dataList = (List<CustomerVO>) lazyCustDataModel.getWrappedData();
+    	if (dataList != null && dataList.size() > 0) {
+    		List<CustomerVO> removeList = new ArrayList<CustomerVO>();
+    		for (CustomerVO data : dataList) {
+    			for (Object obj : selectedObjs) {
+    				CustomerVO custVO = (CustomerVO) obj;
+    	    		if (data.getId().equals(custVO.getId())) {
+    	    			removeList.add(data);
+    	    			break;
+    	    		}
+    	    	}
+    		}
+    		if(removeList.size() > 0) dataList.removeAll(removeList);
+    		removeList = new ArrayList<CustomerVO>();
+    		for (CustomerVO data : dataList) {
+    			for (CustomerVO selectedVO : selectedCustList) {
+    	    		if (data.getId().equals(selectedVO.getId())) {
+    	    			removeList.add(selectedVO);
+    	    			break;
+    	    		}
+    	    	}
+    		}
+    		if(removeList.size() > 0) selectedCustList.removeAll(removeList);
+    	}
+	}
+
+	public LazyDataModel<CustomerVO> getLazyCustDataModel() {
+		return lazyCustDataModel;
+	}
+
+	public void setLazyCustDataModel(LazyDataModel<CustomerVO> lazyCustDataModel) {
+		this.lazyCustDataModel = lazyCustDataModel;
+	}
+
+	public List<String> getColumnList() {
+		return columnList;
+	}
+
+	public void setColumnList(List<String> columnList) {
+		this.columnList = columnList;
+	}
+
+	public List<CustomerProfileUpdateVO> getCustomerProfileUpdateList() {
+		return customerProfileUpdateList;
+	}
+
+	public void setCustomerProfileUpdateList(List<CustomerProfileUpdateVO> customerProfileUpdateList) {
+		this.customerProfileUpdateList = customerProfileUpdateList;
+	}
+
+	public List<String> getUnableSentEmailCustList() {
+		return unableSentEmailCustList;
+	}
+
+	public void setUnableSentEmailCustList(List<String> unableSentEmailCustList) {
+		this.unableSentEmailCustList = unableSentEmailCustList;
+	}
+}

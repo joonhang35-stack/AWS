@@ -1,0 +1,43 @@
+package com.bcs.zsg.acct.helper;
+
+import org.apache.commons.lang.StringUtils;
+
+import com.bcs.zsg.core.helper.PropertiesLookup;
+
+public final class EInvoiceProperties {
+	public static String PROPERTYFILE = "einvoice.properties";
+	
+	public static String ENV_BASE_URL_SANDBOX = PropertiesLookup.getProperty(PROPERTYFILE, "envbaseurl.sandbox");
+	public static String ENV_BASE_URL_ACTUAL = PropertiesLookup.getProperty(PROPERTYFILE, "envbaseurl.actual");
+//	public static String ENV_BASE_URL = PropertiesLookup.getProperty(PROPERTYFILE, "envbaseurl");
+	
+	public static String SYSTEM_API_SANDBOX = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.sandbox");
+	public static String SYSTEM_API_ACTUAL = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.actual");
+//	public static String SYSTEM_API = PropertiesLookup.getProperty(PROPERTYFILE, "system.api");
+	
+	public static String API_LOGIN = PropertiesLookup.getProperty(PROPERTYFILE, "api.login");
+	public static String API_VALIDATE = PropertiesLookup.getProperty(PROPERTYFILE, "api.validate");
+	public static String API_SUBMIT = PropertiesLookup.getProperty(PROPERTYFILE, "api.submit");
+	
+	public static String TESTING = PropertiesLookup.getProperty(PROPERTYFILE, "testing");
+	
+	public static String getEnvBaseUrl() {
+		if (TESTING.equals("true")) {
+			return ENV_BASE_URL_SANDBOX;
+		} else {
+			return ENV_BASE_URL_ACTUAL;
+		}
+	}
+	
+	public static String getSystemApiUrl() {
+		if (TESTING.equals("true")) {
+			return SYSTEM_API_SANDBOX;
+		} else {
+			return SYSTEM_API_ACTUAL;
+		}
+	}
+		
+	public static boolean isTesting() {
+		return StringUtils.equalsIgnoreCase(TESTING, "true");
+	}
+}

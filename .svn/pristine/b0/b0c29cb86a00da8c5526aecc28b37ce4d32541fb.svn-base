@@ -1,0 +1,502 @@
+package com.bcs.zsg.bank.dao;
+
+import java.math.BigInteger;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.primefaces.model.SortOrder;
+
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctTransViewVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.bank.vo.BankAcctVO;
+import com.bcs.zsg.bank.vo.CashBookVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+
+
+public class PaymentDAOImpl extends BaseHibernateDAO implements PaymentDAO {
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransVO> getAcctTransList(Long CompId) throws BusinessException {
+		Criteria criteria = createCriteria(AcctTransVO.class);
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.add(Restrictions.eq("companyId",CompId));
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CashBookVO> getCashBookList() throws BusinessException {
+		Criteria criteria = createCriteria(CashBookVO.class);
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<BankAcctVO> getBankAcctList() throws BusinessException {
+		Criteria criteria = createCriteria(BankAcctVO.class);
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctVO> getAcctList(Long idCompany,String strAutoComplete) throws BusinessException {
+		Query query = createSQLQuery("SELECT id FROM account where CONCAT(code,'-',sub_code) like '" + strAutoComplete + "%'");
+		//query.setString("strAutoComplete", strAutoComplete);
+		List<Object> results = query.list();
+		List<Long> acctIdList = new ArrayList<Long>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			BigInteger id = (BigInteger) it.next();
+			acctIdList.add(id.longValue());
+		}
+		
+		if (CollectionUtils.isNotEmpty(acctIdList)) {
+			Criteria criteria = createCriteria(AcctVO.class);
+			criteria.add(Restrictions.eq("idCompany",idCompany));
+			criteria.add(Restrictions.in("id", acctIdList));
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			return criteria.list();
+		}
+		return null;
+	}
+
+	@Override
+	public AcctVO getAcctDescList(String acctCd,String acctSubCd,Long CompId) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(AcctVO.class);
+		criteria.add(Restrictions.eq("code",acctCd));
+		criteria.add(Restrictions.eq("subCode",acctSubCd));
+		criteria.add(Restrictions.eq("idCompany",CompId));
+		return (AcctVO)criteria.uniqueResult();
+	}
+
+	@Override
+	public BankAcctVO getBankAcctSearchList(Long idBank) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(BankAcctVO.class);
+		criteria.add(Restrictions.eq("id",idBank));
+		return (BankAcctVO)criteria.uniqueResult();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctVO> getAcctCodeList(Long idAccount) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(AcctVO.class);
+		criteria.add(Restrictions.eq("id",idAccount));
+		return criteria.list();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransViewVO> getAcctTransListView() throws BusinessException {
+		Criteria criteria = createCriteria(AcctTransViewVO.class);
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransViewVO> getAcctTransViewTableList(String sysNo,
+			String transTypeCd, String sysCode,String statusActive,Long CompId) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(AcctTransViewVO.class);
+		criteria.add(Restrictions.eq("sysNo",sysNo));
+		criteria.add(Restrictions.eq("sysCode",sysCode));
+		criteria.add(Restrictions.eq("statusCode",statusActive));
+		criteria.add(Restrictions.eq("type",transTypeCd));
+		criteria.add(Restrictions.eq("companyId",CompId));
+		return criteria.list();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransViewVO> getAcctTransSysNoList(String sysNo,String sysCode, Long CompId) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(AcctTransViewVO.class);
+		criteria.add(Restrictions.eq("sysNo",sysNo));
+		criteria.add(Restrictions.eq("sysCode",sysCode));
+		criteria.add(Restrictions.eq("companyId",CompId));
+		return criteria.list();
+	}
+	
+	@Override
+	public LookupItemVO getlookupItemBT(String cd) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(LookupItemVO.class);
+		criteria.add(Restrictions.eq("code",cd));
+		return (LookupItemVO)criteria.uniqueResult();
+	}
+
+	@Override
+	public LookupItemVO getlookupItemCBT(String gd) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(LookupItemVO.class);
+		criteria.add(Restrictions.eq("code",gd));
+		return (LookupItemVO)criteria.uniqueResult();
+	}
+
+	@Override
+	public SupplierVO getSupplier(Long supplierId, Long idCompany) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(SupplierVO.class);
+		criteria.add(Restrictions.eq("personId", supplierId));
+		criteria.add(Restrictions.eq("companyId", idCompany));
+		return (SupplierVO)criteria.uniqueResult();
+	}
+
+
+	@Override
+	public AcctVO getAcctSearchList(Long idAcct) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(AcctVO.class);
+		criteria.add(Restrictions.eq("id",idAcct));
+		return (AcctVO)criteria.uniqueResult();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CashBookVO> getBankCashBookList(String sysNumCdBankPmnt, Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		/*Criteria criteria =getSession().createCriteria(CashBookVO.class);
+		if (searchParamVO != null) {
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(searchParamVO.getFromDate());
+			cal.set(Calendar.HOUR_OF_DAY, 0);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			searchParamVO.setFromDate(cal.getTime());
+			
+			cal.setTime(searchParamVO.getToDate());
+			cal.set(Calendar.HOUR_OF_DAY, 23);
+			cal.set(Calendar.MINUTE, 59);
+			cal.set(Calendar.SECOND, 59);
+			searchParamVO.setToDate(cal.getTime());
+			
+			criteria.add(Restrictions.between("dtTrans", searchParamVO.getFromDate(), searchParamVO.getToDate()));
+		}
+		criteria.add(Restrictions.eq("sysCode",sysNumCdBankPmnt));
+		criteria.add(Restrictions.eq("idBank",bankId));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.addOrder(Order.desc("id"));
+		return criteria.list();*/
+		
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		StringBuilder sb = new StringBuilder();
+		// This Query Use For BA, BP and RFND Only
+		sb.append("SELECT c.id, c.sys_no, c.dt_trans, c.trans_type_cd, c.payee, c.credit, c.ref_no, c.remarks, b.name, c.type_cd, c.sys_cd, c.id_bank, c.debit, ").
+			//append("(select sum(a.tax_amount) from account_trans a where a.id_company = :idCompany and a.sys_cd = :sysCode and a.sys_no = c.sys_no and a.status_cd = :statusCode group by a.id_company, a.sys_cd, a.sys_no) as tax_amount ").
+			//append("if(ifnull(a.tax_code_group, '')='','NO','YES') as tax_code_group ").
+			//append("IF((a.tax_code_group LIKE '%NONE%') = 1,'NO','YES') as tax_code_group ").
+			append("c.tax_code_group, t.code AS tourCd ").
+			append("FROM cash_book c ").
+			append("LEFT JOIN bank b ON b.id = c.id_bank ").
+			append("LEFT JOIN (SELECT id, code FROM tour_dep) t ON c.id_tour_dep = t.id ").
+			//append("LEFT JOIN (select sys_no, group_concat(case when tax_code = '' or tax_code is null then 'NONE' else tax_code end) as tax_code_group from account_trans ").
+				//append("where id_company = :idCompany and sys_cd = :sysCode and status_cd = :statusCode ").
+				//append("and case ").
+					//append("when sys_cd = 'bank_adjm' then type_cd = 'gnrl_deps' or type_cd = 'gnrl_pymt' ").
+					//append("when sys_cd = 'bank_deps' then type_cd = 'gnrl_deps' ").
+					//append("when sys_cd = 'bank_pmnt' then type_cd = 'gnrl_pymt' ").
+				//append("end ").
+				//append("group by id_company, sys_cd, sys_no) a on a.sys_no = c.sys_no ").
+			append("WHERE c.sys_cd = :sysCode AND c.status_cd = :statusCode AND b.id_company = :idCompany ");
+		
+		// filtered by transaction date
+		if (searchParamVO.getObj2() == null || !CommonConstant.SEARCH_ALL_DATES.equals(searchParamVO.getObj2().toString())) {
+			if ((searchParamVO.getObj3() == null || StringUtils.isEmpty(searchParamVO.getObj3().toString())) 
+					&& (searchParamVO.getObj4() == null || StringUtils.isEmpty(searchParamVO.getObj4().toString()))) {
+				sb.append("AND dt_trans BETWEEN ");
+				
+				Calendar cal = Calendar.getInstance();
+				cal.setTime(searchParamVO.getFromDate());
+				cal.set(Calendar.HOUR_OF_DAY, 0);
+				cal.set(Calendar.MINUTE, 0);
+				cal.set(Calendar.SECOND, 0);
+				sb.append("'").append(dateFormat.format(cal.getTime())).append("' AND ");
+				
+				cal.setTime(searchParamVO.getToDate());
+				cal.set(Calendar.HOUR_OF_DAY, 23);
+				cal.set(Calendar.MINUTE, 59);
+				cal.set(Calendar.SECOND, 59);
+				sb.append("'").append(dateFormat.format(cal.getTime())).append("' ");
+			}
+		}
+		
+		// filtered by bank
+		if (!searchParamVO.getObj1().toString().equals(CommonConstant.SEARCH_ALL_BANKS)) {
+			sb.append("AND c.id_bank = '").append(searchParamVO.getObj1()).append("' ");
+		}/* else {
+			sb.append("AND id_bank IN (SELECT id FROM bank WHERE id_company = '").append(idCompany).append("') ");
+		}*/
+		
+		// filtered by payment number
+		if (searchParamVO.getObj3() != null && StringUtils.isNotEmpty(searchParamVO.getObj3().toString()) 
+				&& searchParamVO.getObj4() != null && StringUtils.isNotEmpty(searchParamVO.getObj4().toString())) {
+			sb.append("AND CAST(c.sys_no as signed) BETWEEN CAST('").append(searchParamVO.getObj3()).append("' as signed) AND ");
+			sb.append("CAST('").append(searchParamVO.getObj4()).append("' as signed) ");
+		}
+		
+		if (searchParamVO.getObj3() != null && StringUtils.isNotEmpty(searchParamVO.getObj3().toString())) {
+			sb.append("AND CAST(c.sys_no as signed) = CAST('").append(searchParamVO.getObj3()).append("' as signed) ");
+		}
+		
+		if (searchParamVO.getObj4() != null && StringUtils.isNotEmpty(searchParamVO.getObj4().toString())) {
+			sb.append("AND CAST(c.sys_no as signed) <= CAST('").append(searchParamVO.getObj4()).append("' as signed) ");
+		}
+		
+		sb.append("ORDER by id DESC");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("idCompany", idCompany);
+		query.setString("sysCode", sysNumCdBankPmnt);
+		query.setString("statusCode", BaseConstant.STATUS_ACTIVE);
+		List<Object[]> results = query.list();
+		List<CashBookVO> list = new ArrayList<CashBookVO>();
+		
+		if (CollectionUtils.isNotEmpty(results)) {
+			for (Object obj[] : results) {
+				CashBookVO vo = new CashBookVO();
+				vo.setId(((Number) obj[0]).longValue());
+				vo.setSysNo((String) obj[1]);
+				vo.setDtTrans((Date) obj[2]);
+				vo.setTransTypeCd((String) obj[3]);
+				vo.setPayee((String) obj[4]);
+				vo.setCredit((Double) obj[5]);
+				vo.setRefNo((String) obj[6]);
+				vo.setRemarks((String) obj[7]);
+				vo.setBankName((String) obj[8]);
+				vo.setTypeCd(obj[9] == null ? null : (String) obj[9]);
+				vo.setSysCode((String) obj[10]);
+				vo.setIdBank(((Number) obj[11]).longValue());
+				vo.setDebit((Double) obj[12]);
+				//vo.setTaxAmount((Double) obj[13]);
+				vo.setTaxCodeGroup((String) obj[13]);
+				vo.setTourCd((String) obj[14]);
+				list.add(vo);
+			}
+		}
+		return list;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getCashBookListSize(Map<String, Object> params) throws BusinessException {
+		SearchParamVO searchParamVO = (SearchParamVO) params.get("searchParamVO");
+		
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		StringBuilder sb = new StringBuilder();
+		// This Query Use For BA, BP and RFND Only
+		sb.append("SELECT count(c.id) ").
+			append("FROM cash_book c ").
+			append("LEFT JOIN bank b ON b.id = c.id_bank ").
+			append("WHERE c.sys_cd = :sysCode AND c.status_cd = :statusCode AND b.id_company = :idCompany ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("bankName".equals(entry.getKey())) sb.append("b.name like '%").append(entry.getValue()).append("%'");
+				else if ("dtTrans".equals(entry.getKey())) sb.append("date_format(c.dt_trans, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("longSysNo".equals(entry.getKey())) sb.append("c.sys_no like '%").append(entry.getValue()).append("%'");
+				else if ("transTypeCd".equals(entry.getKey())) sb.append("(case when c.trans_type_cd = 'cash_with' then lcase('Bank Payment') when c.trans_type_cd = 'bill_pymt' then lcase('Bills Payment') end) like lcase('").append(entry.getValue()).append("%')");
+				else if ("payee".equals(entry.getKey())) sb.append("c.payee like '%").append(entry.getValue()).append("%'");
+				else if ("taxCodeGroup".equals(entry.getKey())) sb.append("c.tax_code_group like '%").append(entry.getValue()).append("%'");
+				else if ("credit".equals(entry.getKey())) sb.append("c.credit like '").append(entry.getValue()).append("%'");
+				else if ("refNo".equals(entry.getKey())) sb.append("c.ref_no like '%").append(entry.getValue()).append("%'");
+				else if ("remarks".equals(entry.getKey())) sb.append("c.remarks like '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		
+		
+		// filtered by transaction date
+		if (searchParamVO.getObj2() == null || !CommonConstant.SEARCH_ALL_DATES.equals(searchParamVO.getObj2().toString())) {
+			if ((searchParamVO.getObj3() == null || StringUtils.isEmpty(searchParamVO.getObj3().toString())) 
+					&& (searchParamVO.getObj4() == null || StringUtils.isEmpty(searchParamVO.getObj4().toString()))) {
+				sb.append("AND c.dt_trans BETWEEN ");
+				
+				Calendar cal = Calendar.getInstance();
+				cal.setTime(searchParamVO.getFromDate());
+				cal.set(Calendar.HOUR_OF_DAY, 0);
+				cal.set(Calendar.MINUTE, 0);
+				cal.set(Calendar.SECOND, 0);
+				sb.append("'").append(dateFormat.format(cal.getTime())).append("' AND ");
+				
+				cal.setTime(searchParamVO.getToDate());
+				cal.set(Calendar.HOUR_OF_DAY, 23);
+				cal.set(Calendar.MINUTE, 59);
+				cal.set(Calendar.SECOND, 59);
+				sb.append("'").append(dateFormat.format(cal.getTime())).append("' ");
+			}
+		}
+		
+		// filtered by bank
+		if (!searchParamVO.getObj1().toString().equals(CommonConstant.SEARCH_ALL_BANKS)) {
+			sb.append("AND c.id_bank = '").append(searchParamVO.getObj1()).append("' ");
+		}
+		
+		// filtered by payment number
+		if (searchParamVO.getObj3() != null && StringUtils.isNotEmpty(searchParamVO.getObj3().toString()) 
+				&& searchParamVO.getObj4() != null && StringUtils.isNotEmpty(searchParamVO.getObj4().toString())) {
+			sb.append("AND CAST(c.sys_no as signed) BETWEEN CAST('").append(searchParamVO.getObj3()).append("' as signed) AND ");
+			sb.append("CAST('").append(searchParamVO.getObj4()).append("' as signed) ");
+		}
+		
+		if (searchParamVO.getObj3() != null && StringUtils.isNotEmpty(searchParamVO.getObj3().toString())) {
+			sb.append("AND CAST(c.sys_no as signed) = CAST('").append(searchParamVO.getObj3()).append("' as signed) ");
+		}
+		
+		if (searchParamVO.getObj4() != null && StringUtils.isNotEmpty(searchParamVO.getObj4().toString())) {
+			sb.append("AND CAST(c.sys_no as signed) <= CAST('").append(searchParamVO.getObj4()).append("' as signed) ");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", params.get("companyId"));
+		query.setParameter("sysCode", params.get("cashBookType"));
+		query.setString("statusCode", BaseConstant.STATUS_ACTIVE);
+		
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CashBookVO> getCashBookList(Map<String, Object> params) throws BusinessException {
+		SearchParamVO searchParamVO = (SearchParamVO) params.get("searchParamVO");
+		
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		StringBuilder sb = new StringBuilder();
+		// This Query Use For BA, BP and RFND Only
+		sb.append("SELECT c.id, c.sys_no, c.dt_trans, c.trans_type_cd, c.payee, c.credit, c.ref_no, c.remarks, b.name, c.type_cd, c.sys_cd, c.id_bank, c.debit, ").
+			append("c.tax_code_group ").
+			append("FROM cash_book c ").
+			append("LEFT JOIN bank b ON b.id = c.id_bank ").
+			append("WHERE c.sys_cd = :sysCode AND c.status_cd = :statusCode AND b.id_company = :idCompany ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("bankName".equals(entry.getKey())) sb.append("b.name like '%").append(entry.getValue()).append("%'");
+				else if ("dtTrans".equals(entry.getKey())) sb.append("date_format(c.dt_trans, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("longSysNo".equals(entry.getKey())) sb.append("c.sys_no like '%").append(entry.getValue()).append("%'");
+				else if ("transTypeCd".equals(entry.getKey())) sb.append("(case when c.trans_type_cd = 'cash_with' then lcase('Bank Payment') when c.trans_type_cd = 'bill_pymt' then lcase('Bills Payment') end) like lcase('").append(entry.getValue()).append("%')");
+				else if ("payee".equals(entry.getKey())) sb.append("c.payee like '%").append(entry.getValue()).append("%'");
+				else if ("taxCodeGroup".equals(entry.getKey())) sb.append("c.tax_code_group like '%").append(entry.getValue()).append("%'");
+				else if ("credit".equals(entry.getKey())) sb.append("c.credit like '").append(entry.getValue()).append("%'");
+				else if ("refNo".equals(entry.getKey())) sb.append("c.ref_no like '%").append(entry.getValue()).append("%'");
+				else if ("remarks".equals(entry.getKey())) sb.append("c.remarks like '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		
+		// filtered by transaction date
+		if (searchParamVO.getObj2() == null || !CommonConstant.SEARCH_ALL_DATES.equals(searchParamVO.getObj2().toString())) {
+			if ((searchParamVO.getObj3() == null || StringUtils.isEmpty(searchParamVO.getObj3().toString())) 
+					&& (searchParamVO.getObj4() == null || StringUtils.isEmpty(searchParamVO.getObj4().toString()))) {
+				sb.append("AND c.dt_trans BETWEEN ");
+				
+				Calendar cal = Calendar.getInstance();
+				cal.setTime(searchParamVO.getFromDate());
+				cal.set(Calendar.HOUR_OF_DAY, 0);
+				cal.set(Calendar.MINUTE, 0);
+				cal.set(Calendar.SECOND, 0);
+				sb.append("'").append(dateFormat.format(cal.getTime())).append("' AND ");
+				
+				cal.setTime(searchParamVO.getToDate());
+				cal.set(Calendar.HOUR_OF_DAY, 23);
+				cal.set(Calendar.MINUTE, 59);
+				cal.set(Calendar.SECOND, 59);
+				sb.append("'").append(dateFormat.format(cal.getTime())).append("' ");
+			}
+		}
+		
+		// filtered by bank
+		if (!searchParamVO.getObj1().toString().equals(CommonConstant.SEARCH_ALL_BANKS)) {
+			sb.append("AND c.id_bank = '").append(searchParamVO.getObj1()).append("' ");
+		}
+		
+		// filtered by payment number
+		if (searchParamVO.getObj3() != null && StringUtils.isNotEmpty(searchParamVO.getObj3().toString()) 
+				&& searchParamVO.getObj4() != null && StringUtils.isNotEmpty(searchParamVO.getObj4().toString())) {
+			sb.append("AND CAST(c.sys_no as signed) BETWEEN CAST('").append(searchParamVO.getObj3()).append("' as signed) AND ");
+			sb.append("CAST('").append(searchParamVO.getObj4()).append("' as signed) ");
+		}
+		
+		if (searchParamVO.getObj3() != null && StringUtils.isNotEmpty(searchParamVO.getObj3().toString())) {
+			sb.append("AND CAST(c.sys_no as signed) = CAST('").append(searchParamVO.getObj3()).append("' as signed) ");
+		}
+		
+		if (searchParamVO.getObj4() != null && StringUtils.isNotEmpty(searchParamVO.getObj4().toString())) {
+			sb.append("AND CAST(c.sys_no as signed) <= CAST('").append(searchParamVO.getObj4()).append("' as signed) ");
+		}
+		
+		sb.append("ORDER BY ");
+		String sortField = (String) params.get("sortField");
+		
+		if (sortField == null) sb.append("c.id DESC");
+		else {
+			if ("bankName".equals(sortField)) sb.append("b.name");
+			else if ("dtTrans".equals(sortField)) sb.append("c.dt_trans");
+			else if ("longSysNo".equals(sortField)) sb.append("cast(c.sys_no as decimal)");
+			else if ("transTypeCd".equals(sortField)) sb.append("(case when c.trans_type_cd = 'cash_with' then lcase('Bank Payment') when c.trans_type_cd = 'bill_pymt' then lcase('Bills Payment') end)");
+			else if ("payee".equals(sortField)) sb.append("c.payee");
+			else if ("taxCodeGroup".equals(sortField)) sb.append("c.tax_code_group");
+			else if ("credit".equals(sortField)) sb.append("c.credit");
+			else if ("refNo".equals(sortField)) sb.append("c.ref_no");
+			else if ("remarks".equals(sortField)) sb.append("c.remarks");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" ASC");
+			else sb.append(" DESC");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", params.get("companyId"));
+		query.setParameter("sysCode", params.get("cashBookType"));
+		query.setString("statusCode", BaseConstant.STATUS_ACTIVE);
+		query.setFirstResult((Integer) params.get("first"));
+		query.setMaxResults((Integer) params.get("pageSize"));
+		List<Object[]> results = query.list();
+		List<CashBookVO> list = new ArrayList<CashBookVO>();
+		
+		if (CollectionUtils.isNotEmpty(results)) {
+			for (Object obj[] : results) {
+				CashBookVO vo = new CashBookVO();
+				vo.setId(((Number) obj[0]).longValue());
+				vo.setSysNo((String) obj[1]);
+				vo.setDtTrans((Date) obj[2]);
+				vo.setTransTypeCd((String) obj[3]);
+				vo.setPayee((String) obj[4]);
+				vo.setCredit((Double) obj[5]);
+				vo.setRefNo((String) obj[6]);
+				vo.setRemarks((String) obj[7]);
+				vo.setBankName((String) obj[8]);
+				vo.setTypeCd(obj[9] == null ? null : (String) obj[9]);
+				vo.setSysCode((String) obj[10]);
+				vo.setIdBank(((Number) obj[11]).longValue());
+				vo.setDebit((Double) obj[12]);
+				//vo.setTaxAmount((Double) obj[13]);
+				vo.setTaxCodeGroup((String) obj[13]);
+				list.add(vo);
+			}
+		}
+		return list;
+	}
+}

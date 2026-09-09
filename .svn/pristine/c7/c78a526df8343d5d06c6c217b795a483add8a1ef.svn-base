@@ -1,0 +1,816 @@
+package com.bcs.zsg.mail.service;
+
+import java.io.File;
+import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.helper.EInvoiceProperties;
+import com.bcs.zsg.cfg.sec.dao.UserDAO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeVO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.cfg.sec.vo.PasswordResetVO;
+import com.bcs.zsg.common.helper.AESEncryption;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.component.common.helper.LookupUtils;
+import com.bcs.zsg.component.security.vo.UserVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.db.bterp.dao.airline.AirlineDAO;
+import com.bcs.zsg.feedback.dao.FeedbackDAO;
+import com.bcs.zsg.mail.helper.ConstantEmailTemplate;
+import com.bcs.zsg.mail.helper.EmailProperties;
+import com.bcs.zsg.maintenance.dao.LookUpDAO;
+import com.bcs.zsg.maintenance.vo.CustomerProfileUpdateVO;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.maintenance.vo.SupplierProfileUpdateVO;
+import com.bcs.zsg.product.dao.TourPackageDAO;
+import com.bcs.zsg.product.dao.TourPackageDAOImpl;
+import com.bcs.zsg.product.vo.AirlineVO;
+import com.bcs.zsg.product.vo.FeedbackVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.product.vo.TourPackageVO;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.purchase.dao.PurchaseDAO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.dao.CustomerDAO;
+import com.bcs.zsg.sales.dao.InvoiceDAO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.InvoiceEmailPaymentVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+public class EmailingServiceImpl implements EmailingService {
+	
+	@Autowired
+	private LookUpDAO lookUpDAO;
+	
+	@Autowired
+	private TourPackageDAO tourPkgDAO;
+	
+	@Autowired
+	private UserDAO userDAO;
+	
+	@Autowired
+	private InvoiceDAO invoiceDAO;
+	
+	@Autowired
+	private AirlineDAO airlineDAO;
+	
+	@Autowired
+	private CustomerDAO customerDAO;
+	
+	@Autowired
+	private PurchaseDAO purchaseDAO;
+	
+	@Autowired
+	private transient AppEmailTemplate emailTemplate;
+	
+	@Autowired
+	private TourPackageDAO tourPackageDAO;
+	
+	@Autowired
+	private FeedbackDAO feedbackDAO;
+	
+	SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
+	SimpleDateFormat sdf2 = new SimpleDateFormat("dd-MMM-yyyy HH:mm:ss");
+	
+	/**
+	 * Sent forgot password email
+	 * @throws Exception 
+	 */
+	@Override
+	public void sendForgotPasswordEmail(PasswordResetVO vo, UserVO userVO) throws Exception {
+		StringBuilder url = new StringBuilder();
+	    url.append(EmailProperties.MAIL_URL);
+	    url.append("/app/user/resetpassword" + "?" 
+		+ AESEncryption.encrypt("auth=" + vo.getEncodedPassword()));
+		
+	    // Get email template
+		Map<String, Object> map = new HashMap<>();
+		map.put("userName", userVO.getName());
+		map.put("userId", userVO.getLoginId());
+		map.put("url", url.toString());
+		String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.PASS_RESET_EMAIL, map);
+		
+		ProcessSentEmail processSentEmail = new ProcessSentEmail("PASSWORD RESET EMAIL", content, vo.getEmailAddress());
+		Thread thread = new Thread(processSentEmail);
+		thread.start();
+	}
+	
+	/***
+	 * Sent Invoice Changes Email and EO Changes Email -START-
+	 */
+	@Override
+	public void sendInvChangesBySpecificPerson(InvoiceVO invoiceVO, String prefixValue, List<String> emailList, List<String> invoiceChangesList, String otherTypeRemark, UserVO userVO) throws BusinessException {
+		sendInvChangesEmail(invoiceVO, prefixValue, emailList, invoiceChangesList, otherTypeRemark, userVO);
+	}
+	
+	@Override
+	public void sendEOChangesBySpecificPerson(ExOrderVO exOrderVO, String prefixValue, List<String> emailList, List<String> eoChangesList, String otherTypeRemark, UserVO userVO) throws BusinessException {
+		sendEOChangesEmail(exOrderVO, prefixValue, emailList, eoChangesList, otherTypeRemark, userVO);
+	}
+	
+	@Override
+	public void sendInvChangesByDepartment(InvoiceVO invoiceVO, String prefixValue, List<String> departmentList, List<String> invoiceChangesList, String otherTypeRemark, Long companyId, UserVO userVO) throws BusinessException {
+		try {
+			if (CollectionUtils.isEmpty(departmentList))
+				return;
+			
+			List<String> emailList = departmentList;
+//			List<String> codeList = new ArrayList<String>();
+//			List<String> emailList = new ArrayList<String>();
+//			for(String code : departmentList) {
+//				codeList.add(code);
+//			}
+//			List<EmployeeViewVO> dprtList = tourPkgDAO.getDepartmentViewList(companyId, codeList);
+//			
+//			for(EmployeeViewVO vo : dprtList) {
+//				if(StringUtils.isNotBlank(vo.getUserVO().getEmailAddress())) {
+//					emailList.add(vo.getUserVO().getEmailAddress());
+//				}
+//			}
+			
+			sendInvChangesEmail(invoiceVO, prefixValue, emailList, invoiceChangesList, otherTypeRemark, userVO);
+		} catch ( Exception e) {
+			throw new BusinessException(e);
+		}
+	}
+	
+	@Override
+	public void sendEOChangesByDepartment(ExOrderVO exOrderVO, String prefixValue, List<String> departmentList, List<String> eoChangesList, String otherTypeRemark, Long companyId, UserVO userVO) throws BusinessException {
+		try {
+			if (CollectionUtils.isEmpty(departmentList))
+				return;
+			
+			List<String> emailList = departmentList;
+//			List<String> codeList = new ArrayList<String>();
+//			List<String> emailList = new ArrayList<String>();
+//			for(String code : departmentList) {
+//				codeList.add(code);
+//			}
+//			List<EmployeeViewVO> dprtList = tourPkgDAO.getDepartmentViewList(companyId, codeList);
+//			
+//			for(EmployeeViewVO vo : dprtList) {
+//				if(StringUtils.isNotBlank(vo.getUserVO().getEmailAddress())) {
+//					emailList.add(vo.getUserVO().getEmailAddress());
+//				}
+//			}
+			
+			sendEOChangesEmail(exOrderVO, prefixValue, emailList, eoChangesList, otherTypeRemark, userVO);
+		} catch ( Exception e) {
+			throw new BusinessException(e);
+		}
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private void sendInvChangesEmail(InvoiceVO invoiceVO, String prefixValue, List<String> emailList, List<String> invoiceChangesList, String otherTypeRemark, UserVO userVO) throws BusinessException {
+		try {
+			List<String> descList = new ArrayList<String>();
+			List<LookupItemVO> lookUpItemList = lookUpDAO.getLookUpCodeList(CommonConstant.LOOKUP_CAT_CD_INV_CHANGES);
+			String selectedChanges = "";
+			String subjectLine = "";
+			int count = 1;
+			for(String code : invoiceChangesList) {
+				for(LookupItemVO vo : lookUpItemList) {
+					if(StringUtils.equals(code, vo.getCode())) {
+						
+						if (StringUtils.isBlank(selectedChanges)) {
+							subjectLine = vo.getDescription();
+							selectedChanges = vo.getDescription();
+						} else {
+							subjectLine = selectedChanges + ", " + vo.getDescription();
+							selectedChanges = selectedChanges + ", " + vo.getDescription();
+						}
+						
+						if (count == 3) {
+							descList.add(selectedChanges);
+							selectedChanges = "";
+							count = 1;
+						} else {
+							count ++;
+						}
+						break;
+					}
+				}
+			}
+			if (StringUtils.isNotBlank(selectedChanges)) descList.add(selectedChanges);
+			
+			if (emailList != null) {	
+			    // Get email template
+				String[] description = descList.toArray(new String[descList.size()]);
+				Map<String, Object> map = new HashMap<>();
+				Map root = new HashMap();
+				for(int i=0; i<description.length;i++) { // 65 = A-Z = 90
+					map.put(Character.toString((char) (65+i)), description[i]);
+				}
+				
+				root.put("info", map);
+				root.put("bgColor", CommonConstant.EMAIL_BG_COLOR);
+//				root.put("changesMade", selectedChanges);
+				root.put("bookingID", invoiceVO.getBookingId() != null ? String.valueOf(invoiceVO.getBookingId()) : " - ");
+				root.put("prefix", prefixValue);
+				root.put("code", invoiceVO.getCode());
+				root.put("tourCode", StringUtils.isNotBlank(invoiceVO.getTourCd()) ? invoiceVO.getTourCd() : " - ");
+				
+				if (invoiceVO.getTourDepId() != null) {
+					TourDepartureVO tourDepVO = tourPkgDAO.getTourDepById(invoiceVO.getTourDepId());
+					TourPackageVO tourPkgVO = tourPkgDAO.getTourPackageById(tourDepVO.getIdTourPkg());
+					root.put("tourPkg", tourPkgVO.getNameEn() + " " + tourPkgVO.getNameOther());
+					root.put("tourDepDt", sdf.format(invoiceVO.getDepartureDt()));
+				} else {
+					root.put("tourPkg", " - ");
+					root.put("tourDepDt", " - ");
+				}
+				
+				List<EmployeeVO> employeeList = userDAO.getEmployeeList(userVO);
+				String department = "";
+				
+				for(EmployeeVO vo : employeeList) {
+					if (StringUtils.isNotBlank(vo.getDepartment())) {
+						department = LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_DEPARTMENT, vo.getDepartment());
+						break;
+					}
+				}
+				
+				root.put("requester", (StringUtils.isBlank(department) ? "-" : department) + " / " + userVO.getName());
+				if(StringUtils.isNotEmpty(otherTypeRemark));
+					root.put("others", otherTypeRemark);
+				String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.INV_CHANGES, root);
+				
+				ProcessSentEmail processSentEmail = new ProcessSentEmail(
+						invoiceVO.getTourCd() + " / " + root.get("prefix") + root.get("code") + " / " + subjectLine,
+						content,
+						userVO.getEmailAddress(),
+						emailList);
+				Thread thread = new Thread(processSentEmail);
+				thread.start();
+			}
+		} catch ( Exception e) {
+			throw new BusinessException(e);
+		}
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private void sendEOChangesEmail(ExOrderVO exOrderVO, String prefixValue, List<String> emailList, List<String> eoChangesList, String otherTypeRemark, UserVO userVO) throws BusinessException {
+		try {
+//			List<String> descList = new ArrayList<String>();
+//			List<LookupItemVO> lookUpItemList = lookUpDAO.getLookUpCodeList(CommonConstant.LOOKUP_CAT_CD_EO_CHANGES);
+//			String selectedChanges = "";
+//			String subjectLine = "";
+//			int count = 1;
+//			for(String code : eoChangesList) {
+//				for(LookupItemVO vo : lookUpItemList) {
+//					if(StringUtils.equals(code, vo.getCode())) {
+//						
+//						if (StringUtils.isBlank(selectedChanges)) {
+//							subjectLine = vo.getDescription();
+//							selectedChanges = vo.getDescription();
+//						} else {
+//							subjectLine = selectedChanges + ", " + vo.getDescription();
+//							selectedChanges = selectedChanges + ", " + vo.getDescription();
+//						}
+//						
+//						if (count == 3) {
+//							descList.add(selectedChanges);
+//							selectedChanges = "";
+//							count = 1;
+//						} else {
+//							count ++;
+//						}
+//						break;
+//					}
+//				}
+//			}
+//			if (StringUtils.isNotBlank(selectedChanges)) descList.add(selectedChanges);
+			
+			if (emailList != null) {	
+			    // Get email template
+//				String[] description = descList.toArray(new String[descList.size()]);
+//				Map<String, Object> map = new HashMap<>();
+				Map root = new HashMap();
+//				for(int i=0; i<description.length;i++) { // 65 = A-Z = 90
+//					map.put(Character.toString((char) (65+i)), description[i]);
+//				}
+//				root.put("info", map);
+//				root.put("changesMade", selectedChanges);
+//				root.put("bookingID", invoiceVO.getBookingId() != null ? String.valueOf(invoiceVO.getBookingId()) : " - ");
+				root.put("prefix", prefixValue);
+				root.put("code", exOrderVO.getCode());
+//				root.put("tourCode", StringUtils.isNotBlank(exOrderVO.getTourCode()) ? exOrderVO.getTourCode() : " - ");
+				
+				if (exOrderVO.getTourDepVO() != null) {
+					TourDepartureVO tourDepVO = exOrderVO.getTourDepVO();
+					TourPackageVO tourPkgVO = tourPkgDAO.getTourPackageById(tourDepVO.getIdTourPkg());
+					root.put("tourCode", StringUtils.isNotBlank(tourDepVO.getCode()) ? tourDepVO.getCode() : " - ");
+					root.put("tourPkg", tourPkgVO.getNameEn() + " " + tourPkgVO.getNameOther());
+					root.put("tourDepDt", sdf.format(exOrderVO.getTourDepDt()));
+				} else {
+					root.put("tourPkg", " - ");
+					root.put("tourDepDt", " - ");
+				}
+				
+				List<EmployeeVO> employeeList = userDAO.getEmployeeList(userVO);
+				String department = "";
+				
+				for(EmployeeVO vo : employeeList) {
+					if (StringUtils.isNotBlank(vo.getDepartment())) {
+						department = LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_DEPARTMENT, vo.getDepartment());
+						break;
+					}
+				}
+				
+				root.put("requester", (StringUtils.isBlank(department) ? "-" : department) + " / " + userVO.getName());
+				if(StringUtils.isNotEmpty(otherTypeRemark));
+					root.put("others", otherTypeRemark);
+				String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.EO_CHANGES, root);
+				
+				ProcessSentEmail processSentEmail = new ProcessSentEmail(
+						exOrderVO.getTourDepVO().getCode() + " / " + root.get("prefix") + root.get("code"),
+						content,
+						userVO.getEmailAddress(),
+						emailList);
+				Thread thread = new Thread(processSentEmail);
+				thread.start();
+			}
+		} catch ( Exception e) {
+			throw new BusinessException(e);
+		}
+	}
+	/***
+	 * Sent Invoice Changes Email and EO Changes Email -END-
+	 */
+	
+	
+	/**
+	 * Send Notification Email for Tour Departure That Not Operation -START-
+	 */
+	
+	@Override
+	public void sendTourDepNOEmailByIndividual(TourDepartureVO tourDepVO, List<String> emailEmployeeList, String remarks, UserVO userVO) throws BusinessException {
+		sendTourDepNOEmail(tourDepVO, emailEmployeeList, remarks, userVO);
+	}
+	
+	@Override
+	public void sendTourDepNOEmailByDepartment(TourDepartureVO tourDepVO, List<String> departmentList, String remarks, Long companyId, UserVO userVO) throws BusinessException {
+		try {
+			if (CollectionUtils.isEmpty(departmentList))
+				return;
+			
+			List<String> codeList = new ArrayList<String>();
+			List<String> emailList = new ArrayList<String>();
+			for(String code : departmentList) {
+				codeList.add(code);
+			}
+			List<EmployeeViewVO> dprtList = tourPkgDAO.getDepartmentViewList(companyId, codeList);
+			
+			for(EmployeeViewVO vo : dprtList) {
+				if(StringUtils.isNotBlank(vo.getUserVO().getEmailAddress())) {
+					emailList.add(vo.getUserVO().getEmailAddress());
+				}
+			}
+			
+			sendTourDepNOEmail(tourDepVO, emailList, remarks, userVO);
+		} catch ( Exception e) {
+			throw new BusinessException(e);
+		}
+	}
+	
+	private void sendTourDepNOEmail(TourDepartureVO tourDepVO, List<String> emailList, String remarks, UserVO userVO) throws BusinessException {
+		try {
+			if (emailList != null) {
+				TourPackageVO tourPackageVO = tourPkgDAO.getTourPackageById(tourDepVO.getIdTourPkg());
+				
+			    // Get email template
+				Map<String, Object> map = new HashMap<>();
+				map.put("tourCd", tourDepVO.getCode());
+				map.put("nameEn", tourPackageVO.getNameEn());
+				map.put("nameOther", tourPackageVO.getNameOther());
+				map.put("departureDate", sdf.format(tourDepVO.getDtDep()));
+				map.put("tourStatus", LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_TOUR_STATUS, tourDepVO.getTourStatusCd()));
+				map.put("remarks", StringUtils.isBlank(remarks) ? "-" : remarks);
+				
+				List<EmployeeVO> employeeList = userDAO.getEmployeeList(userVO);
+				String department = "";
+				for(EmployeeVO vo : employeeList) {
+					if (StringUtils.isNotBlank(vo.getDepartment())) {
+						department = LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_DEPARTMENT, vo.getDepartment());
+						break;
+					}
+				}
+				map.put("sender", (StringUtils.isBlank(department) ? "-" : department) + " / " + userVO.getName());
+				
+				String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.TOUR_DEP_NOT_OPERATING, map);
+				
+				ProcessSentEmail processSentEmail = new ProcessSentEmail("AWS Tour No OP - " + tourDepVO.getCode(), content, userVO.getEmailAddress(), emailList);
+				Thread thread = new Thread(processSentEmail);
+				thread.start();
+			}
+		} catch ( Exception e) {
+			throw new BusinessException(e);
+		}
+	}
+	
+	/**
+	 * Send Notification Email for Tour Departure That Not Operation -END-
+	 */
+	
+	
+	/***
+	 * Sent Invoice Payment Email
+	 * @throws BusinessException 
+	 */
+	@Override
+	public void sendEmailPaymentEmail(InvoiceEmailPaymentVO invoiceEmailPaymentVO, UserVO userVO) throws BusinessException {
+		if (invoiceEmailPaymentVO == null)
+			return;
+		
+		if (StringUtils.isBlank(invoiceEmailPaymentVO.getEmail())) 
+			return;
+		
+		try {
+			InvoiceVO invoiceVO = invoiceDAO.getInvoiceById(invoiceEmailPaymentVO.getIdInvoice());
+			if (invoiceVO == null) return;
+			
+			invoiceDAO.getInvoiceDetails(invoiceVO);
+			
+			// Get email template
+			Map<String, Object> map = new HashMap<>();
+			
+			map.put("docTypeCd", invoiceVO.getDocTypeCd());
+			map.put("customerName", invoiceVO.getAttnTo());
+			map.put("re", invoiceVO.getSubjLine());
+			if (invoiceVO.getBookingId() != null)
+				map.put("bookingNo", invoiceVO.getBookingId().toString());
+			else if (invoiceVO.getIdParentInvTourBooking() != null) map.put("bookingNo", invoiceVO.getIdParentInvTourBooking().toString());
+			map.put("prefix", invoiceEmailPaymentVO.getPrefix());
+			map.put("code", invoiceEmailPaymentVO.getInvoiceNo());
+			map.put("invoiceStatus", LookupUtils.getReferenceDataValue("INV_STATUS", invoiceVO.getStatusCd()));
+			map.put("tourCode", invoiceVO.getTourCd());
+			map.put("salesPerson", invoiceVO.getSalerName());
+			map.put("amount", invoiceEmailPaymentVO.getPaymentAmt().setScale(2, BigDecimal.ROUND_HALF_UP).toString());
+			map.put("adminCharges", invoiceEmailPaymentVO.getAdminCharges().setScale(2, BigDecimal.ROUND_HALF_UP).toString());
+			map.put("totalPaymentAmt", invoiceEmailPaymentVO.getTotalPaymentAmt().setScale(2, BigDecimal.ROUND_HALF_UP).toString());
+			
+			String docTypeDesc = "Invoice";
+			if (SalesConstant.DOC_TYPE_CD_PAX_STMT.equals(invoiceVO.getDocTypeCd())) {
+				docTypeDesc = "Pax Statement";
+			}
+			map.put("docTypeDesc", docTypeDesc);
+			map.put("lowercaseDocTypeDesc", docTypeDesc.toLowerCase());
+			
+		    StringBuilder url = new StringBuilder();
+		    url.append(EmailProperties.MAIL_URL);
+		    
+		    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm a");
+		    
+		    url.append("/app/sales/emailPayment" + "?" 
+    			+ AESEncryption.encrypt("id=" + invoiceEmailPaymentVO.getId()));
+			
+			map.put("url", url);
+			map.put("footerContent", "Please do not reply to this email, it was sent from an unmonitored email address. Payment link will expire in (" + sdf.format(invoiceEmailPaymentVO.getDtExpiry()) +"), you would not be able to complete payment once the link is expired. If you have any enquiries, please contact us at enquiry@applevacations.my or call our office at 03-2705 8299");
+			
+			String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.INV_EMAIL_PMNT, map);
+			
+			List<String> ccEmailList = new ArrayList<String>();
+			ccEmailList.add(userVO.getEmailAddress());
+			ccEmailList.add("payment@applevacations.my");
+			
+			ProcessSentEmail processSentEmail = new ProcessSentEmail(CommonConstant.EMAIL_FULL_COMP_NAME, "Payment Request for " + docTypeDesc + " " + invoiceEmailPaymentVO.getPrefix() + " " + invoiceEmailPaymentVO.getInvoiceNo(), content, invoiceEmailPaymentVO.getEmail(), null, ccEmailList);
+			Thread thread = new Thread(processSentEmail);
+			thread.start();
+		} catch ( Exception e) {
+			throw new BusinessException(e);
+		}
+	}
+
+	@Override
+	public void sendEmailInvoiceEmail(InvoiceVO invoiceVO, UserVO userVO, List<String> emailList, File file, String termsAndConditionFile, String itineraryPath) throws Exception {
+		if (invoiceVO == null)
+			return;
+		
+		try {
+			invoiceDAO.getInvoiceDetails(invoiceVO);
+			
+			// Get email template
+			SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
+			String departureDate = sdf.format(invoiceVO.getDepartureDt());
+			String airlineName = "TBA";
+			String airlineCode = "";
+			TourDepartureVO tourDepVO = tourPkgDAO.getTourDepById(invoiceVO.getTourDepId());
+			
+			Map<String, Object> map = new HashMap<>();
+			
+			map.put("bgColor", CommonConstant.EMAIL_BG_COLOR);
+			map.put("docTypeCd", invoiceVO.getDocTypeCd());
+//			map.put("invoiceVO", invoiceVO);
+			map.put("customerName", invoiceVO.getAttnTo());
+			map.put("companyName", CommonConstant.EMAIL_FULL_COMP_NAME);
+			map.put("re", invoiceVO.getSubjLine());
+			if (invoiceVO.getBookingId() != null || invoiceVO.getIdParentInvTourBooking() != null) {
+				
+				// set booking number
+				if (invoiceVO.getBookingId() != null)					map.put("bookingNo", invoiceVO.getBookingId().toString());
+				else if (invoiceVO.getIdParentInvTourBooking() != null) map.put("bookingNo", invoiceVO.getIdParentInvTourBooking().toString());
+			    
+				map.put("invoiceNo", invoiceVO.getPrefix() + " " + invoiceVO.getCode());
+			    if (tourDepVO.getIdAirline() != null) {
+					AirlineVO airlineVO = airlineDAO.getAirline(tourDepVO.getIdAirline());
+					airlineName = airlineVO.getDesc();
+					airlineCode = "(" + airlineVO.getCode() + ")";
+				}
+			    map.put("airline", airlineName + " " + airlineCode);
+			    map.put("departureDate", departureDate);
+			}
+			map.put("invoiceStatus", LookupUtils.getReferenceDataValue("INV_STATUS", invoiceVO.getStatusCd()));
+			map.put("tourCode", invoiceVO.getTourCd());
+			map.put("salesPerson", invoiceVO.getSalerName());
+			
+			String docTypeDesc = "Invoice";
+			if (SalesConstant.DOC_TYPE_CD_PAX_STMT.equals(invoiceVO.getDocTypeCd())) {
+				docTypeDesc = "Pax Statement";
+			}
+			map.put("docTypeDesc", docTypeDesc);
+			map.put("lowercaseDocTypeDesc", docTypeDesc.toLowerCase());
+			
+		    StringBuilder url = new StringBuilder();
+		    url.append(EmailProperties.MAIL_URL);
+		    
+//		    map.put("footerContent", "Please do not reply to this email, it was sent from an unmonitored email address. If you have any enquiries, please contact us at enquiry@applevacations.my or call our office at 03-2705 8299");
+		    map.put("footerContent", "Please do not reply to this email, it was sent from an unmonitored email address. If you have any enquiries, please contact us at " + CommonConstant.EMAIL_ENQUIRY_EMAIL + " or call our office at " + CommonConstant.EMAIL_ENQUIRY_PHONE);
+			
+			String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.INV_EMAIL_INVC, map);
+			
+			List<String> ccEmailList = new ArrayList<String>();
+			ccEmailList.add(userVO.getEmailAddress());
+//			ccEmailList.add("payment@applevacations.my");
+			
+//			ProcessSentEmail processSentEmail = new ProcessSentEmail(CommonConstant.EMAIL_FULL_COMP_NAME, "Invoice for Booking ID" + invoiceVO.getBookingId(), content, email, null, ccEmailList, file);
+//			ProcessSentEmail processSentEmail = new ProcessSentEmail(CommonConstant.EMAIL_FULL_COMP_NAME, "Invoice " + invoiceVO.getPrefix() + invoiceVO.getCode() + " from Apple Vacations", content, emailList, null, ccEmailList, file, termsAndConditionFile, itineraryPath);
+			ProcessSentEmail processSentEmail = new ProcessSentEmail(CommonConstant.EMAIL_FULL_COMP_NAME, docTypeDesc + " " + invoiceVO.getPrefix() + invoiceVO.getCode() + " from " + CommonConstant.EMAIL_SHORT_COMP_NAME, content, emailList, null, ccEmailList, file, termsAndConditionFile, itineraryPath);
+			Thread thread = new Thread(processSentEmail);
+			thread.start();
+		} catch ( Exception e) {
+			//throw new BusinessException(e);
+			throw e;
+		}
+	}
+
+	@Override
+	public void sendCustomerProfileUpdateEmail(CustomerProfileUpdateVO customerProfileUpdateVO, UserVO userVO) throws BusinessException {
+		if (customerProfileUpdateVO == null)
+			return;
+		
+		if (StringUtils.isBlank(customerProfileUpdateVO.getEmail())) 
+			return;
+		
+		try {
+			CustomerVO customerVO = customerDAO.getCustomerDetail(customerProfileUpdateVO.getIdCustomer());
+			if (customerVO == null) return;
+			
+			// Get email template
+//			Map<String, Object> map = new HashMap<>(); // Do not use this map cause URL sent out is different after encrypt (received and CC with diff url link)
+			Map root = new HashMap();
+			
+//			map.put("customerName", customerVO.getPersonVO().getSalutation() + ". " + customerVO.getPersonVO().getLastName() + " " + customerVO.getPersonVO().getGivenName());
+			
+		    StringBuilder url = new StringBuilder();
+		    if ( customerVO.getPcTypeCd().equals("C")) {
+		    	url.append(EmailProperties.FRONTEND_URL_UPD_CUST_C);
+		    } else {
+		    	url.append(EmailProperties.FRONTEND_URL_UPD_CUST_P);
+		    }
+		    
+		    url.append("?key=").append(URLEncoder.encode(AESEncryption.encrypt("custId=" + customerProfileUpdateVO.getIdCustomer() + "&uuid=" + customerProfileUpdateVO.getUuid())));
+			
+		    root.put("url", url);
+		    root.put("footerContent", "Please do not reply to this email, as it was sent from an unmonitored email address. The update link will expire once submitted, and you will no longer be able to complete the profile update after it expires. If you have any questions, please contact us at enquiry@applevacations.my or call our office at 03-2705 8299. Thank you.");
+			
+			String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.CUST_PROFILE_UPDATE, root);
+			
+			List<String> ccEmailList = new ArrayList<String>();
+			ccEmailList.add(userVO.getEmailAddress());
+			
+			ProcessSentEmail processSentEmail = new ProcessSentEmail(CommonConstant.EMAIL_FULL_COMP_NAME, "Data Collection for E-Invoice Implementation", content, customerProfileUpdateVO.getEmail(), null, ccEmailList);
+			Thread thread = new Thread(processSentEmail);
+			thread.start();
+		} catch ( Exception e) {
+			throw new BusinessException(e);
+		}
+	}
+	
+	@Override
+	public void sendSupplierProfileUpdateEmail(SupplierProfileUpdateVO supplierProfileUpdateVO, UserVO userVO) throws BusinessException {
+		if (supplierProfileUpdateVO == null)
+			return;
+		
+		if (StringUtils.isBlank(supplierProfileUpdateVO.getEmail()))
+			return;
+		
+		try {
+			SupplierVO supplierVO = purchaseDAO.getSupplierById(supplierProfileUpdateVO.getIdSupplier());
+			if (supplierVO == null) return;
+			
+			// Get email template
+//			Map<String, Object> map = new HashMap<>();
+			Map root = new HashMap();
+			
+		    StringBuilder url = new StringBuilder();
+		    url.append(EmailProperties.FRONTEND_URL_UPD_SUPPL);
+		    
+		    url.append("?key=").append(URLEncoder.encode(AESEncryption.encrypt("supplId=" + supplierProfileUpdateVO.getIdSupplier() + "&uuid=" + supplierProfileUpdateVO.getUuid())));
+			
+		    root.put("url", url);
+		    root.put("footerContent", "Please do not reply to this email, as it was sent from an unmonitored email address. The update link will expire once submitted, and you will no longer be able to complete the profile update after it expires. If you have any questions, please contact us at enquiry@applevacations.my or call our office at 03-2705 8299. Thank you.");
+			
+			String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.SUPPL_PROFILE_UPDATE, root);
+			
+			List<String> ccEmailList = new ArrayList<String>();
+			ccEmailList.add(userVO.getEmailAddress());
+			
+			ProcessSentEmail processSentEmail = new ProcessSentEmail(CommonConstant.EMAIL_FULL_COMP_NAME, "Data Collection for E-Invoice Implementation", content, supplierProfileUpdateVO.getEmail(), null, ccEmailList);
+			Thread thread = new Thread(processSentEmail);
+			thread.start();
+		} catch ( Exception e) {
+			throw new BusinessException(e);
+		}
+	}
+	
+	@Override
+	public void sendEInvNotifyEmail(InvoiceVO invoiceVO, String toEmailAddr, List<String> ccEmailList) throws Exception {
+		if (invoiceVO == null)	return;
+		
+		try {
+			Map<String, Object> map = new HashMap<>();
+			
+			map.put("prefixVal", LookupItemUtils.getInvPrefix(invoiceVO.getCompanyId())); 
+			map.put("code", invoiceVO.getCode());
+			
+			if (invoiceVO.geteInvoiceDocument() != null) {
+				map.put("eInvoiceStatus", invoiceVO.geteInvoiceDocument().getStatus());
+				
+				if (StringUtils.isNotBlank(invoiceVO.geteInvoiceDocument().getDocumentStatusReason())) {
+					map.put("reason", invoiceVO.geteInvoiceDocument().getDocumentStatusReason());
+				}
+			}
+			
+			map.put("datetime", sdf2.format(new Date()));
+			map.put("testing", EInvoiceProperties.isTesting());
+			
+			String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.E_INV_NOTIFY, map);
+			
+			System.out.println("CYY toEmailAddr: " + toEmailAddr);
+			
+			String subject = EInvoiceProperties.isTesting() ? "TESTING | E-Invoice Submission" : "E-Invoice Submission";
+			
+			ProcessSentEmail processSentEmail = new ProcessSentEmail(CommonConstant.EMAIL_FULL_COMP_NAME, subject, content, toEmailAddr, null, ccEmailList);
+			Thread thread = new Thread(processSentEmail);
+			thread.start();
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+	
+	@Override
+	public void sendEInvNotifyEmail(String code, String eInvoiceStatus, String statusReason, Long idCompany, String toEmailAddr, List<String> ccEmailList) throws Exception {
+		try {
+			Map<String, Object> map = new HashMap<>();
+			
+			map.put("prefixVal", LookupItemUtils.getInvPrefix(idCompany));
+			map.put("code", code);
+			map.put("eInvoiceStatus", eInvoiceStatus);
+			map.put("reason", statusReason);
+			map.put("datetime", sdf2.format(new Date()));
+			map.put("testing", EInvoiceProperties.isTesting());
+			map.put("bgColor", CommonConstant.EMAIL_BG_COLOR);
+			
+			String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.E_INV_NOTIFY, map);
+			
+			System.out.println("CYY toEmailAddr: " + toEmailAddr);
+			
+			String subject = EInvoiceProperties.isTesting() ? "TESTING | E-Invoice Submission" : "E-Invoice Submission";
+			
+			ProcessSentEmail processSentEmail = new ProcessSentEmail(CommonConstant.EMAIL_FULL_COMP_NAME, subject, content, toEmailAddr, null, ccEmailList);
+			Thread thread = new Thread(processSentEmail);
+			thread.start();
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+	
+	@Override
+	public void sendCustomerFeedbackEmailing(final List<FeedbackVO> feedbackList) throws BusinessException {
+		String updatedByTmp = "SYSTEM";
+		try {
+			if (BaseContext.getUserFullName() != null) {
+				updatedByTmp = BaseContext.getUserFullName();
+			} else if (BaseContext.getLoginId() != null) {
+				updatedByTmp = BaseContext.getLoginId();
+			}
+		} catch (Exception e) {
+			// Ignore
+		}
+		final String updatedBy = updatedByTmp;
+
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					System.out.println("FeedbackEmailJob triggered (emailing phase)");
+					if (CollectionUtils.isEmpty(feedbackList)) {
+						return;
+					}
+
+					for (FeedbackVO feedbackVO : feedbackList) {
+						try {
+							if (StringUtils.isBlank(feedbackVO.getCustomerEmail())) {
+								System.out.println(feedbackVO.getInvId() + ": the customer email is empty");
+								continue;
+							}
+							
+							String encryptedKey = "";
+							String newUuid = UUID.randomUUID().toString();
+
+							try {
+								String rawValue =
+										"custId=" + feedbackVO.getCustomerId()
+										+ "&tourDepId=" + feedbackVO.getIdTourDeparture()
+										+ "&uuid=" + newUuid;
+
+								encryptedKey = URLEncoder.encode(AESEncryption.encrypt(rawValue), "UTF-8");
+								System.out.println("feedback url raw value: " + rawValue);
+							} catch (Exception ex) {
+								throw new BusinessException(ex);
+							}
+
+							String feedbackUrl = EmailProperties.FRONTEND_URL_FEEDBACK_CUSTOMER + "?key=" + encryptedKey;
+							String subject = "We'd love your feedback — " + StringUtils.defaultIfBlank(feedbackVO.getTourCode(), "");
+
+							Map root = new HashMap();
+							root.put("customerName", StringUtils.defaultIfBlank(feedbackVO.getCustomerName(), "Valued Customer"));
+							root.put("url", feedbackUrl);
+							root.put("footerContent", "Please do not reply to this email, as it was sent from an unmonitored email address. If you have any questions, please contact us at enquiry@applevacations.my or call our office at 03-2705 8299. Thank you.");
+
+							String content = emailTemplate.processEmailMappingFooterDoNotReply(ConstantEmailTemplate.CUSTOMER_FEEDBACK_EMAIL, root);
+
+							//feedbackVO.setCustomerEmail(""); // debug purpose
+							ProcessSentEmail processSentEmail = new ProcessSentEmail(CommonConstant.EMAIL_FULL_COMP_NAME, subject, content, feedbackVO.getCustomerEmail(), null, null);
+							Thread thread = new Thread(processSentEmail);
+							thread.start();
+							
+							feedbackDAO.updateFeedbackForEmailSent(feedbackVO.getTourBookingId(), feedbackVO.getCustomerId(), newUuid, "E", updatedBy);
+							Thread.sleep(1000);
+
+						} catch (Exception e) {
+							System.err.println(
+									"Failed to send feedback email. "
+									+ "TourDepId=" + feedbackVO.getIdTourDeparture()
+									+ ", FeedbackId=" + feedbackVO.getIdFeedback()
+									+ ", Email=" + feedbackVO.getCustomerEmail()
+									+ ", Error=" + e.getMessage());
+						}
+					}
+				} catch (Exception e) {
+					System.err.println("Error running feedback emailing thread: " + e.getMessage());
+					e.printStackTrace();
+				}
+			}
+		}).start();
+	}
+
+
+//				} catch (Exception e) {
+//					System.err.println("Error running feedback emailing thread: " + e.getMessage());
+//					e.printStackTrace();
+//				}
+//			}
+//		}).start();
+	
+	
+//	public FeedbackVO insertFeedback(Long idTourPkg, Long idTourDep, Long idCustomer, String tokenUuid) throws BusinessException {
+//		
+//	    FeedbackVO feedbackVO = new FeedbackVO();
+//
+//	    feedbackVO.setIdTourPkg(idTourPkg);
+//	    feedbackVO.setIdTourDeparture(idTourDep);
+//	    feedbackVO.setCustomerId(idCustomer);
+//	    feedbackVO.setTokenUuid(tokenUuid);
+//	    feedbackVO.setFeedbackStatus("PENDING");
+//
+//        tourPackageDAO.insertFeedback(feedbackVO);
+//	    
+//	    return feedbackVO;
+//	}1
+//	
+}

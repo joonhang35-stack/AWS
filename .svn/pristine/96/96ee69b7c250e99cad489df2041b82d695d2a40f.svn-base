@@ -1,0 +1,180 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+
+<p:growl id="msg"/>
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddPaymentDialog.show();
+		} else {
+			varAddPaymentDialog.hide();
+		}
+	}
+	</script>
+<div style="height:500px;width:900px;overflow:auto;">
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idPaymentNo">Payment No. </h:outputLabel></p:column>
+		<p:column><h:outputText id="idPaymentNo" label="Payment No." value="#{paymentBean.cashBookVO.sysPrefix}-#{paymentBean.cashBookVO.sysNo}" rendered="#{not empty paymentBean.cashBookVO.sysNo}"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idBankAcct">Bank Account </h:outputLabel></p:column>
+		<p:column>
+			<h:outputText id="idBankAcct" label="idBankAcct" value="#{paymentBean.cashBookVO.temp}" rendered="#{not empty paymentBean.cashBookVO.id}"/>
+			<h:selectOneMenu id="idBankAcctSelect" label="Bank Account" value="#{paymentBean.cashBookVO.idBank}" rendered="#{empty paymentBean.cashBookVO.id}">
+				<f:selectItems value="#{paymentBean.bankAcctViewList}" var="bankVO" itemLabel="#{bankVO.name}" itemValue="#{bankVO.id}"/>
+			</h:selectOneMenu>
+		</p:column>
+	 	<p:column><h:outputLabel for="idCompanyCode">Company Code</h:outputLabel></p:column>
+		<p:column><h:outputText id="idCompanyCode" value="#{paymentBean.sessionInfoBean.companyVO.name}"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAddEODt">Date <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:calendar pattern="dd-MMM-yyyy" id="idAddEODt" value="#{paymentBean.cashBookVO.dtTrans}" navigator="true" showButtonPanel="true"
+				mindate="#{paymentBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart, 'dd-MMM-yyyy')}"
+				maxdate="#{paymentBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd, 'dd-MMM-yyyy')}"
+				required="true" disabled="#{not empty paymentBean.cashBookVO.id and paymentBean.cashBookVO.dateInFinPeriodClosed}" >
+				<p:ajax event="dateSelect" listener="#{paymentBean.handleDateChange}" update=":idAddPayment:idShowAcctTransList,:idAddPayment:idTaxableSection"/>
+			</p:calendar>
+			<span style="font-style:italic; font-size:9px; color:#333333;">(dd-MMM-yyyy)</span>
+		</p:column>
+		<p:column><h:outputLabel for="idPayee">Pay <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idPayee" label="Payee" value="#{paymentBean.cashBookVO.payee}" size="30" required="true" readonly="#{not empty paymentBean.cashBookVO.idSupplier}"></p:inputText>&nbsp;
+			<p:commandButton icon="ui-icon-search" update=":idSuppListDialog" oncomplete="varSuppListDialog.show()" process="@this"/>
+			<p:commandButton icon="ui-icon-close" actionListener="#{paymentBean.handleSupplierClear}" update=":idAddPayment:idPayee,:idAddPayment:idSupplierNumber" process="@this"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAmount">Amount <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idAmount" label="Amount" value="#{paymentBean.cashBookVO.credit}" required="true" styleClass="txt_right"
+					disabled="#{not empty paymentBean.cashBookVO.id and paymentBean.cashBookVO.dateInFinPeriodClosed}">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				<p:ajax update=":idAddPayment:idAddTrans"/>
+			</p:inputText>
+		</p:column>
+		<p:column><h:outputLabel for="idSupplierNumber">Supplier Number </h:outputLabel></p:column>
+		<p:column><h:outputText id="idSupplierNumber" label="SupplierNumber" value="#{paymentBean.cashBookVO.suppCode}"></h:outputText></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idChequeNo">Cheque No <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idChequeNo" label="Cheque No" value="#{paymentBean.cashBookVO.refNo}" required="true" maxlength="30" style="width:230px"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idMemo">Memo <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputTextarea id="idMemo" label="Memo" value="#{paymentBean.cashBookVO.remarks}" required="true" rows="7" cols="90"/></p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid>
+	<p:row>
+		<p:column>
+			<p:commandButton id="idAddTrans" value="Add Account Transaction" oncomplete="varAccountTransactionDialog.show()" actionListener="#{paymentBean.onAddAcctTrans}"
+				update=":idAcctTransDialog" disabled="#{not empty paymentBean.cashBookVO.id and paymentBean.cashBookVO.dateInFinPeriodClosed}"
+				process="@this"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:dataTable id="idShowAcctTransList" value="#{paymentBean.cashBookVO.acctTransList}" var="acctTransViewVO" style="width:250px">
+				<p:column headerText="Edit" style="width:40px; text-align:center;">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{paymentBean.onAcctTransSelected(acctTransViewVO)}" oncomplete="varAccountTransactionDialog.show()"
+						process="@this" update=":idAcctTransDialog" disabled="#{not empty paymentBean.cashBookVO.id and paymentBean.cashBookVO.dateInFinPeriodClosed}"/>
+				</p:column>
+				<p:column headerText="Delete" style="width:40px; text-align:center;">
+					<p:commandButton icon="ui-icon-close"  actionListener="#{paymentBean.delAcctTrans(acctTransViewVO)}" 
+						update=":idAddPayment:idShowAcctTransList,:idAddPayment:idTaxableSection,:idAddAcctTrans"
+						process="@this" disabled="#{not empty paymentBean.cashBookVO.id and paymentBean.cashBookVO.dateInFinPeriodClosed}"/>
+				</p:column>
+				<p:column headerText="Account">
+					<h:outputText value="#{acctTransViewVO.acctViewVO.code}" rendered="#{empty acctTransViewVO.acctViewVO.subCode}"/>
+					<h:outputText value="#{acctTransViewVO.acctViewVO.code}-#{acctTransViewVO.acctViewVO.subCode}" rendered="#{not empty acctTransViewVO.acctViewVO.subCode}"/>
+				</p:column>
+				<p:column headerText="Description" width="200" >
+					<h:outputText value="#{acctTransViewVO.acctViewVO.desc}" rendered="#{empty acctTransViewVO.acctViewVO.subCode}"/>
+					<h:outputText value="#{acctTransViewVO.acctViewVO.desc}, #{acctTransViewVO.acctViewVO.subDesc}" rendered="#{not empty acctTransViewVO.acctViewVO.subCode}"/>
+				</p:column>
+				<p:column headerText="Amount" styleClass="txt_right" width="110" >
+					<h:outputText value="#{paymentBean.getDoubleDecimalFormat('#,##0.00',acctTransViewVO.amount)}"/>
+				</p:column>
+				<p:column headerText="GST Amount" styleClass="txt_right" width="110" rendered="#{paymentBean.isGSTPeriod}">
+					<h:outputText value="#{acctTransViewVO.taxAmount}">
+		        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Amount Inc. GST" styleClass="txt_right" width="110" rendered="#{paymentBean.isGSTPeriod}">
+					<h:outputText value="#{acctTransViewVO.amountIncludeTax}">
+		        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+		        	</h:outputText>
+				</p:column>
+			</p:dataTable>
+		</p:column>
+	</p:row>
+</p:panelGrid>	
+
+	<p:panelGrid id="idTaxableSection">
+		<p:row rendered="#{paymentBean.isGSTPeriod}">
+			<p:column style="width:200px">
+				<h:outputLabel for="idTtlGST">GST Amount:</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idTtlGST" value="#{paymentBean.amtCalcViewVO.totalTax}" readonly="true" style="text-align:right;background:#ccc">
+					<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:200px">
+				<h:outputLabel for="idGSTIncAmt">#{paymentBean.isGSTPeriod ? 'Amount Inclusive of GST:' : 'Total Amount:'}</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idGSTIncAmt" value="#{paymentBean.amtCalcViewVO.totalAmountIncludeTax}" readonly="true" style="text-align:right;background:#ccc">
+					<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<!-- <p:row>
+			<p:column>
+				<h:outputLabel for="idRoundingAmt">Rounding Adjustment:</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idRoundingAmt" value="#{paymentBean.amtCalcViewVO.totalRounding}" readonly="true" style="text-align:right;background:#ccc">
+					<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idTtlAmt">Total Amount:</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idTtlAmt" value="#{paymentBean.amtCalcViewVO.totalBalance}" readonly="true" style="text-align:right;background:#ccc">
+					<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				</p:inputText>
+			</p:column>
+		</p:row> -->
+</p:panelGrid>	
+</div>
+<h:panelGrid id="idButtonGrid" columns="4" style="width: 1px; margin: 5px 0 0 6px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{paymentBean.addPayment}" update="@form" rendered="#{empty paymentBean.cashBookVO.id}"/>
+	<p:commandButton id="idBtnEditSubmit" value="#{msg['common.button.label.save']}" actionListener="#{paymentBean.editPayment}" update="@form" rendered="#{not empty paymentBean.cashBookVO.id and paymentBean.cashBookVO.transTypeCd ne 'bill_pymt'}"/>
+	<p:commandButton value="#{msg['common.button.label.new']}" actionListener="#{paymentBean.newPaymentForm}" update="@form" rendered="#{not empty paymentBean.cashBookVO.id}" process="@this">
+		<pe:resetEditableValues for="idAddPayment"/>
+	</p:commandButton>
+	<p:commandButton id="idBtnAddCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{paymentBean.resetForm}" update="@form,:idForm:idPaymentTable" process="@this" oncomplete="varAddPaymentDialog.hide()">
+		<pe:resetEditableValues for="idAddPayment"/>
+	</p:commandButton>
+	<p:commandButton icon="ui-icon-print" value="PV" actionListener="#{paymentBean.printPV(paymentBean.cashBookVO)}" process="@this" ajax="false" rendered="#{not empty paymentBean.cashBookVO.id}"/>
+</h:panelGrid>
+
+</ui:composition>

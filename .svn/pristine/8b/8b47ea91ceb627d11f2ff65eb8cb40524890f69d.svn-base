@@ -1,0 +1,947 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+<script type="text/javascript">
+function onValidationBillList(xhr, status, args, tempX) {
+	if (!args.validationFailed) {   
+		if(!args.validateError)
+			if (tempX == 1) varMultiPmntDialog.show();
+			else varAttachPmntDialog.show();
+	} 
+	
+}
+
+function subTotalRecal() {
+	var totalAmt=0;
+	var totalPaid=0;
+	var totalBal=0;
+	var totalAllocate=0;
+	var tbody = $(document.getElementById('idBillListForm:idPurBillPmntTable')).find('tbody');
+	var tfoot = $(document.getElementById('idBillListForm:idPurBillPmntTable')).find('tfoot');
+	
+	if (tfoot.find('tr').eq(0).find('td').eq(1).find('div').text().indexOf("Sub Total:") == -1) {
+		return true;
+	}
+	
+	tbody.find('tr').each(function (key, val) {
+		var totalSubBillAmt = tbody.find('tr').eq(key).find('td').eq(8).find('div').text();
+		var totalSubAmtPaid = tbody.find('tr').eq(key).find('td').eq(9).find('div').text();
+		var totalSubCurBal = tbody.find('tr').eq(key).find('td').eq(10).find('div').text();
+		var totalSubAmtAllocate = tbody.find('tr').eq(key).find('td').eq(11).find('input').val();
+		if (typeof totalSubAmtAllocate === 'undefined') {
+			totalSubAmtAllocate = "0.0";
+		}
+		totalSubBillAmt = totalSubBillAmt.replace(",", "");
+		totalSubAmtPaid = totalSubAmtPaid.replace(",", "");
+		totalSubCurBal = totalSubCurBal.replace(",", "");
+		totalSubAmtAllocate = totalSubAmtAllocate.replace(",", "");
+		totalAmt += parseFloat(totalSubBillAmt);
+		totalPaid += parseFloat(totalSubAmtPaid);
+		totalBal += parseFloat(totalSubCurBal);
+		totalAllocate += parseFloat(totalSubAmtAllocate);
+    });
+	var fmtTotal = 0;
+	
+	fmtTotal = formatNumber(totalAmt);
+	tfoot.find('tr').eq(0).find('td').eq(2).find('div').text(fmtTotal);
+	fmtTotal = formatNumber(totalPaid);
+	tfoot.find('tr').eq(0).find('td').eq(3).find('div').text(fmtTotal);
+	fmtTotal = formatNumber(totalBal);
+	tfoot.find('tr').eq(0).find('td').eq(4).find('div').text(fmtTotal);
+	fmtTotal = formatNumber(totalAllocate);
+	tfoot.find('tr').eq(0).find('td').eq(5).find('div').text(fmtTotal);
+}
+
+function formatNumber(number) {
+    number = number.toFixed(2) + '';
+    x = number.split('.');
+    x1 = x[0];
+    x2 = x.length > 1 ? '.' + x[1] : '';
+    var rgx = /(\d+)(\d{3})/;
+    while (rgx.test(x1)) {
+        x1 = x1.replace(rgx, '$1' + ',' + '$2');
+    }
+    return x1 + x2;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var filters = document.querySelectorAll('input.ui-column-filter');
+    filters.forEach(function(filter) {
+        filter.setAttribute('enterkeyhint', 'enter');
+    });
+});
+</script>
+
+<p:panel header="Bill Payment" toggleable="true" toggleSpeed="500">
+<h:form id="idBillListForm">
+	<p:growl id="msg"/>
+	<p:panelGrid columns="14" cellpadding="0" cellspacing="2" style="width:300px;">
+		<p:commandButton value="Add" oncomplete="varAddFuncDialog.show()" update=":idDetailsDialog">
+			<f:actionListener binding="#{billPymtBean.addBill()}"></f:actionListener>
+			<f:actionListener binding="#{journalBean.handleJournalDetailAddNew()}"></f:actionListener>
+		</p:commandButton>
+		<p:separator style="width:2px;height:20px" />
+		<p:commandButton value="Multiple Bills Payment" style="width:160px" actionListener="#{billPymtBean.onMultiBillsPymt}" process="@this" update="@form,:idMultiPmntForm,:idBillListForm:idPurBillPmntTable"/>
+		<p:separator style="width:2px;height:20px" />
+		<p:commandButton value="Multiple E-Invoice Submission" style="width:220px" styleClass="nowrap" oncomplete="varMulpEInvDialog.show()" update=":idMulpEInvDialog :idMulpEInvForm" process="@this" rendered="#{billPymtBean.invPmntAuthVO.eInvoice}"></p:commandButton>
+		<p:separator style="width:2px;height:20px" />
+		<p:commandButton value="Consolidate E-Invoice Submission" style="width:220px" styleClass="nowrap" oncomplete="varConsolEInvDialog.show()" update=":idConsolEInvDialog" process="@this" rendered="#{billPymtBean.invPmntAuthVO.eInvoice}"></p:commandButton>
+		<p:separator style="width:2px;height:20px" />
+	 	<p:calendar id="idBillDateFr" label="Bill Date From" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{billPymtBean.billFromDate}">
+	 		<p:ajax event="dateSelect" listener="#{billPymtBean.handleBillDtChange}"
+				oncomplete="purBillPmntTable.clearFilters()" update=":idBillListForm:idPurBillPmntTable :idBillListForm:msg"/>
+	 	</p:calendar>
+		<p:watermark for="idBillDateFr" value="Bill Date From" />
+		<p:calendar id="idBillDateTo" label="Bill Date To" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{billPymtBean.billToDate}">
+	 		<p:ajax event="dateSelect" listener="#{billPymtBean.handleBillDtChange}"
+				oncomplete="purBillPmntTable.clearFilters()" update=":idBillListForm:idPurBillPmntTable :idBillListForm:msg"/>
+	 	</p:calendar>
+		<p:watermark for="idBillDateTo" value="Bill Date To" />
+		<p:separator style="width:2px;height:20px" />
+		<p:selectOneButton id="idPrintType" value="#{billPymtBean.countryFilter}" style="display: flex" styleClass="nowrap">
+	 		<f:selectItem itemLabel="Both" itemValue="ALL"/>
+            <f:selectItem itemLabel="Foreign Supplier" itemValue="F" />
+            <f:selectItem itemLabel="Local Supplier" itemValue="L"/>
+            <p:ajax event="change" update="@form" listener="#{billPymtBean.loadBillList}"></p:ajax>
+        </p:selectOneButton>
+<!-- 		<p:commandButton value="Multiple Bills Payment" style="width:160px" actionListener="#{billPymtBean.onMultiBillsPymt}" process="@this" update="@form,:idMultiPmntForm,:idBillListForm:idPurBillPmntTable"/>
+ -->		
+		<!-- <p:commandButton id="toggler" value="Columns" style="float:left"
+			icon="ui-icon-calculator"
+			actionListener="#{billPymtBean.handleChangeColumnsViewClick}"
+			oncomplete="varListingTableViewDialog.show();" process="@this"
+			update=":idListingTableViewDialog" />
+			<p:separator style="width:2px;height:20px" />
+		<h:commandLink value="Export"
+			styleClass="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ui-button-text"
+			style="padding: .5em 1em;">
+			<p:dataExporter type="xls" target="idPurBillPmntTable"
+				fileName="Exorder" postProcessor="#{billPymtBean.postProcessXLS}"/>
+		</h:commandLink> -->
+	</p:panelGrid>
+	<p:panelGrid rendered="#{billPymtBean.blMultiPymt}" columns="7" cellpadding="0" cellspacing="2" style="width:990px;">
+		<h:outputLabel>Supplier Type <span class="required">* </span></h:outputLabel>
+		<p:selectOneButton id="idSuppType" value="#{billPymtBean.suppTypeFilter}" style="display: flex" styleClass="nowrap">
+	 		<f:selectItem itemLabel="Both" itemValue="ALL"/>
+            <f:selectItem itemLabel="TRADE CREDITOR" itemValue="TC" />
+            <f:selectItem itemLabel="SUNDRY CREDITOR" itemValue="SC"/>
+            <p:ajax event="change" update="@form, :idBillListForm:idShowSuppName" listener="#{billPymtBean.handleSuppTypeSelecttion()}"></p:ajax>
+        </p:selectOneButton>
+		<h:outputLabel>Supplier <span class="required">* </span></h:outputLabel>
+	    <p:selectCheckboxMenu id="idShowSuppName" label="Supplier" value="#{billPymtBean.idSupplierList}"
+			filter="true" filterMatchMode="contains" style="width:150px; display:block;" onHide="executeOnOnhide();">
+			<f:selectItems value="#{billPymtBean.multiSuppList}" var="vo" itemLabel="#{vo.fullName}" itemValue="#{vo.id}" /> 
+		</p:selectCheckboxMenu>
+	    <p:remoteCommand name="executeOnOnhide" actionListener="#{billPymtBean.handleSuppSelection()}" update=":idBillListForm:idPurBillPmntTable"
+	    	oncomplete="subTotalRecal()"/>
+	    
+	    <p:commandButton value="Apply Payment" actionListener="#{billPymtBean.onMultiPmntClick}" oncomplete="onValidationBillList(xhr, status, args, 1)" process="@form" update="@form,:idMultiPmntForm,idPurBillPmntTable"/>
+	    <p:commandButton value="Attach Payment" actionListener="#{billPymtBean.onAttachPmntClick}" oncomplete="onValidationBillList(xhr, status, args, 2)" process="@form" update="@form,:idAttachPmntDialog,:idAttachPmntForm" 
+	    	rendered="#{billPymtBean.invPmntAuthVO.accountManager}"/>
+	</p:panelGrid>
+	
+	<p:dataTable id="idPurBillPmntTable" widgetVar="purBillPmntTable" value="#{billPymtBean.lazyDataModel}" var="purBillPmnt" paginator="true" rows="20"  
+		paginatorTemplate="#{bterp:pageTemplate()}" 
+		rowsPerPageTemplate="10, 20, 30, 100, 300, 500, 1000, 1500" lazy="true" filterEvent="enter" rowStyleClass="#{purBillPmnt.amtAllocate ne 0 and billPymtBean.blMultiPymt ? 'group-color-one' : ''}"
+		rowKey="#{purBillPmnt.id}" selectionMode="single">
+		
+		<p:ajax event="page" oncomplete="subTotalRecal()"/>
+		<p:ajax event="sort" oncomplete="subTotalRecal()"/>
+		<p:ajax event="filter" oncomplete="subTotalRecal()"/>
+		
+		<p:column headerText="Edit" style="width:40px; text-align:center;" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(1)}" exportable="false">
+			<p:commandButton icon="ui-icon-pencil" actionListener="#{billPymtBean.onBillSelected(purBillPmnt.id)}" update=":idDetailsDialog :idAddFuncForm:idJournalList" oncomplete="varAddFuncDialog.show()">
+				<!-- <f:actionListener binding="#{billPymtBean.onBillSelected(purBillPmnt.id)}"></f:actionListener> -->
+				<!-- <f:actionListener binding="#{journalBean.onJournalSelected(billPymtBean.exOrderBillVO.idJournal)}"></f:actionListener> -->
+			</p:commandButton>
+		</p:column>
+		<p:column headerText="Delete" style="width:50px; text-align:center;" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(2)}" exportable="false">
+			<p:commandButton icon="ui-icon-close" actionListener="#{billPymtBean.onBillSelected(purBillPmnt.id)}" oncomplete="varDelEODialog.show()" 
+				rendered="#{(purBillPmnt.status != 'CC' and purBillPmnt.status != 'VD')}" />
+		</p:column>
+		<p:column headerText="Pay" style="width:50px; text-align:center;" rendered="#{billPymtBean.blMultiPymt == true and billPymtBean.listingTableViewVO.verifyVisibility(3)}" exportable="false">
+			<p:commandButton icon="ui-icon-plus" actionListener="#{billPymtBean.onBillPay(purBillPmnt, true)}" update="@form,idPurBillPmntTable" process="@this" 
+							disabled="#{(purBillPmnt.status eq 'CC' or purBillPmnt.billAmt eq purBillPmnt.amtPaid)}" oncomplete="subTotalRecal()"/>
+		</p:column>
+		<p:column headerText="Bill Id" sortBy="#{purBillPmnt.code}" style="width:60px;" filterStyle="width:60px;" styleClass="txt_center" filterBy="#{purBillPmnt.code}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(4)}">
+			<f:facet name="header"><h:outputText value="Bill Id" /></f:facet>
+			<h:outputText value="#{purBillPmnt.code}" />
+		</p:column>
+		<p:column headerText="Supplier Name" sortBy="#{purBillPmnt.supplierName}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.supplierName}" filterMatchMode="contains" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(5)}">
+			<f:facet name="header"><h:outputText value="Supplier Name" /></f:facet>
+			<h:outputText value="#{purBillPmnt.supplierName}" />
+		</p:column>
+		<p:column headerText="Bill Date" sortBy="#{purBillPmnt.billDt}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.billDt}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(6)}">
+			<f:facet name="header"><h:outputText value="Bill Date" /></f:facet>
+			<h:outputText value="#{purBillPmnt.billDt}" >
+				<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+			</h:outputText>
+		</p:column>
+		<p:column headerText="EO No" sortBy="#{purBillPmnt.eoCode}" style="width:60px;" filterStyle="width:60px;" styleClass="txt_center" filterBy="#{purBillPmnt.eoCode}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(7)}">
+			<f:facet name="header"><h:outputText value="EO No" /></f:facet>
+			<h:outputText value="#{purBillPmnt.eoCode}" />
+		</p:column>
+		<p:column headerText="Tax Code Applied" sortBy="#{purBillPmnt.taxCodeGroup}" style="width: 80px;" filterBy="#{purBillPmnt.taxCodeGroup}" filterMatchMode="contains" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(8)}">
+			<f:facet name="header"><h:outputText value="Tax Code Applied" /></f:facet>
+			<h:outputText value="#{purBillPmnt.taxCodeGroup}" />
+		</p:column>
+		<p:column headerText="Amount" sortBy="#{purBillPmnt.billAmt}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.billAmt}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(9)}">
+			<f:facet name="header"><h:outputText value="Amount" /></f:facet>
+			<h:outputText value="#{purBillPmnt.billAmt}" >
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Payment Amount" sortBy="#{purBillPmnt.amtPaid}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.amtPaid}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(10)}">
+			<f:facet name="header"><h:outputText value="Payment Amount" /></f:facet>
+			<h:outputText value="#{purBillPmnt.amtPaid}" >
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Current Balance" sortBy="#{purBillPmnt.curBal}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.curBal}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(11)}">
+			<f:facet name="header"><h:outputText value="Current Balance" /></f:facet>
+			<h:outputText value="#{purBillPmnt.curBal}" >
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Amount to Allocate"  style="width: 80px;" styleClass="txt_center" rendered="#{billPymtBean.blMultiPymt == true and billPymtBean.listingTableViewVO.verifyVisibility(12)}">
+			<f:facet name="header"><h:outputText value="Amount to Allocate" /></f:facet>
+			<p:inputText id="idAmountToAllocate" colspan="3" label="Amount to Allocate" value="#{purBillPmnt.amtAllocate}" rendered="#{purBillPmnt.curBal!=0}">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				<p:ajax event="blur" listener="#{billPymtBean.onBillPay(purBillPmnt, false)}" update="idPurBillPmntTable" process="@this" oncomplete="subTotalRecal()"/>
+			</p:inputText>
+		</p:column>
+		<p:column headerText="Reason for Expense" sortBy="#{purBillPmnt.exReason}" width="200" filterBy="#{purBillPmnt.exReason}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(17)}">
+			<f:facet name="header"><h:outputText value="Reason for Expense" /></f:facet>
+			<h:outputText value="#{purBillPmnt.exReason}" />
+		</p:column>
+		<p:column headerText="Due Date" sortBy="#{purBillPmnt.dueDt}" style="width: 70px;" filterStyle="width:70px;" styleClass="txt_center" filterBy="#{purBillPmnt.dueDt}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(13)}">
+			<f:facet name="header"><h:outputText value="Due Date" /></f:facet>
+			<h:outputText value="#{purBillPmnt.dueDt}" >
+				<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Tour Code"  style="width: 80px;" styleClass="txt_center"   filterBy="#{purBillPmnt.tourCode}" filterMatchMode="contains" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(14)}">
+			<f:facet name="header"><h:outputText value="Tour Code" /></f:facet>
+			<h:outputText value="#{purBillPmnt.tourCode}" />
+		</p:column>
+		<p:column headerText="Invoice/CN No." sortBy="#{purBillPmnt.cnNumber}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.cnNumber}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(15)}">
+			<f:facet name="header"><h:outputText value="Invoice/CN No." /></f:facet>
+			<h:outputText value="#{purBillPmnt.cnNumber}" />
+		</p:column>
+		<p:column headerText="AWS Invoice No." sortBy="#{purBillPmnt.invoices}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.invoices}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(16)}">
+			<f:facet name="header"><h:outputText value="AWS Invoice No." /></f:facet>
+			<h:outputText value="#{purBillPmnt.invoices}" />
+		</p:column>
+		<!-- Joon Hang - show paymentNo in Table -->
+		<p:column headerText="Payment No." width="180" styleClass="txt_center" filterBy="#{purBillPmnt.codePayment}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(16)}">
+			<f:facet name="header"><h:outputText value="Payment No." /></f:facet>
+			<h:outputText value="#{purBillPmnt.codePayment}" escape="false"/>
+		    <p:commandLink actionListener="#{billPymtBean.viewPaymentForBillPayment(purBillPmnt.id)}" oncomplete="varPaymentDetailsDialog.show()" process="@this" update=":idPaymentDetailsDialog" rendered="#{not empty purBillPmnt.codePayment}">
+		    	<i class="fa fa-info-circle" aria-hidden="true" />
+		    </p:commandLink>
+		</p:column>
+		<p:column headerText="Comments" sortBy="#{purBillPmnt.comments}" width="200" filterBy="#{purBillPmnt.comments}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(18)}">
+			<f:facet name="header"><h:outputText value="Comments" /></f:facet>
+			<h:outputText value="#{purBillPmnt.comments}" />
+		</p:column>
+		<p:column headerText="Country" sortBy="#{purBillPmnt.countryVO.country}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.countryVO.country}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(19)}">
+			<f:facet name="header"><h:outputText value="Country" /></f:facet>
+			<h:outputText value="#{purBillPmnt.countryVO.country}" />
+		</p:column>
+		<p:column headerText="Status" sortBy="#{purBillPmnt.status}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.status}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(19)}">
+			<f:facet name="header"><h:outputText value="Status" /></f:facet>
+			<h:outputText value="#{zsg:referenceDataValue('BILL_STATUS', purBillPmnt.status)}" />
+		</p:column>
+		<p:column headerText="E-Invoice Status" sortBy="#{purBillPmnt.eInvoiceStatus}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.eInvoiceStatus}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(19)}">
+			<f:facet name="header"><h:outputText value="E-Invoice Status" /></f:facet>
+			<h:outputText value="#{purBillPmnt.eInvoiceStatus}" />
+		</p:column>
+		<p:column headerText="Updated By" sortBy="#{purBillPmnt.updatedBy}" style="width: 70px;" filterStyle="width:70px;" styleClass="txt_center" filterBy="#{purBillPmnt.updatedBy}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(20)}">
+			<f:facet name="header"><h:outputText value="Updated By" /></f:facet>
+			<h:outputText value="#{purBillPmnt.updatedBy}" />
+		</p:column>
+		<p:column headerText="Updated Date" sortBy="#{purBillPmnt.updatedDate}" style="width: 70px;" filterStyle="width:70px;" styleClass="txt_center" filterBy="#{purBillPmnt.updatedDate}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(21)}">
+			<f:facet name="header"><h:outputText value="Updated Date" /></f:facet>
+			<h:outputText value="#{purBillPmnt.updatedDate}"><f:convertDateTime pattern="#{config['date.display.pattern']} HH:mm:ss"/></h:outputText>
+		</p:column>
+		
+		<p:columnGroup type="footer">
+			<p:row rendered="#{billPymtBean.blMultiPymt}">
+            	<p:column footerText="" colspan="6" rendered="#{billPymtBean.blMultiPymt != true}"/>
+            	<p:column footerText="" colspan="7" rendered="#{billPymtBean.blMultiPymt == true}"/>
+                <p:column footerText="Sub Total:"  style="text-align:right"  />
+                <p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalAmtMap['totalSubBillAmt'])}" />
+                <p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalAmtMap['totalSubAmtPaid'])}" />
+                <p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalAmtMap['totalSubCurBal'])}" />
+            	<p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalAmtMap['totalSubAmtAllocate'])}" rendered="#{billPymtBean.blMultiPymt}"/>
+                <p:column footerText="" colspan="8" rendered="#{billPymtBean.blMultiPymt != true}"/>
+            	<p:column footerText="" colspan="9" rendered="#{billPymtBean.blMultiPymt == true}"/>
+			</p:row>
+            <p:row>
+            	<p:column footerText="" colspan="6"/>
+            	<p:column footerText="" rendered="#{billPymtBean.blMultiPymt == true}"/>
+                <p:column footerText="Grand Total:"  style="text-align:right"  />
+                <p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalAmtMap['totalBillAmt'])}" />
+                <p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalAmtMap['totalAmtPaid'])}" />
+                <p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalAmtMap['totalCurBal'])}" />
+            	<!-- <p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalAmtMap['totalAmtAllocate'])}" rendered="#{billPymtBean.blMultiPymt}"/> -->
+                <p:column footerText="" colspan="13"/> 
+            </p:row>  
+		</p:columnGroup>
+	</p:dataTable>
+	
+	<br/>
+	<!-- <h:commandLink
+		action="#{billPymtBean.validateAndExport}" >
+		<p:graphicImage value="/img/excel.png" />
+		<p:dataExporter type="dataSizeCheckingCSV" target="idPurBillPmntTable" fileName="L"/>
+	</h:commandLink>
+	<p:commandButton value="Export CSV" action="#{billPymtBean.validateAndExport}" update="msg">
+    	<p:dataExporter type="csv" target="idPurBillPmntTable" fileName="L"/>
+	</p:commandButton> -->
+	
+	<h:panelGrid columns="2" style="width: 10px">
+		<p:commandButton value="Add" actionListener="#{billPymtBean.addBill}" oncomplete="varAddFuncDialog.show()" update=":idDetailsDialog"/>
+		<p:commandButton value="Export" actionListener="#{billPymtBean.validateBillListExport}" update="msg" oncomplete="if (args &amp;&amp; !args.validationFailed) varExportDialog.show()"/>
+	</h:panelGrid>
+</h:form>
+</p:panel>
+
+<p:dialog id="idDetailsDialog" widgetVar="varAddFuncDialog" header="Bill Payment" modal="true" resizable="false" dynamic="true" draggable="true"
+	closable="false">
+	<h:form id="idAddFuncForm">
+		<ui:include src="../../common/bill_payment/add_bills_payment.xhtml"/>
+	</h:form>	
+</p:dialog>
+
+<p:dialog id="idPymtDialog" widgetVar="varAddPymtDialog" header="Apply Payment" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idAddPymtForm">
+		<ui:include src="../../common/bill_payment/add_payment.xhtml"/>
+	</h:form>	
+</p:dialog>
+
+<p:dialog id="idEditPymtDialog" widgetVar="varEditPymtDialog" header="Edit Payment" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idEditPymtForm">
+		<ui:include src="../../common/bill_payment/edit_payment.xhtml"/>
+	</h:form>	
+</p:dialog>
+		
+<p:dialog id="idAcctSubCatDialog" widgetVar="varAcctSubCatDialog" header="General Ledger Account (G/L Acct) Details" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="false">
+	<h:form id="idAddAcctSubCatForm">
+		<ui:include src="../../../purchase/common/bill_payment/add_gl_acct.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idEditAcctDialog" widgetVar="varEditAcctDialog" header="General Ledger Account (G/L Acct) Details" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="false">
+	<h:form id="idEditAcctSubCatForm">
+		<ui:include src="../../../purchase/common/bill_payment/edit_gl_acct.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idMultiPmntDialog" widgetVar="varMultiPmntDialog" header="Multiple Bills Payment" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<h:form id="idMultiPmntForm">
+		<ui:include src="../../../purchase/common/bill_payment/add_multiple_pmnt.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idAttachPmntDialog" widgetVar="varAttachPmntDialog" header="Attach Payment" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idAttachPmntForm">
+		<ui:include src="../../../purchase/common/bill_payment/add_attach_pmnt.xhtml"/>
+	</h:form>
+</p:dialog>
+		
+<p:dialog id="idcreateBillDialog" widgetVar="varCreateBillDialog" header="Create Bills" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel>Selected Period </h:outputLabel></p:column>
+			<p:column><p:inputText label="Supplier Number" value=""/></p:column>
+			<p:column><h:outputLabel>to </h:outputLabel></p:column>
+			<p:column><p:inputText label="Supplier Number" value=""/></p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:dataTable id="idPurBillPmntTable2" widgetVar="purBillPmntTable2" value="" var="purBillPmnt" paginator="true" rows="20" 
+		paginatorTemplate="#{bterp:pageTemplate()}" 
+		rowsPerPageTemplate="20, 30, 50" emptyMessage="#{msg['cust.tbl.empty.message']}">
+		<p:column headerText="Edit" style="width: 5px;" styleClass="txt_center">
+			<p:commandButton value="Edit"/>
+		</p:column>
+		<p:column headerText="Supplier" style="width: 5px;" styleClass="txt_center">
+			<h:outputText label="Supplier Number" value=""/>
+		</p:column>
+		<p:column headerText="Exchange Order No" style="width: 5px;" styleClass="txt_center">
+			<h:outputText label="Supplier Number" value=""/>
+		</p:column>
+		<p:column headerText="Date" style="width: 5px;" styleClass="txt_center">
+			<h:outputText label="Supplier Number" value=""/>
+		</p:column>
+		<p:column headerText="Exchange Order Amt" style="width: 5px;" styleClass="txt_center">
+			<h:outputText label="Supplier Number" value=""/>
+		</p:column>
+	</p:dataTable>
+	<p:panelGrid columns="3" >
+		<p:commandButton value="Select All"/>
+		<p:commandButton value="Create Bills for Selected Exchange Orders"/>
+		<p:commandButton value="Done" onclick="varCreateBillDialog.hide()" process="@this" />
+		<p:commandButton value="Delete"/>
+	</p:panelGrid>
+</p:dialog>
+
+<!--
+	DIALOG - EXCHANGE ORDER LIST
+-->
+<p:dialog id="idEOListDialog" widgetVar="varEOListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<h:form id="idExOrderList">
+		<p:dataTable widgetVar="varEOList" value="#{billPymtBean.exOrderList}" var="vo" paginator="true" rows="10" paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowKey="#{vo.id}" selectionMode="single" filterEvent="enter" filteredValue="#{billPymtBean.filteredObjList}">
+			
+			<p:ajax event="rowSelect" listener="#{billPymtBean.handleEOSelect}" oncomplete="varEOListDialog.hide(),varEOList.clearFilters()"
+				update=":idAddFuncForm:idShowEO,:idAddFuncForm:idSupplierType,:idAddFuncForm:idShowSuppName,:idAddFuncForm:idInvAmt,
+					:idAddPymtForm:idAddPayTo,:idAddFuncForm:idInvAmt,:idAddFuncForm:idDueDt,:idAddFuncForm:idAddTourCd,:idAddFuncForm:idEOAmt,
+					:idAddFuncForm:idPaymentTerm,:idAddFuncForm:idTtlAmt,:idAddFuncForm:idAmtDue,:idAddFuncForm:tabView:idAPAcct,
+					:idAddFuncForm:idEOInvListTable,:idAddFuncForm:idViewEOButton,:idAddFuncForm:idViewSupplierButton,:idAddFuncForm:idAddTourCd,
+					:idAddFuncForm:idDepDt"/>
+			
+			<p:column headerText="Exchange Order No" sortBy="#{vo.code}" filterBy="#{vo.code}" style="width:80px;">
+				<h:outputText value="#{vo.code}" />
+			</p:column>
+			<p:column headerText="Corporate Name" sortBy="#{vo.supplierName}" filterBy="#{vo.supplierName}" style="width:250px;">
+				<!--h:outputText value="#{vo.suppFullName}" /-->
+				<h:outputText value="#{vo.supplierName}" />
+			</p:column>
+			<p:column headerText="Contact Person" sortBy="#{vo.contactPerson}" filterBy="#{vo.contactPerson}" style="width:150px;">
+				<h:outputText value="#{vo.contactPerson}" />
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ACCOUNT SUB CAT LIST
+-->
+<p:dialog id="idAcctSubCatList" widgetVar="varAcctSubCatList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<h:form id="idAccSubCatListForm">
+		<p:dataTable value="#{billPymtBean.acctList}" var="vo2" rowKey="#{vo2.id}" selectionMode="single" scrollable="true" scrollHeight="300" filterEvent="enter">
+			<p:ajax event="rowSelect" listener="#{billPymtBean.handleSubAcctSelect}" oncomplete="varAcctSubCatList.hide()"
+				update=":idAddAcctSubCatForm:idAccountNo,:idAddAcctSubCatForm:idDesc,:idAddAcctSubCatForm:idGSTSearchButton,:idAddAcctSubCatForm:idGSTClearButton,
+					:idAddAcctSubCatForm:idGSTCode,:idAddAcctSubCatForm:idGSTRate,:idAddAcctSubCatForm:idGSTAmt,:idAddAcctSubCatForm:idAmt,
+					:idEditAcctSubCatForm:idAccountNo,:idEditAcctSubCatForm:idDesc,:idEditAcctSubCatForm:idGSTSearchButton,
+					:idEditAcctSubCatForm:idGSTCode,:idEditAcctSubCatForm:idGSTRate,:idEditAcctSubCatForm:idGSTAmt,:idEditAcctSubCatForm:idAmt"/>
+		
+			<p:column headerText="Account No" sortBy="#{vo2.code}" filterBy="#{vo2.code}" filterMatchMode="contains" width="100">
+				<h:outputText value="#{vo2.code}" />  
+				<h:outputText value="-#{vo2.subCode}" rendered="#{not empty vo2.subDesc}" />
+			</p:column>
+			<p:column headerText="Description" sortBy="#{vo2.desc}, #{vo2.subDesc}" filterBy="#{vo2.desc}, #{vo2.subDesc}" filterMatchMode="contains" width="200">
+				<h:outputText value="#{vo2.desc}" />
+				<h:outputText value=", #{vo2.subDesc}" rendered="#{not empty vo2.subDesc}" />
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:dialog>
+			 
+<!--
+	DIALOG - TOUR DEPARTURE LIST
+-->
+<p:dialog id="idTourCodeList" widgetVar="varTourCodeList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<div style="overflow:auto; width:800px !important; height:500px !important;">
+	<h:form id="idTourDepListForm">
+		<p:dataTable id="idTourDepList" value="#{billPymtBean.lazyDataModelTourDep}" var="vo" paginator="true" rows="20" lazy="true" 
+			paginatorTemplate="#{bterp:pageTemplate()}"
+			rowsPerPageTemplate="20, 30, 40" rowKey="#{vo.id}" selectionMode="single"
+			filterEvent="enter">
+			
+			<p:ajax event="rowSelect" listener="#{billPymtBean.handleTourCodeSelect}" oncomplete="varTourCodeList.hide()"  update=":idAddFuncForm:idAddTourCd :idAddFuncForm:idDepDt" />
+			<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:200px;">
+				<h:outputText value="#{vo.code}" />   
+			</p:column>
+			<p:column headerText="Departure Date" sortBy="#{vo.dtDep}" filterBy="#{vo.dtDep}" filterMatchMode="contains" style="width:60px;">
+				<h:outputText value="#{vo.dtDep}" >
+					<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+				</h:outputText> 
+			</p:column>
+			<p:column headerText="Package" sortBy="#{vo.packageDesc}" filterBy="#{vo.packageDesc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.packageDesc}" />   
+			</p:column>
+		</p:dataTable>
+	</h:form>
+	</div>
+</p:dialog>
+		
+<!-- DIALOG - BANK LIST -->
+<p:dialog id="idBankAcctDialog" widgetVar="varBankAcctListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="true" header="Bank List">
+	<h:form>
+		<div style="max-height:300px;overflow:auto;">
+			<p:dataTable id="idBankAcctTable" value="#{billPymtBean.bankAcctList}" var="vo" paginator="false" rows="20" filterEvent="enter"
+				paginatorTemplate="#{bterp:pageTemplate()}" 
+				rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{billPymtBean.handleBankSelectUsingBank}" update=":idAddPymtForm:idAddBankAcc,:idAddPymtForm:idAddBankName,:idEditPymtForm:idEditBankAcc,:idEditPymtForm:idEditBankName,:idMultiPmntForm:idAddBankAcc,:idMultiPmntForm:idAddBankName" oncomplete="varBankAcctListDialog.hide()"/>
+				
+				<p:column headerText="GL Name" sortBy="#{vo.name}" filterBy="#{vo.name}">
+					<h:outputText value="#{vo.name}"/>
+				</p:column>
+				  <p:column headerText="GL Account" sortBy="#{vo.acctViewVO.code}-#{vo.acctViewVO.subCode}" filterBy="#{vo.acctViewVO.code}-#{vo.acctViewVO.subCode}">
+					<h:outputText value="#{vo.acctViewVO.code}"/>
+					<h:outputText value="-#{vo.acctViewVO.subCode}" rendered="#{not empty vo.acctViewVO.subCode}"/>
+				</p:column>	
+			</p:dataTable>	
+		</div>
+		<div style="margin-top:5px">
+			<p:commandButton value="Cancel" oncomplete="varBankAcctListDialog.hide();"/>	
+		</div>		
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idGSTListDialog" widgetVar="varGSTListDialog" header="GST Tax Code" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<p:tabView >
+    	<p:tab title="Input Tax" style="width:150px;">
+			<p:dataTable id="idInputTaxCodeList" value="#{billPymtBean.inputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{billPymtBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" 
+					update=":idAddAcctSubCatForm:idGSTCode,:idAddAcctSubCatForm:idGSTRate,:idAddAcctSubCatForm:idGSTAmt,:idAddAcctSubCatForm:idAmt,
+							:idEditAcctSubCatForm:idGSTCode,:idEditAcctSubCatForm:idGSTRate,:idEditAcctSubCatForm:idGSTAmt,:idEditAcctSubCatForm:idAmt"/>
+				<p:column headerText="No." width="25" style="text-align:right;">
+					<h:outputText value="#{vo.seqNo}"/>
+				</p:column>
+				<p:column headerText="Code" width="50">
+					<h:outputText value="#{vo.code}" />
+				</p:column>
+				<p:column headerText="Description" >
+					<h:outputText value="#{vo.description}" />
+				</p:column>
+				<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+					<h:outputText value="#{vo.rate}"/>
+				</p:column>
+			</p:dataTable>
+		</p:tab>
+		<p:tab title="Output Tax" style="width:150px;">
+			<p:dataTable id="idOutputTaxCodeList" value="#{billPymtBean.outputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{billPymtBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" 
+					update=":idAddAcctSubCatForm:idGSTCode,:idAddAcctSubCatForm:idGSTRate,:idAddAcctSubCatForm:idGSTAmt,:idAddAcctSubCatForm:idAmt,
+							:idEditAcctSubCatForm:idGSTCode,:idEditAcctSubCatForm:idGSTRate,:idEditAcctSubCatForm:idGSTAmt,:idEditAcctSubCatForm:idAmt"/>
+				<p:column headerText="No." width="25" style="text-align:right;">
+					<h:outputText value="#{vo.seqNo}"/>
+				</p:column>
+				<p:column headerText="Code" width="50">
+					<h:outputText value="#{vo.code}" />
+				</p:column>
+				<p:column headerText="Description" >
+					<h:outputText value="#{vo.description}" />
+				</p:column>
+				<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+					<h:outputText value="#{vo.rate}"/>
+				</p:column>
+			</p:dataTable>
+		</p:tab>
+	</p:tabView>
+</p:dialog>
+
+		<p:dialog id="idListingTableViewDialog" header="Listing Table View"
+			widgetVar="varListingTableViewDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idListingTableViewForm">
+				<p:growl id="msg" />
+
+				<p:dataTable widgetVar="varTableListingTableView"
+					value="#{billPymtBean.listingTableViewVO.listingTableViewColumnsVOList}"
+					var="vo" paginator="true" rows="10" rowIndexVar="rowIndex"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" style="width: 450px;">
+
+					<p:column headerText="No" style="width: 60px;text-align:center;">
+						<h:outputText value="#{rowIndex + 1}" />
+					</p:column>
+					<p:column headerText="Columns Name">
+						<h:outputText value="#{vo.columnsName}" />
+					</p:column>
+					<p:column headerText="Visibility"
+						style="width:70px;text-align:center;">
+						<p:selectBooleanCheckbox value="#{vo.visible}" />
+					</p:column>
+				</p:dataTable>
+
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Confirm"
+								actionListener="#{billPymtBean.updateListingTableView}"
+								style="margin-right: 5px;" update=":idListingTableViewForm:msg" />
+							<p:commandButton value="Cancel" process="@this"
+								oncomplete="varListingTableViewDialog.hide();" update=":idBillListForm" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:confirmDialog widgetVar="varDelEODialog" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{billPymtBean.deleteBill}" oncomplete="varDelEODialog.hide()" update="@form,:idBillListForm" process="@this"/>
+		<p:commandButton value="Cancel" actionListener="#{billPymtBean.resetForm}" oncomplete="varDelEODialog.hide()" process="@this"/>
+	</h:form> 
+</p:confirmDialog>
+
+<p:confirmDialog widgetVar="varDelPaymentDialog" message="Are you sure want to delete this payment?" closable="false">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{billPymtBean.delPymtList}" oncomplete="varDelPaymentDialog.hide()" process="@this"
+			update="@form,:idAddFuncForm:tabView,:idAddFuncForm:tabView:idBillPmnt,:idEditPymtForm,:idAddFuncForm:msg,:idAddFuncForm:idEOAmt"/>
+		<p:commandButton value="Cancel" actionListener="#{billPymtBean.resetPymtForm}" oncomplete="varDelPaymentDialog.hide()" process="@this"/>
+	</h:form> 
+</p:confirmDialog>
+
+<p:dialog id="idViewEODialog" widgetVar="varViewEODialog" header="Exchange Order" modal="true" resizable="false" dynamic="true" draggable="true">
+	<h:form id="idViewEOForm">
+		<ui:include src="../../common/bill_payment/view_exchange_order.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idViewSupplierDialog" widgetVar="varViewSupplierDialog" header="Supplier" modal="true" resizable="false" dynamic="true" draggable="true">
+	<h:form id="idViewSupplierForm">
+		<ui:include src="../../common/bill_payment/view_supplier.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idViewInvoiceDialog" widgetVar="varViewInvoiceDialog" header="Invoice" modal="true" resizable="false" dynamic="true" draggable="true">
+	<h:form id="idViewInvoiceForm">
+		<ui:include src="../../common/bill_payment/view_invoice.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idAddInvoiceRefDialog" header="Invoice"
+	widgetVar="varAddInvoiceRefDialog" modal="true" resizable="false"
+	dynamic="true" closable="true" styleClass="invoiceRefDialog">
+	<h:form id="idAddInvoiceRefForm">
+		<div style="height:550px;">
+		<ui:include src="../../../sales/inv/add_ref_invoice.xhtml" />
+		</div>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - E-INVOICE DETAILS -->
+<p:dialog id="idEInvoiceDialog" header="E-Invoice"
+	widgetVar="varEInvoiceDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="true">
+	<h:form id="idEInvoiceForm">
+		<ui:include src="../../common/bill_payment/einvoice/einvoice_details.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - CANCEL E-INVOICE REASON -->
+<p:dialog id="idCancelEInvoiceDialog" header="Cancel E-Invoice"
+	widgetVar="varCancelEInvoiceDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="true">
+	<h:form id="idCancelEInvoiceForm">
+		<ui:include src="../../common/bill_payment/einvoice/cancel_e_invoice.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - CONSOL E-INVOICE SUBMISSION -->
+<p:dialog id="idConsolEInvDialog" header="Consolidate E-Invoice Submission"
+	widgetVar="varConsolEInvDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="true">
+	<p:scrollPanel mode="native" style="height: 90vh; width: 94vw;">
+		<h:form id="idConsolEInvForm">
+			<ui:include src="consolidate_e_invoice_submission.xhtml" />
+		</h:form>
+	</p:scrollPanel>
+</p:dialog>
+
+<!-- DIALOG - MULTIPLE E-INVOICE SUBMISSION -->
+<p:dialog id="idMulpEInvDialog" header="Multiple E-Invoice Submission"
+	widgetVar="varMulpEInvDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="true">
+	<p:scrollPanel mode="native" style="height: 90vh; width: 94vw;">
+		<h:form id="idMulpEInvForm">
+			<ui:include src="multiple_e_invoice_submission.xhtml" />
+		</h:form>
+	</p:scrollPanel>
+</p:dialog>
+
+<!-- DIALOG - POST JOURNAL -->
+<p:dialog id="idJournalDetailsDialog" header="Journal"
+	widgetVar="varJournalDetailsDialog" modal="true" resizable="true"
+	dynamic="true" draggable="true" closable="true">
+	<h:form id="idJournalCartForm">
+		<ui:include src="../../journal/journal_details.xhtml" />
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idEmployeeListDialog" header="Employee List"
+	widgetVar="varEmployeeListDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="false">
+	<h:form id="idEmployeeListForm">
+		<p:dataTable widgetVar="varEmployeeListTable"
+			value="#{billPymtBean.employeeList}" var="vo" paginator="true"
+			rows="10"
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+			selectionMode="single" filterEvent="enter">
+			<p:ajax event="rowSelect"
+				listener="#{billPymtBean.handleEmployeeSelect}"
+				update=":idAddFuncForm:idPayee,:idAddFuncForm:idEoBillPersonListTable"
+				oncomplete="varEmployeeListTable.clearFilters();varEmployeeListDialog.hide();"
+				process="@this" />
+
+			<p:column headerText="Employee ID" sortBy="#{vo.id}"
+				filterBy="#{vo.id}">
+				<h:outputText value="#{vo.id}" />
+			</p:column>
+			<p:column headerText="User Name" sortBy="#{vo.userVO.name}"
+				filterBy="#{vo.userVO.name}"
+				style="font-size:10px; width:200px;">
+				<h:outputText value="#{vo.userVO.name}" />
+			</p:column>
+			<p:column headerText="Name" sortBy="#{vo.fullName}" filterBy="#{vo.fullName}" style="font-size:10px; width:200px;">
+				<h:outputText value="#{vo.fullName}" />
+			</p:column>
+		</p:dataTable>
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}"
+				onclick="varEmployeeListDialog.hide();varEmployeeListTable.clearFilters();" />
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+
+		<!-- DIALOG - POST JOURNAL - TOUR LIST -->
+		<p:dialog id="idTourListDialog" header="Tour List"
+			widgetVar="varTourListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idTourListForm">
+				<p:dataTable widgetVar="varTourListTable"
+					value="#{journalBean.tourDepViewList}" var="vo" paginator="true"
+					rows="10"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{journalBean.handleTourDepSelect}"
+						update=":idJournalCartForm:idTour"
+						oncomplete="varTourListTable.clearFilters();varTourListDialog.hide();"
+						process="@this" />
+
+					<p:column headerText="Tour Code" sortBy="#{vo.code}"
+						filterBy="#{vo.code}">
+						<h:outputText value="#{vo.code}" />
+					</p:column>
+					<p:column headerText="Departure Date" sortBy="#{vo.dtDep}">
+						<h:outputText value="#{vo.dtDep}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Description"
+						style="font-size:10px; width:650px;">
+						<h:outputText value="#{vo.numDays}Days "
+							rendered="#{vo.numDays != 0}" />
+						<h:outputText value="#{vo.numNights}Nights "
+							rendered="#{vo.numNights != 0}" />
+						<h:outputText
+							value="#{vo.tourPkgVO.nameEn} #{vo.tourPkgVO.nameOther} #{vo.tourPkgVO.nameZh}" />
+						<h:outputText value=" [#{vo.desc}]" style="color:#FF0000;"
+							rendered="#{not empty vo.desc}" />
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varTourListDialog.hide();varTourListTable.clearFilters();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<!-- DIALOG - POST JOURNAL - JOURNAL ITEM -->
+		<p:dialog id="idJourItemDialog" widgetVar="varJourItemDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			hideEffect="fade" showEffect="fade" style="top:10% !important">
+			<f:facet name="header">
+				<h:outputFormat value="Journal Entries Item" />
+			</f:facet>
+			<h:form id="idFormJournalItem">
+				<ui:include src="../../journal/journal_items.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<!-- DIALOG - POST JOURNAL - HIDDEN FORM -->
+		<p:dialog id="idMainJournalDialog" widgetVar="varMainJournalDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			hideEffect="fade" showEffect="fade" style="top:10% !important">
+			<f:facet name="header">
+				<!-- <h:outputFormat value="Journal Entries Item" /> -->
+			</f:facet>
+			<h:form id="idMainJournalForm">
+				<!-- <ui:include src="../../journal/journal_items.xhtml" /> -->
+			</h:form>
+		</p:dialog>
+
+		<!--
+			DIALOG - ACCOUNT SUB CAT LIST
+		-->
+		<p:dialog id="idJournalAcctSubCatList" widgetVar="varJournalAcctSubCatList" header="Account List"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			hideEffect="fade" showEffect="fade" closable="true">
+			<h:form id="idAccountList">
+				<p:dataTable id="idAcctListTable" widgetVar="varAcctListTable"
+					value="#{acctBean.lazyAcctDataModel}" var="vo" paginator="true"
+					rows="20" paginatorTemplate="#{bterp:pageTemplate()}" lazy="true"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single" filterEvent="enter"
+					filteredValue="#{journalBean.filteredObjList}">
+					<p:ajax event="rowSelect"
+						listener="#{journalBean.handleSubAcctSelect}"
+						update=":idAccountList:idAcctListTable,:idFormJournalItem:panelItemData"
+						oncomplete="varAcctListTable.clearFilters();varAcctListTable.unselectAllRows();varJournalAcctSubCatList.hide()" />
+
+					<p:column headerText="Account No" sortBy="#{vo.code}"
+						filterBy="#{vo.code}">
+						<h:outputText
+							value="#{vo.code.concat(empty vo.subCode ? '' : '-'.concat(vo.subCode))}" />
+					</p:column>
+					<p:column headerText="Description" sortBy="#{vo.desc}"
+						filterBy="#{vo.desc}">
+						<h:outputText
+							value="#{vo.desc.concat(vo.subDesc eq '' ? '' : '-'.concat(vo.subDesc))}" />
+					</p:column>
+				</p:dataTable>
+			</h:form>
+			<p:ajax event="close" ajax="false" immediate="true"
+				oncomplete="varAcctListTable.clearFilters();" />
+
+		</p:dialog>
+
+		<p:dialog id="idSuppOptDialog" widgetVar="varSuppOptDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="true">
+			<f:facet name="header">
+				<h:outputFormat value="Supplier/Vendor" />
+			</f:facet>
+			<h:form id="idAddSupplierForm">
+				<ui:include
+					src="../../../purchase/common/add_supplier.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idContactDialog" widgetVar="varContactDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Add Contact" />
+				</f:facet>
+				<h:form id="idAddContactForm">
+					<ui:include src="../../../purchase/common/add_contact.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idRemarksDialog" widgetVar="varRemarksDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Add Remarks" />
+				</f:facet>
+				<h:form id="idAddRemarksForm">
+					<ui:include src="../../../purchase/common/add_remarks.xhtml"/>
+				</h:form>
+		</p:dialog>
+
+		<!-- <p:dialog id="idEODetailsDialog" widgetVar="varAddFuncDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Add Exchange Order" />
+			</f:facet>
+			<h:form id="idAddExOrderForm">
+				<ui:include
+					src="../../purchase/common/exchange_order/add_exchange_order.xhtml" />
+			</h:form>
+		</p:dialog> -->
+		
+		<!-- DIALOG - MULTIPLE E-INVOICE SUBMIT RESPONSE -->
+		<p:dialog id="idMultipleEInvSubmitRespDialog" header="Submit Response"
+			widgetVar="varMultipleEInvSubmitRespDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="true">
+			<h:form id="idMultipleEInvSubmitRespForm">
+				<ui:include src="multiple_e_invoice_submit_response.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idEditRemarksDialog" widgetVar="varEditRemarksDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Edit Remarks" />
+				</f:facet>
+				<h:form id="idEditRemarksForm">
+				<ui:include src="../../../purchase/common/edit_remarks.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idUserDialog" widgetVar="varUserDialog"  modal="true" resizable="false" dynamic="true" draggable="true" 
+			hideEffect="fade" showEffect="fade" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Add User" />
+			</f:facet>
+			<h:form id="idAddUserForm">
+				<ui:include src="../../common/bill_payment/add_user.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<!-- DIALOG - EXPORT CONFIRMATION -->
+		<p:confirmDialog id="idExportDialog" widgetVar="varExportDialog"
+			header="Confirmation"
+			message="Which type of file do you want to export?" closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="PDF"
+					actionListener="#{billPymtBean.exportBillList('pdf')}" ajax="false">
+					<p:dataExporter type="pdf"
+						target=":idBillListForm:idPurBillPmntTable"
+						fileName="Bill_Payment_List"
+						preProcessor="#{billPymtBean.preProcessPDF}" />
+				</p:commandButton>
+				<p:commandButton value="Excel"
+					actionListener="#{billPymtBean.exportBillList('csv')}" ajax="false" />
+				<p:commandButton value="Cancel" onclick="varExportDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+		
+		<p:dialog id="idViewPymtDialog" widgetVar="varViewPymtDialog" header="View Payment" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+			<h:form id="idViewPymtForm">
+				<ui:include src="../../common/bill_payment/view_payment.xhtml"/>
+			</h:form>	
+		</p:dialog>
+		
+		<!-- DIALOG - PAYMENT DETAILS  -->
+		<p:dialog id="idPaymentDetailsDialog" widgetVar="varPaymentDetailsDialog" modal="true" resizable="false" dynamic="true" draggable="false" 
+			hideEffect="fade" showEffect="fade" header="Payment Details" closable="true">
+			<h:form id="idPaymentDetailsForm">
+				<p:dataTable id="idPaymentDetailsTable" value="#{billPymtBean.billPaymentList}" var="pmnt">
+		            <p:column headerText="View">
+		                <p:commandButton icon="ui-icon-search" actionListener="#{billPymtBean.onPymtSelected(pmnt)}"
+						update=":idViewPymtDialog" process="@this" oncomplete="varViewPymtDialog.show()"/>
+		            </p:column>
+		            <p:column headerText="Payment No" style="width: 150px;" styleClass="txt_center">
+		            	<h:outputText label="Payment No" value="BP-#{pmnt.code} "/>
+					</p:column>
+		            <p:column headerText="Transaction Date" style="width: 5px;" styleClass="txt_center">
+			            <h:outputText label="Transaction Date" value="#{pmnt.pymtDt}">
+			            <f:convertDateTime pattern="#{config['date.display.pattern']}" />
+			            </h:outputText>
+					</p:column>
+		            <p:column headerText="Amount Paid" style="width: 150px;" styleClass="txt_center">
+			            <h:outputText label="Amount Paid" value="#{pmnt.pmntAmount}">
+			            	<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			            </h:outputText>
+					</p:column>
+		        </p:dataTable>
+		        <h:panelGrid column="5" style="width:1px">
+		        	<p:commandButton value="Cancel" oncomplete="varPaymentDetailsDialog.hide()"/>
+		        </h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+	</ui:define>
+</ui:composition>

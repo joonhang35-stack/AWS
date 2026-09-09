@@ -1,0 +1,154 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<script type="text/javascript">
+	function onEditAirlineScheduleValidate(xhr, status, args) {
+		if (args.validationFailed) {
+			
+		} else {
+			varEditAirlineScheduleDialog.hide();
+		}
+	}
+</script>
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idScheduleName">Schedule Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idScheduleName" label="Schedule Name" value="#{airlineBean.airlineScheduleVO.desc}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idRemarks">Remarks</h:outputLabel></p:column>
+		<p:column><p:inputText id="idRemarks" value="#{airlineBean.airlineScheduleVO.remarks}" style="width:300px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idTktValidity">Ticket Validity (Day) <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idTktValidity" label="Ticket Validity" value="#{airlineBean.airlineScheduleVO.tktValidity}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:panel header="Fees and Charges">
+				<p:panelGrid>
+					<p:row>
+						<p:column style="width:150px;"><h:outputLabel>APT Tax (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column><h:outputLabel for="idAptTaxAdt">ADT</h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idAptTaxAdt" label="APT Tax ADT" value="#{airlineBean.airlineScheduleVO.amtAptAdt}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+						<p:column><h:outputLabel for="idAptTaxChd">CHD</h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idAptTaxChd" label="APT Tax CHD" value="#{airlineBean.airlineScheduleVO.amtAptChd}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column><h:outputLabel>YQ &amp; Fuel (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column><h:outputLabel for="idFuelAdt">ADT</h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idFuelAdt" label="YQ &amp; Fuel ADT" value="#{airlineBean.airlineScheduleVO.amtFuelAdt}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+						<p:column><h:outputLabel for="idFuelChd">CHD</h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idFuelChd" label="YQ &amp; Fuel CHD" value="#{airlineBean.airlineScheduleVO.amtFuelChd}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="2"><h:outputLabel for="idTrvlIns">Trvl Insurance (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idTrvlIns" label="Trvl Insurance" value="#{airlineBean.airlineScheduleVO.amtTrvlIns}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="2"><h:outputLabel for="idVisa">Visa (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idVisa" label="Trvl Insurance" value="#{airlineBean.airlineScheduleVO.amtVisa}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="2"><h:outputLabel for="idAC">A/C (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idAC" label="A/C" value="#{airlineBean.airlineScheduleVO.amtAC}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="2"><h:outputLabel for="idTipping">Tipping (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idTipping" label="Tipping" value="#{airlineBean.airlineScheduleVO.amtTipping}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="2"><h:outputLabel for="idDeviation">Deviation (RM) <span class="required">*</span></h:outputLabel></p:column>
+						<p:column>
+							<p:inputText id="idDeviation" label="Deviation" value="#{airlineBean.airlineScheduleVO.amtDeviation}" required="true">
+								<f:convertNumber pattern="#,##0.00"/>
+								<pe:keyFilter regEx="/[\d\.\s,]/"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Extra Charges" actionListener="#{airlineBean.onExtraItemChargeAdd}" oncomplete="varAddScheduleChargeDialog.show()" immediate="true" update=":idAddScheduleChargeDialog"/>
+						</p:column>
+						<p:column colspan="4">
+							<p:panel id="idExtraItemCharge" style="border:0;">
+								<p:dataTable value="#{airlineBean.airlineScheduleVO.extraItemChargeList}" var="vo" rendered="#{not empty airlineBean.airlineScheduleVO.extraItemChargeList}">
+									<p:column style="width:30px;"><p:commandLink styleClass="ui-icon ui-icon-pencil" actionListener="#{airlineBean.onExtraItemChargeSelect(vo)}" update=":idAddScheduleChargeDialog" process="@this" oncomplete="varAddScheduleChargeDialog.show()"/></p:column>
+									<p:column style="width:30px;">
+										<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{airlineBean.delExtraItemCharge(vo)}" update=":idAddAirlineScheduleForm:idExtraItemCharge,:idEditAirlineSchedulesForm:idExtraItemCharge" process="@this"/>
+										<!-- <p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{airlineBean.delExtraItemCharge(vo, 1)}" update=":idEditAirlineSchedulesForm:idExtraItemCharge" process="@this" rendered="#{not empty vo.id}"/> -->
+									</p:column>
+									<p:column headerText="Extra Fee Name"><h:outputText value="#{vo.typeDesc}"/></p:column>
+									<p:column headerText="Extra Fee Amount">
+										<h:outputText value="#{vo.amount}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+									</p:column>
+									<p:column headerText="Calculate MISC" style="text-align:center;">
+										<h:outputText value="Y" rendered="#{vo.isMisc}"/>
+										<h:outputText value="N" rendered="#{not vo.isMisc}"/>
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{airlineBean.updAirlineSchedule}" oncomplete="onEditAirlineScheduleValidate(xhr, status, args)" update="msg, :idAirlineSchedulesForm:idShowScheduleList"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varEditAirlineScheduleDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddAirlineScheduleForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

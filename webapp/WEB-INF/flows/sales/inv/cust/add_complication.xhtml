@@ -1,0 +1,44 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varComplicationDialog.show();
+		} else {
+			varComplicationDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idComplicationType">Complication <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idComplicationType" label="Complication" value="#{custBean.personComplicationVO.complicationCd}" required="true">  
+	            <f:selectItem itemLabel="Select One" itemValue=""/>
+	            <f:selectItems value="#{bterp:lookupItemList('cust_cmpl')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu>
+        </p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{custBean.addComplication}" update="@form,:idEditCustForm:idComplicationListPanel" rendered="#{custBean.complicationAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{custBean.updateComplication}" update="@form,:idEditCustForm:idComplicationListTable" oncomplete="onValidation(xhr, status, args)" rendered="#{not custBean.complicationAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{custBean.resetComplicationForm}" update="@form" process="@this" oncomplete="varComplicationDialog.hide()" global="false">
+		<pe:resetEditableValues for="idComplicationForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

@@ -1,0 +1,257 @@
+package com.bcs.zsg.product.vo;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
+import com.bcs.zsg.core.vo.BaseVO;
+
+public class TourThemeVO extends BaseVO {
+
+	private static final long serialVersionUID = 1L;
+
+	private Long idTourCat;
+	private Long idAcct;
+	private Long idCountry;
+	private Long idParent;
+	private String desc;
+	private String tourCatDesc;
+	private String imgPath;
+	private String acctCd;
+	private String year;
+	private int seq;
+	private List<TourPackageVO> tourPkgList;
+	
+	private Map<String, List<TourThemeVO>> tourThemeYearMap;
+	private Map<String, List<TourPackageVO>> tourPkgYearMap;
+
+	private List<TourThemeCountryVO> countryList;
+	private Long[] selectedCountries;
+	private String countriesName;
+	private String typeCd;
+	
+	public List<Map.Entry<String, List<TourThemeVO>>> getTourThemeMapList() {
+		if (tourThemeYearMap == null)
+			return new ArrayList<>();
+		
+		Map<String, List<TourThemeVO>> treeMap = new TreeMap<String, List<TourThemeVO>>(tourThemeYearMap);
+		
+		Set<Map.Entry<String, List<TourThemeVO>>> tourThemeSet = treeMap.entrySet();
+		return new ArrayList<Map.Entry<String, List<TourThemeVO>>>(tourThemeSet);
+	}
+	
+	public List<Map.Entry<String, List<TourPackageVO>>> getTourPkgMapList() {
+		if (tourPkgYearMap == null)
+			return new ArrayList<>();
+		
+		Map<String, List<TourPackageVO>> treeMap = new TreeMap<String, List<TourPackageVO>>(tourPkgYearMap);
+		
+		Set<Map.Entry<String, List<TourPackageVO>>> tourPkgSet = treeMap.entrySet();
+		return new ArrayList<Map.Entry<String, List<TourPackageVO>>>(tourPkgSet);
+	}
+	
+	/**
+	 * @return the idTourCat
+	 */
+	public Long getIdTourCat() {
+		return idTourCat;
+	}
+
+	/**
+	 * @param idTourCat the idTourCat to set
+	 */
+	public void setIdTourCat(Long idTourCat) {
+		this.idTourCat = idTourCat;
+	}
+
+	/**
+	 * @return the idAcct
+	 */
+	public Long getIdAcct() {
+		return idAcct;
+	}
+
+	/**
+	 * @param idAcct the idAcct to set
+	 */
+	public void setIdAcct(Long idAcct) {
+		this.idAcct = idAcct;
+	}
+
+	/**
+	 * @return the idCountry
+	 */
+	public Long getIdCountry() {
+		return idCountry;
+	}
+
+	/**
+	 * @param idCountry the idCountry to set
+	 */
+	public void setIdCountry(Long idCountry) {
+		this.idCountry = idCountry;
+	}
+
+	/**
+	 * @return the idParent
+	 */
+	public Long getIdParent() {
+		return idParent;
+	}
+
+	/**
+	 * @param idParent the idParent to set
+	 */
+	public void setIdParent(Long idParent) {
+		this.idParent = idParent;
+	}
+
+	/**
+	 * @return the desc
+	 */
+	public String getDesc() {
+		return desc;
+	}
+
+	/**
+	 * @param desc the desc to set
+	 */
+	public void setDesc(String desc) {
+		this.desc = desc;
+	}
+
+	/**
+	 * @return the imgPath
+	 */
+	public String getImgPath() {
+		return imgPath;
+	}
+
+	/**
+	 * @param imgPath the imgPath to set
+	 */
+	public void setImgPath(String imgPath) {
+		this.imgPath = imgPath;
+	}
+
+	/**
+	 * @return the acctCd
+	 */
+	public String getAcctCd() {
+		return acctCd;
+	}
+
+	/**
+	 * @param acctCd the acctCd to set
+	 */
+	public void setAcctCd(String acctCd) {
+		this.acctCd = acctCd;
+	}
+
+	/**
+	 * @return the year
+	 */
+	public String getYear() {
+		return year;
+	}
+
+	/**
+	 * @param year the year to set
+	 */
+	public void setYear(String year) {
+		this.year = year;
+	}
+
+	/**
+	 * @return the seq
+	 */
+	public int getSeq() {
+		return seq;
+	}
+
+	/**
+	 * @param seq the seq to set
+	 */
+	public void setSeq(int seq) {
+		this.seq = seq;
+	}
+
+	/**
+	 * @return the tourPkgList
+	 */
+	public List<TourPackageVO> getTourPkgList() {
+		return tourPkgList;
+	}
+
+	/**
+	 * @param tourPkgList the tourPkgList to set
+	 */
+	public void setTourPkgList(List<TourPackageVO> tourPkgList) {
+		this.tourPkgList = tourPkgList;
+	}
+
+	/**
+	 * @return the tourCatDesc
+	 */
+	public String getTourCatDesc() {
+		return tourCatDesc;
+	}
+
+	/**
+	 * @param tourCatDesc the tourCatDesc to set
+	 */
+	public void setTourCatDesc(String tourCatDesc) {
+		this.tourCatDesc = tourCatDesc;
+	}
+
+	public List<TourThemeCountryVO> getCountryList() {
+		return countryList;
+	}
+
+	public void setCountryList(List<TourThemeCountryVO> countryList) {
+		this.countryList = countryList;
+	}
+
+	public Long[] getSelectedCountries() {
+		return selectedCountries;
+	}
+
+	public void setSelectedCountries(Long[] selectedCountries) {
+		this.selectedCountries = selectedCountries;
+	}
+
+	public String getCountriesName() {
+		return countriesName;
+	}
+
+	public void setCountriesName(String countriesName) {
+		this.countriesName = countriesName;
+	}
+
+	public Map<String, List<TourThemeVO>> getTourThemeYearMap() {
+		return tourThemeYearMap;
+	}
+
+	public void setTourThemeYearMap(Map<String, List<TourThemeVO>> tourThemeYearMap) {
+		this.tourThemeYearMap = tourThemeYearMap;
+	}
+
+	public Map<String, List<TourPackageVO>> getTourPkgYearMap() {
+		return tourPkgYearMap;
+	}
+
+	public void setTourPkgYearMap(Map<String, List<TourPackageVO>> tourPkgYearMap) {
+		this.tourPkgYearMap = tourPkgYearMap;
+	}
+
+	public String getTypeCd() {
+		return typeCd;
+	}
+
+	public void setTypeCd(String typeCd) {
+		this.typeCd = typeCd;
+	}
+
+}

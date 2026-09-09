@@ -1,0 +1,132 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="headIncludes">
+
+</ui:define>
+
+<ui:define name="content">
+	<h:form id="idForm" name="forgotPassForm">
+		<p:growl id="msg"/>
+		<p:fieldset id="idResetPasswordFieldSet" legend="#{msg['login.link.label.resetpass']}" style="margin: auto; width: 300pt;">
+			<p:messages/>
+			<p:focus context="idResetPasswordFieldSet"/>
+			
+			<c:if test="#{param.err != null or param.t != null}">
+				<div id="idSampleForm:idEntryMessages" class="ui-messages ui-widget">
+					<div class="ui-messages-error ui-corner-all">
+						<span class="ui-messages-error-icon"></span>
+						<ul><li><span class="ui-messages-error-summary">
+						
+							<c:choose>
+								<c:when test="#{param.err != null}">
+									<c:choose>
+										<c:when test="#{param.code eq 'ERR_SEC_INVALID_CREDENTIALS'}">
+											<h:outputFormat value="#{err['ERR_SEC_INVALID_CREDENTIALS']}"/>
+										</c:when>
+										<c:when test="#{param.code eq 'ERR_SEC_LOGIN_CREDENTIALS_REQUIRED'}">
+											<h:outputFormat value="#{err['ERR_SEC_LOGIN_CREDENTIALS_REQUIRED']}"/>
+										</c:when>
+										<c:when test="#{param.code eq 'ERR_SEC_LOGIN_CAPTCHA_FAILED'}">
+											<h:outputFormat value="#{err['ERR_SEC_LOGIN_CAPTCHA_FAILED']}"/>
+										</c:when>
+										<c:otherwise>
+											<h:outputFormat value="#{err['ERR_GENERAL_EXCEPTION']}"/>
+										</c:otherwise>
+									</c:choose>
+								</c:when>
+								<c:when test="#{param.t != null}">
+									<c:choose>
+										<c:when test="#{param.c != null}">
+											<h:outputFormat value="#{err['ERR_SEC_LOGIN_CONCURRENT']}"/>
+										</c:when>
+										<c:otherwise>
+											<h:outputFormat value="#{err['ERR_SEC_SESSION_TIMEOUT']}"/>
+										</c:otherwise>
+									</c:choose>
+								</c:when>
+							</c:choose>
+							
+						</span></li></ul>
+					</div>
+				</div>
+			</c:if>
+		
+			<p:panelGrid id="idPanelResetPassword" rendered="#{resetPasswordBean.isResetUrlValid and not resetPasswordBean.isSuccess}">
+				<p:row>
+					<p:column style="width: 90px;">
+						<h:outputText for="new_password" value="#{msg['login.label.field.newpassword']}"/>
+					</p:column>
+					<p:column>
+						<p:password id="idNewPassword" label="New Password" value="#{resetPasswordBean.changePasswordVO.newPassword}" required="true" maxlength="30" match="idConfirmPassword">
+							<f:validateLength minimum="8" maximum="30"/>
+						</p:password>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputText for="email" value="#{msg['login.label.field.confirmpassword']}:"/>
+					</p:column>
+					<p:column>
+						<p:password id="idConfirmPassword" label="Confirm New Password" value="#{resetPasswordBean.changePasswordVO.confirmPassword}" required="true" maxlength="30" feedback="false">
+							<f:validateLength minimum="8" maximum="30"/>
+						</p:password>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column></p:column>
+					<p:column>
+						<p:commandButton value="#{msg['common.button.label.reset']}"
+							update=":idForm"
+							actionListener="#{resetPasswordBean.confirmChange()}" />
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column></p:column>
+					<p:column>
+						<a href="${contextPath}/app/login" style="color: #7c51a1;"> #{msg['login.link.label.logininstead']} </a>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			
+			<p:panelGrid id="idPanelSuccess" rendered="#{resetPasswordBean.isSuccess}">
+				<p:row>
+					<p:column>
+						<h:outputText style="font-weight: bold;" value="Password Successfully Changed."/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<a href="${contextPath}/app/login" style="color: #7c51a1;"> #{msg['login.link.label.proceedlogin']} </a>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			
+			<p:panelGrid id="idPanelInvalid" rendered="#{!resetPasswordBean.isResetUrlValid}">
+				<p:row>
+					<p:column>
+						<h:outputText style="font-weight: bold;" value="Web url entered was invalid."/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputText value="Please enter a valid web url."/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<a href="${contextPath}/app/login" style="color: #7c51a1;"> #{msg['login.link.label.logininstead']} </a>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:fieldset>
+	</h:form>
+</ui:define>
+</ui:composition>

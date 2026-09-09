@@ -1,0 +1,258 @@
+package com.bcs.zsg.acct.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctTransViewVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.db.bterp.dao.acct.AccountDAO;
+import com.bcs.zsg.db.bterp.dao.accttrans.AccountTransDAO;
+import com.bcs.zsg.db.bterp.dao.view.accttransview.AccountTransViewDAO;
+
+public class AccountServiceImpl implements AccountService {
+
+	@Autowired
+	private AccountDAO acctDAO;
+
+	@Autowired
+	private AccountTransDAO acctTransDAO;
+
+	@Autowired
+	private AccountTransViewDAO acctTransViewDAO;
+	
+	@Override
+	public int getAccountListSize(Map<String, Object> params) throws BusinessException {
+		return acctDAO.getAcctListSize(params);
+	}
+
+	@Override
+	public List<AcctVO> getAccountList(Map<String, Object> params) throws BusinessException {
+		return acctDAO.getAcctList(params);
+	}
+
+	@Override
+	public boolean isAccountValid(AcctVO acctVO) throws BusinessException {
+		return acctDAO.isAcctValid(acctVO);
+	}
+
+	@Override
+	public List<AcctVO> getAccountAutoCompleteList(Long idCompany, String strAutoCompleteValue) throws BusinessException {
+		return acctDAO.getAcctListAutoComplete(idCompany, strAutoCompleteValue, false);
+	}
+	
+	@Override
+	public AcctVO getAcctVO(Long idAcct) throws BusinessException {
+		return acctDAO.getAcctVO(idAcct);
+	}
+	
+	/*
+	 * ACCOUNT_TRANS SERVICE
+	 */
+	@Override
+	public AcctTransVO getAccountTrans(Map<String, Object> params) throws BusinessException {
+		return acctTransDAO.getAccountTrans(params);
+	}
+	
+	@Override
+	public List<AcctTransVO> getAccountTransList(Map<String, Object> params) throws BusinessException {
+		return acctTransDAO.getAccountTransList(params);
+	}
+
+	@Override
+	public List<AcctTransVO> getAccountTransListFilterID(Map<String, Object> params, Object[] ids, boolean filterIN) 
+			throws BusinessException {
+		return acctTransDAO.getAccountTransListFilterID(params, ids, filterIN);
+	}
+	
+	@Override
+	public void auditAcctTrans(String action, AcctTransVO acctTransVO) throws BusinessException {
+		auditAcctTrans(action, acctTransVO, false);
+	}
+	
+	@Override
+	public void auditAcctTransEmailPayment(String action, AcctTransVO acctTransVO) throws BusinessException {
+		auditAcctTrans(action, acctTransVO, true);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.acct.service.ChartOfAcctService#audAcctTrans(java.lang.String, com.bcs.zsg.acct.vo.AcctTransVO)
+	 */
+	private void auditAcctTrans(String action, AcctTransVO acctTransVO, boolean bySystem) throws BusinessException {
+		if (CommonConstant.ACTION_CD_ADD.equals(action)) {
+			acctTransVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			if (bySystem) acctTransDAO.insert(acctTransVO, "SYSTEM");
+			else acctTransDAO.insert(acctTransVO);
+			
+		} else if (CommonConstant.ACTION_CD_UPD.equals(action)) {
+			if (bySystem) acctTransDAO.update(acctTransVO, "SYSTEM");
+			else acctTransDAO.update(acctTransVO);
+			
+		} else if (CommonConstant.ACTION_CD_DEL.equals(action)) {
+			acctTransVO.setStatusCode(BaseConstant.STATUS_TERMINATED);
+			if (bySystem) acctTransDAO.update(acctTransVO, "SYSTEM");
+			else acctTransDAO.update(acctTransVO);
+		}
+	}
+
+	/*
+	 * ACCOUNT_TRANS VIEW SERVICE
+	 */
+	
+	@Override
+	public List<AcctTransViewVO> getAccountTransViewList(AcctTransViewVO acctTransViewVO) throws BusinessException {
+		return acctTransViewDAO.getAccountTransViewList(acctTransViewVO);
+	}
+	
+	@Override
+	public void roundingAndTaxUpdate(AcctTransVO updateVO, AcctTransVO acctRef) throws BusinessException {
+		
+		AcctTransVO acctTransVO = new AcctTransVO();
+		
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("sysNo", acctRef.getSysNo());
+		params.put("companyId", acctRef.getCompanyId());
+		params.put("sysCode", acctRef.getSysCode());
+		params.put("acctId", updateVO.getAcctId());
+		params.put("type", updateVO.getType());
+
+		acctTransVO = acctTransDAO.getAccountTrans(params);
+		if (acctTransVO == null) {
+			acctTransVO = new AcctTransVO();
+			acctTransVO.setCompanyId(acctRef.getCompanyId());
+			acctTransVO.setSysCode(acctRef.getSysCode());
+			acctTransVO.setSysPrefix(acctRef.getSysPrefix());
+			acctTransVO.setSysNo(acctRef.getSysNo());
+			acctTransVO.setType(updateVO.getType());
+			acctTransVO.setAcctId(updateVO.getAcctId());
+		}
+		
+		acctTransVO.setTransDt(acctRef.getTransDt());
+		acctTransVO.setRefNo("");
+		acctTransVO.setSource(acctRef.getSource());
+		acctTransVO.setDestination(acctRef.getDestination());
+		acctTransVO.setCode("");
+		acctTransVO.setDesc("");
+		acctTransVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+		if (acctTransVO != null && updateVO.getType().equals(CommonConstant.SYS_NUM_CD_NCT)
+			&& updateVO.getDebit() == 0.00 && updateVO.getCredit() == 0.00 ) {
+			acctTransVO.setStatusCode(BaseConstant.STATUS_TERMINATED);
+		}
+		
+		acctTransVO.setDebit(updateVO.getDebit());
+		acctTransVO.setCredit(updateVO.getCredit());
+		
+		acctTransVO.setTaxCode(null);
+		acctTransVO.setTaxRate(null);
+		acctTransVO.setTaxAmount(0.00);
+		
+		if (acctTransVO.getId() == null) {
+			if (updateVO.getType().equals(CommonConstant.SYS_NUM_CD_NCT) && updateVO.getDebit() == 0.00 && updateVO.getCredit() == 0.00 ) {
+			} else {
+				auditAcctTrans(CommonConstant.ACTION_CD_ADD, acctTransVO);
+			}
+		} else {
+			auditAcctTrans(CommonConstant.ACTION_CD_UPD, acctTransVO);
+		}
+	}
+	
+	@Override
+	public void roundingAndTaxUpdateRfnd(AcctTransVO updateVO, AcctTransVO acctRef) throws BusinessException {
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("sysNo", acctRef.getSysNo());
+		params.put("companyId", acctRef.getCompanyId());
+		params.put("sysCode", acctRef.getSysCode());
+		params.put("acctId", updateVO.getAcctId());
+		params.put("type", updateVO.getType());
+		
+		// You Yuan 2026.1.23
+		// long story short, acctTransDAO.getAccountTransList function will cause 
+		// org.hibernate.exception.GenericJDBCException: Cannot open connection
+		// Caused by: org.apache.tomcat.jdbc.pool.PoolExhaustedException: [http-nio-8080-exec-1] Timeout: Pool empty. Unable to fetch a connection in 10 seconds, none available[size:15; busy:15; idle:0; lastwait:10000].
+		List<AcctTransVO> acctTransList = acctTransDAO.getAccountTransList(params);
+		boolean flg, isDebit = false, isCredit = false;
+		
+		for (int i = 0; i < acctTransList.size(); i++) {
+			AcctTransVO acctTransVO = acctTransList.get(i);
+			flg = false;
+			
+			acctTransVO.setTransDt(acctRef.getTransDt());
+			acctTransVO.setRefNo("");
+			acctTransVO.setSource(acctRef.getSource());
+			acctTransVO.setDestination(acctRef.getDestination());
+			acctTransVO.setCode("");
+			acctTransVO.setDesc("");
+			acctTransVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			if (!flg && !isDebit && updateVO.getDebit() != 0.00) {
+				acctTransVO.setDebit(updateVO.getDebit());
+				acctTransVO.setCredit(0.00);
+				isDebit = true;
+				flg = true;
+			}
+			if (!flg && !isCredit && updateVO.getCredit() != 0.00) {
+				acctTransVO.setDebit(0.00);
+				acctTransVO.setCredit(updateVO.getCredit());
+				isCredit = true;
+				flg = true;
+			}
+			if (flg) {
+				auditAcctTrans(CommonConstant.ACTION_CD_UPD, acctTransVO);
+			} else {
+				auditAcctTrans(CommonConstant.ACTION_CD_DEL, acctTransVO);
+			}
+		}
+		
+		if (!isDebit && updateVO.getDebit() != 0.00) {
+			AcctTransVO acctTransVO = new AcctTransVO();
+			acctTransVO.setCompanyId(acctRef.getCompanyId());
+			acctTransVO.setSysCode(acctRef.getSysCode());
+			acctTransVO.setSysPrefix(acctRef.getSysPrefix());
+			acctTransVO.setSysNo(acctRef.getSysNo());
+			acctTransVO.setType(updateVO.getType());
+			acctTransVO.setAcctId(updateVO.getAcctId());
+			acctTransVO.setTransDt(acctRef.getTransDt());
+			acctTransVO.setRefNo("");
+			acctTransVO.setSource(acctRef.getSource());
+			acctTransVO.setDestination(acctRef.getDestination());
+			acctTransVO.setCode("");
+			acctTransVO.setDesc("");
+			acctTransVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			acctTransVO.setDebit(updateVO.getDebit());
+			acctTransVO.setCredit(0.00);
+			acctTransVO.setTaxCode(null);
+			acctTransVO.setTaxRate(null);
+			acctTransVO.setTaxAmount(0.00);
+			auditAcctTrans(CommonConstant.ACTION_CD_ADD, acctTransVO);
+		}
+		
+		if (!isCredit && updateVO.getCredit() != 0.00) {
+			AcctTransVO acctTransVO = new AcctTransVO();
+			acctTransVO.setCompanyId(acctRef.getCompanyId());
+			acctTransVO.setSysCode(acctRef.getSysCode());
+			acctTransVO.setSysPrefix(acctRef.getSysPrefix());
+			acctTransVO.setSysNo(acctRef.getSysNo());
+			acctTransVO.setType(updateVO.getType());
+			acctTransVO.setAcctId(updateVO.getAcctId());
+			acctTransVO.setTransDt(acctRef.getTransDt());
+			acctTransVO.setRefNo("");
+			acctTransVO.setSource(acctRef.getSource());
+			acctTransVO.setDestination(acctRef.getDestination());
+			acctTransVO.setCode("");
+			acctTransVO.setDesc("");
+			acctTransVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			acctTransVO.setDebit(0.00);
+			acctTransVO.setCredit(updateVO.getCredit());
+			acctTransVO.setTaxCode(null);
+			acctTransVO.setTaxRate(null);
+			acctTransVO.setTaxAmount(0.00);
+			auditAcctTrans(CommonConstant.ACTION_CD_ADD, acctTransVO);
+		}
+	}
+
+}

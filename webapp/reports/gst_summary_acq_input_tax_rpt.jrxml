@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="gst_summary_acq_input_tax_rpt" language="groovy" pageWidth="612" pageHeight="792" columnWidth="572" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="0b84bc90-9d36-4559-bf71-8a09f9c87b5a">
+	<property name="ireport.zoom" value="2.0"/>
+	<property name="ireport.x" value="250"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="companyName" class="java.lang.String"/>
+	<parameter name="slogan" class="java.lang.String"/>
+	<parameter name="address" class="java.lang.String"/>
+	<parameter name="contact" class="java.lang.String"/>
+	<parameter name="fromDate" class="java.util.Date"/>
+	<parameter name="toDate" class="java.util.Date"/>
+	<field name="taxCode" class="java.lang.String"/>
+	<field name="taxDesc" class="java.lang.String"/>
+	<field name="taxRate" class="java.lang.Float"/>
+	<field name="amount" class="java.lang.Double"/>
+	<field name="taxAmt" class="java.lang.Double"/>
+	<field name="claimable" class="java.lang.Integer"/>
+	<field name="exCode" class="java.lang.String"/>
+	<variable name="amountTotal" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[new BigDecimal(String.valueOf($F{amount}))]]></variableExpression>
+	</variable>
+	<variable name="taxAmtClaimableTtl" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[($F{claimable}==1) ? new BigDecimal(String.valueOf($F{taxAmt})) : new BigDecimal(String.valueOf("0"))]]></variableExpression>
+	</variable>
+	<variable name="taxAmtNonClaimableTtl" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[($F{claimable}==0) ? new BigDecimal(String.valueOf($F{taxAmt})) : new BigDecimal(String.valueOf("0"))]]></variableExpression>
+	</variable>
+	<variable name="amountSubTotal" class="java.math.BigDecimal" resetType="Group" resetGroup="Type Of Acquisition" calculation="Sum">
+		<variableExpression><![CDATA[new BigDecimal(String.valueOf($F{amount}))]]></variableExpression>
+	</variable>
+	<variable name="taxAmtClaimableSubTtl" class="java.math.BigDecimal" resetType="Group" resetGroup="Type Of Acquisition" calculation="Sum">
+		<variableExpression><![CDATA[($F{claimable}==1) ? new BigDecimal(String.valueOf($F{taxAmt})) : new BigDecimal(String.valueOf("0"))]]></variableExpression>
+	</variable>
+	<variable name="taxAmtNonClaimableSubTtl" class="java.math.BigDecimal" resetType="Group" resetGroup="Type Of Acquisition" calculation="Sum">
+		<variableExpression><![CDATA[($F{claimable}==0) ? new BigDecimal(String.valueOf($F{taxAmt})) : new BigDecimal(String.valueOf("0"))]]></variableExpression>
+	</variable>
+	<group name="Type Of Acquisition">
+		<groupExpression><![CDATA[$F{exCode}]]></groupExpression>
+		<groupHeader>
+			<band height="21">
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+					<reportElement uuid="6f8097da-ff49-45c1-91bd-554039bf5f6e" x="4" y="3" width="567" height="15"/>
+					<textElement verticalAlignment="Top">
+						<font fontName="Arial Unicode MS" size="11" isBold="true"/>
+						<paragraph lineSpacing="Single"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{exCode}]]></textFieldExpression>
+				</textField>
+				<line>
+					<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="0" y="0" width="1" height="20"/>
+					<graphicElement>
+						<pen lineWidth="1.0"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="571" y="0" width="1" height="20"/>
+					<graphicElement>
+						<pen lineWidth="1.0"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="0" y="20" width="572" height="1"/>
+					<graphicElement>
+						<pen lineWidth="1.0"/>
+					</graphicElement>
+				</line>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="21">
+				<line>
+					<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="319" y="0" width="1" height="20"/>
+					<graphicElement>
+						<pen lineWidth="1.0"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="420" y="0" width="1" height="20"/>
+					<graphicElement>
+						<pen lineWidth="1.0"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="495" y="0" width="1" height="20"/>
+					<graphicElement>
+						<pen lineWidth="1.0"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="571" y="0" width="1" height="20"/>
+					<graphicElement>
+						<pen lineWidth="1.0"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="0" y="0" width="1" height="20"/>
+					<graphicElement>
+						<pen lineWidth="1.0"/>
+					</graphicElement>
+				</line>
+				<line>
+					<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" positionType="Float" x="0" y="20" width="572" height="1"/>
+					<graphicElement>
+						<pen lineWidth="1.0"/>
+					</graphicElement>
+				</line>
+				<staticText>
+					<reportElement uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee" x="0" y="3" width="315" height="15"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="10" isBold="true"/>
+					</textElement>
+					<text><![CDATA[Sub-Total :]]></text>
+				</staticText>
+				<textField pattern="#,##0.00;(#,##0.00)" isBlankWhenNull="true">
+					<reportElement uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314" x="420" y="3" width="71" height="15"/>
+					<textElement textAlignment="Right" verticalAlignment="Top">
+						<font fontName="Arial Unicode MS" size="10"/>
+					</textElement>
+					<textFieldExpression><![CDATA[($V{taxAmtClaimableSubTtl}!=0.00) ? $V{taxAmtClaimableSubTtl} : "-"]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00;(#,##0.00)" isBlankWhenNull="true">
+					<reportElement uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314" x="495" y="3" width="74" height="15"/>
+					<textElement textAlignment="Right" verticalAlignment="Top">
+						<font fontName="Arial Unicode MS" size="10"/>
+					</textElement>
+					<textFieldExpression><![CDATA[($V{taxAmtNonClaimableSubTtl}!=0.00) ? $V{taxAmtNonClaimableSubTtl} : "-"]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00;(#,##0.00)" isBlankWhenNull="true">
+					<reportElement uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314" x="319" y="3" width="97" height="15"/>
+					<textElement textAlignment="Right" verticalAlignment="Top">
+						<font fontName="Arial Unicode MS" size="10"/>
+					</textElement>
+					<textFieldExpression><![CDATA[($V{amountSubTotal}!=0.00) ? $V{amountSubTotal} : "-"]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupFooter>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="80">
+			<textField isBlankWhenNull="true">
+				<reportElement uuid="9c2b6d44-8649-41e1-9329-5efec8d48501" x="0" y="0" width="572" height="20"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{companyName}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement uuid="99c82e2a-1efc-49e6-baa6-66189b7716c0" positionType="Float" x="0" y="20" width="572" height="40"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["GST Summary for Acquisition & Input Tax\nfor Taxable Period " +
+(($P{fromDate}==null) ? "" : (new SimpleDateFormat("dd/MM/yyyy")).format($P{fromDate})) +
+" - " +
+(($P{toDate}==null) ? "" : (new SimpleDateFormat("dd/MM/yyyy")).format($P{toDate}))]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement uuid="adfc2d65-b12c-4f66-b81d-91bc3bc7b17f" x="0" y="60" width="572" height="20"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Print At " + new SimpleDateFormat("dd-MM-yyyy hh:mm:ss a").format(new Date())]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<columnHeader>
+		<band height="40">
+			<staticText>
+				<reportElement uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee" x="0" y="0" width="319" height="40"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="10" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Types of Acquisition]]></text>
+			</staticText>
+			<staticText>
+				<reportElement uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee" x="495" y="19" width="77" height="20"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="10" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Non-Claimable]]></text>
+			</staticText>
+			<staticText>
+				<reportElement uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee" x="420" y="0" width="152" height="20"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="10" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Input Tax 6% (RM)]]></text>
+			</staticText>
+			<staticText>
+				<reportElement uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee" x="420" y="19" width="75" height="20"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="10" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Claimable]]></text>
+			</staticText>
+			<staticText>
+				<reportElement uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee" x="319" y="0" width="102" height="40"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="10" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Value of Acquisition Excluding GST (RM)]]></text>
+			</staticText>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="0" y="39" width="572" height="1"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="421" y="19" width="151" height="1"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="420" y="0" width="1" height="39"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="0" y="0" width="572" height="1"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="0" y="0" width="1" height="39"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="319" y="0" width="1" height="40"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="571" y="0" width="1" height="39"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" x="495" y="19" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="21" splitType="Stretch">
+			<textField pattern="#,##0.00;(#,##0.00)" isBlankWhenNull="true">
+				<reportElement uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314" x="420" y="3" width="71" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="10"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{claimable}==1) ? (($F{taxAmt}!=0.00) ? $F{taxAmt} : "-") : "-"]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)">
+				<reportElement uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314" x="319" y="3" width="97" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="10"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{amount}!=0.00) ? $F{amount} : "-"]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement uuid="6f8097da-ff49-45c1-91bd-554039bf5f6e" x="4" y="3" width="311" height="15"/>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="10" isBold="false"/>
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{taxCode} + " - " + $F{taxDesc}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)" isBlankWhenNull="true">
+				<reportElement uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314" x="495" y="3" width="73" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="10"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{claimable}==0) ? (($F{taxAmt}!=0.00) ? $F{taxAmt} : "-") : "-"]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="319" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="420" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="495" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="571" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" positionType="Float" x="0" y="20" width="572" height="1"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="0" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+		</band>
+	</detail>
+	<summary>
+		<band height="21">
+			<textField pattern="#,##0.00;(#,##0.00)" isBlankWhenNull="true">
+				<reportElement uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314" x="420" y="3" width="71" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="10"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($V{taxAmtClaimableTtl}!=0.00) ? $V{taxAmtClaimableTtl} : "-"]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)" isBlankWhenNull="true">
+				<reportElement uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314" x="319" y="3" width="97" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="10"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($V{amountTotal}!=0.00) ? $V{amountTotal} : "-"]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)" isBlankWhenNull="true">
+				<reportElement uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314" x="495" y="3" width="74" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="10"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($V{taxAmtNonClaimableTtl}!=0.00) ? $V{taxAmtNonClaimableTtl} : "-"]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee" x="0" y="3" width="315" height="15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[TOTAL :]]></text>
+			</staticText>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="319" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="420" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="495" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="571" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" stretchType="RelativeToBandHeight" x="0" y="0" width="1" height="20"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement uuid="f9818151-0a5f-40ef-a83e-dea837ac1061" positionType="Float" x="0" y="20" width="572" height="1"/>
+				<graphicElement>
+					<pen lineWidth="1.0"/>
+				</graphicElement>
+			</line>
+		</band>
+	</summary>
+</jasperReport>

@@ -1,0 +1,161 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:panel style="border:0; width:800px;">
+	<f:facet name="header">
+		<h:outputText value="Booking ID : "/><h:outputFormat value="#{cruiseBookingBean.bookingViewVO.id}"/>
+	</f:facet>
+	<div style="height:500px; overflow:auto;">
+	<p:panelGrid>
+		<p:row>
+			<p:column colspan="2"><h:outputText value="#{cruiseBookingBean.bookingViewVO.tourDepViewVO.tourPkgVO.numDays}D/#{cruiseBookingBean.bookingViewVO.tourDepViewVO.tourPkgVO.numNights}N "/><h:outputText value="#{cruiseBookingBean.bookingViewVO.tourDepViewVO.tourPkgVO.nameEn}"/> <h:outputText value=" [#{cruiseBookingBean.bookingViewVO.tourDepViewVO.desc}]" style="color:#FF0000;" rendered="#{not empty cruiseBookingBean.bookingViewVO.tourDepViewVO.desc}"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:120px;"><h:outputText value="Departure Date"/></p:column>
+			<p:column><h:outputText value="#{cruiseBookingBean.bookingViewVO.tourDepViewVO.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputText value="Invoice No."/></p:column>
+<!-- 			<p:column><h:outputText value="#{bterp:sysNumGenVO(cruiseBookingBean.bookingVO.idCompany, 'invc').prefixid}#{cruiseBookingBean.bookingViewVO.invoiceVO.code}" rendered="#{not empty cruiseBookingBean.bookingViewVO.invoiceVO}"/></p:column> -->
+			<p:column><h:outputText value="#{bterp:sysNumGenVO(cruiseBookingBean.bookingVO.idCompany, 'invc').prefixid}#{cruiseBookingBean.bookingViewVO.invoiceVO.code}" rendered="#{not empty cruiseBookingBean.bookingViewVO.invoiceVO}"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputText value="Bill To"/></p:column>
+			<p:column><h:outputText value="#{bterp:lookupItemDesc('salutatn', cruiseBookingBean.bookingViewVO.customerVO.personVO.salutation)} #{cruiseBookingBean.bookingViewVO.customerVO.personVO.lastName} #{cruiseBookingBean.bookingViewVO.customerVO.personVO.givenName}" style="text-transform:uppercase;"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="2">
+				<p:dataTable value="#{cruiseBookingBean.bookingViewVO.customerVO.identityList}" var="vo">
+					<f:facet name="header">ID</f:facet>
+					<p:column headerText="ID Type" style="width:50%;"><h:outputText value="#{bterp:lookupItemDesc('id_type', vo.idType)}"/></p:column>
+					<p:column headerText="Number"><h:outputText value="#{vo.idNo}"/></p:column>
+				</p:dataTable>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="2">
+				<p:dataTable value="#{cruiseBookingBean.bookingViewVO.customerVO.personContactList}" var="vo">
+					<f:facet name="header">Contact</f:facet>
+					<p:column headerText="ID Type" style="width:50%;"><h:outputText value="#{bterp:lookupItemDesc('cntc_type', vo.typeCd)}"/></p:column>
+					<p:column headerText="Number"><h:outputText value="#{vo.countryCd}#{vo.number}"/></p:column>
+				</p:dataTable>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="2">
+				<h:outputText value="Full Tour Price"/>
+				<div class="ui-datatable ui-widget">
+					<table>
+						<thead>
+							<tr>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Cabin Type"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Adult 1ST/2ND"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Adult 3RD"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Adult 4TH"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Adult SGL"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Child 3RD"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Child 4TH"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Infant"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Total Cabin"/></th>
+							</tr>
+						</thead>
+						<tbody class="ui-datatable-data ui-widget-content">
+							<c:forEach items="#{cruiseBookingBean.bookingVO.tourCruiseCabinList}" var="vo">
+								<tr>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.cruiseCabinCd}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.paxTwn}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.pax3}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.pax4}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.paxSgl}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.pax3Chd}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.pax4Chd}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.paxInf}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.ttlCabin}"></h:outputText></td>
+								</tr>
+								<tr>
+									<td style="text-align:center; padding:5px;">&nbsp;</td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.priceTwn}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.price3}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.price4}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.priceSgl}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.price3Chd}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.price4Chd}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.priceInf}"></h:outputText></td>
+									<td style="text-align:center; padding:5px;"><h:outputText value="#{vo.totalPrice}"></h:outputText></td>
+								</tr>
+							</c:forEach>
+						</tbody>
+					</table>
+				</div>
+				<br/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputText value="Payment Status"/></p:column>
+			<p:column><h:outputText value="#{zsg:referenceDataValue('BOOK_PMNT_STATUS', cruiseBookingBean.bookingViewVO.pmntStatusCd)}"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputText value="Booking Expiry"/></p:column>
+			<p:column><h:outputText value="#{cruiseBookingBean.bookingViewVO.dtExp}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:150px;"><h:outputText value="Date Booking Made"/></p:column>
+			<p:column><h:outputText value="#{cruiseBookingBean.bookingViewVO.createdDate}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:150px;"><h:outputText value="Discount"/></p:column>
+			<p:column>
+				<div class="ui-datatable ui-widget" style="width: 320px;">
+					<table>
+						<thead>
+							<tr>
+								<th colspan="2" class="ui-state-default" style="padding:5px;"><h:outputText value="Level 1"/></th>
+								<th colspan="2" class="ui-state-default" style="padding:5px;"><h:outputText value="Level 2"/></th>
+								<th rowspan="2" class="ui-state-default" style="padding:5px;"><h:outputText value="Not Entitled"/></th>
+							</tr>
+							<tr>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Amount"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Seat"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Amount"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Seat"/></th>
+							</tr>
+						</thead>
+						<tbody class="ui-datatable-data ui-widget-content">
+							<tr>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{cruiseBookingBean.bookingVO.discount1}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{cruiseBookingBean.bookingVO.discountPax1}"></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{cruiseBookingBean.bookingVO.discount2}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{cruiseBookingBean.bookingVO.discountPax2}"></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{cruiseBookingBean.bookingVO.notEntitledDiscountPax}"></h:outputText></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:150px;"><h:outputText value="MISC"/></p:column>
+			<p:column>
+				(<h:outputText value="Visa : "/><h:outputText value="#{cruiseBookingBean.bookingVO.cruiseVisa}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", A/C : "/><h:outputText value="#{cruiseBookingBean.bookingVO.cruiseAC}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", Gratuities Fees : "/><h:outputText value="#{cruiseBookingBean.bookingVO.cruiseTipping}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", Port Charges : "/><h:outputText value="#{cruiseBookingBean.bookingVO.cruiseAptAdt}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", Travel Insurance : "/><h:outputText value="#{cruiseBookingBean.bookingVO.cruiseTrvlIns}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", Deviation : "/><h:outputText value="#{cruiseBookingBean.bookingVO.cruiseDeviation}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", Other : "/><h:outputText value="#{cruiseBookingBean.bookingVO.cruiseExtra}"><f:convertNumber pattern="#,##0.00"/></h:outputText>)
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	</div>
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBookingBean.resetBookingForm}" onclick="varBookingDetailsDialog.hide()"/>
+	</h:panelGrid>
+</p:panel>
+</ui:composition>

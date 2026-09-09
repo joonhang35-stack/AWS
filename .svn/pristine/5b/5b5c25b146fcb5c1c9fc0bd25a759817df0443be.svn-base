@@ -1,0 +1,30 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<div style="width:1200px; overflow:auto;">
+<p:dataTable id="idTourDepList" value="#{tourPkgBean.availableTourDepList}" var="vo" paginator="true" rows="10" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="5,10,15" selectionMode="single" selection="#{tourPkgBean.availableTourDepVO}" rowKey="#{vo.id}">
+	
+	<p:column headerText="Tour Code" style="font-size:10px;" filterBy="#{vo.code}"><h:outputText value="#{vo.code}"/></p:column>
+	<p:column headerText="Dep Date" style="font-size:10px;"><h:outputText value="#{vo.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+	<p:column headerText="Description" style="font-size:10px;">
+		<h:outputText value="#{vo.numDays}D #{vo.numNights}N #{vo.nameEn} #{vo.nameZh} #{vo.nameOther}"/><h:outputText value=" [#{vo.desc}]" style="color:#FF0000;" rendered="#{not empty vo.desc}"/>
+	</p:column>
+	<p:column headerText="Seat Allotment" style="font-size:10px; text-align:center;"><h:outputText value="#{vo.seatAllot}"/></p:column>
+	<p:column headerText="Total Book" style="font-size:10px; text-align:center;"><h:outputText value="#{vo.quantity + vo.reservedSeat + vo.tourManagerPax}"/></p:column>
+	<p:column headerText="Balance" style="font-size:10px; text-align:center;"><h:outputText value="#{vo.seatAllot - (vo.quantity + vo.reservedSeat + vo.tourManagerPax)}"/></p:column>
+</p:dataTable>
+</div>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="Transfer" oncomplete="varTransferConfirmationDialog.show()"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetAvailableTourDepForm}" oncomplete="varAvailableTourDepListDialog.hide()" process="@this" update="@form"/>
+</h:panelGrid>
+</ui:composition>

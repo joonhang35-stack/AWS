@@ -1,0 +1,47 @@
+package com.bcs.zsg.maintenance.dao;
+
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.vo.MalaysiaStateVO;
+
+public class MalaysiaStateDAOImpl extends BaseHibernateDAO implements MalaysiaStateDAO {
+
+	@Override
+	public MalaysiaStateVO getStateById(Long id) throws BusinessException {
+		Criteria criteria = createCriteria(MalaysiaStateVO.class);
+		criteria.add(Restrictions.eq("id", id));
+		criteria.setMaxResults(1);
+		return (MalaysiaStateVO) criteria.uniqueResult();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<MalaysiaStateVO> getStateList() throws BusinessException {
+		// TODO Auto-generated method stub
+		Criteria criteria = createCriteria(MalaysiaStateVO.class);
+		criteria.addOrder(Order.asc("name"));
+		return criteria.list();
+	}
+
+	@Override
+	public MalaysiaStateVO getStateByEInvoiceStateCode(String eInvoiceStateCode) throws BusinessException {
+		Criteria criteria = createCriteria(MalaysiaStateVO.class);
+		criteria.add(Restrictions.eq("eInvoiceStateCode", eInvoiceStateCode));
+//		criteria.setMaxResults(1);
+		return (MalaysiaStateVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public MalaysiaStateVO getStateByStateCode(String stateCode) throws BusinessException {
+		Criteria criteria = createCriteria(MalaysiaStateVO.class);
+		criteria.add(Restrictions.eq("code", stateCode));
+//		criteria.setMaxResults(1);
+		return (MalaysiaStateVO) criteria.uniqueResult();
+	}
+}

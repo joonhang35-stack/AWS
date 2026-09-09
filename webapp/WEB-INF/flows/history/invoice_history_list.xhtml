@@ -1,0 +1,66 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:scrollPanel mode="native" scrollMode="native" style="height:470px;">  
+<p:dataTable value="#{historyBean.invoiceHistoryViewAllList}" var="vo"
+	rowKey="#{vo.id}" selectionMode="single">
+	<p:ajax event="rowSelect" listener="#{historyBean.handleInvoiceHistoryAllSelect}" update=":idInvoiceHistoryDetailForm" oncomplete="varInvoiceHistoryDetailDialog.show()"/>
+	
+	<p:column headerText="Update Date" width="100" styleClass="txt_center"><h:outputText value="#{vo.updatedDate}"><f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss a"/></h:outputText></p:column>
+	<p:column headerText="Update By" width="120"><h:outputText value="#{vo.updatedBy}"/></p:column>
+	<p:column headerText="Sold To" width="150">
+		<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.custSalutatnCd)} #{vo.custLName} #{vo.custFName}" rendered="#{vo.custType == 'P'}"/>
+		<h:outputText value="#{vo.coName}" rendered="#{vo.custType == 'C'}"/>
+	</p:column>
+	<!-- JH - pax statement and doc status-->
+	<p:column headerText="Pax Statement No" width="100"><h:outputText value="#{vo.psNo}"/></p:column>
+	<p:column headerText="Invoice No" width="80"><h:outputText value="#{vo.code}"/></p:column>
+	<p:column headerText="Document Type Status" width="150"><h:outputText value="#{zsg:referenceDataValue('PS_STATUS', vo.docTypeStatus)}"/></p:column>
+	<p:column headerText="Company" width="180">
+		<h:outputText value="#{vo.companyCd}: #{vo.companyName}"/>
+	</p:column>
+	<p:column headerText="Invoice Category" width="100" styleClass="txt_center"><h:outputText value="#{bterp:lookupItemDesc('inv_cat', vo.catCd)}"/></p:column>
+	<p:column headerText="A/R Account" width="180">
+		<h:outputText value="#{vo.acctCd}: #{vo.acctDesc}" rendered="#{vo.subAcctCd == ''}"/>
+		<h:outputText value="#{vo.acctCd}-#{vo.subAcctCd}: #{vo.acctDesc}-#{vo.subAcctDesc}" rendered="#{vo.subAcctCd != ''}"/>
+	</p:column>
+	<p:column headerText="Invoice Date" width="100" styleClass="txt_center"><h:outputText value="#{vo.invoiceDt}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+	<p:column headerText="Attention To" width="150"><h:outputText value="#{vo.attnTo}"/></p:column>
+	<p:column headerText="Sales Person" width="100"><h:outputText value="#{vo.salerName}"/></p:column>
+	<p:column headerText="Tour Code" width="100"><h:outputText value="#{vo.tourCd}"/></p:column>
+	<p:column headerText="Booking No" width="100"><h:outputText value="#{vo.bookingId}"/></p:column>
+	<p:column headerText="Departure Date" width="100" styleClass="txt_center"><h:outputText value="#{vo.departureDt}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+	<p:column headerText="Issued By" width="100"><h:outputText value="#{vo.issuedBy}"/></p:column>
+	<p:column headerText="Order Source" width="100" styleClass="txt_center"><h:outputText value="#{bterp:lookupItemDesc('ordr_sorc', vo.orderCd)}"/></p:column>
+	<p:column headerText="Invoice Due" width="100" styleClass="txt_center"><h:outputText value="#{vo.invoiceDue}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+	<p:column headerText="GDS Booking Reference/EO" width="180"><h:outputText value="#{vo.gdsBookingRef}"/></p:column>
+	<p:column headerText="Subject Line" width="500"><h:outputText value="#{vo.subjLine}"/></p:column>
+	<p:column headerText="Use Travel Warrant" width="150" styleClass="txt_center">
+		<h:outputText value="Yes" rendered="#{vo.trvWarrantChecked}"/>
+		<h:outputText value="No" rendered="#{not vo.trvWarrantChecked}"/>
+	</p:column>
+	<p:column headerText="Additional Remarks">
+		<h:outputText id="idAddRemarks" value="Details" style="color:#0000FF;"/>
+		<p:tooltip for="idAddRemarks" value="#{vo.remarks}" showEffect="fade" hideEffect="fade" style="max-width:600px;"/>
+	</p:column>
+	<p:column headerText="Total Amount" width="100"><h:outputText value="#{vo.amount}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+	<p:column headerText="Amount Due" width="100"><h:outputText value="#{vo.balance}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+	<p:column headerText="Reason" width="200"><h:outputText value="#{vo.reason}"/></p:column>
+	<!-- JH - add 3 e-invoice and 1 sub ps and 1 version-->
+	<p:column headerText="Version" width="50" styleClass="txt_center"><h:outputText  value="#{vo.version}"></h:outputText></p:column>
+	<p:column headerText="E-Invoice Submission" width="120"><h:outputText value="#{vo.eInvoiceSubmissionUid}"/></p:column>
+	<p:column headerText="E-Invoice Document" width="120"><h:outputText value="#{vo.eInvoiceDocumentUuid}"/></p:column>
+	<p:column headerText="E-Invoice Status" width="100"><h:outputText value="#{vo.eInvoiceStatus}"/></p:column>
+	<p:column headerText="Sub PS Running No" width="120"><h:outputText value="#{vo.subPsRunningNumber}"/></p:column>
+	<p:column headerText="Status" width="150" styleClass="txt_center"><h:outputText value="#{zsg:referenceDataValue('INV_STATUS', vo.statusCd)}" /></p:column>
+	<p:column headerText="Action" width="50" styleClass="txt_center"><h:outputText value="#{zsg:referenceDataValue('ACT_TYPE_CD', vo.actionCd)}"/></p:column>
+</p:dataTable>
+</p:scrollPanel>
+</ui:composition>

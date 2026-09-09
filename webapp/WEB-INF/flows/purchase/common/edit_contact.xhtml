@@ -1,0 +1,30 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	  			
+	<p:panelGrid>
+		<p:row>
+		<p:column><h:outputLabel for="idEditContactType">Contact Type <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+		<h:selectOneMenu id="idEditContactType" value="#{purchaseBean.contactVO.contactType}">  
+            <f:selectItems value="#{bterp:lookupItemList('cntc_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+        </h:selectOneMenu>
+        </p:column>
+        <p:column><h:outputLabel for="idEditContact">Contact Number <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idEditContact" label="Contact No" value="#{purchaseBean.contactVO.contactNo}" required="true"/></p:column>
+		</p:row>
+		
+	</p:panelGrid>
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseBean.editContact}" update="@form,:idAddSupplierForm:idShowContact,:idAddPCustomerForm,:idAddContactForm,:idEditContactForm,:idEditPCustomerForm,:idAddCSupplierForm,:idEditCSupplierForm" oncomplete="varEditContactDialog.hide()"/>
+		<p:commandButton value="Cancel" actionListener="#{purchaseBean.resetContactForm}" onclick="varEditContactDialog.hide()" process="@this">
+			<pe:resetEditableValues for="idAddContactForm,idEditContactForm"/>
+		</p:commandButton>
+	</p:panelGrid>
+</ui:composition>

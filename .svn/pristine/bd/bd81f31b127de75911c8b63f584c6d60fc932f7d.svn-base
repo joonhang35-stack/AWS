@@ -1,0 +1,483 @@
+package com.bcs.zsg.acct.service;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.bcs.zsg.acct.dao.ChartOfAcctDAO;
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.JournalVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.db.bterp.dao.gst.GSTDAO;
+import com.bcs.zsg.db.bterp.dao.journal.JournalDAO;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.maintenance.dao.CorporateProfileDAO;
+import com.bcs.zsg.maintenance.dao.SystemNumberGenerationDAO;
+import com.bcs.zsg.maintenance.helper.MaintConstant;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.purchase.dao.BillPymtDAO;
+import com.bcs.zsg.sales.dao.InvoiceDAO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+import com.bcs.zsg.zextra.backend.helper.SysNumGenUtil;
+
+public class JournalServiceImpl implements JournalService {
+	
+	@Autowired
+	private AccountService accountService;
+	@Autowired
+	private JournalDAO journalDAO;
+	@Autowired
+	private SystemNumberGenerationDAO systemNumberGenerationDAO;
+	@Autowired
+	private GSTDAO gstDAO;
+	@Autowired
+	private AccountService acctService;
+	@Autowired
+	private BillPymtDAO billPymtDAO;
+	@Autowired
+	private CorporateProfileDAO corporateProfileDAO;
+	@Autowired
+	private ChartOfAcctDAO chartOfAcctDAO;
+	@Autowired
+	private InvoiceDAO invoiceDAO;
+	
+	@Override
+	public void insertJournal(JournalVO journalVO, List<AcctTransVO> journalCartList) throws BusinessException, QueueException {
+		
+		SystemNumberGenerationVO journalSysNumVO = new SystemNumberGenerationVO();
+		journalSysNumVO.setCode(CommonConstant.SYS_NUM_CD_JRNL);
+		journalSysNumVO.setIdCompany(journalVO.getCompanyId());
+		journalSysNumVO = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(journalSysNumVO));
+		
+		Long journalId = journalSysNumVO.getNextnumber();
+		
+		journalVO.setSysNo(journalId.toString());
+		
+		if (StringUtils.isBlank(BaseContext.getUserFullName()) && StringUtils.isBlank(BaseContext.getLoginId())) {
+			journalDAO.insert(journalVO, "SYSTEM");
+		} else {
+			journalDAO.insert(journalVO);
+		}
+		
+		AcctTransVO journalMain = createMainAcctTransJournal(journalVO);
+		
+		// You Yuan 2026.1.23
+		// long story short, this function will cause 
+		// org.hibernate.exception.GenericJDBCException: Cannot open connection
+		// Caused by: org.apache.tomcat.jdbc.pool.PoolExhaustedException: [http-nio-8080-exec-1] Timeout: Pool empty. Unable to fetch a connection in 10 seconds, none available[size:15; busy:15; idle:0; lastwait:10000].
+		updateRoundingAndTax(journalVO.getAmountCalcViewVO(), journalMain, journalCartList); 
+		
+		addJournalItem(journalMain, journalCartList);
+	}
+	
+	private void addJournalItem(AcctTransVO journalMain, List<AcctTransVO> journalCartList) throws BusinessException {
+
+		for (AcctTransVO vo : journalCartList) {
+			vo.setTransDt(journalMain.getTransDt());
+			vo.setSysPrefix(journalMain.getSysPrefix());
+			vo.setSysCode(journalMain.getSysCode());
+			vo.setCompanyId(journalMain.getCompanyId());
+			vo.setSysNo(journalMain.getSysNo());
+			vo.setRefNo(journalMain.getRefNo());
+			vo.setSource(journalMain.getSource());
+			vo.setDestination(journalMain.getDestination());
+			
+			if (StringUtils.isBlank(BaseContext.getUserFullName()) && StringUtils.isBlank(BaseContext.getLoginId())) {
+				accountService.auditAcctTransEmailPayment(CommonConstant.ACTION_CD_ADD, vo);
+			} else {
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_ADD, vo);
+			}
+			
+		}
+	}
+	
+	private String getDestination(JournalVO journalVO) {
+		return journalVO.getReason() + (StringUtils.isNotBlank(journalVO.getReference()) ? "-" + journalVO.getReference() : "");
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public void updateJournal(JournalVO journalVO, List<AcctTransVO> journalCartList, AddUpdDelVO journalItemsVO) throws BusinessException, QueueException {
+
+		AcctTransVO mainVO = createMainAcctTransJournal(journalVO);
+		
+		if (journalItemsVO.getAddList().size() > 0) {
+			addJournalItem(mainVO, ((List<AcctTransVO>)((List<?>)journalItemsVO.getAddList())));
+		}
+
+		System.out.println("CYY journalItemsVO.getUpdList().size(): " + journalItemsVO.getUpdList().size());
+		Set<Long> idList = new HashSet<Long>();
+		if (journalItemsVO.getUpdList().size() > 0) {
+			for (Object vo : journalItemsVO.getUpdList()) {
+				AcctTransVO acctTransVO = (AcctTransVO) vo;
+				acctTransVO.setTransDt(journalVO.getJournalDt());
+				acctTransVO.setDestination(getDestination(journalVO));
+				
+				System.out.println("CYY acctTransVO.getId(): " + acctTransVO.getId());
+				System.out.println("CYY DC: " + acctTransVO.getDebit() + ", " + acctTransVO.getCredit());
+				
+				idList.add(acctTransVO.getId());
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD, acctTransVO);
+			}
+		}
+		
+		if (journalItemsVO.getDelList().size() > 0) {
+			for (Object vo : journalItemsVO.getDelList()) {
+				AcctTransVO acctTransVO = (AcctTransVO) vo;
+				idList.add(acctTransVO.getId());
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_DEL, acctTransVO);
+			}
+		}
+		
+		JournalVO dbJournal = journalDAO.getJournal(journalVO);
+		List<AcctTransVO> journalItemList = new ArrayList<AcctTransVO>();
+		
+		if(dbJournal.getJournalDt() != journalVO.getJournalDt() || 
+				dbJournal.getReason() != journalVO.getReason() ) {
+			//Get journal item not found in update and Update with latest data.
+			
+			Map<String, Object> params = generateAccountTranParam(journalVO, true);
+			params.remove("transDt");
+			
+			journalItemList = accountService.getAccountTransListFilterID(params
+													, idList.toArray(), false);
+			
+			if (journalItemList.size() > 0) {
+				for (AcctTransVO acctTransVO : journalItemList) {
+					acctTransVO.setTransDt(journalVO.getJournalDt());
+					acctTransVO.setDestination(getDestination(journalVO));
+					accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD, acctTransVO);
+				}
+			}
+		}
+		
+		dbJournal.setJournalDt(journalVO.getJournalDt());
+		dbJournal.setReason(journalVO.getReason());
+		dbJournal.setReference(journalVO.getReference());
+		dbJournal.setTotalAmt(journalVO.getTotalAmt());
+		dbJournal.setIdTourDep(journalVO.getIdTourDep());
+		dbJournal.setIdDpt(journalVO.getIdDpt());
+		
+		journalDAO.update(dbJournal);
+		
+		updateRoundingAndTax(journalVO.getAmountCalcViewVO(), mainVO, journalCartList);
+		
+	}
+	
+	@Override
+	public void delJournal(JournalVO journalVO) throws BusinessException {
+		
+		// delete linking from bill to journal
+		billPymtDAO.removeJournalFromBill(journalVO.getId());
+		
+		List<AcctTransVO> journalItems = accountService.getAccountTransList(generateAccountTranParam(journalVO, false));
+		
+		for(AcctTransVO vo : journalItems){
+			accountService.auditAcctTrans(CommonConstant.ACTION_CD_DEL, vo);
+		}
+		journalDAO.delete(journalVO);
+	}
+	
+	public int getJournalListSize(Map<String, Object> params) throws BusinessException {
+		return journalDAO.getListSizeJournal(params);
+	}
+	
+	@Override
+	public List<?> getJournalList(Map<String, Object> params) throws BusinessException {
+		return journalDAO.getListJournal(params);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 */
+	@Override
+	public List<AcctTransVO> getJournalItems(JournalVO journalVO) throws BusinessException {
+		return accountService.getAccountTransList(generateAccountTranParam(journalVO, true));
+	}
+
+	private Map<String, Object> generateAccountTranParam(JournalVO journalVO, boolean includeRefNo) {
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("companyId", journalVO.getCompanyId());
+		params.put("sysCode", CommonConstant.SYS_NUM_CD_JRNL);
+		params.put("transDt", journalVO.getJournalDt());
+		params.put("sysNo", journalVO.getSysNo());
+		
+		//For account tax and rnd inclusion/exclude
+		if(includeRefNo)
+			params.put("refNo", journalVO.getId().toString());
+		params.put("statusCode", BaseConstant.STATUS_ACTIVE);
+		return params;
+	}
+	
+	private AcctTransVO createMainAcctTransJournal(JournalVO journalVO) throws BusinessException {
+		SystemNumberGenerationVO invSNGVO = systemNumberGenerationDAO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_JRNL, journalVO.getCompanyId());
+
+		AcctTransVO mainVO = new AcctTransVO();
+		
+		mainVO.setTransDt(journalVO.getJournalDt());
+		mainVO.setSysPrefix(invSNGVO.getPrefixid());
+		mainVO.setSysCode(CommonConstant.SYS_NUM_CD_JRNL);
+		mainVO.setCompanyId(journalVO.getCompanyId());
+		mainVO.setSysNo(journalVO.getSysNo());
+		mainVO.setRefNo(journalVO.getId().toString());
+		mainVO.setSource(invSNGVO.getPrefixid() + "-" + journalVO.getSysNo());
+		mainVO.setDestination(getDestination(journalVO));
+
+		return mainVO;
+	}
+	
+	private AcctTransVO updateRoundingAndTax(AmountCalcViewVO amountCalcViewVO, AcctTransVO mainVO, List<AcctTransVO> journalCartList) throws BusinessException {
+		List<String> nonClaimableTaxCode = gstDAO.getNonClaimableTaxList();
+		
+		BigDecimal ttlTaxDebit = new BigDecimal("0.00");
+		BigDecimal ttlTaxCredit = new BigDecimal("0.00");
+		BigDecimal ttlNCTaxDebit = new BigDecimal("0.00");
+		BigDecimal ttlNCTaxCredit = new BigDecimal("0.00");
+		
+		for(AcctTransVO vo : journalCartList) {
+			if (StringUtils.isNotEmpty(vo.getTaxCode()) && nonClaimableTaxCode.contains(vo.getTaxCode())) {
+				if(vo.getCredit() != 0.00)
+					ttlNCTaxCredit = ttlNCTaxCredit.add(new BigDecimal(String.valueOf(vo.getDTaxAmount())));
+				else
+					ttlNCTaxDebit = ttlNCTaxDebit.add(new BigDecimal(String.valueOf(vo.getDTaxAmount())));
+			} else {
+				if(vo.getCredit() != 0.00)
+					ttlTaxCredit = ttlTaxCredit.add(new BigDecimal(String.valueOf(vo.getDTaxAmount())));
+				else
+					ttlTaxDebit = ttlTaxDebit.add(new BigDecimal(String.valueOf(vo.getDTaxAmount())));
+			}
+		}
+		
+		// You Yuan 2026.1.23
+		// long story short, acctService.roundingAndTaxUpdateRfnd function will cause 
+		// org.hibernate.exception.GenericJDBCException: Cannot open connection
+		// Caused by: org.apache.tomcat.jdbc.pool.PoolExhaustedException: [http-nio-8080-exec-1] Timeout: Pool empty. Unable to fetch a connection in 10 seconds, none available[size:15; busy:15; idle:0; lastwait:10000].
+
+		// Suspense GST
+		AcctTransVO acctVO = new AcctTransVO();
+		acctVO.setAcctId(amountCalcViewVO.getIdTaxAcct());
+		acctVO.setType(CommonConstant.SYS_NUM_CD_TAX);
+		acctVO.setDebit(ttlTaxDebit.doubleValue());
+		acctVO.setCredit(ttlTaxCredit.doubleValue());
+		acctService.roundingAndTaxUpdateRfnd(acctVO, mainVO);
+		
+		// Block/Non Claimable GST
+		acctVO = new AcctTransVO();
+		acctVO.setAcctId(amountCalcViewVO.getIdTaxNonClaimableAcct());
+		acctVO.setType(CommonConstant.SYS_NUM_CD_NCT);
+		acctVO.setDebit(ttlNCTaxDebit.doubleValue());
+		acctVO.setCredit(ttlNCTaxCredit.doubleValue());
+		acctService.roundingAndTaxUpdateRfnd(acctVO, mainVO);
+		
+		return mainVO;
+	}
+	
+	@Override
+	public JournalVO getJournalById(Long idJournal, Long idCompany) throws BusinessException {
+		return journalDAO.getJournalById(idJournal, idCompany);
+	}
+	
+	@Override
+	public JournalVO insertReverseJournal(InvoiceVO paxStmtVO, InvoiceVO invoiceVO) throws BusinessException, QueueException {
+		
+		// reverse sales journal
+
+		// preparation
+		CompanyVO companyVO = corporateProfileDAO.getCompanyDetails(paxStmtVO.getCompanyId());
+		AmountCalcViewVO amtCalcViewVO = new AmountCalcViewVO();
+		amtCalcViewVO.setIdTaxAcct(companyVO.getIdAcctGST());
+		amtCalcViewVO.setIdTaxNonClaimableAcct(companyVO.getIdAcctNonClaimableGST());
+
+		SystemNumberGenerationVO psSNGVO = systemNumberGenerationDAO
+				.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_PAX_STMT, paxStmtVO.getCompanyId());
+		SystemNumberGenerationVO invSNGVO = systemNumberGenerationDAO
+				.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_INVC, paxStmtVO.getCompanyId());
+		
+		BigDecimal totalCrdAmt = new BigDecimal("0.00"); // total credit amount
+		BigDecimal totalDbtAmt = new BigDecimal("0.00"); // total debit amount
+
+		// create journal
+		JournalVO journalVO = new JournalVO();
+		journalVO.setCompanyId(paxStmtVO.getCompanyId());
+		journalVO.setReason("[Reverse Sales] Convert " + psSNGVO.getPrefixid() + paxStmtVO.getPsNo() + " To " + invSNGVO.getPrefixid()
+				+ invoiceVO.getCode());
+		journalVO.setJournalDt(invoiceVO.getInvoiceDt()); // use inv dt, not ps dt, cuz now inv dt follow conversion dt
+		journalVO.setIdTourDep(invoiceVO.getTourDepId());
+		journalVO.setIdDpt(MaintConstant.DEPT_TYPE_ACCT);
+		journalVO.setIdInv(invoiceVO.getId());
+		journalVO.setIdPs(paxStmtVO.getId());
+		journalVO.setJournalCartList(new ArrayList<AcctTransVO>());
+		
+		// create journal items
+
+		// main journal item (reverse trade debtor)
+		AcctTransVO mainJournalItem = buildJourItem(paxStmtVO);
+		journalVO.getJournalCartList().add(mainJournalItem);
+
+		totalCrdAmt = totalCrdAmt.add(new BigDecimal(String.valueOf(mainJournalItem.getCredit())));
+		totalDbtAmt = totalDbtAmt.add(new BigDecimal(String.valueOf(mainJournalItem.getDebit())));
+
+		// journal items (invoice item)
+		for (InvoiceItemVO itemVO : paxStmtVO.getInvoiceItemList()) {
+			AcctTransVO journalItem = buildJourItem(itemVO, false);
+			journalVO.getJournalCartList().add(journalItem);
+
+			totalCrdAmt = totalCrdAmt.add(new BigDecimal(String.valueOf(journalItem.getCredit())));
+			totalDbtAmt = totalDbtAmt.add(new BigDecimal(String.valueOf(journalItem.getDebit())));
+		}
+		
+		// other journal item (tax/rounding)
+		if (paxStmtVO.getIdAcctRounding() != null) {
+			journalVO.getJournalCartList().add(buildTaxRoundingJourItem(paxStmtVO.getRoundingAmt(), CommonConstant.SYS_NUM_CD_ROUNDING, paxStmtVO.getIdAcctRounding()));
+		}
+		if (paxStmtVO.getIdAcctGST() != null) {
+			journalVO.getJournalCartList().add(buildTaxRoundingJourItem(paxStmtVO.getTaxAmt(), CommonConstant.SYS_NUM_CD_TAX, paxStmtVO.getIdAcctGST()));
+		}
+
+//		System.out.println("CYY totalCrdAmt: " + totalCrdAmt);
+//		System.out.println("CYY totalDbtAmt: " + totalDbtAmt);
+
+		if (CollectionUtils.isEmpty(journalVO.getJournalCartList()))
+			throw new BusinessException(CommonErrConstant.ERR_ACCT_JOURNAL_NO_ITEM);
+		if (totalCrdAmt.doubleValue() == totalDbtAmt.doubleValue()) // && totalCrdAmt.doubleValue() != 0.00)
+			journalVO.setTotalAmt(totalCrdAmt.doubleValue());
+		else
+			throw new BusinessException(CommonErrConstant.ERR_ACCT_CREDIT_DEBIT_NOT_EQUAL);
+
+		journalVO.setAmountCalcViewVO(updateTaxableAmount(false, journalVO.getJournalCartList(), amtCalcViewVO));
+		journalVO.setTypeCd(CommonConstant.JOURNAL_TYPE_SALES);
+
+		insertJournal(journalVO, journalVO.getJournalCartList());
+		
+		return journalVO;
+	}
+	
+	private AmountCalcViewVO updateTaxableAmount(boolean isCalGLItems, List<AcctTransVO> journalCartList, AmountCalcViewVO amtCalcViewVO) throws BusinessException {
+		if (isCalGLItems) calculateGLItemsAmount(journalCartList);
+		
+		return AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, false, journalCartList, null, false);
+	}
+	
+	private void calculateGLItemsAmount(List<AcctTransVO> list) throws BusinessException {
+		for (AcctTransVO vo : list) {
+			vo.setTaxAmount(vo.getAmount() < 0 ? -vo.getTaxAmount() : vo.getTaxAmount());
+			
+			BigDecimal amount = new BigDecimal(String.valueOf(vo.getAmount()));
+			BigDecimal taxAmount = new BigDecimal(vo.getTaxAmount().toString());
+			
+			vo.setAmountIncludeTax(amount.add(taxAmount).doubleValue());
+		}
+	}
+	
+	private AcctTransVO buildJourItem(InvoiceVO paxStmtVO) throws BusinessException {
+		paxStmtVO.setAcctVO(chartOfAcctDAO.getAcctVO(paxStmtVO.getAcctId()));
+
+		if (paxStmtVO.getAcctVO().getSubCode().equals("")) {
+//			mainJournalItem.setCode(paxStmtVO.getAcctVO().getCode());
+//			mainJournalItem.setDesc(paxStmtVO.getAcctVO().getDesc());
+			return buildJourItem(paxStmtVO.getAmount(), 0.0, 
+					paxStmtVO.getAcctVO().getDesc(), 
+					paxStmtVO.getAcctId(),
+					paxStmtVO.getAcctVO().getCode());
+		} else {
+//			mainJournalItem.setCode(paxStmtVO.getAcctVO().getCode() + "-" + paxStmtVO.getAcctVO().getSubCode());
+//			mainJournalItem.setDesc(paxStmtVO.getAcctVO().getDesc() + ", " + paxStmtVO.getAcctVO().getSubDesc());
+			return buildJourItem(paxStmtVO.getAmount(), 0.0, 
+					paxStmtVO.getAcctVO().getDesc() + ", " + paxStmtVO.getAcctVO().getSubDesc(), 
+					paxStmtVO.getAcctId(),
+					paxStmtVO.getAcctVO().getCode() + "-" + paxStmtVO.getAcctVO().getSubCode());
+		}
+		
+	}
+	
+	/**
+	 * reverse sales journal
+	 * build journal item from invoice item
+	 * @param itemVO
+	 * @param accLoaded
+	 * @return
+	 * @throws BusinessException 
+	 */
+	private AcctTransVO buildJourItem(InvoiceItemVO itemVO, boolean accLoaded) throws BusinessException {
+		if (!accLoaded) {
+			// set account code if account not loaded
+			AcctVO acctVO = chartOfAcctDAO.getAcctVO(itemVO.getAcctId());
+			if (acctVO.getSubCode().equals("")) {
+				itemVO.setSalesAcctCd(acctVO.getCode());
+			} else {
+				itemVO.setSalesAcctCd(acctVO.getCode() + "-" + acctVO.getSubCode());
+			}
+		}
+		if (StringUtils.isNotBlank(itemVO.getSubDesc())) {
+			itemVO.setDesc(itemVO.getDesc() + BaseConstant.PAD_SPACE + BaseConstant.PAD_SLASH + BaseConstant.PAD_SPACE + itemVO.getSubDesc());
+		}
+		return buildJourItem(0.0, itemVO.getAmount(), itemVO.getDesc(), itemVO.getAcctId(), itemVO.getSalesAcctCd());
+	}
+	
+	/**
+	 * reverse sales journal
+	 * build tax or rounding journal item
+	 * @param debit
+	 * @param taxOrRounding
+	 * @param idAcct
+	 * @return
+	 */
+	private AcctTransVO buildTaxRoundingJourItem(Double debit, String taxOrRounding, Long idAcct) {
+		return buildJourItem(0.0, debit, taxOrRounding, idAcct, taxOrRounding);
+	}
+	
+	/**
+	 * build journal item account trans
+	 * @param credit
+	 * @param debit
+	 * @param desc
+	 * @param idAcct
+	 * @param code
+	 * @return
+	 */
+	private AcctTransVO buildJourItem(Double credit, Double debit, String desc, Long idAcct, String code) {
+		AcctTransVO journalItem = new AcctTransVO();
+		journalItem.setCredit(credit);
+		journalItem.setDebit(debit);
+		journalItem.setDesc(desc);
+		journalItem.setAcctId(idAcct);
+		journalItem.setCode(code);
+		return journalItem;
+	}
+	
+	@Override
+	public List<JournalVO> getJournalListByBillId(Long idBill, Long idCompany) throws BusinessException {
+		return journalDAO.getJournalListByBillId(idBill, idCompany);
+	}
+	
+	@Override
+	public JournalVO getJournalByPaxStmtId(Long idPaxStmt, Long idCompany) throws BusinessException {
+		return journalDAO.getJournalByPaxStmtId(idPaxStmt, idCompany);
+	}
+	
+	@Override
+	public JournalVO getJournalDetails(JournalVO journalVO) throws BusinessException {
+		journalVO.setJournalCartList(getJournalItems(journalVO));
+		journalVO.setExOrderBillVO(billPymtDAO.getEOBill(journalVO.getIdBill()));
+		return journalVO;
+	}
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<script type="text/javascript">
+	function onTourCodeValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varEditTourCodeDialog.hide();
+		}
+	}
+</script>
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idTourCode">Tour Code <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idTourCode" label="Tour Code" value="#{ticketingBean.tourDepVO.code}" maxlength="30" required="true"/> <span style="font-style:italic; font-size:9px; color:#333333;">max: 30 char</span></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idTourDesc">Tour Description</h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idTourDesc" value="#{ticketingBean.tourPkgVO.nameEn}" style="width:300px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idInvRemarks">Tour Remarks</h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputTextarea id="idInvRemarks" value="#{ticketingBean.tourDepVO.invRemarks}" style="width:300px;"/></p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid columns="3" style="width: 1px;">
+	<c:if test="#{sessionInfoBean.employeeVO.department.contains('wholesale') or not sessionInfoBean.employeeVO.department.contains('sale') or ticketingBean.rolesAuthVO.salesManager}">
+		<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{ticketingBean.addTourCode}" update="@form,:idTicketingForm:idTourCodeList" oncomplete="varTourCodeList.clearFilters()" rendered="#{empty ticketingBean.tourDepVO.id}"/>
+		<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{ticketingBean.updTourCode}" update="@form,:idTicketingForm:idTourCodeList" oncomplete="onTourCodeValidation(xhr, status, args),varTourCodeList.clearFilters()" rendered="#{not empty ticketingBean.tourDepVO.id}"/>
+	</c:if>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{ticketingBean.resetForm}" oncomplete="varAddTourCodeDialog.hide(),varEditTourCodeDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddTourCodeForm,idEditTourCodeForm"/>
+	</p:commandButton>
+</p:panelGrid>
+</ui:composition>

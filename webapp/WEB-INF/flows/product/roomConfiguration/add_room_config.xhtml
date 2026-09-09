@@ -1,0 +1,65 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idDesc">Description <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText label="Description" id="idDesc" value="#{roomConfigBean.roomConfigVO.description}" required="true" 
+				style="width: 300px;" maxlength="255"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Category <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:panelGrid columns="6">
+				<h:outputLabel>TWN</h:outputLabel>
+				<h:outputLabel>SGL</h:outputLabel>
+				<h:outputLabel>CTW</h:outputLabel>
+				<h:outputLabel>CWB</h:outputLabel>
+				<h:outputLabel>CNB</h:outputLabel>
+				<h:outputLabel>INFT</h:outputLabel>
+				<p:inputText label="TWN" id="idFtTwn" value="#{roomConfigBean.roomConfigVO.twnQty}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="SGL" id="idFtSgl" value="#{roomConfigBean.roomConfigVO.sglQty}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="CTW" id="idFtCtw" value="#{roomConfigBean.roomConfigVO.ctwQty}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="CWB" id="idFtCwb" value="#{roomConfigBean.roomConfigVO.cwbQty}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="CNB" id="idFtCnb" value="#{roomConfigBean.roomConfigVO.cnbQty}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="INFT" id="idFtInft" value="#{roomConfigBean.roomConfigVO.inftQty}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+			</h:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idGroupList">Group</h:outputLabel></p:column>
+		<p:column style="width: 300px;">
+			<p:selectCheckboxMenu id="idGroupList" value="#{roomConfigBean.roomConfigVO.groupList}" label="Group" 
+				filter="true" filterMatchMode="contains" onHide="executeOnhide();" style="display: flex;width: fit-content;">
+				<f:selectItems value="#{bterp:lookupItemList('room_config_region')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+			</p:selectCheckboxMenu>
+			<p:remoteCommand name="executeOnhide" actionListener="#{roomConfigBean.handleGroupChange}" process="@this, idGroupList" update="idTxtGroup" global="false" />
+			<p:outputLabel id="idTxtGroup" value="#{roomConfigBean.groupDesc}" style="float: left"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column/>
+		<p:column>
+			
+		</p:column>
+	</p:row>
+
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{roomConfigBean.addRoomConfig}" update="@form,:idTourRoomConfigForm:idRoomConfigList" rendered="#{empty roomConfigBean.roomConfigVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{roomConfigBean.updRoomConfig}" update="@form,:idTourRoomConfigForm:idRoomConfigList" oncomplete="if (args &amp;&amp; !args.validationFailed) varEditRoomConfigDialog.hide()" rendered="#{not empty roomConfigBean.roomConfigVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{roomConfigBean.resetForm}" onclick="varAddRoomConfigDialog.hide(),varEditRoomConfigDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddRoomConfigForm,idEditRoomConfigForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

@@ -1,0 +1,173 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<style></style>
+
+	<p:growl id="msg" />
+
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.isPass) {
+				varReasonDialog.show();
+			}
+		}
+	</script>
+
+	<p:tabView id="idTabView" activeIndex="#{paymentBean.mulpEInvActiveTabIndex}">
+	
+		<!-- <p:ajax event="tabChange"></p:ajax> -->
+		
+		<p:tab title="Bank Payment List">
+			<p:panelGrid style="margin-top:5px; width: 550px">
+				<p:row>
+					<p:column style="width:200px;">
+						<h:outputLabel>Date</h:outputLabel>
+					</p:column>
+					<p:column style="width:10px;">
+						<p:separator style="width:2px;height:20px" />
+					</p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idPmntDateFr" label="Date From"
+							pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true"
+							value="#{paymentBean.searchParamVO.fromDate}" />
+						<p:watermark for="idPmntDateFr" value="Date From" />
+					</p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idPmntDateTo" label="Date To"
+							pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true"
+							value="#{paymentBean.searchParamVO.toDate}" />
+						<p:watermark for="idPmntDateTo" value="Date To" />
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<p:commandButton value="Search"
+							actionListener="#{paymentBean.reloadPmntEInvList}"
+							update=":idMulpEInvForm:idTabView :idMulpEInvForm:idTabView:idConsolInvListTable" />
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+
+			<p:dataTable id="idConsolInvListTable" widgetVar="varConsolInvListTable"
+				value="#{paymentBean.lazyPmntEInvDataModel}" var="cashBookVO" paginator="true"
+				rows="50" rowIndexVar="rowIndex"
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+				rowsPerPageTemplate="50, 100, 200, 300, 500, 1000, 1500"
+				selection="#{paymentBean.selectedPmntList}" rowKey="#{cashBookVO.id}"
+				filteredValue="#{paymentBean.filteredObjList}" lazy="true"
+				filterEvent="enter">
+				
+				<p:ajax event="rowSelectCheckbox" update=":idMulpEInvForm:idTabView"/>
+				<p:ajax event="rowUnselectCheckbox" update=":idMulpEInvForm:idTabView"/>
+				<p:ajax event="toggleSelect" update=":idMulpEInvForm:idTabView"/>
+
+				<p:column selectionMode="multiple"
+					style="width:16px;text-align:center" />
+				
+				<p:column sortBy="#{cashBookVO.bankName}" filterBy="#{cashBookVO.bankName}" filterMatchMode="contains" headerText="Bank Account" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(4)}">
+					<h:outputText value="#{cashBookVO.bankName}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.longSysNo}" filterBy="#{cashBookVO.longSysNo}" filterMatchMode="contains" headerText="Payment Number" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(5)}">
+					<h:outputText value="#{paymentBean.prefixValue}-#{cashBookVO.longSysNo}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.dtTrans}" filterBy="#{cashBookVO.dtTrans}" filterMatchMode="contains" headerText="Payment Date" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(6)}">
+					<h:outputText value="#{cashBookVO.dtTrans}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.transTypeCd}" filterBy="#{cashBookVO.transTypeCd}" filterMatchMode="contains" headerText="Payment Type" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(7)}">
+					<h:outputText value="Bank Payment" rendered="#{cashBookVO.transTypeCd eq 'cash_with'}"/>
+					<h:outputText value="Bills Payment" rendered="#{cashBookVO.transTypeCd eq 'bill_pymt'}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.payee}" filterBy="#{cashBookVO.payee}" filterMatchMode="contains" headerText="Payee" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(8)}">
+					<h:outputText value="#{cashBookVO.payee}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.taxCodeGroup}" filterBy="#{cashBookVO.taxCodeGroup}" filterMatchMode="contains" headerText="Tax Code Applied" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(9)}">
+					<h:outputText value="#{cashBookVO.taxCodeGroup}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.credit}" filterBy="#{cashBookVO.credit}" filterMatchMode="contains" headerText="Amount" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(10)}">
+					<h:outputText value="#{cashBookVO.credit}">
+					<f:convertNumber pattern="#,##0.00"/></h:outputText>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.refNo}" filterBy="#{cashBookVO.refNo}" filterMatchMode="contains" headerText="Cheque No" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(11)}">
+					<h:outputText value="#{cashBookVO.refNo}"/>
+				</p:column>
+				<p:column filterBy="#{purBillPmnt.eInvoiceStatus}" filterOptions="#{paymentBean.statusListItems}" headerText="E-Invoice Status" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(12)}">
+					<h:outputText value="#{cashBookVO.eInvoiceStatus}" />
+				</p:column>
+				<p:column sortBy="#{cashBookVO.remarks}" filterBy="#{cashBookVO.remarks}" filterMatchMode="contains" headerText="Memo" style="word-wrap:break-word;" width="200" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(13)}">
+					<h:outputText value="#{cashBookVO.remarks}"/>
+				</p:column>
+			</p:dataTable>
+		</p:tab>
+		<p:tab title="Selected Bank Payments">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<p:commandButton 
+							value="Submit" actionListener="#{paymentBean.submitMultipleEInvoice}" 
+							update=":idMulpEInvForm:msg idSelectedConsolInvListTable :idMulpEInvForm:idTabView :idMultipleEInvSubmitRespDialog" 
+							oncomplete="varMultipleEInvSubmitRespDialog.show()"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			<p:dataTable id="idSelectedConsolInvListTable" widgetVar="varSelectedConsolInvListTable"
+				value="#{paymentBean.savedSelectedPmntList}" var="cashBookVO" paginator="true"
+				rows="50" rowIndexVar="rowIndex"
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+				rowsPerPageTemplate="50, 100, 200, 300, 500, 1000, 1500"
+				filteredValue="#{paymentBean.filteredObjList}" lazy="true"
+				filterEvent="enter">
+				
+				<p:column headerText="Cancel" width="40"
+					style="text-align:center;">
+					<p:commandButton icon="ui-icon-close" actionListener="#{paymentBean.removePmntFromSelectedPmnts(cashBookVO)}" 
+						process="@this" update=":idMulpEInvForm:idTabView:idConsolInvListTable :idMulpEInvForm:idTabView:idSelectedConsolInvListTable" />
+				</p:column>
+				
+				<p:column sortBy="#{cashBookVO.bankName}" filterBy="#{cashBookVO.bankName}" filterMatchMode="contains" headerText="Bank Account" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(4)}">
+					<h:outputText value="#{cashBookVO.bankName}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.longSysNo}" filterBy="#{cashBookVO.longSysNo}" filterMatchMode="contains" headerText="Payment Number" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(5)}">
+					<h:outputText value="#{paymentBean.prefixValue}-#{cashBookVO.longSysNo}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.dtTrans}" filterBy="#{cashBookVO.dtTrans}" filterMatchMode="contains" headerText="Payment Date" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(6)}">
+					<h:outputText value="#{cashBookVO.dtTrans}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.transTypeCd}" filterBy="#{cashBookVO.transTypeCd}" filterMatchMode="contains" headerText="Payment Type" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(7)}">
+					<h:outputText value="Bank Payment" rendered="#{cashBookVO.transTypeCd eq 'cash_with'}"/>
+					<h:outputText value="Bills Payment" rendered="#{cashBookVO.transTypeCd eq 'bill_pymt'}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.payee}" filterBy="#{cashBookVO.payee}" filterMatchMode="contains" headerText="Payee" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(8)}">
+					<h:outputText value="#{cashBookVO.payee}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.taxCodeGroup}" filterBy="#{cashBookVO.taxCodeGroup}" filterMatchMode="contains" headerText="Tax Code Applied" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(9)}">
+					<h:outputText value="#{cashBookVO.taxCodeGroup}"/>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.credit}" filterBy="#{cashBookVO.credit}" filterMatchMode="contains" headerText="Amount" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(10)}">
+					<h:outputText value="#{cashBookVO.credit}">
+					<f:convertNumber pattern="#,##0.00"/></h:outputText>
+				</p:column>
+				<p:column sortBy="#{cashBookVO.refNo}" filterBy="#{cashBookVO.refNo}" filterMatchMode="contains" headerText="Cheque No" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(11)}">
+					<h:outputText value="#{cashBookVO.refNo}"/>
+				</p:column>
+				<p:column filterBy="#{purBillPmnt.eInvoiceStatus}" filterOptions="#{paymentBean.statusListItems}" headerText="E-Invoice Status" width="120" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(12)}">
+					<h:outputText value="#{cashBookVO.eInvoiceStatus}" />
+				</p:column>
+				<p:column sortBy="#{cashBookVO.remarks}" filterBy="#{cashBookVO.remarks}" filterMatchMode="contains" headerText="Memo" style="word-wrap:break-word;" width="200" rendered="#{paymentBean.listingTableViewVO.verifyVisibility(13)}">
+					<h:outputText value="#{cashBookVO.remarks}"/>
+				</p:column>
+			</p:dataTable>
+		
+		</p:tab>
+	</p:tabView>
+
+	<h:panelGrid columns="11" style="width: 1px;">
+	</h:panelGrid>
+</ui:composition>

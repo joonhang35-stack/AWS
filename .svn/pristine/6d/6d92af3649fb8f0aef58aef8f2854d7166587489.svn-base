@@ -1,0 +1,539 @@
+package com.bcs.zsg.product.web.bean;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.cfg.sec.bo.UserBO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.DatesUtils;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.gst.bo.GSTBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.product.bo.TourCatBO;
+import com.bcs.zsg.product.bo.TourPackageBO;
+import com.bcs.zsg.product.helper.ProductConstant;
+import com.bcs.zsg.product.vo.TourCatViewVO;
+import com.bcs.zsg.product.vo.TourDepItemVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.product.vo.TourPackageVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.sales.bo.BookingBO;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.vo.BookingChargeItemVO;
+import com.bcs.zsg.sales.vo.BookingVO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+import net.sf.jasperreports.engine.JasperPrint;
+
+public class TourInsuranceBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient TourPackageBO tourPackageBO;
+	@Autowired
+	private transient TourCatBO tourCatBO;
+	@Autowired
+	protected transient RegionBO regionBO;
+	@Autowired
+	protected transient BookingBO bookingBO;
+	@Autowired
+	protected transient UserBO userBO;
+	@Autowired
+	protected transient GSTBO gstBO;
+	@Autowired
+	protected transient InvoiceBO invoiceBO;
+	
+	private TourDepartureVO tourDepVO;
+	private TourPackageVO tourPkgVO;
+	private BookingVO bookingVO;
+	
+	private LazyTourDepartureInsuranceDataModel lazyTourDepInsDataModel;
+	private List<TourDepartureVO> tourDepList;
+	private List<CountryVO> countryList;
+	private List<TourCatViewVO> tourCatViewList;
+	private List<BookingVO> bookingList;
+	private List<EmployeeViewVO> employeeList;
+	
+	private final int TOUR_DEPARTURE_DATE_MAX_RANGE = 180;
+	private final String URL_SALES_PAX_STATEMENT = "/app/sales/paxStatement";
+	private final String URL_SALES_INV = "/app/sales/inv";
+	
+	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+	
+	private String exportRange; // select more than 7 or 2 to 7 pax to export
+	
+	private Integer rangeStart; // start range to export
+	private Integer rangeEnd; // end range to export
+	
+	TrackingLogUtils trackingLogUtils;
+	
+	public void init() {
+		trackingLogUtils = new TrackingLogUtils(getClass());
+		try {
+			initSearchParam();
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(searchParamVO.getToDate());
+			cal.add(Calendar.DATE, TOUR_DEPARTURE_DATE_MAX_RANGE);
+			searchParamVO.setToDate(cal.getTime());
+			
+			//lazyTourDepInsDataModel = new LazyTourDepartureInsuranceDataModel();
+			countryList = regionBO.getCountryList();
+			
+			SearchParamVO paramVO = new SearchParamVO();
+			paramVO.setObj1(ProductConstant.TYPE_TOUR);
+			paramVO.setCompanyVO(getSessionInfoBean().getCompanyVO());
+			
+			trackingLogUtils.startLogs();
+			tourCatViewList = tourCatBO.getTourCatViewList(paramVO);
+			trackingLogUtils.endLogs("tourCatViewList");
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+		loadTourDepartureInsList();
+	}
+	
+	@Override
+	public void resetForm() {
+		
+	}
+	
+	public void resetBookingForm() {
+		bookingVO = new BookingVO();
+		bookingVO.setIdCompany(getSessionInfoBean().getCompanyVO().getId());
+	}
+	
+	public void loadTourDepartureInsList() {
+		
+		trackingLogUtils.startLogs();
+		try {
+			
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("companyId", getSessionInfoBean().getCompanyVO().getId());
+			tourDepList = tourPackageBO.getTourDepartureInsuranceList(searchParamVO, params);
+			//lazyTourDepInsDataModel.setTourDepList(departureList);
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("loadTourDepartureInsList");
+		}
+	}
+	
+	public void saveTourDepartureInsurance(TourDepartureVO vo) {
+		try {
+			tourPackageBO.saveTourDepartureInsurance(vo);
+			vo.setAddEdit(false);
+			//loadTourDepartureInsList();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void printTourInsuranceNameList(TourDepartureVO vo) {
+		try {
+			HashMap<String, Object> map = new HashMap<String, Object>();
+			List<BookingVO> customerList = new ArrayList<BookingVO>();
+			customerList = bookingBO.getPassengerListWithNricByidTourDep(vo.getId());
+			map.put("tableList", customerList);
+			if (CollectionUtils.isEmpty(customerList)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_TOUR_INS_NAME_LIST;
+			String reportName = vo.getCode() + "_";
+			
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(customerList, map, jasperFileName);
+			ReportUtils.printReportExcel(jasperPrint, reportName);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Handle to show booking list
+	 * @param tourDepVO
+	 */
+	public void handleShowBookingList(TourDepartureVO vo) {
+		try {
+			tourDepVO = tourPackageBO.getTourDepById(vo.getId());
+			if (vo.getDtDep() != null && vo.getDeadline() != null)
+				tourDepVO.setDtDeadline(DatesUtils.getPreviousDate(vo.getDtDep(), vo.getDeadline()).getTime());
+			
+			handleOpPicShow();
+			
+			bookingList = bookingBO.getBookingList(vo);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleShowBookingListFromSearch(TourDepartureVO vo) {
+		try {
+//			isFromSearchFiltering = true;
+			tourPkgVO = tourPackageBO.getTourPackageById(vo.getIdTourPkg());
+			handleShowBookingList(vo);
+		} catch (Throwable t) {
+			errorResult(t);
+		} 
+	}
+	
+	public void handleOpPicShow() {
+		try {
+			tourDepVO.setOpPicName("");
+			List<String>  opPicList = new ArrayList<String>();
+			if (StringUtils.isNotEmpty(tourDepVO.getOpPic())) {
+				opPicList = Arrays.asList(tourDepVO.getOpPic().replaceAll(",$", "").split(",", -1));
+			}
+			
+			// query employee list
+			if(CollectionUtils.isEmpty(employeeList)) employeeList = userBO.getEmployeeViewList(getSessionInfoBean().getCompanyVO().getId(), null);
+			
+			if (CollectionUtils.isNotEmpty(opPicList) && CollectionUtils.isNotEmpty(employeeList)) {
+				for (String pic : opPicList) {
+					for (EmployeeViewVO vo : employeeList) {
+						if (vo.getId().longValue() == Long.parseLong(pic)) {
+							if (StringUtils.isBlank(tourDepVO.getOpPicName())) {
+								tourDepVO.setOpPicName(vo.getUserVO().getName());
+							} else {
+								tourDepVO.setOpPicName(tourDepVO.getOpPicName() + ", " + vo.getUserVO().getName());
+							}
+							break;
+						}
+					}
+				}
+			}
+		
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleBookingSelect(BookingVO vo) {
+		try {
+			bookingVO = vo;
+			bookingVO.setEmployeeViewVO(userBO.getEmployeeView(vo.getIdEmployee()));
+			tourPackageBO.setMiscAdtChd(tourDepVO, null, bookingVO);
+			
+			int count = 1, totalDiscountPax = 0;
+			for (BookingChargeItemVO itemVO : bookingVO.getBookingChargeItemList()) {
+				if (StringUtils.equals(ProductConstant.TOUR_DEP_ITM_CD_DISC, itemVO.getCode())) {
+					if (count == 1) {
+						bookingVO.setDiscount1(itemVO.getAmount() < 0 ? (itemVO.getAmount() * -1) : itemVO.getAmount());
+						bookingVO.setDiscountPax1(itemVO.getQuantity());
+						totalDiscountPax += itemVO.getQuantity();
+						count++;
+					} else if (count == 2) {
+						bookingVO.setDiscount2(itemVO.getAmount() < 0 ? (itemVO.getAmount() * -1) : itemVO.getAmount());
+						bookingVO.setDiscountPax2(itemVO.getQuantity());
+						totalDiscountPax += itemVO.getQuantity();
+					}
+				}
+			}
+			bookingVO.setNotEntitledDiscountPax(bookingVO.getQuantity() - totalDiscountPax);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void makePayment(BookingVO vo) {
+		try {
+			List<TourDepItemVO> tourDepItemVOList = tourPackageBO.getTourDepItemList(tourDepVO.getId(), getSessionInfoBean().getCompanyVO().getId());
+			boolean isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), new Date());
+			
+			InvoiceVO invVO = new InvoiceVO();
+			invVO.setInvoiceDt(new Date());
+			invVO.setCustomerId(vo.getIdCust());
+			invVO.setBookingId(vo.getId());
+			invVO.setTourCd(tourDepVO.getCode());
+			invVO.setTourDepId(tourDepVO.getId());
+			invVO.setSubjLine(tourDepVO.getDesc());
+			invVO.setDepartureDt(tourDepVO.getDtDep());
+			invVO.setOrderCd(vo.getOrderTypeCd());
+			invVO.setCatCd(CommonConstant.LOOKUP_ITM_INV_CAT_TOUR);
+			invVO.setSalerId(vo.getIdEmployee());
+			invVO.setSalerName(vo.getEmployeeViewVO().getUserVO().getName());
+			StringBuilder sb = new StringBuilder();
+			if (tourPkgVO == null) tourPkgVO = new TourPackageVO();
+			sb.append(tourDepVO.getNumDays() + "Days " + tourDepVO.getNumNights() + "Nights ");
+			if (!StringUtils.isEmpty(tourPkgVO.getNameEn())) sb.append(tourPkgVO.getNameEn());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameZh())) sb.append(" " + tourPkgVO.getNameZh());
+			if (!StringUtils.isEmpty(tourPkgVO.getNameOther())) sb.append(" " + tourPkgVO.getNameOther());
+			if (!StringUtils.isEmpty(tourDepVO.getDesc())) sb.append(" [" + tourDepVO.getDesc() + "]");
+			invVO.setSubjLine(sb.toString());
+			if (StringUtils.isNotEmpty(tourDepVO.getLangCode())) {
+				invVO.setSubjLine(invVO.getSubjLine() + " [" +
+					LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_PRODUCT_LANG, tourDepVO.getLangCode()) +
+				"]");
+			}
+			
+			/*for (String orderType : SalesConstant.BOOKING_ORDER_TYPE_TFAIR_SP) {
+				if (vo.getOrderTypeCd().startsWith(orderType)) {
+					invVO.setTfairSalerId(vo.getIdSalerTfair());
+					break;
+				}
+			}*/
+			invVO.setTfairSalerId(vo.getIdSalerTfair());
+			invVO.setInvoiceItemList(new ArrayList<InvoiceItemVO>());
+			for (BookingChargeItemVO itemVO : vo.getBookingChargeItemList()) {
+				if (itemVO.getQuantity() > 0 && itemVO.getAmount().doubleValue() != 0) {
+					InvoiceItemVO invItemVO = new InvoiceItemVO();
+					invItemVO.setAcctId(itemVO.getIdAcct());
+					invItemVO.setInvEOItemId(itemVO.getIdInvEoItem());
+					invItemVO.setInvItemCd(itemVO.getCode());
+					invItemVO.setCode(itemVO.getCode());
+					invItemVO.setDesc(itemVO.getDesc());
+					if(itemVO.getIsLock() != null) invItemVO.setIsLock(itemVO.getIsLock()); else invItemVO.setIsLock(false);
+					invItemVO.setQty(itemVO.getQuantity());
+					invItemVO.setUnitPrice(itemVO.getAmount());
+					//invItemVO.setAmount(itemVO.getAmount() * itemVO.getQuantity());
+					invItemVO.setAmount((new BigDecimal(String.valueOf(itemVO.getAmount()))).multiply(new BigDecimal(String.valueOf(itemVO.getQuantity()))).doubleValue());
+					invItemVO.setTaxAmount(0.00);
+					if (isGSTPeriod) {
+						for (TourDepItemVO tourDepItemVO : tourDepItemVOList) {
+							if (tourDepItemVO.getCode().equals(itemVO.getCode())) {
+								invItemVO.setTaxCode(tourDepItemVO.getTaxCode());
+								invItemVO.setTaxRate(tourDepItemVO.getTaxRate());
+								tourDepItemVOList.remove(tourDepItemVO);
+								break;
+							}
+						}
+					} else {
+						invItemVO.setTaxCode(null);
+						invItemVO.setTaxRate(null);
+					}
+					
+					invVO.getInvoiceItemList().add(invItemVO);
+				}
+			}
+			// send redirect
+//			sendRedirect("bookingId", vo.getId(), invVO, URL_SALES_PAX_STATEMENT);
+//			sendRedirect("bookingId", vo.getId(), invVO, URL_SALES_INV);
+			
+			// Booking search existed invoice if created date before 2025-01-01 go for invoice else pax statement
+			InvoiceVO existedInvVO = invoiceBO.getInvoice(vo.getId());
+			if (existedInvVO != null) {
+		        if (DatesUtils.isDateLessOrEqual(existedInvVO.getCreatedDate(), sdf.parse("2024-12-31"))) {
+		        	sendRedirect("bookingId", vo.getId(), invVO, URL_SALES_INV);
+		        } else {
+		        	sendRedirect("bookingId", vo.getId(), invVO, URL_SALES_PAX_STATEMENT);
+		        }
+			} else {
+				sendRedirect("bookingId", vo.getId(), invVO, URL_SALES_PAX_STATEMENT);
+			}
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void printTourInsuranceList() {
+	    try {
+	    	HashMap<String, Object> map = new HashMap<String, Object>();
+	    	List<TourDepartureVO> tourDepList;
+	    	String reportName = CommonConstant.PDF_RPT_TOUR_INS_LIST;
+	    	Map<String, Object> params = new HashMap<String, Object>();
+			params.put("companyId", getSessionInfoBean().getCompanyVO().getId());
+//	    	if ("All_Search".equals(exportRange)) {
+//	    		tourDepList = (List<TourDepartureVO>) tourPackageBO.getTourDepartureInsuranceList(searchParamVO, params);
+//	    		reportName = reportName.concat("_Original_");	
+//	    	} 
+//	    	else{
+//	    		if (rangeStart == null) rangeStart = 2;
+//	    	    if (rangeEnd == null) rangeEnd = 7;
+//	    	    searchParamVO.setObj9(rangeStart);
+//	    	    searchParamVO.setObj10(rangeEnd);
+//	    		tourDepList = (List<TourDepartureVO>) tourPackageBO.getTourDepartureInsurancePaxList(searchParamVO, params);  
+//	    		reportName = reportName.concat("_PAX"+rangeStart+"-"+rangeEnd+"_");  
+//	    	}
+    		tourDepList = (List<TourDepartureVO>) tourPackageBO.getTourDepartureInsuranceList(searchParamVO, params);
+    		reportName = reportName.concat("_Original_");
+	    	
+	    	if (CollectionUtils.isEmpty(tourDepList)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+	    	map.put("list", tourDepList);
+	    	
+	        String jasperFileName = CommonConstant.JAS_RPT_TOUR_INS_LIST;      
+	        
+	        JasperPrint jasperPrint = ReportUtils.getJasperPrint(tourDepList, map, jasperFileName);
+	        ReportUtils.printReportExcel(jasperPrint, reportName);
+	                
+	    } catch (Throwable t) {
+	        t.printStackTrace();
+	        errorResult(t);
+	    } 
+	}
+	
+	public void onCopyClick() {  
+		FacesMessage msg = new FacesMessage(FacesMessage.SEVERITY_INFO, "Details copied!",  null);  
+		FacesContext.getCurrentInstance().addMessage(null, msg);  
+	}
+	
+	public String getIdentityStr(String s) {
+		return LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_ID_TYPE, s.substring(0, s.indexOf("|"))) + ": " + s.substring(s.indexOf("|") + 1);
+	}
+	
+	public String getContactStr(String s) {
+		return LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, s.substring(0, s.indexOf("|"))) + ": " + s.substring(s.indexOf("|") + 1);
+	}
+
+	public String getContactStrWithCountryPair(String contact, String countryCodes) {
+	    if (StringUtils.isNotBlank(contact)) {
+	        int idx = contact.indexOf("|");
+	        if (idx == -1) return contact;
+	        
+	        String contactType = contact.substring(0, idx);
+	        String contactNumber = contact.substring(idx + 1);
+	        String countryCode = "";
+	        
+	        if (StringUtils.isNotBlank(countryCodes)) {
+	            String[] countryArray = countryCodes.split(",");
+	            for (String countryCodeItem : countryArray) {
+	                if (StringUtils.isNotBlank(countryCodeItem)) {
+	                    int idxCountryCode = countryCodeItem.indexOf("|");
+	                    if (idxCountryCode != -1 && contactType.equals(countryCodeItem.substring(0, idxCountryCode))) {
+	                        countryCode = countryCodeItem.substring(idxCountryCode + 1);
+	                        break; 
+	                    }
+	                }
+	            }
+	        }
+	        String phoneNumber = FunctionUtils.phoneNumber(countryCode, contactNumber);
+	        
+	        return LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, contactType) 
+	            + ": " + phoneNumber;
+	    }
+	    return contact;
+	}
+	
+	public LazyTourDepartureInsuranceDataModel getLazyTourDepInsDataModel() {
+		return lazyTourDepInsDataModel;
+	}
+	
+	public List<TourDepartureVO> getTourDepList() {
+		return tourDepList;
+	}
+
+	public List<CountryVO> getCountryList() {
+		return countryList;
+	}
+
+	public List<TourCatViewVO> getTourCatViewList() {
+		return tourCatViewList;
+	}
+
+	public TourDepartureVO getTourDepVO() {
+		return tourDepVO;
+	}
+
+	public void setTourDepVO(TourDepartureVO tourDepVO) {
+		this.tourDepVO = tourDepVO;
+	}
+
+	public TourPackageVO getTourPkgVO() {
+		return tourPkgVO;
+	}
+
+	public void setTourPkgVO(TourPackageVO tourPkgVO) {
+		this.tourPkgVO = tourPkgVO;
+	}
+
+	public List<BookingVO> getBookingList() {
+		return bookingList;
+	}
+
+	public List<EmployeeViewVO> getEmployeeList() {
+		return employeeList;
+	}
+
+	public BookingVO getBookingVO() {
+		return bookingVO;
+	}
+
+	public void setBookingVO(BookingVO bookingVO) {
+		this.bookingVO = bookingVO;
+	}
+
+	public String getExportRange() {
+		return exportRange;
+	}
+	
+	public void setExportRange(String exportRange) {
+		this.exportRange = exportRange;
+	}
+	
+	class LazyTourDepartureInsuranceDataModel extends LazyDataModel<TourDepartureVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+
+		private List<TourDepartureVO> tourDepList;
+		
+		@Override
+		public List<TourDepartureVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			List<TourDepartureVO> list = new ArrayList<TourDepartureVO>();
+			int rowCount = 0;
+			
+			if (CollectionUtils.isNotEmpty(tourDepList)) {
+				String filterCode = filters.get("code");
+				boolean isCode = true;
+				
+				for (int i = 0; i < tourDepList.size(); i++) {
+					try {
+						TourDepartureVO vo = tourDepList.get(i);
+						
+						if (!filters.isEmpty()) {
+							isCode = true;
+							if (filterCode != null && !vo.getCode().startsWith(filterCode)) isCode = false;
+							
+							if (isCode) {
+								if (rowCount >= first && list.size() < pageSize) {
+									
+									list.add(vo);
+								}
+								++rowCount;
+							}
+						} else {
+							if (i >= first && list.size() < pageSize) list.add(vo);
+							++rowCount;
+						}
+					} catch (Exception e) {
+						break;
+					}
+				}
+			}
+			setRowCount(rowCount);
+			return list;
+		}
+
+		public void setTourDepList(List<TourDepartureVO> tourDepList) {
+			this.tourDepList = tourDepList;
+		}
+		
+	}
+}

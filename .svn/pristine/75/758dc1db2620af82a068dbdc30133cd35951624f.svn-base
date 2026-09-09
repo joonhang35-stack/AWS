@@ -1,0 +1,2176 @@
+package com.bcs.zsg.feedback.web.bean;
+
+import java.io.Serializable;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Collection;
+import java.util.Map;
+import java.util.UUID;
+import java.awt.Color;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.math.BigInteger;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+import javax.net.ssl.HttpsURLConnection;
+import javax.xml.bind.DatatypeConverter;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.primefaces.event.FileUploadEvent;
+import org.primefaces.event.SelectEvent;
+import org.primefaces.model.LazyDataModel;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import net.sf.jasperreports.engine.JasperCompileManager;
+import net.sf.jasperreports.engine.design.JasperDesign;
+import net.sf.jasperreports.engine.design.JRDesignField;
+import net.sf.jasperreports.engine.design.JRDesignBand;
+import net.sf.jasperreports.engine.design.JRDesignStaticText;
+import net.sf.jasperreports.engine.design.JRDesignTextField;
+import net.sf.jasperreports.engine.design.JRDesignExpression;
+import net.sf.jasperreports.engine.xml.JRXmlLoader;
+import net.sf.jasperreports.engine.data.JRMapCollectionDataSource;
+import net.sf.jasperreports.engine.JasperPrint;
+import net.sf.jasperreports.engine.JasperReport;
+import net.sf.jasperreports.engine.JasperFillManager;
+import net.sf.jasperreports.engine.type.ModeEnum;
+import net.sf.jasperreports.engine.type.HorizontalAlignEnum;
+import net.sf.jasperreports.engine.type.VerticalAlignEnum;
+import net.sf.jasperreports.engine.JRStyle;
+
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.feedback.bo.FeedbackBO;
+import com.bcs.zsg.mail.bo.EmailingBO;
+import com.bcs.zsg.product.helper.LazyDMTourDep;
+import com.bcs.zsg.product.vo.FeedbackVO;
+import com.bcs.zsg.product.vo.FeedbackVO.ManualQuestionAnswer;
+import com.bcs.zsg.product.vo.FeedbackVO.AnswerOption;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.common.helper.AESEncryption;
+import com.bcs.zsg.common.helper.HttpUtils;
+import com.bcs.zsg.web.SystemProperty;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.CompanyContactVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.ReportUtils;
+import net.sf.jasperreports.engine.JasperPrint;
+import com.bcs.zsg.cfg.sec.bo.UserBO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+
+public class FeedbackReportBean extends AppBackingBean implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient FeedbackBO feedbackBO;
+	
+	@Autowired
+	private transient EmailingBO emailingBO;
+	
+	@Autowired
+	private transient CorporateProfileBO corporateProfileBO;
+
+	@Autowired
+	private transient RegionBO regionBO;
+
+	@Autowired
+	private transient UserBO userBO;
+
+	private LazyDMTourDep<TourDepartureVO> lazyDataModelTourDep;
+	private TourDepartureVO selectedTourDep;
+	private List<EmployeeViewVO> employeeList;
+
+	private String tourCode;
+	private String tourLeader;
+	private String tourManager;
+	private String packageName;
+
+	private List<ReportColumn> columnList;
+	private List<FeedbackRow> feedbackRows;
+	private List<FeedbackRow> searchFeedbackRows;
+	private List<HeaderGroup> headerGroupList;
+	private List<FeedbackVO> selectedFeedbackAttachments;
+
+	// For Editing HOS Comment Details
+	private FeedbackRow selectedFeedbackRow;
+	private String editingCommentsHos;
+	private List<FeedbackVO> editingHosAttachments;
+	private List<Long> deletedAttachmentIds;
+	private Map<String, byte[]> newUploadedFilesMap;
+
+	// For Adding Manual Feedback Form
+	private List<FeedbackVO> eligibleBookings;
+	private FeedbackVO selectedEligibleBooking;
+	private Long selectedBookingId;
+	private String selectedManualPaxKey;
+	private List<ManualQuestionAnswer> manualQAAnswers;
+	private String manualGeneralComments;
+	private List<FeedbackVO> manualAttachments;
+	private List<Long> manualDeletedAttachmentIds;
+	private Map<String, byte[]> manualNewUploadedFilesMap;
+	private String selectedCommentText;
+
+	// For Passenger Details Dialog & Emailing
+	private List<FeedbackVO> selectedPaxList;
+	private FeedbackRow paxDialogFeedbackRow;
+
+	// For Editing Customer Feedback Answers
+	private List<ManualQuestionAnswer> editCustQAAnswers;
+	private String editCustComments;
+	private List<FeedbackVO> editCustAttachments;
+	private List<Long> editCustDeletedAttachmentIds;
+	private Map<String, byte[]> editCustNewUploadedFilesMap;
+	private FeedbackRow editingFeedbackRow;
+
+	public void init() {
+		try {
+			initSearchParam();
+			resetForm();
+			
+			// Initialize Tour Departure search parameters
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("inactiveRecords", false);
+			lazyDataModelTourDep = new LazyDMTourDep<TourDepartureVO>(params);
+			lazyDataModelTourDep.setCompanyId(this.getSessionInfoBean().getCompanyVO().getId());
+			
+			if (employeeList == null) {
+				employeeList = userBO.getEmployeeViewList(getSessionInfoBean().getCompanyVO().getId());
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	@Override
+	public void resetForm() {
+		selectedTourDep = null;
+		tourCode = null;
+		tourLeader = null;
+		tourManager = null;
+		packageName = null;
+		columnList = null;
+		feedbackRows = null;
+		selectedFeedbackRow = null;
+		editingCommentsHos = null;
+		editingHosAttachments = null;
+		deletedAttachmentIds = null;
+		newUploadedFilesMap = null;
+		eligibleBookings = null;
+		selectedEligibleBooking = null;
+		manualQAAnswers = null;
+		selectedManualPaxKey = null;
+		headerGroupList = null;
+		selectedFeedbackAttachments = null;
+
+		// Clear Edit Customer Feedback fields
+		editCustQAAnswers = null;
+		editCustComments = null;
+		editCustAttachments = null;
+		editCustDeletedAttachmentIds = null;
+		editCustNewUploadedFilesMap = null;
+		editingFeedbackRow = null;
+		selectedSearchFeedbackRow = null;
+		searchFeedbackRows = null;
+		
+		// Clear Pax Details fields
+		selectedPaxList = null;
+		paxDialogFeedbackRow = null;
+	}
+
+	public void handleTourDepSelect(SelectEvent event) {
+		try {
+			selectedTourDep = (TourDepartureVO) event.getObject();
+			selectedSearchFeedbackRow = null;
+			loadReportData();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void loadReportData() {
+		try {
+			if (selectedTourDep == null) {
+				return;
+			}
+			
+			// Load Header Information
+			TourDepartureVO headerVO = feedbackBO.getFeedbackReportHeader(selectedTourDep.getId());
+			if (headerVO != null) {
+				this.tourCode = headerVO.getCode();
+				this.tourLeader = headerVO.getTourLead();
+				this.tourManager = headerVO.getTourManager();
+				this.packageName = headerVO.getPackageName();
+			} else {
+				this.tourCode = selectedTourDep.getCode();
+				this.tourLeader = "-";
+				this.tourManager = "-";
+				this.packageName = selectedTourDep.getPackageName();
+			}
+
+			// 1. Build Column Headers dynamically from active questions (sorted by question id)
+			List<Object[]> activeQA = feedbackBO.getActiveQuestionsAndAnswers();
+			Map<String, String> lookupMap = feedbackBO.getFeedbackLookupMap();
+
+			columnList = new ArrayList<ReportColumn>();
+			headerGroupList = new ArrayList<HeaderGroup>();
+			Map<String, HeaderGroup> groupMap = new LinkedHashMap<String, HeaderGroup>();
+			
+			// Map to track unique question columns for RATING/TEXT types
+			Map<Long, ReportColumn> ratingTextColsMap = new LinkedHashMap<Long, ReportColumn>();
+
+			for (Object[] row : activeQA) {
+				Long qId = row[0] != null ? ((Number) row[0]).longValue() : null;
+				Integer seqNo = row[1] != null ? ((Number) row[1]).intValue() : 0;
+				String sectionType = row[2] != null ? row[2].toString() : "";
+				String qCode = row[3] != null ? row[3].toString() : "";
+				String qText = row[4] != null ? row[4].toString() : "";
+				String ansType = row[5] != null ? row[5].toString() : "";
+
+				Long ansId = row[6] != null ? ((Number) row[6]).longValue() : null;
+				String ansLabel = row[7] != null ? row[7].toString() : "";
+
+				// Determine groupKey and groupHeaderText and rowspan
+				String groupKey;
+				String groupHeaderText;
+				int rowspan;
+
+				if ("RADIO".equalsIgnoreCase(ansType) || "CHECKBOX".equalsIgnoreCase(ansType)) {
+					groupKey = "Q_" + qId;
+					boolean isFirstOfSection = true;
+					for (HeaderGroup existingGroup : headerGroupList) {
+						if (sectionType.equals(existingGroup.getSectionType())) {
+							isFirstOfSection = false;
+							break;
+						}
+					}
+					if (isFirstOfSection && lookupMap.containsKey(sectionType)) {
+						groupHeaderText = lookupMap.get(sectionType);
+					} else {
+						groupHeaderText = StringUtils.isNotBlank(qText) ? qText : sectionType;
+					}
+					rowspan = 1;
+				} else {
+					groupKey = "SEC_" + sectionType;
+					if (lookupMap.containsKey(sectionType)) {
+						groupHeaderText = lookupMap.get(sectionType);
+					} else {
+						groupHeaderText = sectionType;
+					}
+					if (StringUtils.isBlank(qText)) {
+						rowspan = 2;
+					} else {
+						rowspan = 1;
+					}
+				}
+
+				HeaderGroup group = groupMap.get(groupKey);
+				if (group == null) {
+					group = new HeaderGroup(groupHeaderText);
+					group.setRowspan(rowspan);
+					group.setSectionType(sectionType);
+					groupMap.put(groupKey, group);
+					headerGroupList.add(group);
+				}
+
+				if ("RATING".equalsIgnoreCase(ansType) || "TEXT".equalsIgnoreCase(ansType) || "TEXTAREA".equalsIgnoreCase(ansType)) {
+					if (!ratingTextColsMap.containsKey(qId)) {
+						String colHeader = (rowspan == 2) ? groupHeaderText : qText;
+						ReportColumn col = new ReportColumn(qId, colHeader, ansType, null, groupHeaderText);
+						ratingTextColsMap.put(qId, col);
+						columnList.add(col);
+						group.getColumns().add(col);
+					}
+				} else if ("RADIO".equalsIgnoreCase(ansType) || "CHECKBOX".equalsIgnoreCase(ansType)) {
+					if (ansId != null) {
+						String labelText = ansLabel;
+						if (labelText.startsWith("?")) {
+							labelText = labelText.substring(1);
+						}
+						// Dynamic sub-column for each answer option
+						ReportColumn col = new ReportColumn(qId, labelText, ansType, ansId, groupHeaderText);
+						columnList.add(col);
+						group.getColumns().add(col);
+					}
+				}
+			}
+
+			// Rebuild columnList from headerGroupList to ensure the data columns (columnList)
+			// align exactly with the grouped headers (headerGroupList)
+			columnList.clear();
+			for (HeaderGroup g : headerGroupList) {
+				for (ReportColumn col : g.getColumns()) {
+					columnList.add(col);
+				}
+			}
+
+			// 2. Pivot Feedback Data into Rows - show ALL feedback for the tour departure
+			List<FeedbackVO> details = feedbackBO.getFeedbackListbyTourDepId(selectedTourDep.getId());
+			Map<Long, FeedbackRow> rowsMap = new LinkedHashMap<Long, FeedbackRow>();
+			List<FeedbackRow> feedbackRowList = new ArrayList<FeedbackRow>();
+
+			for (FeedbackVO vo : details) {
+				Long feedbackId = vo.getIdFeedback();
+				if (feedbackId == null) continue;
+
+				FeedbackRow row = rowsMap.get(feedbackId);
+				if (row == null) {
+					row = new FeedbackRow();
+					row.setIdFeedback(feedbackId);
+					row.setTourBookingId(vo.getTourBookingId());
+					row.setCustomerId(vo.getCustomerId());
+					row.setInvId(vo.getInvId());
+					row.setInvCode(vo.getInvCode());
+					row.setPsNo(vo.getPsNo());
+					row.setIdTourPkg(vo.getIdTourPkg());
+					row.setCustomerEmail(vo.getCustomerEmail());
+					row.setCustomerName(vo.getCustomerName());
+					row.setComments(vo.getComments());
+					row.setCommentsHos(vo.getCommentsHos());
+					row.setAttachment(vo.getAttachment());
+					row.setAttachmentHos(vo.getAttachmentHos());
+					rowsMap.put(feedbackId, row);
+					feedbackRowList.add(row);
+				}
+
+				// Map Cell Value using answer_label_en
+				Long qId = vo.getIdFeedbackQuestion();
+				if (qId == null) continue;
+
+				String ansType = vo.getAnswerType();
+				if ("RATING".equalsIgnoreCase(ansType)) {
+					// Display answer_label_en (e.g. "Excellent", "Good", "Average", "Poor")
+					String answerLabel = vo.getAnswerLabelEn();
+					if (StringUtils.isNotBlank(answerLabel)) {
+						if (answerLabel.startsWith("?")) {
+							answerLabel = answerLabel.substring(1);
+						}
+						Integer score = vo.getScoreValue();
+						String cellValue = (score != null) ? answerLabel + " (" + score + ")" : answerLabel;
+						row.getCellValues().put(String.valueOf(qId), cellValue);
+						row.getCellScoreValues().put(String.valueOf(qId), vo.getScoreValue());
+					}
+				} else if ("TEXT".equalsIgnoreCase(ansType) || "TEXTAREA".equalsIgnoreCase(ansType)) {
+					String cellValue = StringUtils.isNotBlank(vo.getAnswerText()) ? vo.getAnswerText() : "";
+					if (StringUtils.isNotBlank(vo.getRemarks())) {
+						cellValue += (StringUtils.isNotBlank(cellValue) ? " | " : "") + vo.getRemarks();
+					}
+					row.getCellValues().put(String.valueOf(qId), cellValue);
+				} else if ("RADIO".equalsIgnoreCase(ansType) || "CHECKBOX".equalsIgnoreCase(ansType)) {
+					Long selectedAnsId = vo.getIdFeedbackAnswer();
+					if (selectedAnsId != null) {
+						String key = qId + "_" + selectedAnsId;
+						row.getCellValues().put(key, "Y");
+					}
+				}
+			}
+
+			// 2b. Back-fill missing column keys with "-" so every row has an entry for every column.
+			// Without this, unanswered questions leave gaps in cellValues, causing column misalignment.
+			for (FeedbackRow r : feedbackRowList) {
+				for (ReportColumn col : columnList) {
+					String colKey = col.getKey();
+					if (!r.getCellValues().containsKey(colKey)) {
+						r.getCellValues().put(colKey, "-");
+					}
+				}
+			}
+
+			// 3. Compute Totals & Averages
+			int totalFeedbacksCount = feedbackRowList.size();
+			
+			// Total Row
+			FeedbackRow totalRow = new FeedbackRow();
+			totalRow.setSummaryRow(true);
+			totalRow.setSummaryType("TOTAL");
+			totalRow.setCustomerName("Total");
+
+			// Average Row
+			FeedbackRow averageRow = new FeedbackRow();
+			averageRow.setSummaryRow(true);
+			averageRow.setSummaryType("AVERAGE");
+			averageRow.setCustomerName("Average");
+
+			for (ReportColumn col : columnList) {
+				String colKey = col.getKey();
+				if ("RATING".equalsIgnoreCase(col.getAnswerType())) {
+					int sum = 0;
+					int respondentsCount = 0;
+					for (FeedbackRow r : feedbackRowList) {
+						String val = r.getCellValues().get(colKey);
+						if (StringUtils.isNotBlank(val)) {
+							Integer score = r.getCellScoreValues().get(colKey);
+							if (score != null) {
+								sum += score;
+								respondentsCount++;
+							}
+						}
+					}
+					if (respondentsCount > 0) {
+						totalRow.getCellValues().put(colKey, String.valueOf(sum));
+						double average = (double) sum / respondentsCount;
+						averageRow.getCellValues().put(colKey, String.format("%.2f", average));
+					} else {
+						totalRow.getCellValues().put(colKey, "-");
+						averageRow.getCellValues().put(colKey, "-");
+					}
+				} else {
+					totalRow.getCellValues().put(colKey, "");
+					averageRow.getCellValues().put(colKey, "");
+				}
+			}
+
+			// Add summary rows to list
+			if (totalFeedbacksCount > 0) {
+				feedbackRowList.add(totalRow);
+				feedbackRowList.add(averageRow);
+			}
+
+			this.feedbackRows = feedbackRowList;
+
+			this.searchFeedbackRows = new ArrayList<FeedbackRow>();
+			for (FeedbackRow r : feedbackRowList) {
+				if (!r.isSummaryRow()) {
+					this.searchFeedbackRows.add(r);
+				}
+			}
+
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void loadFeedbackDetails(FeedbackRow row) {
+		try {
+			this.selectedFeedbackRow = row;
+			this.editingCommentsHos = row.getCommentsHos();
+			this.deletedAttachmentIds = new ArrayList<Long>();
+			this.newUploadedFilesMap = new HashMap<String, byte[]>();
+
+			// Load attachments from database
+			List<FeedbackVO> allAttachments = feedbackBO.getAttachmentsByFeedbackId(row.getIdFeedback());
+			this.editingHosAttachments = new ArrayList<FeedbackVO>();
+
+			if (CollectionUtils.isNotEmpty(allAttachments)) {
+				for (FeedbackVO att : allAttachments) {
+					if ("hos".equals(att.getType())) {
+						this.editingHosAttachments.add(att);
+					}
+				}
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void handleHosAttachmentUpload(FileUploadEvent event) {
+		try {
+			String originalName = event.getFile().getFileName();
+			String fileNameLower = originalName.toLowerCase();
+			
+			if (fileNameLower.endsWith(".jpg") ||
+				fileNameLower.endsWith(".jpeg") ||
+				fileNameLower.endsWith(".png") ||
+				fileNameLower.endsWith(".gif") ||
+				fileNameLower.endsWith(".webp") ||
+				fileNameLower.endsWith(".pdf")) {
+				System.out.println("Valid attachment file: " + originalName);
+			} else {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_ERROR, "Invalid file type. Only JPG, JPEG, PNG, GIF, WEBP, and PDF files are allowed.", ""));
+				return;
+			}
+			
+			String ext = "";
+			int idx = originalName.lastIndexOf(".");
+			if (idx >= 0) {
+				ext = originalName.substring(idx);
+			}
+			String uuidFileName = UUID.randomUUID().toString() + ext;
+			
+			byte[] fileContents;
+			try (InputStream in = event.getFile().getInputstream();
+				 ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+				byte[] buf = new byte[1024];
+				int read;
+				while ((read = in.read(buf)) != -1) {
+					bos.write(buf, 0, read);
+				}
+				fileContents = bos.toByteArray();
+			}
+			
+			if (this.newUploadedFilesMap == null) {
+				this.newUploadedFilesMap = new HashMap<String, byte[]>();
+			}
+			this.newUploadedFilesMap.put(uuidFileName, fileContents);
+			
+			FeedbackVO att = new FeedbackVO();
+			att.setIdFeedback(selectedFeedbackRow.getIdFeedback());
+			att.setAttachmentUrl("api/files/feedback/");
+			att.setFilename(uuidFileName);
+			att.setType("hos");
+			
+			if (this.editingHosAttachments == null) {
+				this.editingHosAttachments = new ArrayList<FeedbackVO>();
+			}
+			this.editingHosAttachments.add(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "File " + originalName + " selected.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_ERROR, "Failed to select file: " + t.getMessage(), ""));
+		}
+	}
+
+	public void removeHosAttachment(FeedbackVO att) {
+		try {
+			if (att.getIdAttachment() != null) {
+				this.deletedAttachmentIds.add(att.getIdAttachment());
+			} else {
+				if (this.newUploadedFilesMap != null) {
+					this.newUploadedFilesMap.remove(att.getFilename());
+				}
+			}
+			this.editingHosAttachments.remove(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "Attachment removed.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public String getAttachmentSecureUrl(FeedbackVO att) {
+		if (att == null || att.getFilename() == null) return "#";
+		try {
+			if (this.newUploadedFilesMap != null && this.newUploadedFilesMap.containsKey(att.getFilename())) {
+				byte[] bytes = this.newUploadedFilesMap.get(att.getFilename());
+				String base64 =DatatypeConverter.printBase64Binary(bytes);
+				String mimeType = "image/png";
+				String fn = att.getFilename().toLowerCase();
+				if (fn.endsWith(".pdf")) mimeType = "application/pdf";
+				else if (fn.endsWith(".jpg") || fn.endsWith(".jpeg")) mimeType = "image/jpeg";
+				else if (fn.endsWith(".gif")) mimeType = "image/gif";
+				else if (fn.endsWith(".webp")) mimeType = "image/webp";
+				return "data:" + mimeType + ";base64," + base64;
+			}
+
+			String privateKey = SystemProperty.SYSTEM_REQUEST_HEADER_AUTHORIZATION;
+			String raw = "file=" + att.getFilename() + "&privateKey=" + privateKey;
+			String encrypted = URLEncoder.encode(AESEncryption.encrypt(raw), "UTF-8");
+			return SystemProperty.FEEDBACK_GET_ATTACHMENT + att.getFilename() + "?key=" + encrypted;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return "#";
+		}
+	}
+
+	private String uploadFileToApi(String originalName, byte[] fileBytes, String useOriginalFilename) throws Exception {
+		String boundary = "===" + System.currentTimeMillis() + "===";
+		String LINE_FEED = "\r\n";
+		
+		URL url = new URL(SystemProperty.getSystemApiUrl() + "/" + SystemProperty.FEEDBACK_UPLOAD_ATTACHMENT);
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+		
+		if (conn instanceof HttpsURLConnection) {
+			((HttpsURLConnection) conn).setSSLSocketFactory(HttpUtils.getSslContext().getSocketFactory());
+		}
+		
+		conn.setUseCaches(false);
+		conn.setDoOutput(true);
+		conn.setDoInput(true);
+		conn.setRequestMethod("POST");
+		conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+		conn.setRequestProperty("x-api-key", SystemProperty.SYSTEM_REQUEST_HEADER_AUTHORIZATION);
+		
+		try (OutputStream outputStream = conn.getOutputStream();
+			 PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, "UTF-8"), true)) {
+			
+			writer.append("--" + boundary).append(LINE_FEED);
+			writer.append("Content-Disposition: form-data; name=\"path\"").append(LINE_FEED);
+			writer.append("Content-Type: text/plain; charset=UTF-8").append(LINE_FEED);
+			writer.append(LINE_FEED);
+			writer.append("feedback").append(LINE_FEED);
+			writer.flush();
+			
+			writer.append("--" + boundary).append(LINE_FEED);
+			writer.append("Content-Disposition: form-data; name=\"useOriginalFilename\"").append(LINE_FEED);
+			writer.append("Content-Type: text/plain; charset=UTF-8").append(LINE_FEED);
+			writer.append(LINE_FEED);
+			writer.append(useOriginalFilename).append(LINE_FEED);
+			writer.flush();
+			
+			writer.append("--" + boundary).append(LINE_FEED);
+			writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"" + originalName + "\"").append(LINE_FEED);
+			writer.append("Content-Type: " + URLConnection.guessContentTypeFromName(originalName)).append(LINE_FEED);
+			writer.append("Content-Transfer-Encoding: binary").append(LINE_FEED);
+			writer.append(LINE_FEED);
+			writer.flush();
+			
+			outputStream.write(fileBytes);
+			outputStream.flush();
+			
+			writer.append(LINE_FEED);
+			writer.flush();
+			
+			writer.append("--" + boundary + "--").append(LINE_FEED);
+			writer.flush();
+		}
+		
+		int responseCode = conn.getResponseCode();
+		if (responseCode == HttpURLConnection.HTTP_OK) {
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+				StringBuilder response = new StringBuilder();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					response.append(line);
+				}
+				return response.toString();
+			}
+		} else {
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream() != null ? conn.getErrorStream() : conn.getInputStream(), "UTF-8"))) {
+				StringBuilder errorResponse = new StringBuilder();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					errorResponse.append(line);
+				}
+				throw new IOException("Server returned HTTP response code: " + responseCode + ", details: " + errorResponse.toString());
+			}
+		}
+	}
+
+	public void saveFeedbackEdits() {
+		try {
+			if (selectedFeedbackRow == null) {
+				return;
+			}
+			
+			// 1. Upload files
+			if (newUploadedFilesMap != null && !newUploadedFilesMap.isEmpty()) {
+				for (Map.Entry<String, byte[]> entry : newUploadedFilesMap.entrySet()) {
+					String uuidFileName = entry.getKey();
+					byte[] fileBytes = entry.getValue();
+					String responseStr = uploadFileToApi(uuidFileName, fileBytes, "true");
+					Gson gson = new Gson();
+					JsonObject json = gson.fromJson(responseStr, JsonObject.class);
+					if (json == null || !json.has("status") || !"SUCCESS".equals(json.get("status").getAsString())) {
+						throw new IOException("Failed to upload " + uuidFileName);
+					}
+				}
+			}
+			
+			// 2. Save HOS actions comments and attachments
+			feedbackBO.saveFeedbackEdits(selectedFeedbackRow.getIdFeedback(), editingCommentsHos, editingHosAttachments, deletedAttachmentIds);
+			
+			// 3. Clear memory and refresh UI
+			if (newUploadedFilesMap != null) newUploadedFilesMap.clear();
+			if (deletedAttachmentIds != null) deletedAttachmentIds.clear();
+			loadReportData();
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "HOS Comments and Attachments updated successfully.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void handleTourDepLeaderOrGuideChange() { 
+		try {
+			if (selectedTourDep != null) {
+				feedbackBO.updateTourDepLeaderAndGuide(selectedTourDep.getId(), selectedTourDep.getIdTourLeader(), selectedTourDep.getIdTourGuide());
+				
+				// Re-load header information to show updated leader/manager names
+				TourDepartureVO headerVO = feedbackBO.getFeedbackReportHeader(selectedTourDep.getId());
+				if (headerVO != null) {
+					this.tourLeader = headerVO.getTourLead();
+					this.tourManager = headerVO.getTourManager();
+				}
+				
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_INFO, "Tour Leader and Guide updated successfully.", ""));
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void initManualFeedback() {
+		try {
+			if (selectedTourDep == null) {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_WARN, "Please select a Tour Departure first.", ""));
+				return;
+			}
+			
+			eligibleBookings = feedbackBO.getBookingsWithoutFeedback(selectedTourDep.getId());
+			selectedEligibleBooking = null;
+			selectedManualPaxKey = null;
+			manualQAAnswers = new ArrayList<ManualQuestionAnswer>();
+			manualGeneralComments = null;
+			manualAttachments = new ArrayList<FeedbackVO>();
+			manualDeletedAttachmentIds = new ArrayList<Long>();
+			manualNewUploadedFilesMap = new HashMap<String, byte[]>();
+
+			// Prepare empty questions for key-in
+			List<Object[]> activeQA = feedbackBO.getActiveQuestionsAndAnswers();
+			Map<Long, ManualQuestionAnswer> map = new LinkedHashMap<Long, ManualQuestionAnswer>();
+
+			for (Object[] row : activeQA) {
+				Long qId = row[0] != null ? ((Number) row[0]).longValue() : null;
+				Integer seqNo = row[1] != null ? ((Number) row[1]).intValue() : 0;
+				String sectionType = row[2] != null ? row[2].toString() : "";
+				String qText = row[4] != null ? row[4].toString() : "";
+				String ansType = row[5] != null ? row[5].toString() : "";
+				
+				Long ansId = row[6] != null ? ((Number) row[6]).longValue() : null;
+				String ansLabel = row[7] != null ? row[7].toString() : "";
+				Integer scoreVal = row[8] != null ? ((Number) row[8]).intValue() : 0;
+
+				ManualQuestionAnswer mq = map.get(qId);
+				if (mq == null) {
+					mq = new ManualQuestionAnswer();
+					mq.setQuestionId(qId);
+					mq.setSeqNo(seqNo);
+					mq.setQuestionText(StringUtils.isNotBlank(qText) ? qText : sectionType);
+					mq.setAnswerType(ansType);
+					mq.setOptions(new ArrayList<AnswerOption>());
+					map.put(qId, mq);
+					manualQAAnswers.add(mq);
+				}
+				
+				if (ansId != null) {
+					String label = ansLabel;
+					if (label.startsWith("?")) {
+						label = label.substring(1);
+					}
+					mq.getOptions().add(new AnswerOption(ansId, label, scoreVal));
+				}
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void saveManualFeedback() {
+		try {
+			if (selectedManualPaxKey == null || selectedManualPaxKey.trim().isEmpty()) {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_ERROR, "Please select a customer/booking.", ""));
+				return;
+			}
+
+			selectedEligibleBooking = null;
+			if (eligibleBookings != null) {
+				for (FeedbackVO b : eligibleBookings) {
+					String key = b.getTourBookingId() + "_" + b.getCustomerId() + "_" + (b.getInvId() != null ? b.getInvId() : "0");
+					if (key.equals(selectedManualPaxKey)) {
+						selectedEligibleBooking = b;
+						break;
+					}
+				}
+			}
+
+			if (selectedEligibleBooking == null) {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_ERROR, "Selected booking could not be found.", ""));
+				return;
+			}
+
+			// 1. Upload files
+			if (manualNewUploadedFilesMap != null && !manualNewUploadedFilesMap.isEmpty()) {
+				for (Map.Entry<String, byte[]> entry : manualNewUploadedFilesMap.entrySet()) {
+					String uuidFileName = entry.getKey();
+					byte[] fileBytes = entry.getValue();
+					String responseStr = uploadFileToApi(uuidFileName, fileBytes, "true");
+					Gson gson = new Gson();
+					JsonObject json = gson.fromJson(responseStr, JsonObject.class);
+					if (json == null || !json.has("status") || !"SUCCESS".equals(json.get("status").getAsString())) {
+						throw new IOException("Failed to upload " + uuidFileName);
+					}
+				}
+			}
+
+			// 2. Create dynamic FeedbackVO
+			FeedbackVO manualVO = new FeedbackVO();
+			manualVO.setIdTourPkg(selectedEligibleBooking.getIdTourPkg());
+			manualVO.setIdTourDeparture(selectedTourDep.getId());
+			manualVO.setInvId(selectedEligibleBooking.getInvId());
+			manualVO.setPsNo(selectedEligibleBooking.getPsNo());
+			manualVO.setCustomerId(selectedEligibleBooking.getCustomerId());
+			manualVO.setTourBookingId(selectedEligibleBooking.getTourBookingId());
+			manualVO.setCustomerEmail(selectedEligibleBooking.getCustomerEmail());
+			manualVO.setIdPs(selectedEligibleBooking.getIdPs());
+			manualVO.setIdInv(selectedEligibleBooking.getIdInv());
+			manualVO.setTokenUuid(UUID.randomUUID().toString());
+			manualVO.setFeedbackStatus("C"); // Completed
+			manualVO.setComments(this.manualGeneralComments);
+
+			feedbackBO.saveCustomerFeedback(manualVO, manualQAAnswers, manualAttachments, manualDeletedAttachmentIds);
+
+			// 3. Reset state and reload report data
+			if (manualNewUploadedFilesMap != null) manualNewUploadedFilesMap.clear();
+			if (manualDeletedAttachmentIds != null) manualDeletedAttachmentIds.clear();
+			this.manualGeneralComments = null;
+			if (this.manualAttachments != null) this.manualAttachments.clear();
+			loadReportData();
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "Manual feedback submitted successfully.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void initEditFeedback(FeedbackRow row) {
+		try {
+			this.editingFeedbackRow = row;
+			this.editCustComments = row.getComments();
+			this.editCustDeletedAttachmentIds = new ArrayList<Long>();
+			this.editCustNewUploadedFilesMap = new HashMap<String, byte[]>();
+			this.editCustQAAnswers = new ArrayList<ManualQuestionAnswer>();
+
+			List<Object[]> activeQA = feedbackBO.getActiveQuestionsAndAnswers();
+			Map<Long, ManualQuestionAnswer> map = new LinkedHashMap<Long, ManualQuestionAnswer>();
+
+			for (Object[] r : activeQA) {
+				Long qId = r[0] != null ? ((Number) r[0]).longValue() : null;
+				Integer seqNo = r[1] != null ? ((Number) r[1]).intValue() : 0;
+				String sectionType = r[2] != null ? r[2].toString() : "";
+				String qText = r[4] != null ? r[4].toString() : "";
+				String ansType = r[5] != null ? r[5].toString() : "";
+				
+				Long ansId = r[6] != null ? ((Number) r[6]).longValue() : null;
+				String ansLabel = r[7] != null ? r[7].toString() : "";
+				Integer scoreVal = r[8] != null ? ((Number) r[8]).intValue() : 0;
+
+				ManualQuestionAnswer mq = map.get(qId);
+				if (mq == null) {
+					mq = new ManualQuestionAnswer();
+					mq.setQuestionId(qId);
+					mq.setSeqNo(seqNo);
+					mq.setQuestionText(StringUtils.isNotBlank(qText) ? qText : sectionType);
+					mq.setAnswerType(ansType);
+					mq.setOptions(new ArrayList<AnswerOption>());
+					map.put(qId, mq);
+					editCustQAAnswers.add(mq);
+				}
+				
+				if (ansId != null) {
+					String label = ansLabel;
+					if (label.startsWith("?")) {
+						label = label.substring(1);
+					}
+					mq.getOptions().add(new AnswerOption(ansId, label, scoreVal));
+				}
+			}
+
+			if (row.getIdFeedback() != null) {
+				List<FeedbackVO> existing = feedbackBO.getFeedbackDetails(row.getIdFeedback());
+				for (FeedbackVO vo : existing) {
+					Long qId = vo.getIdFeedbackQuestion();
+					if (qId == null) continue;
+					ManualQuestionAnswer mq = map.get(qId);
+					if (mq != null) {
+						if ("RATING".equalsIgnoreCase(mq.getAnswerType())) {
+							mq.setSelectedAnswerId(vo.getIdFeedbackAnswer());
+							mq.setRemarks(vo.getRemarks());
+						} else if ("RADIO".equalsIgnoreCase(mq.getAnswerType())) {
+							mq.setSelectedAnswerId(vo.getIdFeedbackAnswer());
+						} else if ("CHECKBOX".equalsIgnoreCase(mq.getAnswerType())) {
+							if (mq.getSelectedAnswerIds() == null) {
+								mq.setSelectedAnswerIds(new ArrayList<Long>());
+							}
+							if (vo.getIdFeedbackAnswer() != null) {
+								mq.getSelectedAnswerIds().add(vo.getIdFeedbackAnswer());
+							}
+						} else if ("TEXT".equalsIgnoreCase(mq.getAnswerType()) || "TEXTAREA".equalsIgnoreCase(mq.getAnswerType())) {
+							mq.setAnswerText(vo.getAnswerText());
+						}
+					}
+				}
+
+				List<FeedbackVO> allAtts = feedbackBO.getAttachmentsByFeedbackId(row.getIdFeedback());
+				this.editCustAttachments = new ArrayList<FeedbackVO>();
+				if (allAtts != null) {
+					for (FeedbackVO att : allAtts) {
+						if ("cust".equals(att.getType())) {
+							this.editCustAttachments.add(att);
+						}
+					}
+				}
+			} else {
+				this.editCustAttachments = new ArrayList<FeedbackVO>();
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void handleManualAttachmentUpload(FileUploadEvent event) {
+		try {
+			String originalName = event.getFile().getFileName();
+			String fileNameLower = originalName.toLowerCase();
+			
+			if (fileNameLower.endsWith(".jpg") ||
+				fileNameLower.endsWith(".jpeg") ||
+				fileNameLower.endsWith(".png") ||
+				fileNameLower.endsWith(".gif") ||
+				fileNameLower.endsWith(".webp") ||
+				fileNameLower.endsWith(".pdf")) {
+				System.out.println("Valid manual attachment file: " + originalName);
+			} else {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_ERROR, "Invalid file type. Only JPG, JPEG, PNG, GIF, WEBP, and PDF files are allowed.", ""));
+				return;
+			}
+			
+			String ext = "";
+			int idx = originalName.lastIndexOf(".");
+			if (idx >= 0) {
+				ext = originalName.substring(idx);
+			}
+			String uuidFileName = UUID.randomUUID().toString() + ext;
+			
+			byte[] fileContents;
+			try (InputStream in = event.getFile().getInputstream();
+				 ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+				byte[] buf = new byte[1024];
+				int read;
+				while ((read = in.read(buf)) != -1) {
+					bos.write(buf, 0, read);
+				}
+				fileContents = bos.toByteArray();
+			}
+			
+			if (this.manualNewUploadedFilesMap == null) {
+				this.manualNewUploadedFilesMap = new HashMap<String, byte[]>();
+			}
+			this.manualNewUploadedFilesMap.put(uuidFileName, fileContents);
+			
+			FeedbackVO att = new FeedbackVO();
+			att.setAttachmentUrl("api/files/feedback/");
+			att.setFilename(uuidFileName);
+			att.setType("cust");
+			
+			if (this.manualAttachments == null) {
+				this.manualAttachments = new ArrayList<FeedbackVO>();
+			}
+			this.manualAttachments.add(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "File " + originalName + " selected.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_ERROR, "Failed to select file: " + t.getMessage(), ""));
+		}
+	}
+
+	public void removeManualAttachment(FeedbackVO att) {
+		try {
+			if (att.getIdAttachment() != null) {
+				this.manualDeletedAttachmentIds.add(att.getIdAttachment());
+			} else {
+				if (this.manualNewUploadedFilesMap != null) {
+					this.manualNewUploadedFilesMap.remove(att.getFilename());
+				}
+			}
+			this.manualAttachments.remove(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "Attachment removed.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void handleCustAttachmentUpload(FileUploadEvent event) {
+		try {
+			String originalName = event.getFile().getFileName();
+			String fileNameLower = originalName.toLowerCase();
+			
+			if (fileNameLower.endsWith(".jpg") ||
+				fileNameLower.endsWith(".jpeg") ||
+				fileNameLower.endsWith(".png") ||
+				fileNameLower.endsWith(".gif") ||
+				fileNameLower.endsWith(".webp") ||
+				fileNameLower.endsWith(".pdf")) {
+				System.out.println("Valid customer attachment file: " + originalName);
+			} else {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_ERROR, "Invalid file type. Only JPG, JPEG, PNG, GIF, WEBP, and PDF files are allowed.", ""));
+				return;
+			}
+			
+			String ext = "";
+			int idx = originalName.lastIndexOf(".");
+			if (idx >= 0) {
+				ext = originalName.substring(idx);
+			}
+			String uuidFileName = UUID.randomUUID().toString() + ext;
+			
+			byte[] fileContents;
+			try (InputStream in = event.getFile().getInputstream();
+				 ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+				byte[] buf = new byte[1024];
+				int read;
+				while ((read = in.read(buf)) != -1) {
+					bos.write(buf, 0, read);
+				}
+				fileContents = bos.toByteArray();
+			}
+			
+			if (this.editCustNewUploadedFilesMap == null) {
+				this.editCustNewUploadedFilesMap = new HashMap<String, byte[]>();
+			}
+			this.editCustNewUploadedFilesMap.put(uuidFileName, fileContents);
+			
+			FeedbackVO att = new FeedbackVO();
+			att.setIdFeedback(editingFeedbackRow.getIdFeedback());
+			att.setAttachmentUrl("api/files/feedback/");
+			att.setFilename(uuidFileName);
+			att.setType("cust");
+			
+			if (this.editCustAttachments == null) {
+				this.editCustAttachments = new ArrayList<FeedbackVO>();
+			}
+			this.editCustAttachments.add(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "File " + originalName + " selected.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_ERROR, "Failed to select file: " + t.getMessage(), ""));
+		}
+	}
+
+	public void removeCustAttachment(FeedbackVO att) {
+		try {
+			if (att.getIdAttachment() != null) {
+				this.editCustDeletedAttachmentIds.add(att.getIdAttachment());
+			} else {
+				if (this.editCustNewUploadedFilesMap != null) {
+					this.editCustNewUploadedFilesMap.remove(att.getFilename());
+				}
+			}
+			this.editCustAttachments.remove(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "Attachment removed.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void saveCustomerFeedbackEdits() {
+		try {
+			if (editingFeedbackRow == null) {
+				return;
+			}
+
+			// 1. Upload files
+			if (editCustNewUploadedFilesMap != null && !editCustNewUploadedFilesMap.isEmpty()) {
+				for (Map.Entry<String, byte[]> entry : editCustNewUploadedFilesMap.entrySet()) {
+					String uuidFileName = entry.getKey();
+					byte[] fileBytes = entry.getValue();
+					String responseStr = uploadFileToApi(uuidFileName, fileBytes, "true");
+					Gson gson = new Gson();
+					JsonObject json = gson.fromJson(responseStr, JsonObject.class);
+					if (json == null || !json.has("status") || !"SUCCESS".equals(json.get("status").getAsString())) {
+						throw new IOException("Failed to upload " + uuidFileName);
+					}
+				}
+			}
+
+			// 2. Prepare FeedbackVO
+			FeedbackVO vo = new FeedbackVO();
+			vo.setIdFeedback(editingFeedbackRow.getIdFeedback());
+			vo.setIdTourPkg(editingFeedbackRow.getIdTourPkg());
+			vo.setIdTourDeparture(selectedTourDep.getId());
+			vo.setInvId(editingFeedbackRow.getInvId());
+			vo.setCustomerId(editingFeedbackRow.getCustomerId());
+			vo.setTourBookingId(editingFeedbackRow.getTourBookingId());
+			vo.setCustomerEmail(editingFeedbackRow.getCustomerEmail());
+			vo.setTokenUuid(UUID.randomUUID().toString());
+			vo.setFeedbackStatus("C"); // Completed
+			vo.setComments(this.editCustComments);
+
+			feedbackBO.saveCustomerFeedback(vo, editCustQAAnswers, editCustAttachments, editCustDeletedAttachmentIds);
+
+			// 3. Reset maps and reload report data
+			if (editCustNewUploadedFilesMap != null) editCustNewUploadedFilesMap.clear();
+			if (editCustDeletedAttachmentIds != null) editCustDeletedAttachmentIds.clear();
+			loadReportData();
+
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "Customer Feedback submitted successfully.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	
+
+	public void handleChangeColumnsViewClick() {
+		// No-op: column visibility is managed by direct binding to ReportColumn.visible
+	}
+
+	public boolean isFeedbackModuleEnabled() {
+		return SystemProperty.isFeedbackModuleEnabled();
+	}
+
+
+	public String getTruncatedText(String text) {
+		if (text == null || text.trim().isEmpty()) {
+			return "";
+		}
+		if (text.length() > 30) {
+			return text.substring(0, 27) + "...";
+		}
+		return text;
+	}
+
+	public boolean isTextLong(String text) {
+		return text != null && text.length() > 30;
+	}
+
+
+
+
+
+
+	public void loadPaxDetails(FeedbackRow row) {
+		try {
+			this.paxDialogFeedbackRow = row;
+			this.selectedPaxList = feedbackBO.getPaxListForFeedback(row.getTourBookingId(), row.getInvCode(), row.getPsNo());
+			if (selectedPaxList != null) {
+				for (FeedbackVO vo : selectedPaxList) {
+					vo.setSelected(true); // Default to checked
+				}
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void sendPaxFeedbackEmail() {
+		try {
+			if (selectedPaxList == null || selectedPaxList.isEmpty()) {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_WARN, "No passengers available.", ""));
+				return;
+			}
+
+			String updatedBy = "SYSTEM";
+			try {
+				if (BaseContext.getUserFullName() != null) {
+					updatedBy = BaseContext.getUserFullName();
+				} else if (BaseContext.getLoginId() != null) {
+					updatedBy = BaseContext.getLoginId();
+				}
+			} catch (Exception e) {}
+
+			List<FeedbackVO> listToEmail = new ArrayList<FeedbackVO>();
+			for (FeedbackVO vo : selectedPaxList) {
+				if (vo.isSelected()) {
+					if (StringUtils.isBlank(vo.getCustomerEmail())) {
+						FacesContext.getCurrentInstance().addMessage(null,
+							new FacesMessage(FacesMessage.SEVERITY_ERROR, "Passenger " + vo.getCustomerName() + " has no email address.", ""));
+						return;
+					}
+
+					String newUuid = UUID.randomUUID().toString();
+					vo.setTokenUuid(newUuid);
+					vo.setFeedbackStatus("P");
+					
+					Long existingFeedbackId = feedbackBO.getFeedbackId(vo.getTourBookingId(), vo.getCustomerId(), vo.getInvId());
+					if (existingFeedbackId != null) {
+						vo.setIdFeedback(existingFeedbackId);
+						feedbackBO.updateFeedbackForResend(existingFeedbackId, newUuid, "P", vo.getCustomerEmail(), vo.getInvId(), vo.getPsNo(), updatedBy);
+					} else {
+						feedbackBO.insertFeedback(vo);
+					}
+					listToEmail.add(vo);
+				}
+			}
+
+			if (!listToEmail.isEmpty()) {
+				emailingBO.sendCustomerFeedbackEmail(listToEmail);
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_INFO, "Feedback emails triggered successfully.", ""));
+			} else {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_WARN, "Please select at least one passenger.", ""));
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	// Getters for Header Groups
+	public List<HeaderGroup> getHeaderGroupList() { return headerGroupList; }
+	public List<FeedbackVO> getSelectedFeedbackAttachments() { return selectedFeedbackAttachments; }
+
+	public List<HeaderGroup> getVisibleHeaderGroups() {
+		List<HeaderGroup> visibleGroups = new ArrayList<HeaderGroup>();
+		if (headerGroupList != null) {
+			for (HeaderGroup g : headerGroupList) {
+				int visibleCount = 0;
+				for (ReportColumn col : g.getColumns()) {
+					if (col.isVisible()) {
+						visibleCount++;
+					}
+				}
+				if (visibleCount > 0) {
+					HeaderGroup vg = new HeaderGroup(g.getHeaderText());
+					vg.setColspan(visibleCount);
+					vg.setRowspan(g.getRowspan());
+					vg.setColumns(g.getColumns());
+					vg.setSectionType(g.getSectionType());
+					visibleGroups.add(vg);
+				}
+			}
+		}
+		return visibleGroups;
+	}
+
+	public List<ReportColumn> getSubHeaderColumns() {
+		List<ReportColumn> subCols = new ArrayList<ReportColumn>();
+		if (headerGroupList != null) {
+			for (HeaderGroup g : headerGroupList) {
+				if (g.getRowspan() == 1) { // has sub-headers
+					for (ReportColumn col : g.getColumns()) {
+						if (col.isVisible()) {
+							subCols.add(col);
+						}
+					}
+				}
+			}
+		}
+		return subCols;
+	}
+
+	public void loadAttachments(FeedbackRow row) {
+		try {
+			this.selectedFeedbackRow = row;
+			this.selectedFeedbackAttachments = feedbackBO.getAttachmentsByFeedbackId(row.getIdFeedback());
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public HashMap<String, Object> reportHeaderCompany() {
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		try {
+			CompanyVO companyVO = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			
+			StringBuilder address = new StringBuilder();
+			map.put("companyName", companyVO.getName());
+			map.put("slogan", companyVO.getSlogan());
+			
+			if (!companyVO.getCompanyAddressVO().getAddress1().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress1()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress2().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress2()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress3().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress3()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getCity().equals("")) address.append(companyVO.getCompanyAddressVO().getCity()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getState().equals("")) address.append(companyVO.getCompanyAddressVO().getState()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getPostcode().equals("")) address.append(companyVO.getCompanyAddressVO().getPostcode()).append(" ");
+			String countryName = regionBO.getCountryById(companyVO.getCompanyAddressVO().getCountryid()).getCountry();
+			if (!countryName.equals("")) address.append(countryName);
+			map.put("address", address.toString());
+	
+			String contact = "";
+			for (CompanyContactVO vo : companyVO.getCompanyContactList()) {
+				contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getTypecodecontact()) + ": " + vo.getNumber() + "  ";
+			}
+			if (!contact.equals("")) contact = "Tel: " + contact;
+			map.put("contact", contact);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return map;
+	}
+
+	public void printFeedbackReport(String xlsOrPdf) {
+		try {
+			if (feedbackRows == null || feedbackRows.isEmpty()) {
+				throw new BusinessException("ERR_NO_RESULT");
+			}
+
+			// 1. Get lists of visible columns and headers
+			List<ReportColumn> columns = getVisibleColumnList();
+			List<HeaderGroup> groups = getVisibleHeaderGroups();
+
+			// 2. Load the JRXML template
+			String reportPath = FacesContext.getCurrentInstance().getExternalContext().getRealPath("/reports/feedback_rpt_template.jrxml");
+			JasperDesign jasperDesign = JRXmlLoader.load(reportPath);
+
+			// 3. Compute dynamic widths
+			int customerNameWidth = 140;
+			int colWidth = 120;
+			int commentsWidth = 150;
+			int commentsHosWidth = 150;
+			
+			int totalWidth = customerNameWidth + (columns.size() * colWidth) + commentsWidth + commentsHosWidth;
+			int pageWidth = totalWidth + 20; // 10 margin on each side
+
+			jasperDesign.setPageWidth(pageWidth);
+			jasperDesign.setColumnWidth(totalWidth);
+
+			// 4. Add field definitions dynamically
+			// customerName
+			JRDesignField fCustName = new JRDesignField();
+			fCustName.setName("customerName");
+			fCustName.setValueClass(String.class);
+			jasperDesign.addField(fCustName);
+
+			// comments
+			JRDesignField fComments = new JRDesignField();
+			fComments.setName("comments");
+			fComments.setValueClass(String.class);
+			jasperDesign.addField(fComments);
+
+			// commentsHos
+			JRDesignField fCommentsHos = new JRDesignField();
+			fCommentsHos.setName("commentsHos");
+			fCommentsHos.setValueClass(String.class);
+			jasperDesign.addField(fCommentsHos);
+
+			// Dynamic columns
+			for (ReportColumn col : columns) {
+				JRDesignField fDynamic = new JRDesignField();
+				fDynamic.setName(col.getKey());
+				fDynamic.setValueClass(String.class);
+				jasperDesign.addField(fDynamic);
+			}
+
+			// 5. Add headers to columnHeader band
+			JRDesignBand columnHeaderBand = (JRDesignBand) jasperDesign.getColumnHeader();
+			columnHeaderBand.setHeight(48);
+			
+			// Style reference
+			JRStyle rowStyle = jasperDesign.getStylesMap().get("RowStyle");
+
+			// Line box border styling helper
+			Color borderColor = new Color(204, 204, 204); // #CCCCCC
+			Color headerBg = new Color(239, 239, 239); // #EFEFEF
+
+			// Row 1: Merged Group Headers
+			int currentX = 0;
+
+			// Customer Name header
+			JRDesignStaticText headerCust = new JRDesignStaticText();
+			headerCust.setX(currentX);
+			headerCust.setY(0);
+			headerCust.setWidth(customerNameWidth);
+			headerCust.setHeight(48);
+			headerCust.setText("Customer Name");
+			headerCust.setMode(ModeEnum.OPAQUE);
+			headerCust.setBackcolor(headerBg);
+			headerCust.setHorizontalAlignment(HorizontalAlignEnum.CENTER);
+			headerCust.setVerticalAlignment(VerticalAlignEnum.MIDDLE);
+			headerCust.getLineBox().getPen().setLineWidth(0.5f);
+			headerCust.getLineBox().getPen().setLineColor(borderColor);
+			headerCust.setFontName("Arial Unicode MS");
+			headerCust.setFontSize(8);
+			headerCust.setBold(true);
+			columnHeaderBand.addElement(headerCust);
+
+			currentX += customerNameWidth;
+
+			// Visible header groups
+			for (HeaderGroup group : groups) {
+				int width = group.getColspan() * colWidth;
+				int height = group.getRowspan() == 2 ? 48 : 24;
+				
+				JRDesignStaticText headerGroup = new JRDesignStaticText();
+				headerGroup.setX(currentX);
+				headerGroup.setY(0);
+				headerGroup.setWidth(width);
+				headerGroup.setHeight(height);
+				headerGroup.setText(group.getHeaderText());
+				headerGroup.setMode(ModeEnum.OPAQUE);
+				headerGroup.setBackcolor(headerBg);
+				headerGroup.setHorizontalAlignment(HorizontalAlignEnum.CENTER);
+				headerGroup.setVerticalAlignment(VerticalAlignEnum.MIDDLE);
+				headerGroup.getLineBox().getPen().setLineWidth(0.5f);
+				headerGroup.getLineBox().getPen().setLineColor(borderColor);
+				headerGroup.setFontName("Arial Unicode MS");
+				headerGroup.setFontSize(8);
+				headerGroup.setBold(true);
+				columnHeaderBand.addElement(headerGroup);
+
+				currentX += width;
+			}
+
+			// Comments header
+			JRDesignStaticText headerComm = new JRDesignStaticText();
+			headerComm.setX(currentX);
+			headerComm.setY(0);
+			headerComm.setWidth(commentsWidth);
+			headerComm.setHeight(48);
+			headerComm.setText("Comments");
+			headerComm.setMode(ModeEnum.OPAQUE);
+			headerComm.setBackcolor(headerBg);
+			headerComm.setHorizontalAlignment(HorizontalAlignEnum.CENTER);
+			headerComm.setVerticalAlignment(VerticalAlignEnum.MIDDLE);
+			headerComm.getLineBox().getPen().setLineWidth(0.5f);
+			headerComm.getLineBox().getPen().setLineColor(borderColor);
+			headerComm.setFontName("Arial Unicode MS");
+			headerComm.setFontSize(8);
+			headerComm.setBold(true);
+			columnHeaderBand.addElement(headerComm);
+
+			currentX += commentsWidth;
+
+			// Comments HOS header
+			JRDesignStaticText headerCommHos = new JRDesignStaticText();
+			headerCommHos.setX(currentX);
+			headerCommHos.setY(0);
+			headerCommHos.setWidth(commentsHosWidth);
+			headerCommHos.setHeight(48);
+			headerCommHos.setText("Comments from HOS");
+			headerCommHos.setMode(ModeEnum.OPAQUE);
+			headerCommHos.setBackcolor(headerBg);
+			headerCommHos.setHorizontalAlignment(HorizontalAlignEnum.CENTER);
+			headerCommHos.setVerticalAlignment(VerticalAlignEnum.MIDDLE);
+			headerCommHos.getLineBox().getPen().setLineWidth(0.5f);
+			headerCommHos.getLineBox().getPen().setLineColor(borderColor);
+			headerCommHos.setFontName("Arial Unicode MS");
+			headerCommHos.setFontSize(8);
+			headerCommHos.setBold(true);
+			columnHeaderBand.addElement(headerCommHos);
+
+			// Row 2: Sub-headers (only for groups with colspan > 1 / rowspan = 1)
+			int subX = customerNameWidth;
+			for (HeaderGroup group : groups) {
+				int width = group.getColspan() * colWidth;
+				if (group.getRowspan() == 1) {
+					// Add sub-headers
+					for (ReportColumn col : group.getColumns()) {
+						if (col.isVisible()) {
+							JRDesignStaticText subHeader = new JRDesignStaticText();
+							subHeader.setX(subX);
+							subHeader.setY(24);
+							subHeader.setWidth(colWidth);
+							subHeader.setHeight(24);
+							subHeader.setText(col.getHeader());
+							subHeader.setMode(ModeEnum.OPAQUE);
+							subHeader.setBackcolor(headerBg);
+							subHeader.setHorizontalAlignment(HorizontalAlignEnum.CENTER);
+							subHeader.setVerticalAlignment(VerticalAlignEnum.MIDDLE);
+							subHeader.getLineBox().getPen().setLineWidth(0.5f);
+							subHeader.getLineBox().getPen().setLineColor(borderColor);
+							subHeader.setFontName("Arial Unicode MS");
+							subHeader.setFontSize(7);
+							subHeader.setBold(true);
+							columnHeaderBand.addElement(subHeader);
+							subX += colWidth;
+						}
+					}
+				} else {
+					subX += width;
+				}
+			}
+
+			// 6. Add elements to detail band
+			JRDesignBand detailBand = (JRDesignBand) jasperDesign.getDetailSection().getBands()[0];
+
+			int detailX = 0;
+
+			// Customer Name field
+			JRDesignTextField fldCust = new JRDesignTextField();
+			fldCust.setX(detailX);
+			fldCust.setY(0);
+			fldCust.setWidth(customerNameWidth);
+			fldCust.setHeight(20);
+			fldCust.setExpression(createFieldExpression("customerName"));
+			fldCust.setStretchWithOverflow(true);
+			fldCust.setBlankWhenNull(true);
+			fldCust.getLineBox().getPen().setLineWidth(0.5f);
+			fldCust.getLineBox().getPen().setLineColor(borderColor);
+			fldCust.getLineBox().setLeftPadding(3);
+			fldCust.setVerticalAlignment(VerticalAlignEnum.MIDDLE);
+			fldCust.setFontName("Arial Unicode MS");
+			fldCust.setFontSize(8);
+			if (rowStyle != null) fldCust.setStyle(rowStyle);
+			detailBand.addElement(fldCust);
+
+			detailX += customerNameWidth;
+
+			// Dynamic columns fields
+			for (ReportColumn col : columns) {
+				JRDesignTextField fldDynamic = new JRDesignTextField();
+				fldDynamic.setX(detailX);
+				fldDynamic.setY(0);
+				fldDynamic.setWidth(colWidth);
+				fldDynamic.setHeight(20);
+				fldDynamic.setExpression(createFieldExpression(col.getKey()));
+				fldDynamic.setStretchWithOverflow(true);
+				fldDynamic.setBlankWhenNull(true);
+				fldDynamic.getLineBox().getPen().setLineWidth(0.5f);
+				fldDynamic.getLineBox().getPen().setLineColor(borderColor);
+				fldDynamic.setHorizontalAlignment(HorizontalAlignEnum.CENTER);
+				fldDynamic.setVerticalAlignment(VerticalAlignEnum.MIDDLE);
+				fldDynamic.setFontName("Arial Unicode MS");
+				fldDynamic.setFontSize(8);
+				if (rowStyle != null) fldDynamic.setStyle(rowStyle);
+				detailBand.addElement(fldDynamic);
+
+				detailX += colWidth;
+			}
+
+			// Comments field
+			JRDesignTextField fldComm = new JRDesignTextField();
+			fldComm.setX(detailX);
+			fldComm.setY(0);
+			fldComm.setWidth(commentsWidth);
+			fldComm.setHeight(20);
+			fldComm.setExpression(createFieldExpression("comments"));
+			fldComm.setStretchWithOverflow(true);
+			fldComm.setBlankWhenNull(true);
+			fldComm.getLineBox().getPen().setLineWidth(0.5f);
+			fldComm.getLineBox().getPen().setLineColor(borderColor);
+			fldComm.getLineBox().setLeftPadding(3);
+			fldComm.setVerticalAlignment(VerticalAlignEnum.MIDDLE);
+			fldComm.setFontName("Arial Unicode MS");
+			fldComm.setFontSize(8);
+			if (rowStyle != null) fldComm.setStyle(rowStyle);
+			detailBand.addElement(fldComm);
+
+			detailX += commentsWidth;
+
+			// Comments HOS field
+			JRDesignTextField fldCommHos = new JRDesignTextField();
+			fldCommHos.setX(detailX);
+			fldCommHos.setY(0);
+			fldCommHos.setWidth(commentsHosWidth);
+			fldCommHos.setHeight(20);
+			fldCommHos.setExpression(createFieldExpression("commentsHos"));
+			fldCommHos.setStretchWithOverflow(true);
+			fldCommHos.setBlankWhenNull(true);
+			fldCommHos.getLineBox().getPen().setLineWidth(0.5f);
+			fldCommHos.getLineBox().getPen().setLineColor(borderColor);
+			fldCommHos.getLineBox().setLeftPadding(3);
+			fldCommHos.setVerticalAlignment(VerticalAlignEnum.MIDDLE);
+			fldCommHos.setFontName("Arial Unicode MS");
+			fldCommHos.setFontSize(8);
+			if (rowStyle != null) fldCommHos.setStyle(rowStyle);
+			detailBand.addElement(fldCommHos);
+
+			// 7. Compile the design
+			JasperReport jasperReport = JasperCompileManager.compileReport(jasperDesign);
+
+			// 8. Prepare dynamic data source maps with placeholder for null values
+			Collection<Map<String, ?>> dataList = new ArrayList<Map<String, ?>>();
+			boolean isPdf = "PDF".equals(xlsOrPdf);
+			for (FeedbackRow row : feedbackRows) {
+				Map<String, Object> dataMap = new HashMap<String, Object>();
+				// Static fields – ensure non-null placeholders
+				String custName = row.getCustomerName() != null ? row.getCustomerName() : "-";
+				String comments = row.getComments() != null ? row.getComments() : "-";
+				String commentsHos = row.getCommentsHos() != null ? row.getCommentsHos() : "-";
+				
+				if (isPdf) {
+					custName = cleanTextForPdf(custName);
+					comments = cleanTextForPdf(comments);
+					commentsHos = cleanTextForPdf(commentsHos);
+				}
+
+				dataMap.put("customerName", org.apache.commons.lang.StringUtils.isNotBlank(custName) ? custName : "-");
+				dataMap.put("comments", org.apache.commons.lang.StringUtils.isNotBlank(comments) ? comments : "-");
+				dataMap.put("commentsHos", org.apache.commons.lang.StringUtils.isNotBlank(commentsHos) ? commentsHos : "-");
+				dataMap.put("summaryRow", row.isSummaryRow());
+
+				// Dynamic columns – use dash when answer is null
+				for (ReportColumn col : columns) {
+					Object val = row.getCellValues().get(col.getKey());
+					if ("Y".equals(val)) {
+						val = isPdf ? "Y" : "✓";
+					} else if (isPdf && val != null) {
+						val = cleanTextForPdf(val);
+					}
+					dataMap.put(col.getKey(), val != null ? val : "-");
+				}
+				dataList.add(dataMap);
+			}
+
+			// 9. Prepare parameters
+			HashMap<String, Object> map = reportHeaderCompany();
+			map.put("tourCode", this.tourCode != null ? this.tourCode : "-");
+			map.put("tourLeader", this.tourLeader != null ? this.tourLeader : "-");
+			map.put("tourManager", this.tourManager != null ? this.tourManager : "-");
+			map.put("packageName", this.packageName != null ? this.packageName : "-");
+
+			String reportName = "Feedback_Report_" + (this.tourCode != null ? this.tourCode : "tour");
+
+			// 10. Fill and print
+			JRMapCollectionDataSource dataSource = new JRMapCollectionDataSource(dataList);
+			JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, map, dataSource);
+
+			if ("PDF".equals(xlsOrPdf)) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				jasperPrint.setProperty("net.sf.jasperreports.export.xls.detect.cell.type", "true");
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	private String cleanTextForPdf(Object val) {
+		if (val == null) {
+			return null;
+		}
+		String str = String.valueOf(val);
+		// Replace emoji/surrogate characters and unassigned symbols
+		str = str.replaceAll("[\\p{So}\\p{Cs}]", "");
+		return str.trim();
+	}
+
+	private JRDesignExpression createFieldExpression(String fieldName) {
+		JRDesignExpression expression = new JRDesignExpression();
+		expression.setText("$F{" + fieldName + "}");
+		return expression;
+	}
+
+	// Dynamic Header Group helper class
+	public static class HeaderGroup implements Serializable {
+		private static final long serialVersionUID = 1L;
+		private String headerText;
+		private int colspan = 1;
+		private int rowspan = 1;
+		private String sectionType;
+		private List<ReportColumn> columns = new ArrayList<ReportColumn>();
+
+		public HeaderGroup(String headerText) {
+			this.headerText = headerText;
+		}
+
+		public String getHeaderText() { 
+			return headerText; 
+			}
+		
+		public void setHeaderText(String headerText) { 
+			this.headerText = headerText; 
+			}
+		
+		public int getColspan() { 
+			return colspan; 
+			}
+		
+		public void setColspan(int colspan) { 
+			this.colspan = colspan; 
+			}
+		
+		public int getRowspan() { 
+			return rowspan; 
+			}
+		
+		public void setRowspan(int rowspan) { 
+			this.rowspan = rowspan;
+			}
+		
+		public String getSectionType() { 
+			return sectionType; 
+			}
+		
+		public void setSectionType(String sectionType) { 
+			this.sectionType = sectionType; 
+			}
+		
+		public List<ReportColumn> getColumns() { 
+			return columns; 
+			}
+		
+		public void setColumns(List<ReportColumn> columns) { 
+			this.columns = columns; 
+			}
+	}
+	
+	
+	// Dynamic Columns helper class
+	public static class ReportColumn implements Serializable {
+		private static final long serialVersionUID = 1L;
+		private Long questionId;
+		private String header;
+		private String answerType;
+		private Long answerId;
+		private String groupHeader;
+		private boolean visible = true;
+
+		public ReportColumn(Long questionId, String header, String answerType, Long answerId, String groupHeader) {
+			this.questionId = questionId;
+			this.header = header;
+			this.answerType = answerType;
+			this.answerId = answerId;
+			this.groupHeader = groupHeader;
+		}
+
+		public String getKey() {
+			if (answerId != null) {
+				return questionId + "_" + answerId;
+			}
+			return String.valueOf(questionId);
+		}
+
+		public Long getQuestionId() {
+			return questionId; 
+		}
+		
+		public String getHeader() {
+			return header; 
+		}
+		
+		public String getAnswerType() { 
+			return answerType; 
+		}
+		
+		public Long getAnswerId() { 
+			return answerId; 
+		}
+		
+		public String getGroupHeader() { 
+			return groupHeader; 
+		}
+		
+		public boolean isVisible() { 
+			return visible; 
+		}
+		
+		public void setVisible(boolean visible) { 
+			this.visible = visible; 
+		}
+	}
+	
+	// Dynamic Pivoted Rows helper class
+	public static class FeedbackRow implements Serializable {
+		private static final long serialVersionUID = 1L;
+		private Long idFeedback;
+		private Long tourBookingId;
+		private Long customerId;
+		private Long invId;
+		private String invCode;
+		private String psNo;
+		private Long idTourPkg;
+		private String customerEmail;
+		private String customerName;
+		private String comments;
+		private String commentsHos;
+		private String attachment;
+		private String attachmentHos;
+		private Map<String, String> cellValues = new HashMap<String, String>();
+		private Map<String, Integer> cellScoreValues = new HashMap<String, Integer>();
+		private boolean summaryRow = false;
+		private String summaryType;
+
+		public Long getIdFeedback() {
+			return idFeedback;
+		}
+		
+		public void setIdFeedback(Long idFeedback) {
+			this.idFeedback = idFeedback;
+		}
+		
+		public Long getTourBookingId() { 
+			return tourBookingId; 
+		}
+		
+		public void setTourBookingId(Long tourBookingId) { 
+			this.tourBookingId = tourBookingId; 
+		}
+		
+		public Long getCustomerId() { 
+			return customerId; 
+		}
+		
+		public void setCustomerId(Long customerId) {
+			this.customerId = customerId;
+		}
+		
+		public Long getInvId() {
+			return invId; 
+		}
+		
+		public void setInvId(Long invId) { 
+			this.invId = invId; 
+		}
+		
+		public String getInvCode() { 
+			return invCode; 
+		}
+		
+		public void setInvCode(String invCode) { 
+			this.invCode = invCode;
+}
+		
+		public String getPsNo() {
+			return psNo; 
+		}
+		
+		public void setPsNo(String psNo) {
+			this.psNo = psNo; 
+		}
+		
+		public Long getIdTourPkg() {
+			return idTourPkg; 
+		}
+		
+		public void setIdTourPkg(Long idTourPkg) { 
+			this.idTourPkg = idTourPkg;
+		}
+		
+		public String getCustomerEmail() { 
+			return customerEmail;
+		}
+		
+		public void setCustomerEmail(String customerEmail) { 
+			this.customerEmail = customerEmail; 
+		}
+		
+		public String getCustomerName() { 
+			return customerName; 
+		}
+		
+		public void setCustomerName(String customerName) { 
+			this.customerName = customerName; 
+		}
+		
+		public String getComments() { 
+			return comments;
+		}
+		
+		public void setComments(String comments) { 
+			this.comments = comments; 
+		}
+		
+		public String getCommentsHos() { 
+			return commentsHos; 
+		}
+		
+		public void setCommentsHos(String commentsHos) {
+			this.commentsHos = commentsHos; 
+		}
+		
+		public String getAttachment() {
+			return attachment; 
+		}
+		
+		public void setAttachment(String attachment) { 
+			this.attachment = attachment;
+		}
+		
+		public String getAttachmentHos() {
+			return attachmentHos;
+		}
+		
+		public void setAttachmentHos(String attachmentHos) { 
+			this.attachmentHos = attachmentHos;
+		}
+		
+		public Map<String, String> getCellValues() {
+			return cellValues;
+		}
+		
+		public Map<String, Integer> getCellScoreValues() {
+			return cellScoreValues; 
+		}
+		
+		public boolean isSummaryRow() { 
+			return summaryRow; 
+		}
+		
+		public void setSummaryRow(boolean summaryRow) { 
+			this.summaryRow = summaryRow; 
+		}
+		
+		public String getSummaryType() { 
+			return summaryType; 
+		}
+		
+		public void setSummaryType(String summaryType) { 
+			this.summaryType = summaryType; 
+		}
+		
+	}
+	
+	// Getters and Setters
+	public LazyDMTourDep<TourDepartureVO> getLazyDataModelTourDep() { 
+		return lazyDataModelTourDep; 
+	}
+
+	public TourDepartureVO getSelectedTourDep() { 
+		return selectedTourDep; 
+	}
+	
+	public void setSelectedTourDep(TourDepartureVO selectedTourDep) { 
+		this.selectedTourDep = selectedTourDep; 
+	}
+	
+	public String getTourCode() { 
+		return tourCode; 
+	}
+	
+	public String getTourLeader() { 
+		return tourLeader; 
+	}
+	
+	public String getTourManager() { 
+		return tourManager; 
+	}
+	
+	public String getPackageName() { 
+		return packageName; 
+	}
+	
+	public List<ReportColumn> getColumnList() {
+		return columnList; 
+	}
+	
+	public List<FeedbackRow> getFeedbackRows() {
+		if (selectedSearchFeedbackRow != null) {
+			List<FeedbackRow> filtered = new ArrayList<FeedbackRow>();
+			filtered.add(selectedSearchFeedbackRow);
+			return filtered;
+		}
+		return feedbackRows;
+	}
+	
+	public FeedbackRow getSelectedFeedbackRow() { 
+		return selectedFeedbackRow; 
+	}
+
+	public String getEditingCommentsHos() { 
+		return editingCommentsHos; 
+	}
+
+	public void setEditingCommentsHos(String editingCommentsHos) { 
+		this.editingCommentsHos = editingCommentsHos; 
+	}
+	
+	public List<FeedbackVO> getEditingHosAttachments() { 
+		return editingHosAttachments; 
+	}
+	
+	public List<FeedbackVO> getEligibleBookings() { 
+		return eligibleBookings; 
+	}
+	
+	public FeedbackVO getSelectedEligibleBooking() { 
+		return selectedEligibleBooking; 
+	}
+	
+	public void setSelectedEligibleBooking(FeedbackVO selectedEligibleBooking) { 
+		this.selectedEligibleBooking = selectedEligibleBooking; 
+	}
+	
+	public List<ManualQuestionAnswer> getManualQAAnswers() { 
+		return manualQAAnswers; 
+	}
+	
+	public Long getSelectedBookingId() { 
+		return selectedBookingId; 
+	}
+	
+	public void setSelectedBookingId(Long selectedBookingId) { 
+		this.selectedBookingId = selectedBookingId; 
+	}
+
+	public String getSelectedCommentText() {
+		return selectedCommentText;
+	}
+
+	public void setSelectedCommentText(String selectedCommentText) {
+		this.selectedCommentText = selectedCommentText;
+	}
+
+	public String getSelectedManualPaxKey() {
+		return selectedManualPaxKey;
+	}
+
+	public void setSelectedManualPaxKey(String selectedManualPaxKey) {
+		this.selectedManualPaxKey = selectedManualPaxKey;
+	}
+
+	public String getManualGeneralComments() {
+		return manualGeneralComments;
+	}
+
+	public void setManualGeneralComments(String manualGeneralComments) {
+		this.manualGeneralComments = manualGeneralComments;
+	}
+
+	public List<FeedbackVO> getManualAttachments() {
+		return manualAttachments;
+	}
+
+	public void setManualAttachments(List<FeedbackVO> manualAttachments) {
+		this.manualAttachments = manualAttachments;
+	}
+
+	public List<Long> getManualDeletedAttachmentIds() {
+		return manualDeletedAttachmentIds;
+	}
+
+	public void setManualDeletedAttachmentIds(List<Long> manualDeletedAttachmentIds) {
+		this.manualDeletedAttachmentIds = manualDeletedAttachmentIds;
+	}
+
+	public Map<String, byte[]> getManualNewUploadedFilesMap() {
+		return manualNewUploadedFilesMap;
+	}
+
+	public void setManualNewUploadedFilesMap(Map<String, byte[]> manualNewUploadedFilesMap) {
+		this.manualNewUploadedFilesMap = manualNewUploadedFilesMap;
+	}
+
+	public List<EmployeeViewVO> getEmployeeList() {
+		return employeeList;
+	}
+
+	public void setEmployeeList(List<EmployeeViewVO> employeeList) {
+		this.employeeList = employeeList;
+	}
+
+	public List<FeedbackVO> getSelectedPaxList() { 
+		return selectedPaxList; 
+	}
+	
+	public void setSelectedPaxList(List<FeedbackVO> selectedPaxList) { 
+		this.selectedPaxList = selectedPaxList; 
+	}
+	
+	public FeedbackRow getPaxDialogFeedbackRow() {
+		return paxDialogFeedbackRow; 
+	}
+
+	public void setPaxDialogFeedbackRow(FeedbackRow paxDialogFeedbackRow) { 
+		this.paxDialogFeedbackRow = paxDialogFeedbackRow; 
+	}
+	
+	public List<ManualQuestionAnswer> getEditCustQAAnswers() { 
+		return editCustQAAnswers; 
+	}
+	
+	public String getEditCustComments() { 
+		return editCustComments; 
+	}
+	
+	public void setEditCustComments(String editCustComments) { 
+		this.editCustComments = editCustComments; 
+	}
+	
+	public List<FeedbackVO> getEditCustAttachments() { 
+		return editCustAttachments; 
+	}
+	
+	public FeedbackRow getEditingFeedbackRow() { 
+		return editingFeedbackRow; 
+	}
+
+	public List<FeedbackRow> getSearchFeedbackRows() {
+		return searchFeedbackRows;
+	}
+
+	private FeedbackRow selectedSearchFeedbackRow;
+
+	public FeedbackRow getSelectedSearchFeedbackRow() {
+		return selectedSearchFeedbackRow;
+	}
+
+	public void setSelectedSearchFeedbackRow(FeedbackRow selectedSearchFeedbackRow) {
+		this.selectedSearchFeedbackRow = selectedSearchFeedbackRow;
+	}
+
+	public void handleSearchFeedbackSelect(SelectEvent event) {
+		try {
+			this.selectedSearchFeedbackRow = (FeedbackRow) event.getObject();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void selectSearchFeedback(FeedbackRow row) {
+		this.selectedSearchFeedbackRow = row;
+	}
+
+	public void clearSearchFilter() {
+		this.selectedSearchFeedbackRow = null;
+	}
+
+	public void triggerFeedbackEmails() { // this is for testing purpose
+		try {
+			List<FeedbackVO> feedbackList = feedbackBO.getInvoiceForFeedback();
+			if (CollectionUtils.isNotEmpty(feedbackList)) {
+				emailingBO.sendCustomerFeedbackEmail(feedbackList);
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_INFO, "Success", "Triggered sending " + feedbackList.size() + " feedback emails successfully."));
+			} else {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_WARN, "No Invoices Found", "No feedback invoices found for tours ending tomorrow."));
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "Failed to trigger feedback emails: " + t.getMessage()));
+		}
+	}
+
+	public List<ReportColumn> getVisibleColumnList() {
+		List<ReportColumn> visible = new ArrayList<ReportColumn>();
+		if (columnList != null) {
+			for (ReportColumn col : columnList) {
+				if (col.isVisible()) {
+					visible.add(col);
+				}
+			}
+		}
+		return visible;
+	}
+
+}

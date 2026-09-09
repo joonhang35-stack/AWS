@@ -1,0 +1,63 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	<p:growl id="msg"/>
+	<p:panelGrid>
+	
+		<p:row>
+		<p:column><h:outputLabel for="idAddCheckInDt">Check In Date <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:calendar pattern="dd-MMM-yyyy" id="idAddCheckInDt" label="Check In Date" value="#{purchaseEOBean.hotelTourVO.checkInDt}" navigator="true" showButtonPanel="true" required="true"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddCheckOutDt">Check Out Date <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:calendar pattern="dd-MMM-yyyy" id="idAddCheckOutDt" label="Check Out Date" value="#{purchaseEOBean.hotelTourVO.checkOutDt}" navigator="true" showButtonPanel="true" required="true"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddTotalNight">Total Nights <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddTotalNight" label="Total Nights" value="#{purchaseEOBean.hotelTourVO.totalNight}" required="true" maxlength="3"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddArvFlight">Arrival Flight </h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddArvFlight" label="Arrival Flight" value="#{purchaseEOBean.hotelTourVO.arrFlight}" maxlength="255"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddDptFlight">Departure Flight </h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddDptFlight" label="Departure Flight" value="#{purchaseEOBean.hotelTourVO.depFlight}" maxlength="255"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddNoPax">No of Pax </h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddNoPax" label="No of Pax" value="#{purchaseEOBean.hotelTourVO.noOfPax}" maxlength="255"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddMealProv">Meal Provide </h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddMealProv" label="Meal Provide" value="#{purchaseEOBean.hotelTourVO.mealProvide}" maxlength="255"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddRoomsType">Type of Rooms </h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddRoomsType" label="Type of Rooms" value="#{purchaseEOBean.hotelTourVO.typeOfRoom}" maxlength="255"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddHotelUsage">Hotel Resort Usage </h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddHotelUsage" label="Hotel Resort Usage" value="#{purchaseEOBean.hotelTourVO.hotelUsage}" maxlength="255"/></p:column>
+		</p:row>
+		
+	</p:panelGrid>
+
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseEOBean.addHotelTour}" update="@form,:idAddExOrderForm:idTabExOrder:idShowHotelTour" rendered="#{purchaseEOBean.add}"/>
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseEOBean.editHotelTour}" update="@form,:idAddExOrderForm:idTabExOrder:idShowHotelTour" oncomplete="varAddHotelTourDialog.hide()" rendered="#{not purchaseEOBean.add}"/>
+		<p:commandButton value="Cancel" actionListener="#{purchaseEOBean.resetHotelTourForm}" oncomplete="varAddHotelTourDialog.hide()" update="@form,:idAddEOHotelTourForm" process="@this" />
+	</p:panelGrid>
+</ui:composition>

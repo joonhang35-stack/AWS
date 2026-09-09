@@ -1,0 +1,701 @@
+<!DOCTYPE composition
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml" xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets" xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core" xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions" xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	template="/WEB-INF/views/layouts/main.xhtml">
+
+	<ui:define name="content">
+		<style type="text/css">
+			.summary-row {
+				background-color: #f3ebf9 !important;
+				font-weight: bold !important;
+				color: #4b1a7a !important;
+			}
+
+			.summary-row td {
+				font-weight: bold !important;
+				color: #4b1a7a !important;
+			}
+
+			.badge-checkmark {
+				color: #2b8a3e;
+				font-weight: bold;
+				font-size: 1.2em;
+			}
+
+			.meta-panel {
+				background: #f8f9fa;
+				border: 1px solid #dee2e6;
+				border-radius: 6px;
+				padding: 15px;
+				margin-bottom: 20px;
+				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+			}
+
+			.header-container {
+				margin-bottom: 15px;
+			}
+
+			.cust-name {
+				font-size: 11px !important;
+				display: inline-block;
+				min-width: 100px;
+			}
+		</style>
+		<p:panel header="Feedback Form Report" toggleable="true" toggleSpeed="500">
+			<h:form id="idFeedbackReportSearchForm">
+				<p:growl id="msg" />
+
+				<div class="header-container">
+					<!-- Tour Metadata Header -->
+					<h:panelGroup id="idTourMetaPanel" layout="block" styleClass="meta-panel">
+						<h:panelGrid columns="4" cellpadding="8" style="width:1000px;">
+							<h:outputText value="Tour Departure:"
+								style="font-weight:bold; color:#495057; vertical-align:middle;" />
+							<h:panelGroup style="display:inline-flex; align-items:center;">
+								<p:inputText id="idTourDepDisplay"
+									value="#{feedbackReportBean.selectedTourDep ne null ? feedbackReportBean.selectedTourDep.code : ''}"
+									readonly="true"
+									style="background:#ccc; width:150px; color:#212529; font-weight:bold; margin-right:5px;" />
+								<p:commandButton icon="ui-icon-search" oncomplete="varTourListDialog.show()"
+									process="@this" />
+							</h:panelGroup>
+
+							<h:outputText value="Package Name:"
+								style="font-weight:bold; color:#495057; vertical-align:middle;" />
+							<p:inputText value="#{feedbackReportBean.packageName}" readonly="true"
+								style="background:#ccc; width:450px; color:#212529;" />
+
+							<h:outputText value="Tour Leader:"
+								style="font-weight:bold; color:#495057; vertical-align:middle;" />
+							<p:inputText value="#{feedbackReportBean.tourLeader}" readonly="true"
+								style="background:#ccc; width:150px; color:#212529;" />
+
+							<h:outputText value="Tour Guide:"
+								style="font-weight:bold; color:#495057; vertical-align:middle;" />
+							<p:inputText value="#{feedbackReportBean.tourManager}" readonly="true"
+								style="background:#ccc; width:150px; color:#212529;" />
+						</h:panelGrid>
+
+					</h:panelGroup>
+
+					<!-- Toolbar Actions -->
+					<h:panelGrid columns="7" cellpadding="5" style="margin-bottom:15px; width:1000px;"
+						rendered="#{feedbackReportBean.selectedTourDep ne null}">
+						<p:commandButton value="Add Feedback" icon="ui-icon-plus"
+							actionListener="#{feedbackReportBean.initManualFeedback}" update=":idAddFeedbackForm"
+							oncomplete="varAddFeedbackDialog.show()" />
+
+						<p:commandButton value="Search Feedback" icon="ui-icon-search" update=":idSearchFeedbackForm"
+							oncomplete="varSearchFeedbackDialog.show()" />
+
+						<p:commandButton value="Show All Feedback" icon="ui-icon-refresh"
+							actionListener="#{feedbackReportBean.clearSearchFilter}"
+							update=":idFeedbackReportSearchForm"
+							rendered="#{feedbackReportBean.selectedSearchFeedbackRow ne null}" />
+
+						<p:commandButton icon="ui-icon-print" value="#{msg['common.button.label.print']} Excel"
+							actionListener="#{feedbackReportBean.printFeedbackReport('XLS')}" ajax="false" />
+
+						<p:commandButton icon="ui-icon-print" value="#{msg['common.button.label.print']} PDF"
+							actionListener="#{feedbackReportBean.printFeedbackReport('PDF')}" ajax="false" />
+
+						<p:commandButton value="Columns" icon="ui-icon-calculator"
+							actionListener="#{feedbackReportBean.handleChangeColumnsViewClick}"
+							update=":idListingTableViewForm" oncomplete="varListingTableViewDialog.show()"
+							process="@this" />
+					</h:panelGrid>
+				</div>
+
+				<!-- Main Dynamic Datatable -->
+				<p:dataTable id="idFeedbackReportTable" value="#{feedbackReportBean.feedbackRows}" var="row"
+					rendered="#{feedbackReportBean.selectedTourDep ne null}"
+					rowStyleClass="#{row.summaryRow ? 'summary-row' : ''}" rowIndexVar="rowIndex"
+					style="margin-top:10px;">
+
+					<p:columnGroup type="header">
+						<!-- Row 1: Section Headers / Merged Group Headers -->
+						<p:row>
+							<p:column headerText="No." rowspan="2"
+								style="width:40px; font-weight:bold; text-align:center;" />
+
+							<p:column headerText="Customer Name" rowspan="2"
+								style="width:250px; min-width:250px !important; font-weight:bold;" />
+
+							<c:forEach items="#{feedbackReportBean.visibleHeaderGroups}" var="group">
+								<p:column headerText="#{group.headerText}" colspan="#{group.colspan}"
+									rowspan="#{group.rowspan}" style="font-weight:bold;" />
+							</c:forEach>
+
+							<p:column headerText="Comments" rowspan="2"
+								style="width:150px; font-weight:bold; word-wrap: break-word; white-space: normal;" />
+							<p:column headerText="Comments from HOS" rowspan="2"
+								style="width:150px; font-weight:bold; word-wrap: break-word; white-space: normal;" />
+							<p:column headerText="Attachment" rowspan="2"
+								style="width:60px; text-align:center; font-weight:bold;" />
+							<p:column headerText="Action" rowspan="2"
+								style="width:100px; text-align:center; font-weight:bold;" />
+						</p:row>
+
+						<!-- Row 2: Sub-headers (only for groups that have colspan > 1 / rowspan = 1) -->
+						<p:row>
+							<c:forEach items="#{feedbackReportBean.subHeaderColumns}" var="col">
+								<p:column headerText="#{col.header}"
+									style="font-weight:bold; width: 120px; word-wrap: break-word; white-space: normal;" />
+							</c:forEach>
+						</p:row>
+					</p:columnGroup>
+
+					<p:column style="width:40px; text-align:center; vertical-align:middle;">
+						<h:outputText value="#{row.summaryRow ? '' : (rowIndex + 1).toString().concat('.')}" />
+					</p:column>
+
+					<p:column
+						style="width:200px; min-width:200px !important; word-wrap: break-word; white-space: normal; vertical-align:middle;">
+						<h:outputText value="#{row.customerName}" styleClass="cust-name" />
+					</p:column>
+
+					<!-- Dynamic Columns -->
+					<p:columns value="#{feedbackReportBean.visibleColumnList}" var="col" columnIndexVar="colIdx"
+						style="width:120px; word-wrap: break-word; white-space: normal; vertical-align:middle; text-align:center;">
+						<!-- Cell Value Renderers -->
+						<!-- Summary Row Display -->
+						<h:outputText value="#{row.cellValues[col.key]}" rendered="#{row.summaryRow}" />
+
+						<!-- Regular Feedback Row Display -->
+						<h:panelGroup rendered="#{not row.summaryRow}">
+							<!-- Checkmarks for radios/checkboxes -->
+							<h:panelGroup rendered="#{row.cellValues[col.key] eq 'Y'}">
+								<i class="fa fa-check" style="color: #2b8a3e; font-size: 1.25em;"></i>
+							</h:panelGroup>
+
+							<!-- Answer labels, ratings, Short and Long Text -->
+							<h:panelGroup rendered="#{row.cellValues[col.key] ne 'Y'}">
+								<h:outputText value="#{row.cellValues[col.key]}"
+									rendered="#{not feedbackReportBean.isTextLong(row.cellValues[col.key])}" />
+								<p:commandLink value="#{feedbackReportBean.getTruncatedText(row.cellValues[col.key])}"
+									rendered="#{feedbackReportBean.isTextLong(row.cellValues[col.key])}"
+									actionListener="#{feedbackReportBean.setSelectedCommentText(row.cellValues[col.key])}"
+									update=":idFullCommentForm" oncomplete="varFullCommentDialog.show()"
+									style="color:#0000ee; text-decoration:underline; cursor:pointer;" />
+							</h:panelGroup>
+						</h:panelGroup>
+					</p:columns>
+
+					<!-- Comments Column -->
+					<p:column style="width:150px; word-wrap: break-word; white-space: normal; vertical-align:middle;">
+						<h:panelGroup rendered="#{not row.summaryRow and not empty row.comments}">
+							<h:outputText value="#{row.comments}"
+								rendered="#{not feedbackReportBean.isTextLong(row.comments)}" />
+							<p:commandLink value="#{feedbackReportBean.getTruncatedText(row.comments)}"
+								rendered="#{feedbackReportBean.isTextLong(row.comments)}"
+								actionListener="#{feedbackReportBean.setSelectedCommentText(row.comments)}"
+								update=":idFullCommentForm" oncomplete="varFullCommentDialog.show()"
+								style="color:#0000ee; text-decoration:underline; cursor:pointer;" />
+						</h:panelGroup>
+					</p:column>
+
+					<!-- Comments from HOS Column -->
+					<p:column style="width:150px; word-wrap: break-word; white-space: normal; vertical-align:middle;">
+						<h:panelGroup rendered="#{not row.summaryRow and not empty row.commentsHos}">
+							<h:outputText value="#{row.commentsHos}"
+								rendered="#{not feedbackReportBean.isTextLong(row.commentsHos)}" />
+							<p:commandLink value="#{feedbackReportBean.getTruncatedText(row.commentsHos)}"
+								rendered="#{feedbackReportBean.isTextLong(row.commentsHos)}"
+								actionListener="#{feedbackReportBean.setSelectedCommentText(row.commentsHos)}"
+								update=":idFullCommentForm" oncomplete="varFullCommentDialog.show()"
+								style="color:#0000ee; text-decoration:underline; cursor:pointer;" />
+						</h:panelGroup>
+					</p:column>
+
+					<!-- Attachment Column -->
+					<p:column style="width:60px; text-align:center; vertical-align:middle;" exportable="false">
+						<h:panelGroup
+							rendered="#{not row.summaryRow and (not empty row.attachment or not empty row.attachmentHos)}">
+							<p:commandButton icon="ui-icon-image" title="View Files"
+								actionListener="#{feedbackReportBean.loadAttachments(row)}"
+								update=":idAttachmentsListForm" oncomplete="varAttachmentsListDialog.show()"
+								style="vertical-align:middle; width:24px; height:24px;" />
+						</h:panelGroup>
+					</p:column>
+
+					<!-- Action / Edit Column -->
+					<p:column style="width:110px; text-align:center; vertical-align:middle;" exportable="false">
+						<h:panelGroup rendered="#{not row.summaryRow}" layout="block"
+							style="white-space: nowrap; display: inline-flex; gap: 5px; align-items: center; justify-content: center;">
+							<p:commandButton icon="ui-icon-pencil" title="HOS Action"
+								actionListener="#{feedbackReportBean.loadFeedbackDetails(row)}"
+								update=":idFeedbackCommentForm" oncomplete="varFeedbackCommentDialog.show()"
+								style="vertical-align:middle; width:24px; height:24px;" />
+
+							<p:commandButton icon="ui-icon-document" title="Edit Customer Feedback"
+								actionListener="#{feedbackReportBean.initEditFeedback(row)}"
+								update=":idEditFeedbackForm" oncomplete="varEditFeedbackDialog.show()"
+								style="vertical-align:middle; width:24px; height:24px;" />
+
+							<p:commandButton icon="ui-icon-person" title="Passenger Details"
+								actionListener="#{feedbackReportBean.loadPaxDetails(row)}" update=":idPaxDetailsForm"
+								oncomplete="varPaxDetailsDialog.show()"
+								style="vertical-align:middle; width:24px; height:24px;" />
+						</h:panelGroup>
+					</p:column>
+				</p:dataTable>
+			</h:form>
+		</p:panel>
+
+		<!-- Tour Search Dialog -->
+		<p:dialog id="idTourListDialog" header="Tour List" widgetVar="varTourListDialog" modal="true" resizable="false"
+			width="700">
+			<h:form id="idTourListForm">
+				<p:dataTable widgetVar="varTourListTable" value="#{feedbackReportBean.lazyDataModelTourDep}" var="vo"
+					paginator="true" lazy="true" rows="10" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+
+					<p:ajax event="rowSelect" listener="#{feedbackReportBean.handleTourDepSelect}"
+						update=":idFeedbackReportSearchForm, :idFeedbackReportSearchForm:msg"
+						oncomplete="varTourListDialog.hide();" />
+
+					<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}"
+						filterMatchMode="contains">
+						<h:outputText value="#{vo.code}" />
+					</p:column>
+					<p:column headerText="Departure Date" sortBy="#{vo.dtDep}" style="text-align:center;">
+						<h:outputText value="#{vo.dtDep}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Description" sortBy="#{vo.packageDesc}" filterBy="#{vo.packageDesc}"
+						filterMatchMode="contains" style="font-size:10px; width:450px;">
+						<h:outputText value="#{vo.numDays}Days " rendered="#{vo.numDays != 0}" />
+						<h:outputText value="#{vo.numNights}Nights " rendered="#{vo.numNights != 0}" />
+						<h:outputText value="#{vo.nameEn} #{vo.nameOther} #{vo.nameZh}" />
+						<h:outputText value=" [#{vo.desc}]" style="color:#FF0000;" rendered="#{not empty vo.desc}" />
+					</p:column>
+				</p:dataTable>
+			</h:form>
+		</p:dialog>
+
+		<!-- Column Visibility Toggler Dialog -->
+		<p:dialog id="idListingTableViewDialog" header="Columns View" widgetVar="varListingTableViewDialog" modal="true"
+			resizable="false" closable="true">
+			<h:form id="idListingTableViewForm">
+				<p:dataTable value="#{feedbackReportBean.columnList}" var="col" paginator="true" rows="10"
+					rowIndexVar="rowIndex" style="width: 450px;">
+					<p:column headerText="No" style="width: 60px;text-align:center;">
+						<h:outputText value="#{rowIndex + 1}" />
+					</p:column>
+					<p:column headerText="Column Name">
+						<h:outputText
+							value="#{col.groupHeader ne null ? col.groupHeader.concat(' -> ').concat(col.header) : col.header}" />
+					</p:column>
+					<p:column headerText="Visibility" style="width:70px;text-align:center;">
+						<p:selectBooleanCheckbox value="#{col.visible}" />
+					</p:column>
+				</p:dataTable>
+				<p:panelGrid style="margin-top: 10px; width:100%;">
+					<p:row>
+						<p:column style="text-align:left;">
+							<p:commandButton value="Confirm" oncomplete="varListingTableViewDialog.hide();"
+								update=":idFeedbackReportSearchForm:idFeedbackReportTable" style="margin-right: 5px;" />
+							<p:commandButton value="Cancel" onclick="varListingTableViewDialog.hide();" type="button" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<!-- HOS Comments & Actions Dialog -->
+		<p:dialog id="idFeedbackCommentDialog" header="HOS Actions " widgetVar="varFeedbackCommentDialog" modal="true"
+			width="600" height="350" resizable="false">
+			<h:form id="idFeedbackCommentForm" enctype="multipart/form-data">
+
+
+				<div style="margin-bottom: 15px;">
+					<strong style="color: #495057;">Comment from HOS / Actions:</strong>
+					<div style="margin-top: 6px;">
+						<p:inputTextarea value="#{feedbackReportBean.editingCommentsHos}" rows="5" autoResize="false"
+							style="width: 100%; box-sizing: border-box; border-radius: 6px;"
+							placeholder="Enter actions taken..." />
+					</div>
+				</div>
+
+				<div style="margin-bottom: 15px;">
+					<strong style="color: #495057;">Attachments from HOS:</strong>
+					<h:panelGroup id="idReportHosAttachmentsPanel" layout="block" style="margin-top: 8px;">
+						<ui:repeat value="#{feedbackReportBean.editingHosAttachments}" var="att">
+							<div
+								style="margin-top: 4px; display: inline-flex; align-items: center; background: #e8f4fd; padding: 4px 10px; border-radius: 4px; margin-right: 8px;">
+								<p:commandLink styleClass="ui-icon ui-icon-close"
+									style="display: inline-block; margin-right: 6px; cursor: pointer;"
+									actionListener="#{feedbackReportBean.removeHosAttachment(att)}"
+									update=":idFeedbackCommentForm:idReportHosAttachmentsPanel" />
+								<h:outputLink target="_blank" value="#{feedbackReportBean.getAttachmentSecureUrl(att)}"
+									style="color: #1c7ed6; text-decoration: none; font-weight: 500;">
+									<h:outputText value="#{att.filename}" />
+								</h:outputLink>
+							</div>
+						</ui:repeat>
+						<h:outputText value="None" rendered="#{empty feedbackReportBean.editingHosAttachments}"
+							style="color: #adb5bd;" />
+					</h:panelGroup>
+				</div>
+
+				<div style="margin-top: 15px;">
+					<p:fileUpload fileUploadListener="#{feedbackReportBean.handleHosAttachmentUpload}" mode="advanced"
+						auto="true" sizeLimit="10000000" allowTypes="/(\.|\/)(gif|jpe?g|png|webp|pdf)$/i"
+						label="Add Attachment" update="idReportHosAttachmentsPanel" />
+				</div>
+
+				<div style="margin-top: 25px; text-align: left;">
+					<p:commandButton value="Save" actionListener="#{feedbackReportBean.saveFeedbackEdits}"
+						update=":idFeedbackReportSearchForm:idFeedbackReportTable, :idFeedbackReportSearchForm:msg"
+						oncomplete="if (!args.validationFailed) varFeedbackCommentDialog.hide()"
+						style="margin-right: 10px;" />
+					<p:commandButton value="Cancel" onclick="varFeedbackCommentDialog.hide()" type="button" />
+				</div>
+
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idAddFeedbackDialog" header="Manual Feedback Entry " widgetVar="varAddFeedbackDialog" modal="true"
+			width="700" height="500" resizable="false">
+			<h:form id="idAddFeedbackForm">
+
+				<p:panel header="1. Select Customer Booking" toggleable="true" style="margin-bottom: 15px;">
+					<h:selectOneMenu value="#{feedbackReportBean.selectedManualPaxKey}"
+						style="width:100%; padding:6px; border-radius:4px; border:1px solid #ccc;">
+						<f:selectItem itemLabel="-- Select Customer Booking --" itemValue="" />
+						<f:selectItems value="#{feedbackReportBean.eligibleBookings}" var="b"
+							itemValue="#{b.tourBookingId}_#{b.customerId}_#{b.invId ne null ? b.invId : 0}"
+							itemLabel="#{b.customerName} (Inv: #{b.invCode ne null ? b.invCode : '-'} / PS No: #{b.psNo ne null ? b.psNo : '-'} / Booking ID: #{b.tourBookingId})" />
+					</h:selectOneMenu>
+				</p:panel>
+
+				<p:panel header="2. Fill Feedback Responses" toggleable="true" style="margin-bottom: 15px;">
+					<ui:repeat value="#{feedbackReportBean.manualQAAnswers}" var="qa">
+						<div
+							style="background:#f8f9fa; border:1px solid #e9ecef; border-radius:6px; padding:12px; margin-bottom:12px;">
+							<strong style="display:block; margin-bottom:6px; color:#212529;">Q#{qa.seqNo}.
+								#{qa.questionText}</strong>
+
+							<!-- Rating Radio Buttons (Scale 1 to 4) -->
+							<h:panelGroup rendered="#{qa.answerType eq 'RATING'}">
+								<h:selectOneRadio value="#{qa.selectedAnswerId}" converter="javax.faces.Long"
+									style="width: 100%;">
+									<f:selectItems value="#{qa.options}" var="opt" itemValue="#{opt.answerId}"
+										itemLabel="#{opt.label} (#{opt.scoreValue})" />
+								</h:selectOneRadio>
+								<div style="margin-top:5px;">
+									<h:outputText value="Remarks/Comment: " style="font-size:0.9em; color:#495057;" />
+									<p:inputText value="#{qa.remarks}" style="width:80%;"
+										placeholder="Optional remarks..." />
+								</div>
+							</h:panelGroup>
+
+							<!-- Radio Choices -->
+							<h:panelGroup rendered="#{qa.answerType eq 'RADIO'}">
+								<h:selectOneRadio value="#{qa.selectedAnswerId}" converter="javax.faces.Long">
+									<f:selectItems value="#{qa.options}" var="opt" itemValue="#{opt.answerId}"
+										itemLabel="#{opt.label}" />
+								</h:selectOneRadio>
+							</h:panelGroup>
+
+							<!-- Checkbox Choices -->
+							<h:panelGroup rendered="#{qa.answerType eq 'CHECKBOX'}">
+								<p:selectManyCheckbox value="#{qa.selectedAnswerIds}" converter="javax.faces.Long">
+									<f:selectItems value="#{qa.options}" var="opt" itemValue="#{opt.answerId}"
+										itemLabel="#{opt.label}" />
+								</p:selectManyCheckbox>
+							</h:panelGroup>
+
+							<!-- Text / Textarea input -->
+							<h:panelGroup rendered="#{qa.answerType eq 'TEXT' or qa.answerType eq 'TEXTAREA'}">
+								<p:inputTextarea value="#{qa.answerText}" rows="3" autoResize="false"
+									style="width:100%; box-sizing:border-box;"
+									placeholder="Enter customer suggestions..." />
+							</h:panelGroup>
+						</div>
+					</ui:repeat>
+				</p:panel>
+
+				<p:panel header="3. Customer General Comments" toggleable="true" style="margin-bottom: 15px;">
+					<p:inputTextarea value="#{feedbackReportBean.manualGeneralComments}" rows="3" autoResize="false"
+						style="width: 100%; box-sizing: border-box; border-radius: 6px;"
+						placeholder="Enter general comments..." />
+				</p:panel>
+
+				<p:panel header="4. Customer Attachments" toggleable="true" style="margin-bottom: 15px;">
+					<h:panelGroup id="idManualCustAttachmentsPanel" layout="block" style="margin-bottom: 15px;">
+						<ui:repeat value="#{feedbackReportBean.manualAttachments}" var="att">
+							<div
+								style="margin-top: 4px; display: inline-flex; align-items: center; background: #e8f4fd; padding: 4px 10px; border-radius: 4px; margin-right: 8px;">
+								<p:commandLink styleClass="ui-icon ui-icon-close"
+									style="display: inline-block; margin-right: 6px; cursor: pointer;"
+									actionListener="#{feedbackReportBean.removeManualAttachment(att)}"
+									update=":idAddFeedbackForm:idManualCustAttachmentsPanel" />
+								<h:outputLink target="_blank" value="#{feedbackReportBean.getAttachmentSecureUrl(att)}"
+									style="color: #1c7ed6; text-decoration: none; font-weight: 500;">
+									<h:outputText value="#{att.filename}" />
+								</h:outputLink>
+							</div>
+						</ui:repeat>
+						<h:outputText value="None" rendered="#{empty feedbackReportBean.manualAttachments}"
+							style="color: #adb5bd;" />
+					</h:panelGroup>
+					<p:fileUpload fileUploadListener="#{feedbackReportBean.handleManualAttachmentUpload}"
+						mode="advanced" auto="true" sizeLimit="10000000"
+						allowTypes="/(\.|\/)(gif|jpe?g|png|webp|pdf)$/i" label="Add Attachment"
+						update="idManualCustAttachmentsPanel" />
+				</p:panel>
+
+				<div style="text-align:left; margin-top:20px;">
+					<p:commandButton value="Submit Feedback" actionListener="#{feedbackReportBean.saveManualFeedback}"
+						update=":idFeedbackReportSearchForm:idFeedbackReportTable, :idFeedbackReportSearchForm:msg"
+						oncomplete="if (!args.validationFailed) varAddFeedbackDialog.hide()"
+						style="margin-right: 10px;" />
+					<p:commandButton value="Cancel" onclick="varAddFeedbackDialog.hide()" type="button" />
+				</div>
+			</h:form>
+		</p:dialog>
+
+		<!-- Attachments List Dialog -->
+		<p:dialog id="idAttachmentsListDialog" header="Feedback Attachments " widgetVar="varAttachmentsListDialog"
+			modal="true" width="550" resizable="false">
+			<h:form id="idAttachmentsListForm">
+				<p:dataTable value="#{feedbackReportBean.selectedFeedbackAttachments}" var="att" paginator="true"
+					rows="5" rowIndexVar="rowIndex">
+					<p:column headerText="No" style="width: 50px; text-align:center;">
+						<h:outputText value="#{rowIndex + 1}" />
+					</p:column>
+					<p:column headerText="File Name">
+						<h:outputText value="#{att.filename}" />
+					</p:column>
+					<p:column headerText="Type" style="width: 100px; text-align:center;">
+						<h:outputText value="#{att.type eq 'cust' ? 'Customer' : 'HOS'}" />
+					</p:column>
+					<p:column headerText="Action" style="width: 80px; text-align:center;">
+						<h:outputLink target="_blank" value="#{feedbackReportBean.getAttachmentSecureUrl(att)}"
+							style="color: #1c7ed6; text-decoration: none; font-weight: 500;">
+							<h:outputText value="Download" />
+						</h:outputLink>
+					</p:column>
+				</p:dataTable>
+				<div style="text-align:left; margin-top:15px;">
+					<p:commandButton value="Close" onclick="varAttachmentsListDialog.hide()" type="button" />
+				</div>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idEditFeedbackDialog" header="Edit Customer Feedback" widgetVar="varEditFeedbackDialog"
+			modal="true" width="700" height="500" resizable="false">
+			<h:form id="idEditFeedbackForm">
+				<p:outputPanel id="idEditFeedbackPanel">
+
+					<p:panel header="Customer Details Summary" toggleable="true" style="margin-bottom:15px;">
+						<h:panelGrid columns="4" cellpadding="6" style="width:100%;">
+							<strong style="color: #495057;">Customer Name:</strong>
+							<h:outputText value="#{feedbackReportBean.editingFeedbackRow.customerName}" />
+
+							<strong style="color: #495057;">Email:</strong>
+							<h:outputText
+								value="#{feedbackReportBean.editingFeedbackRow.customerEmail ne null ? feedbackReportBean.editingFeedbackRow.customerEmail : '-'}" />
+
+							<strong style="color: #495057;">Invoice Code:</strong>
+							<h:outputText
+								value="#{feedbackReportBean.editingFeedbackRow.invCode ne null ? feedbackReportBean.editingFeedbackRow.invCode : '-'}" />
+
+							<strong style="color: #495057;">Booking ID:</strong>
+							<h:outputText
+								value="#{feedbackReportBean.editingFeedbackRow.tourBookingId ne null ? feedbackReportBean.editingFeedbackRow.tourBookingId : '-'}" />
+						</h:panelGrid>
+					</p:panel>
+
+					<p:panel header="1. Fill / Update Responses" toggleable="true" style="margin-bottom: 15px;">
+						<ui:repeat value="#{feedbackReportBean.editCustQAAnswers}" var="qa">
+							<div
+								style="background:#f8f9fa; border:1px solid #e9ecef; border-radius:6px; padding:12px; margin-bottom:12px;">
+								<strong style="display:block; margin-bottom:6px; color:#212529;">Q#{qa.seqNo}.
+									#{qa.questionText}</strong>
+
+								<!-- Rating Radio Buttons (Scale 1 to 4) -->
+								<h:panelGroup rendered="#{qa.answerType eq 'RATING'}">
+									<h:selectOneRadio value="#{qa.selectedAnswerId}" converter="javax.faces.Long"
+										style="width: 100%;">
+										<f:selectItems value="#{qa.options}" var="opt" itemValue="#{opt.answerId}"
+											itemLabel="#{opt.label} (#{opt.scoreValue})" />
+									</h:selectOneRadio>
+									<div style="margin-top:5px;">
+										<h:outputText value="Remarks/Comment: "
+											style="font-size:0.9em; color:#495057;" />
+										<p:inputText value="#{qa.remarks}" style="width:80%;"
+											placeholder="Optional remarks..." />
+									</div>
+								</h:panelGroup>
+
+								<!-- Radio Choices -->
+								<h:panelGroup rendered="#{qa.answerType eq 'RADIO'}">
+									<h:selectOneRadio value="#{qa.selectedAnswerId}" converter="javax.faces.Long">
+										<f:selectItems value="#{qa.options}" var="opt" itemValue="#{opt.answerId}"
+											itemLabel="#{opt.label}" />
+									</h:selectOneRadio>
+								</h:panelGroup>
+
+								<!-- Checkbox Choices -->
+								<h:panelGroup rendered="#{qa.answerType eq 'CHECKBOX'}">
+									<p:selectManyCheckbox value="#{qa.selectedAnswerIds}" converter="javax.faces.Long">
+										<f:selectItems value="#{qa.options}" var="opt" itemValue="#{opt.answerId}"
+											itemLabel="#{opt.label}" />
+									</p:selectManyCheckbox>
+								</h:panelGroup>
+
+								<!-- Text / Textarea input -->
+								<h:panelGroup rendered="#{qa.answerType eq 'TEXT' or qa.answerType eq 'TEXTAREA'}">
+									<p:inputTextarea value="#{qa.answerText}" rows="3" autoResize="false"
+										style="width:100%; box-sizing:border-box;"
+										placeholder="Enter customer suggestions..." />
+								</h:panelGroup>
+							</div>
+						</ui:repeat>
+					</p:panel>
+
+					<p:panel header="2. Customer Comments" toggleable="true" style="margin-bottom: 15px;">
+						<p:inputTextarea value="#{feedbackReportBean.editCustComments}" rows="3" autoResize="false"
+							style="width: 100%; box-sizing: border-box; border-radius: 6px;"
+							placeholder="Enter general comments..." />
+					</p:panel>
+
+					<p:panel header="3. Customer Attachments" toggleable="true" style="margin-bottom: 15px;">
+						<h:panelGroup id="idEditCustAttachmentsPanel" layout="block" style="margin-bottom: 15px;">
+							<ui:repeat value="#{feedbackReportBean.editCustAttachments}" var="att">
+								<div
+									style="margin-top: 4px; display: inline-flex; align-items: center; background: #e8f4fd; padding: 4px 10px; border-radius: 4px; margin-right: 8px;">
+									<p:commandLink styleClass="ui-icon ui-icon-close"
+										style="display: inline-block; margin-right: 6px; cursor: pointer;"
+										actionListener="#{feedbackReportBean.removeCustAttachment(att)}"
+										update=":idEditFeedbackForm:idEditCustAttachmentsPanel" />
+									<h:outputLink target="_blank"
+										value="#{feedbackReportBean.getAttachmentSecureUrl(att)}"
+										style="color: #1c7ed6; text-decoration: none; font-weight: 500;">
+										<h:outputText value="#{att.filename}" />
+									</h:outputLink>
+								</div>
+							</ui:repeat>
+							<h:outputText value="None" rendered="#{empty feedbackReportBean.editCustAttachments}"
+								style="color: #adb5bd;" />
+						</h:panelGroup>
+						<p:fileUpload fileUploadListener="#{feedbackReportBean.handleCustAttachmentUpload}"
+							mode="advanced" auto="true" sizeLimit="10000000"
+							allowTypes="/(\.|\/)(gif|jpe?g|png|webp|pdf)$/i" label="Add Attachment"
+							update="idEditCustAttachmentsPanel" />
+					</p:panel>
+
+					<div style="text-align:left; margin-top:20px;">
+						<p:commandButton value="Submit Feedback"
+							actionListener="#{feedbackReportBean.saveCustomerFeedbackEdits()}"
+							update=":idFeedbackReportSearchForm:idFeedbackReportTable, :idFeedbackReportSearchForm:msg"
+							oncomplete="if (!args.validationFailed) varEditFeedbackDialog.hide()"
+							style="margin-right: 10px;" />
+						<p:commandButton value="Cancel" onclick="varEditFeedbackDialog.hide()" type="button" />
+					</div>
+				</p:outputPanel>
+			</h:form>
+		</p:dialog>
+
+		<!-- Feedback Search Dialog -->
+		<p:dialog id="idSearchFeedbackDialog" header="Feedback Search " widgetVar="varSearchFeedbackDialog" modal="true"
+			resizable="false" width="1050" dynamic="true">
+			<h:form id="idSearchFeedbackForm">
+				<p:dataTable id="idSearchFeedbackTable" widgetVar="varSearchFeedbackTable"
+					value="#{feedbackReportBean.searchFeedbackRows}" var="row" paginator="true" rows="10"
+					filterEvent="enter">
+
+					<p:column headerText="Customer Name" sortBy="#{row.customerName}" filterBy="#{row.customerName}"
+						filterMatchMode="contains">
+						<h:outputText value="#{row.customerName}" />
+					</p:column>
+					<p:column headerText="Tour Booking ID" sortBy="#{row.tourBookingId}" filterBy="#{row.tourBookingId}"
+						filterMatchMode="contains">
+						<h:outputText value="#{row.tourBookingId}" />
+					</p:column>
+					<p:column headerText="Invoice ID" sortBy="#{row.invId}" filterBy="#{row.invId}"
+						filterMatchMode="contains">
+						<h:outputText value="#{row.invId ne null ? row.invId : '-'}" />
+					</p:column>
+					<p:column headerText="Invoice Code" sortBy="#{row.invCode}" filterBy="#{row.invCode}"
+						filterMatchMode="contains">
+						<h:outputText value="#{row.invCode ne null ? row.invCode : '-'}" />
+					</p:column>
+					<p:column headerText="Pax Statement No" sortBy="#{row.psNo}" filterBy="#{row.psNo}"
+						filterMatchMode="contains">
+						<h:outputText value="#{row.psNo ne null ? row.psNo : '-'}" />
+					</p:column>
+					<p:column headerText="Email" sortBy="#{row.customerEmail}" filterBy="#{row.customerEmail}"
+						filterMatchMode="contains">
+						<h:outputText value="#{row.customerEmail ne null ? row.customerEmail : '-'}" />
+					</p:column>
+					<p:column headerText="Action" style="width:80px; text-align:center;">
+						<p:commandButton icon="ui-icon-check" title="Select"
+							actionListener="#{feedbackReportBean.selectSearchFeedback(row)}"
+							update=":idFeedbackReportSearchForm" oncomplete="varSearchFeedbackDialog.hide();" />
+					</p:column>
+				</p:dataTable>
+				<div style="text-align:left; margin-top:15px;">
+					<p:commandButton value="Close" onclick="varSearchFeedbackDialog.hide()" type="button" />
+				</div>
+			</h:form>
+		</p:dialog>
+
+		<!-- Passenger Details Dialog -->
+		<p:dialog id="idPaxDetailsDialog" header="Passenger Details " widgetVar="varPaxDetailsDialog" modal="true"
+			width="1500" height="400" resizable="false">
+			<h:form id="idPaxDetailsForm">
+				<p:dataTable value="#{feedbackReportBean.selectedPaxList}" var="pax" paginator="true" rows="5">
+					<p:column headerText="Customer ID" style="width:80px; text-align:center;">
+						<h:outputText value="#{pax.customerId}" />
+					</p:column>
+					<p:column headerText="Passenger Name">
+						<h:outputText value="#{pax.customerName}" />
+					</p:column>
+					<p:column headerText="Email">
+						<h:outputText value="#{pax.customerEmail ne null ? pax.customerEmail : '-'}" />
+					</p:column>
+					<p:column headerText="Invoice Code">
+						<h:outputText value="#{pax.invCode ne null ? pax.invCode : '-'}" />
+					</p:column>
+					<p:column headerText="Pax Statement No">
+						<h:outputText value="#{pax.psNo ne null ? pax.psNo : '-'}" />
+					</p:column>
+					<p:column headerText="Tour Booking ID" style="width:100px; text-align:center;">
+						<h:outputText value="#{pax.tourBookingId}" />
+					</p:column>
+					<p:column headerText="Send Email" style="width:70px; text-align:center;">
+						<p:selectBooleanCheckbox value="#{pax.selected}" rendered="#{pax.feedbackStatus ne 'C'}" />
+					</p:column>
+				</p:dataTable>
+				<div style="text-align:left; margin-top:15px;">
+					<p:commandButton value="Send Feedback Emails"
+						actionListener="#{feedbackReportBean.sendPaxFeedbackEmail}"
+						update=":idFeedbackReportSearchForm:msg" oncomplete="varPaxDetailsDialog.hide()"
+						style="margin-right:10px;" />
+					<p:commandButton value="Close" onclick="varPaxDetailsDialog.hide()" type="button" />
+				</div>
+			</h:form>
+		</p:dialog>
+
+		<!-- Full Comment Modal Dialog -->
+		<p:dialog id="idFullCommentDialog" header="Full Comment" widgetVar="varFullCommentDialog" modal="true"
+			resizable="false" width="450">
+			<h:form id="idFullCommentForm">
+				<div style="padding:10px;">
+					<p:inputTextarea id="idFullCommentText" value="#{feedbackReportBean.selectedCommentText}"
+						readonly="true" rows="4" autoResize="false"
+						style="width:98%; overflow-y:auto; resize:none; border:1px solid #ccc; padding:5px; font-family:inherit; font-size:inherit; line-height:1.4;" />
+				</div>
+				<div style="text-align:left; margin-top:15px; padding-top:10px; border-top:1px solid #dee2e6;">
+					<p:commandButton value="Close" onclick="varFullCommentDialog.hide()" type="button" />
+				</div>
+			</h:form>
+		</p:dialog>
+	</ui:define>
+</ui:composition>

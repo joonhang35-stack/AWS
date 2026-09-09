@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+   	 	xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+    		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd">
+
+	<context:component-scan base-package="com.bcs.zsg" />
+	
+	<context:annotation-config/>
+
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:app.properties</value>
+                <value>classpath:jdbc.properties</value>
+                <value>classpath:security.properties</value>
+                <value>classpath:system.properties</value>
+            </list>
+        </property>
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+    </bean>
+
+    <aop:config>
+        <aop:pointcut id="businessPointcut" expression="execution(* *..bo.*BO.*(..))"/>
+        <aop:pointcut id="daoPointcut" expression="execution(* *..dao.*DAO.*(..))"/>
+
+        <aop:advisor id="businessTx" advice-ref="txAdvice" pointcut-ref="businessPointcut"/>
+        <aop:advisor id="daoTx" advice-ref="daoAdvice" pointcut-ref="daoPointcut"/>
+    </aop:config>
+
+    <tx:advice id="txAdvice">
+        <tx:attributes>
+            <tx:method name="get*" read-only="false" rollback-for="Exception"/>
+            <tx:method name="is*" read-only="false" rollback-for="Exception"/>
+            <tx:method name="validate*" read-only="false" rollback-for="Exception"/>
+            <tx:method name="add*" propagation="REQUIRED" rollback-for="Exception"/>
+            <tx:method name="insert*" propagation="REQUIRED" rollback-for="Exception"/>
+            <tx:method name="make*" propagation="REQUIRED" rollback-for="Exception"/>
+            <tx:method name="update*" propagation="REQUIRED" rollback-for="Exception"/>
+            <tx:method name="delete*" propagation="REQUIRED" rollback-for="Exception"/>
+            <tx:method name="process*" propagation="REQUIRED" rollback-for="Exception"/>
+
+            <tx:method name="*" rollback-for="Exception"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <tx:advice id="daoAdvice">
+        <tx:attributes>
+            <tx:method name="get*" read-only="true" rollback-for="Exception"/>
+            <tx:method name="is*" read-only="true" rollback-for="Exception"/>
+            <tx:method name="test*" read-only="true" rollback-for="Exception"/>
+
+			<!-- for insert,update,delete that REQUIRES_NEW transaction -->
+            <tx:method name="insertAuditRecord" propagation="REQUIRES_NEW" rollback-for="Exception"/>          
+            <tx:method name="*RequiresNew" propagation="REQUIRES_NEW" rollback-for="Exception"/>
+
+			<tx:method name="insert*" propagation="REQUIRED" rollback-for="Exception"/>                         
+			<tx:method name="add*" propagation="REQUIRED" rollback-for="Exception"/>
+			<tx:method name="update*" propagation="REQUIRED" rollback-for="Exception"/>
+			<tx:method name="delete*" propagation="REQUIRED" rollback-for="Exception"/>
+			<tx:method name="process*" propagation="REQUIRED" rollback-for="Exception"/>
+			
+            <tx:method name="*" rollback-for="Exception"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- Performance monitoring -->
+    <bean id="businessPerformanceMonitor" class="com.bcs.zsg.core.aop.ProfilingInterceptor">
+        <constructor-arg type="java.lang.String" value="BOPerfLog"/>
+    </bean>
+
+    <bean id="daoPerformanceMonitor" class="com.bcs.zsg.core.aop.ProfilingInterceptor">
+        <constructor-arg type="java.lang.String" value="DAOPerfLog"/>
+    </bean>
+
+    <bean id="debugInterceptor" class="com.bcs.zsg.core.aop.DebugInterceptor"/>
+
+    <aop:config>
+        <aop:aspect ref="debugInterceptor">
+            <aop:around pointcut-ref="businessPointcut" method="printInParameters"/>
+            <aop:around pointcut-ref="daoPointcut" method="printInOutParameters"/>
+        </aop:aspect>
+        <aop:aspect ref="businessPerformanceMonitor">
+            <aop:around pointcut-ref="businessPointcut" method="logDuration"/>
+        </aop:aspect>
+        <aop:aspect ref="daoPerformanceMonitor">
+            <aop:around pointcut-ref="daoPointcut" method="logDuration"/>
+        </aop:aspect>
+    </aop:config>
+    
+    <!-- Startup -->
+    <bean id="startupManager" class="com.bcs.zsg.core.startup.StartupManager">
+    	<property name="startupList">
+    		<list>
+    			<ref bean="integrationStartupItem"/>
+    		</list>
+    	</property>
+    </bean>
+    
+    <task:scheduler id="scheduler" pool-size="10"/>
+	<task:executor id="executor" pool-size="10"/>
+	<task:annotation-driven scheduler="scheduler" executor="executor"/>
+	
+    <task:scheduled-tasks scheduler="scheduler">
+        <task:scheduled ref="gstService" method="processCompanyMonthClose" cron="05 0 0 1 * ?" />
+    </task:scheduled-tasks>
+    
+    <task:scheduled-tasks scheduler="scheduler">
+        <task:scheduled ref="invoiceService" method="processCreateInvoiceForOnlineBooking" cron="0 * * * * ?" />
+    </task:scheduled-tasks>
+ 
+    <task:scheduler id="myScheduler"/>
+</beans>

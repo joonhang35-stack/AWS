@@ -1,0 +1,244 @@
+package com.bcs.zsg.sales.vo;
+
+import com.bcs.zsg.core.vo.BaseVO;
+
+public class InvPmntAuthVO extends BaseVO {
+	private static final long serialVersionUID = 1L;
+	
+	private Boolean pmntAdd;
+	private Boolean pmntUpd;
+	private Boolean pmntDel;
+	
+	private Boolean useTrvlWrrnt;
+	private Boolean salesPerson;
+	private Boolean invVoidInvoiced;
+	private Boolean invCancelFPorDP;
+	private boolean accountManager;
+	private boolean accountRole;
+	private boolean invItemsGSTFreeText;
+	private boolean gstFreeText;
+	private boolean invDtChangeableFirstTime;
+	private boolean salesManager;
+	private boolean asstSalesManager;
+	private boolean operationsRole;
+	private boolean operationsRoles;
+	private boolean sale;
+	
+	// to edit adhoc invoice (means not converted from PS, directly added from invoice listing "Add" buton)
+	private boolean invEditAdhocInv;
+	// to edit invoice converted frpm PS (Account, IT & ERP department)
+	private boolean invEditConvertedInv;
+	
+	// pax stmt
+	private boolean inReviewStmt = false;
+	private boolean eInvoice = false;
+	
+	// E-Invoice
+	private boolean eInvSubmit;
+	private boolean eInvConsolInv;
+	
+	public boolean isInvEditConvertedInv() {
+		return invEditConvertedInv;
+	}
+	public void setInvEditConvertedInv(boolean invEditConvertedInv) {
+		this.invEditConvertedInv = invEditConvertedInv;
+	}
+	public boolean isInvEditAdhocInv() {
+		return invEditAdhocInv;
+	}
+	public void setInvEditAdhocInv(boolean invEditAdhocInv) {
+		this.invEditAdhocInv = invEditAdhocInv;
+	}
+	public boolean iseInvSubmit() {
+		return eInvSubmit;
+	}
+	public void seteInvSubmit(boolean eInvSubmit) {
+		this.eInvSubmit = eInvSubmit;
+	}
+	public boolean iseInvConsolInv() {
+		return eInvConsolInv;
+	}
+	public void seteInvConsolInv(boolean eInvConsolInv) {
+		this.eInvConsolInv = eInvConsolInv;
+	}
+	public boolean isInReviewStmt() {
+		return inReviewStmt;
+	}
+	public void setInReviewStmt(boolean inReviewStmt) {
+		this.inReviewStmt = inReviewStmt;
+	}
+	public boolean iseInvoice() {
+		return eInvoice;
+	}
+	public void seteInvoice(boolean eInvoice) {
+		this.eInvoice = eInvoice;
+	}
+	/**
+	 * @return the pmntAdd
+	 */
+	public Boolean getPmntAdd() {
+		return pmntAdd;
+	}
+	/**
+	 * @param pmntAdd the pmntAdd to set
+	 */
+	public void setPmntAdd(Boolean pmntAdd) {
+		this.pmntAdd = pmntAdd;
+	}
+	/**
+	 * @return the pmntUpd
+	 */
+	public Boolean getPmntUpd() {
+		return pmntUpd;
+	}
+	/**
+	 * @param pmntUpd the pmntUpd to set
+	 */
+	public void setPmntUpd(Boolean pmntUpd) {
+		this.pmntUpd = pmntUpd;
+	}
+	/**
+	 * @return the pmntDel
+	 */
+	public Boolean getPmntDel() {
+		return pmntDel;
+	}
+	/**
+	 * @param pmntDel the pmntDel to set
+	 */
+	public void setPmntDel(Boolean pmntDel) {
+		this.pmntDel = pmntDel;
+	}
+	/**
+	 * @return the useTrvlWrrnt
+	 */
+	public Boolean getUseTrvlWrrnt() {
+		return useTrvlWrrnt;
+	}
+	/**
+	 * @param useTrvlWrrnt the useTrvlWrrnt to set
+	 */
+	public void setUseTrvlWrrnt(Boolean useTrvlWrrnt) {
+		this.useTrvlWrrnt = useTrvlWrrnt;
+	}
+	/**
+	 * @return the salesPerson
+	 */
+	public Boolean getSalesPerson() {
+		return salesPerson;
+	}
+	/**
+	 * @param salesPerson the salesPerson to set
+	 */
+	public void setSalesPerson(Boolean salesPerson) {
+		this.salesPerson = salesPerson;
+	}
+	/**
+	 * @return the invVoidInvoiced
+	 */
+	public Boolean getInvVoidInvoiced() {
+		return invVoidInvoiced;
+	}
+	/**
+	 * @param invVoidInvoiced the invVoidInvoiced to set
+	 */
+	public void setInvVoidInvoiced(Boolean invVoidInvoiced) {
+		this.invVoidInvoiced = invVoidInvoiced;
+	}
+	/**
+	 * @return the invCancelFPorDP
+	 */
+	public Boolean getInvCancelFPorDP() {
+		return invCancelFPorDP;
+	}
+	/**
+	 * @param invCancelFPorDP the invCancelFPorDP to set
+	 */
+	public void setInvCancelFPorDP(Boolean invCancelFPorDP) {
+		this.invCancelFPorDP = invCancelFPorDP;
+	}
+	/**
+	 * @return the accountManager
+	 */
+	public boolean isAccountManager() {
+		return accountManager;
+	}
+	/**
+	 * @param accountManager the accountManager to set
+	 */
+	public void setAccountManager(boolean accountManager) {
+		this.accountManager = accountManager;
+	}
+	/**
+	 * @return the gstFreeText
+	 */
+	public boolean isGstFreeText() {
+		return gstFreeText;
+	}
+	/**
+	 * @param gstFreeText the gstFreeText to set
+	 */
+	public void setGstFreeText(boolean gstFreeText) {
+		this.gstFreeText = gstFreeText;
+	}
+	/**
+	 * @return the invItemsGSTFreeText
+	 */
+	public boolean isInvItemsGSTFreeText() {
+		return invItemsGSTFreeText;
+	}
+	/**
+	 * @param invItemsGSTFreeText the invItemsGSTFreeText to set
+	 */
+	public void setInvItemsGSTFreeText(boolean invItemsGSTFreeText) {
+		this.invItemsGSTFreeText = invItemsGSTFreeText;
+	}
+	/**
+	 * @return the invDtChangeableFirstTime
+	 */
+	public boolean isInvDtChangeableFirstTime() {
+		return invDtChangeableFirstTime;
+	}
+	/**
+	 * @param invDtChangeableFirstTime the invDtChangeableFirstTime to set
+	 */
+	public void setInvDtChangeableFirstTime(boolean invDtChangeableFirstTime) {
+		this.invDtChangeableFirstTime = invDtChangeableFirstTime;
+	}
+	public boolean isAccountRole() {
+		return accountRole;
+	}
+	public void setAccountRole(boolean accountRole) {
+		this.accountRole = accountRole;
+	}
+	public boolean isSalesManager() {
+		return salesManager;
+	}
+	public void setSalesManager(boolean salesManager) {
+		this.salesManager = salesManager;
+	}
+	public boolean isOperationsRole() {
+		return operationsRole;
+	}
+	public void setOperationsRole(boolean operationsRole) {
+		this.operationsRole = operationsRole;
+	}
+	public boolean isOperationsRoles() {
+		return operationsRoles;
+	}
+	public void setOperationsRoles(boolean operationsRoles) {
+		this.operationsRoles = operationsRoles;
+	}
+	public boolean isAsstSalesManager() {
+		return asstSalesManager;
+	}
+	public void setAsstSalesManager(boolean asstSalesManager) {
+		this.asstSalesManager = asstSalesManager;
+	}
+	public boolean isSale() {
+		return sale;
+	}
+	public void setSale(boolean sale) {
+		this.sale = sale;
+	}
+}

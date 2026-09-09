@@ -1,0 +1,226 @@
+package com.bcs.zsg.crm.sec.vo;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import com.bcs.zsg.common.helper.deserializer.GsonUnixTimestampDeserializer;
+import com.bcs.zsg.core.vo.BaseVO;
+import com.google.gson.annotations.SerializedName;
+import com.google.gson.annotations.JsonAdapter;
+
+public class KeycloakAccessTokenClaimVO extends BaseVO {
+
+	private static final long serialVersionUID = 1L;
+
+	private String acr;
+
+	@SerializedName("allowed-origins")
+	private List<String> allowedOrigins;
+
+	private String aud;
+
+	@JsonAdapter(GsonUnixTimestampDeserializer.class)
+	private Date authTime;
+
+	private String azp;
+	private String email;
+
+	private boolean emailVerified;
+
+	@JsonAdapter(GsonUnixTimestampDeserializer.class)
+	private Date exp;
+
+	private String familyName;
+	private String gender;
+	private String givenName;
+
+	@JsonAdapter(GsonUnixTimestampDeserializer.class)
+	private Date iat;
+	private String iss;
+	private String jti;
+	private String name;
+	private String preferredUsername;
+	private KeycloakRealmAccessVO realmAccess;
+	private Map<String, KeycloakResourceAccessVO> resourceAccess;
+	private String scope;
+	private String sid;
+	private String sub;
+	private String typ;
+
+	public Date getAuthTime() {
+		return authTime;
+	}
+
+	public void setAuthTime(Date authTime) {
+		this.authTime = authTime;
+	}
+
+	public String getGender() {
+		return gender;
+	}
+
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+
+	public Date getIat() {
+		return iat;
+	}
+
+	public void setIat(Date iat) {
+		this.iat = iat;
+	}
+
+	public String getAcr() {
+		return acr;
+	}
+
+	public void setAcr(String acr) {
+		this.acr = acr;
+	}
+
+	public List<String> getAllowedOrigins() {
+		return allowedOrigins;
+	}
+
+	public void setAllowedOrigins(List<String> allowedOrigins) {
+		this.allowedOrigins = allowedOrigins;
+	}
+
+	public String getAud() {
+		return aud;
+	}
+
+	public void setAud(String aud) {
+		this.aud = aud;
+	}
+
+	public String getAzp() {
+		return azp;
+	}
+
+	public void setAzp(String azp) {
+		this.azp = azp;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public boolean isEmailVerified() {
+		return emailVerified;
+	}
+
+	public void setEmailVerified(boolean emailVerified) {
+		this.emailVerified = emailVerified;
+	}
+
+	public Date getExp() {
+		return exp;
+	}
+
+	public void setExp(Date exp) {
+		this.exp = exp;
+	}
+
+	public String getFamilyName() {
+		return familyName;
+	}
+
+	public void setFamilyName(String familyName) {
+		this.familyName = familyName;
+	}
+
+	public String getGivenName() {
+		return givenName;
+	}
+
+	public void setGivenName(String givenName) {
+		this.givenName = givenName;
+	}
+
+	public String getIss() {
+		return iss;
+	}
+
+	public void setIss(String iss) {
+		this.iss = iss;
+	}
+
+	public String getJti() {
+		return jti;
+	}
+
+	public void setJti(String jti) {
+		this.jti = jti;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getPreferredUsername() {
+		return preferredUsername;
+	}
+
+	public void setPreferredUsername(String preferredUsername) {
+		this.preferredUsername = preferredUsername;
+	}
+
+	public KeycloakRealmAccessVO getRealmAccess() {
+		return realmAccess;
+	}
+
+	public void setRealmAccess(KeycloakRealmAccessVO realmAccess) {
+		this.realmAccess = realmAccess;
+	}
+
+	public Map<String, KeycloakResourceAccessVO> getResourceAccess() {
+		return resourceAccess;
+	}
+
+	public void setResourceAccess(Map<String, KeycloakResourceAccessVO> resourceAccess) {
+		this.resourceAccess = resourceAccess;
+	}
+
+	public String getScope() {
+		return scope;
+	}
+
+	public void setScope(String scope) {
+		this.scope = scope;
+	}
+
+	public String getSid() {
+		return sid;
+	}
+
+	public void setSid(String sid) {
+		this.sid = sid;
+	}
+
+	public String getSub() {
+		return sub;
+	}
+
+	public void setSub(String sub) {
+		this.sub = sub;
+	}
+
+	public String getTyp() {
+		return typ;
+	}
+
+	public void setTyp(String typ) {
+		this.typ = typ;
+	}
+}

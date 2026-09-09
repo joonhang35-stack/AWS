@@ -1,0 +1,96 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<style>
+	.disabled {
+		background : grey !important;
+		color : white;
+		cursor : auto;
+		pointer-events : none;
+	}
+</style>
+<h:panelGrid columns="2" style="width: 1px;white-space: nowrap;">
+	<p:commandButton value="Add"
+		actionListener="#{campaignBean.addCampaignCountryPkg}" 
+		update=":idAddCampaignForm:idCampaignCountryTabView"
+		oncomplete="varAssignTourPkgListDialog.hide();varSelectTourPkgListTable.clearFilters();" />
+	<p:commandButton value="#{msg['common.button.label.cancel']}" update="@form,:idAddCampaignForm:idCampaignCountryTabView" 
+		 oncomplete="varAssignTourPkgListDialog.hide();varSelectTourPkgListTable.clearFilters();"/>
+</h:panelGrid>
+<p:dataTable id="idSelectTourPkgListTable" widgetVar="varSelectTourPkgListTable" value="#{campaignBean.lazyDataModel}" var="tourVO" paginator="true" rows="20" rowKey="#{tourVO.id}" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="20, 40, 80" emptyMessage="#{msg['cust.tbl.empty.message']}" lazy="true"
+	filteredValue="#{campaignBean.filteredObjList}" filterEvent="enter" 
+	selection="#{campaignBean.selectedTourPkgs}">
+	
+	<!-- <p:ajax event="page" listener="#{campaignBean.onPagination}" /> -->
+
+	<p:column selectionMode="multiple" style="width:16px;text-align:center" />		
+
+	<!-- <p:column headerText="Package ID" sortBy="#{tourVO.id}" filterBy="#{tourVO.id}" filterStyle="width: 90%" filterMatchMode="contains">
+		<h:outputText value="#{tourVO.id}" />
+	</p:column> -->
+	<p:column headerText="Tour Code" sortBy="#{tourVO.code}" filterBy="#{tourVO.code}" filterStyle="width: 90%" filterMatchMode="contains">
+		<h:outputText value="#{tourVO.code}" />
+	</p:column>
+	<!-- <p:column headerText="Tour Name" sortBy="#{tourVO.nameEn}" filterBy="#{tourVO.nameEn}" filterStyle="width: 90%" filterMatchMode="contains">
+		<h:outputText value="#{tourVO.nameEn}" />
+	</p:column>
+	<p:column headerText="Tour Name" sortBy="#{tourVO.nameZh}" filterBy="#{tourVO.nameZh}" filterStyle="width: 90%" filterMatchMode="contains">
+		<h:outputText value="#{tourVO.nameZh}" />
+	</p:column> -->
+	<!-- <p:column headerText="Description"> -->
+	<!-- <p:column headerText="Description" filterBy="#{tourVO.nameEn}" filterStyle="width: 90%" filterMatchMode="contains">
+		<h:outputText value="#{tourVO.numDays}D/#{tourVO.numNights}N #{tourVO.nameEn} #{tourVO.nameZh} #{tourVO.nameOther}" />
+	</p:column> -->
+	<p:column headerText="Description" filterBy="#{tourVO.campaignPkgDesc}" filterStyle="width: 90%" filterMatchMode="contains">
+		<h:outputText value="#{tourVO.campaignPkgDesc}" />
+	</p:column>
+	<p:column headerText="Year" sortBy="#{tourVO.year}" filterBy="#{tourVO.year}" filterStyle="width: 90%" filterMatchMode="contains">
+		<h:outputText value="#{tourVO.year}" />
+	</p:column>
+	<!-- <p:column headerText="Departure" sortBy="#{tourVO.dtDep}" filterBy="#{tourVO.dtDep}" filterStyle="width: 90%" filterMatchMode="contains">
+		<h:outputText value="#{tourVO.dtDep}" >
+			<f:convertDateTime pattern="dd-MMM-yyyy"/>
+		</h:outputText>
+	</p:column> -->
+	<!-- <p:column headerText="Full Twn" filterStyle="width: 90%">
+		<h:outputText value="#{tourVO.fullTwn}" />
+	</p:column>
+	<p:column headerText="Full Sgl" filterStyle="width: 90%">
+		<h:outputText value="#{tourVO.fullSgl}" />
+	</p:column>
+	<p:column headerText="Full Trpl" filterStyle="width: 90%">
+		<h:outputText value="#{tourVO.fullTrpl}" />
+	</p:column>
+	<p:column headerText="Full Ctw" filterStyle="width: 90%">
+		<h:outputText value="#{tourVO.fullCtw}" />
+	</p:column>
+	<p:column headerText="Full Ceb" filterStyle="width: 90%">
+		<h:outputText value="#{tourVO.fullCeb}" />
+	</p:column>
+	<p:column headerText="Full Cnb" filterStyle="width: 90%">
+		<h:outputText value="#{tourVO.fullCnb}" />
+	</p:column>
+	<p:column headerText="Full Inft" filterStyle="width: 90%">
+		<h:outputText value="#{tourVO.fullInft}" />
+	</p:column> -->
+	
+</p:dataTable>
+
+<h:panelGrid columns="2" style="width: 1px;white-space: nowrap;">
+	<p:commandButton value="Add"
+		actionListener="#{campaignBean.addCampaignCountryPkg}" 
+		update=":idAddCampaignForm:idCampaignCountryTabView"
+		oncomplete="varAssignTourPkgListDialog.hide();varSelectTourPkgListTable.clearFilters();" />
+	<p:commandButton value="#{msg['common.button.label.cancel']}" update="@form,:idAddCampaignForm:idCampaignCountryTabView" 
+		 oncomplete="varAssignTourPkgListDialog.hide();varSelectTourPkgListTable.clearFilters();"/>
+</h:panelGrid>
+
+</ui:composition>

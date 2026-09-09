@@ -1,0 +1,217 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp"
+	template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+
+<script type="text/javascript">
+	//<![CDATA[
+	function resetHistoryViewTable() {
+		if (typeof varTourDepHistoryListTable != "undefined") {
+				varTourDepHistoryListTable.clearFilters();
+				varTourDepHistoryListTable.unselectAllRows();
+		}
+		if (typeof varInvoiceHistoryListTable != "undefined") {
+			varInvoiceHistoryListTable.clearFilters();
+			varInvoiceHistoryListTable.unselectAllRows();
+		}
+	}
+	
+	function setEnterKeyHint() {
+		var filters = document.querySelectorAll('input.ui-column-filter');
+	    filters.forEach(function(filter) {
+	        filter.setAttribute('enterkeyhint', 'enter');
+	    });
+	}
+		//]]>
+</script>
+
+<p:panel header="Audit Trail" toggleable="true" toggleSpeed="500">
+	<h:form id="idHistoryForm">
+		<p:growl id="msg"/>
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:80px;">
+					<!--p:commandButton value="Today" actionListener="#{historyBean.init}" process="@this" update="@form"/-->
+					<h:selectOneMenu id="idCatType" label="Categories Type" value="#{historyBean.searchParamVO.obj1}" required="true">  
+			        	<f:selectItem itemLabel="Select One" itemValue=""/>
+			        	<f:selectItems value="#{historyBean.categoryList}" var="n" itemValue="#{n.code}" itemLabel="#{n.value}"/>
+				    </h:selectOneMenu>
+				</p:column>
+				<p:column style="width:10px;"><p:separator style="width:2px;height:20px"/></p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idFromDate" label="From Date" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" 
+							value="#{historyBean.searchParamVO.fromDate}" required="true" requiredMessage="From date required"/>
+					<p:watermark for="idFromDate" value="From Date" />
+				</p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idToDate" label="To Date" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" 
+							value="#{historyBean.searchParamVO.toDate}" required="true" requiredMessage="To date required"/>
+					<p:watermark for="idToDate" value="To Date" />
+				</p:column>
+				<p:column>
+					<p:commandButton value="Search" actionListener="#{historyBean.search}" update="@form,:idHistoryForm"
+									oncomplete="resetHistoryViewTable(); setEnterKeyHint();"/>
+				</p:column> 
+			</p:row>
+		</p:panelGrid>
+		
+		<p:dataTable value="#{historyBean.tourPkgHistoryViewList}" var="vo" paginator="true" rows="10"
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single"
+			rendered="#{not empty historyBean.tourPkgHistoryViewList}">
+			<p:ajax event="rowSelect" listener="#{historyBean.handleTourPkgHistorySelect}" update=":idTourPkgHistoryListDialog" oncomplete="varTourPkgHistoryListDialog.show()"/>
+			
+			<f:facet name="header">Tour Package</f:facet>
+			<p:columnGroup type="header">
+				<p:row>
+					<p:column headerText="Date" rowspan="2" sortBy="#{vo.updatedDate}" style="width:120px;"/>
+					<p:column headerText="Person" rowspan="2" sortBy="#{vo.updatedBy}" style="width:150px;"/>
+					<p:column headerText="Theme/Country" rowspan="2" filterBy="#{vo.themeDesc}" sortBy="#{vo.themeDesc}" style="width:50px;"/>
+					<p:column headerText="Type" rowspan="2" filterBy="#{zsg:referenceDataValue('TOUR_TYPE', vo.typeCd)}" sortBy="#{zsg:referenceDataValue('TOUR_TYPE', vo.typeCd)}" style="width:50px;"/>
+					<p:column headerText="Package Name" colspan="3"/>
+					<p:column headerText="Reason" rowspan="2"/>
+					<p:column headerText="Action" rowspan="2" filterBy="#{zsg:referenceDataValue('ACT_TYPE_CD', vo.actionCd)}" sortBy="#{zsg:referenceDataValue('ACT_TYPE_CD', vo.actionCd)}" style="width:50px;"/>
+				</p:row>
+				<p:row>
+					<p:column headerText="English"/>
+					<p:column headerText="Chinese"/>
+					<p:column headerText="Other"/>
+				</p:row>
+			</p:columnGroup>
+			
+			<p:column styleClass="txt_center"><h:outputLabel value="#{vo.updatedDate}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputLabel></p:column>
+			<p:column><h:outputLabel value="#{vo.updatedBy}"/></p:column>
+			<p:column><h:outputLabel value="#{vo.themeDesc}"/></p:column>
+			<p:column styleClass="txt_center"><h:outputLabel value="#{zsg:referenceDataValue('TOUR_TYPE', vo.typeCd)}"/></p:column>
+			<p:column><h:outputLabel value="#{vo.nameEn}"/></p:column>
+			<p:column><h:outputLabel value="#{vo.nameZh}"/></p:column>
+			<p:column><h:outputLabel value="#{vo.nameOther}"/></p:column>
+			<p:column><h:outputLabel value="#{vo.reason}"/></p:column>
+			<p:column styleClass="txt_center"><h:outputLabel value="#{zsg:referenceDataValue('ACT_TYPE_CD', vo.actionCd)}"/></p:column>
+		</p:dataTable>
+		
+		<p:dataTable id="idTourDepHistoryListTable" widgetVar="varTourDepHistoryListTable" value="#{historyBean.lazyDMTourDepHistory}" 
+			var="vo" paginator="true" rows="10" lazy="true"
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single"
+			rendered="#{not empty historyBean.lazyDMTourDepHistory}" filterEvent="enter">
+			<p:ajax event="rowSelect" listener="#{historyBean.handleTourDepHistorySelect}" update=":idTourDepHistoryListDialog" oncomplete="varTourDepHistoryListDialog.show()"/>
+			
+			<f:facet name="header">Tour Departure</f:facet>
+			
+			<p:column headerText="Update Date" style="width:100px; text-align:center;">
+				<h:outputLabel value="#{vo.updatedDate}"><f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss a"/></h:outputLabel>
+			</p:column>
+			<p:column headerText="Update By" style="width:120px;" filterBy="#{vo.updatedBy}" filterMatchMode="contains">
+				<h:outputLabel value="#{vo.updatedBy}"/>
+			</p:column>
+			<p:column headerText="Departure Date" style="width:120px; text-align:center;">
+				<h:outputLabel value="#{vo.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputLabel>
+			</p:column>
+			<p:column headerText="Tour Code" style="width:200px;" filterBy="#{vo.code}" filterMatchMode="contains">
+				<h:outputLabel value="#{vo.code}"/>
+			</p:column>
+			<p:column headerText="Reason" filterBy="#{vo.reason}" filterMatchMode="contains">
+				<h:outputLabel value="#{vo.reason}"/>
+			</p:column>
+			<p:column headerText="Action" style="width:100px; text-align:center;" 
+								filterBy="#{vo.actionCd}" filterOptions="#{historyBean.actionCodeOptions}" >
+				<h:outputLabel value="#{vo.actionCd}"/>
+			</p:column>
+		</p:dataTable>
+		
+		<p:dataTable widgetVar="varInvoiceHistoryListTable" value="#{historyBean.lazyDMInvoiceHistory}" 
+			var="vo" paginator="true" rows="10" lazy="true"
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single"
+			rendered="#{not empty historyBean.lazyDMInvoiceHistory}" filterEvent="enter">
+			<p:ajax event="rowSelect" listener="#{historyBean.handleInvoiceHistorySelect}" update=":idInvoiceHistoryListDialog" oncomplete="varInvoiceHistoryListDialog.show()"/>
+			
+			<f:facet name="header">Invoice</f:facet>
+			
+			<p:column headerText="Update Date" style="width:100px; text-align:center;">
+				<h:outputLabel value="#{vo.updatedDate}"><f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss a"/></h:outputLabel>
+			</p:column>
+			<p:column headerText="Update By" style="width:120px;" filterBy="#{vo.updatedBy}" filterMatchMode="contains">
+				<h:outputLabel value="#{vo.updatedBy}"/>
+			</p:column>
+			<p:column headerText="Invoice Date" style="width:120px; text-align:center;">
+				<h:outputLabel value="#{vo.invoiceDt}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputLabel>
+			</p:column>
+			<!-- JH - add pax statement to this column -->
+			<p:column headerText="Pax Statement No." style="width:200px;" filterBy="#{vo.psNo}" filterMatchMode="contains">
+				<h:outputLabel value="#{vo.psNo}"/>
+			</p:column>
+			<p:column headerText="Invoice No." style="width:200px;" filterBy="#{vo.code}" filterMatchMode="contains">
+				<h:outputLabel value="#{vo.code}"/>
+			</p:column>
+			<p:column headerText="Reason" filterBy="#{vo.reason}" filterMatchMode="contains">
+				<h:outputLabel value="#{vo.reason}"/>
+			</p:column>
+			<p:column headerText="Status" style="width:80px; text-align:center;" 
+								filterBy="#{vo.statusCd}" filterOptions="#{historyBean.invoiceStatusOptions}" >
+				<h:outputText value="#{vo.statusCd}"/>
+			</p:column>
+			<p:column headerText="Action" style="width:100px; text-align:center;" 
+								filterBy="#{vo.actionCd}" filterOptions="#{historyBean.actionCodeOptions}" >
+				<h:outputLabel value="#{vo.actionCd}"/>
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - TOUR PACKAGE HISTORY LIST
+-->
+<!-- <p:dialog id="idTourPkgHistoryListDialog" widgetVar="varTourPkgHistoryListDialog" header="Tour Packages" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true" style="width:90% !important; height:80% !important; overflow:auto;">
+	<h:form id="idTourPkgHistoryListForm">
+		<ui:include src="tour_pkg_history_list.xhtml"/>
+	</h:form>
+</p:dialog> -->
+
+<!--
+	DIALOG - TOUR DEPARTURE HISTORY LIST
+-->
+<p:dialog id="idTourDepHistoryListDialog" widgetVar="varTourDepHistoryListDialog" header="Tour Departures" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idTourDepHistoryListForm">
+		<div style="height:480px;">
+			<ui:include src="tour_dep_history_list.xhtml"/>
+		</div>
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - INVOICE HISTORY LIST
+-->
+<p:dialog id="idInvoiceHistoryListDialog" widgetVar="varInvoiceHistoryListDialog" header="Invoice" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idInvoiceHistoryListForm">
+		<div style="height:480px;">
+			<ui:include src="invoice_history_list.xhtml"/>
+		</div>
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - INVOICE HISTORY DETAIL
+-->
+<p:dialog widgetVar="varInvoiceHistoryDetailDialog" header="Invoice Detail" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idInvoiceHistoryDetailForm">
+		<div style="height:480px;">
+			<ui:include src="invoice_history_detail.xhtml"/>
+		</div>
+	</h:form>
+</p:dialog>
+</ui:define>
+</ui:composition>

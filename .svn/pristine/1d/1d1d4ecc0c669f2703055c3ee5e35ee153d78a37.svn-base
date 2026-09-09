@@ -1,0 +1,153 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+				xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+	<p:panel header="POS Upload History" toggleable="true" toggleSpeed="500">
+		<h:form id="idForm">
+			<p:growl id="idMsg"/>
+			<p:panel header="History">
+				<p:panelGrid>
+					<p:row>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="Date Range" />
+						</p:column>
+						<p:column style="width:10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column style="width: 150px;">
+							<p:calendar id="idDtFrom" pattern="dd-MMM-yyyy" value="#{posUploadHistoryBean.dateFrom}" navigator="true" showButtonPanel="true" maxdate="#{posUploadHistoryBean.dateTo}">
+								<p:ajax event="dateSelect" global="false" update=":idForm:idDtTo"/>
+							</p:calendar>
+						</p:column>
+						<p:column style="width:10px;">
+							<p:outputLabel value="To" />
+						</p:column>
+						<p:column>
+							<p:calendar id="idDtTo" pattern="dd-MMM-yyyy" value="#{posUploadHistoryBean.dateTo}" navigator="true" showButtonPanel="true" mindate="#{posUploadHistoryBean.dateFrom}">
+								<p:ajax event="dateSelect" global="false" update=":idForm:idDtFrom"/>
+							</p:calendar>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Search" actionListener="#{posUploadHistoryBean.search}" update=":idForm"/>
+						</p:column>
+						<p:column>
+							<h:commandLink>  
+            					<p:graphicImage value="/img/excel.png" />  
+								<p:dataExporter type="xls" target="idSalesTransTable" fileName="POSUploadHistory" ajax="false" />
+							</h:commandLink>  
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<p:dataTable id="idSalesTransTable" widgetVar="varSalesTransTable" value="#{posUploadHistoryBean.posUploadSalesTransVOList}" var="vo" paginator="true" rows="20" rowIndexVar="rowIndex"
+					paginatorTemplate="#{bterp:pageTemplate()}" 
+					rowsPerPageTemplate="20, 30, 50" filterEvent="enter" style="width: 1200px">
+					
+					<p:column headerText="Invoice No" style="width: 120px;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Invoice No"/>
+						</f:facet>
+						<h:outputText value="#{vo.invoiceNo}" />
+					</p:column>
+					<p:column headerText="Invoice Date" style="width: 100px;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Invoice Date"/>
+						</f:facet>
+						<h:outputText value="#{vo.invoiceDate}">
+							<f:convertDateTime pattern="dd-MMM-yyyy"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Sub Total" style="width: 120px;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Sub Total"/>
+						</f:facet>
+						<h:outputText value="#{vo.subTotal}">
+							<f:convertNumber pattern="#,##0.00"/>
+						</h:outputText>
+					</p:column>
+			        <p:column headerText="Discount(%)" style="width: 120px;" styleClass="txt_center">
+			        	<f:facet name="header">
+							<p:outputLabel value="Discount(%)"/>
+						</f:facet>
+			        	<h:outputText value="#{vo.discountPercentage}">
+							<f:convertNumber pattern="#,##0.00"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Discount Amt" style="width: 120px;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Discount Amt"/>
+						</f:facet>
+			        	<h:outputText value="#{vo.discountAmount}">
+							<f:convertNumber pattern="#,##0.00"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Tax Rate" style="width: 120px;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Tax Rate"/>
+						</f:facet>
+			        	<h:outputText value="#{vo.taxRate}">
+							<f:convertNumber pattern="#,##0.00"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Tax Amt" style="width: 120px;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Tax Amt"/>
+						</f:facet>
+			        	<h:outputText value="#{vo.taxAmount}">
+							<f:convertNumber pattern="#,##0.00"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Service&lt;br/&gt;Charge(%)" style="width: 120px;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Service Charge(%)"/>
+						</f:facet>
+			        	<h:outputText value="#{vo.serviceChargePercentage}">
+							<f:convertNumber pattern="#,##0.00"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Service&lt;br/&gt;Charge Amt" style="width: 120px;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Service Charge Amt"/>
+						</f:facet>
+			        	<h:outputText value="#{vo.serviceChargeAmount}">
+							<f:convertNumber pattern="#,##0.00"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Grand Total" style="width: 120px;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Grand Total"/>
+						</f:facet>
+			        	<h:outputText value="#{vo.grandTotal}">
+							<f:convertNumber pattern="#,##0.00"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Is Test" style="width: 50px;pointer-events: none;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Is Test"/>
+						</f:facet>
+						<p:selectBooleanCheckbox  value="#{vo.isTest}" />
+					</p:column>
+					<p:column headerText="Is Void" style="width: 50px;pointer-events: none;" styleClass="txt_center">
+						<f:facet name="header">
+							<p:outputLabel value="Is Void"/>
+						</f:facet>
+						<p:selectBooleanCheckbox  value="#{vo.isVoid}" />
+					</p:column>
+				</p:dataTable>
+			</p:panel>
+		</h:form>
+	</p:panel>
+	
+</ui:define>
+</ui:composition>

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddInvoicePaymentsDialog.show();
+		} else {
+			varAddInvoicePaymentsDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid id="idInvPaymentPenal">
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idPmntDt">Payment Date <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idPmntDt" label="Payment Date" value="#{salesBean.invoicePaymentVO.pmntDt}" readonly="true" style="background:#ccc">
+				<f:convertDateTime pattern="dd-MMM-yyyy"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idOrgRcptNo">Original Receipt No</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idOrgRcptNo" label="Original Receipt No" value="#{salesBean.invoicePaymentVO.code}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+	<!--  
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idPmntType">Payment Type <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idPmntType" label="Payment Type" value="#{salesBean.invoicePaymentVO.pmntTypeCd}" required="true">  
+	        	<f:selectItem itemLabel="Select One" itemValue=""/>
+	        	<f:selectItems value="#{bterp:lookupItemList('pymt_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		    </h:selectOneMenu>
+		</p:column>
+	</p:row>
+	-->
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idRefNo">Payment Reference No</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idRefNo" label="Payment Reference No" maxlength="100" value="#{salesBean.invoicePaymentVO.refNo}"/>
+		</p:column>
+	</p:row>
+	<!-- 
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idPmntFor">Being Payment For <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idPmntFor" label="Being Payment For" value="#{salesBean.invoicePaymentVO.pmntFor}" required="true"/>
+		</p:column>
+	</p:row> -->
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idAmtPaid">Amount Paid <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAmtPaid" label="Amount Paid" value="#{salesBean.invoicePaymentVO.amount}" required="true">
+			    <f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idIssuedBy">Issued By <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idIssuedBy" label="Issued By" value="#{salesBean.invoicePaymentVO.pmntIssuedBy}" readonly="true" style="background:#ccc"/>
+			<!--h:selectOneMenu id="idIssuedBy" label="Issued By" value="#{salesBean.invoicePaymentVO.issuerId}" effect="fade" required="true">
+				<f:selectItem itemLabel="Select One" itemValue=""/>
+				<f:selectItems value="#{salesBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+			</h:selectOneMenu-->
+		</p:column>
+	</p:row>
+	<!--p:row>
+		<p:column>
+			<h:outputLabel for="idCustNo">Customer No</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCustNo" label="Customer No" value="salesBean.invoicePaymentVO." readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row-->
+	
+	<!-- 
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idReceivedFr">Received From</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idReceivedFr" label="Received No" value="#{salesBean.invoicePaymentVO.recievedFr}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row> -->
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{salesBean.addCreditNotePmnt}" update="@form,:idAddInvoiceForm:idInvDetailsTab:idInvPmntListTable,:idAddInvoiceForm:idAmtPaid,:idAddInvoiceForm:idAmtDue" rendered="#{salesBean.invPmntAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{salesBean.updateInvPmnt}" update="@form,:idAddInvoiceForm:idInvDetailsTab:idInvPmntListTable,:idAddInvoiceForm:idAmtPaid,:idAddInvoiceForm:idAmtDue" oncomplete="onValidation(xhr, status, args)" rendered="#{not salesBean.invPmntAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetInvPmntForm}" update="@form" process="@this" oncomplete="varAddInvoicePaymentsDialog.hide()" global="false">
+		<pe:resetEditableValues for="idAddInvoicePaymentsForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

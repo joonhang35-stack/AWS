@@ -1,0 +1,111 @@
+package com.bcs.zsg.acct.bo;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.service.AccountService;
+import com.bcs.zsg.acct.service.JournalService;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.JournalVO;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+
+public class JournalBOImpl implements JournalBO {
+
+	@Autowired
+	private JournalService journalService;
+
+	@Autowired
+	private AccountService accountService;
+	
+	public void insertJournal(JournalVO journalVO, List<AcctTransVO> journalCartList) throws BusinessException , QueueException{
+		journalService.insertJournal(journalVO, journalCartList);
+	}
+	
+	public void updateJournal(JournalVO journalVO, List<AcctTransVO> journalCartList, AddUpdDelVO journalItemsVO) throws BusinessException , QueueException{
+		journalService.updateJournal(journalVO, journalCartList, journalItemsVO);
+	}
+	
+	public void delJournal(JournalVO journalVO) throws BusinessException {
+		journalService.delJournal(journalVO);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 */
+	@Override
+	public List<AcctTransVO> getJournalItems(JournalVO journalVO) throws BusinessException {
+		return journalService.getJournalItems(journalVO);
+	}
+
+	@Override
+	public List<AcctVO> getAcctAutoCompleteList(Long idCompany, String strAutoCompleteValue) throws BusinessException {
+		return accountService.getAccountAutoCompleteList(idCompany, strAutoCompleteValue);
+	}
+
+	@Override
+	public boolean isAccountValid(AcctVO acctVO) throws BusinessException {
+		return accountService.isAccountValid(acctVO);
+	}
+	
+
+	@Override
+	public int getJournalListSize(Map<String, Object> params) throws BusinessException {
+		return journalService.getJournalListSize(params);
+	}
+	
+	@Override
+	public List<?> getJournalList(Map<String, Object> params) throws BusinessException {
+		return journalService.getJournalList(params);
+	}
+	
+	@Override
+	public JournalVO getJournalById(Long idJournal, Long idCompany) throws BusinessException {
+		return journalService.getJournalById(idJournal, idCompany);
+	}
+	
+	@Override
+	public List<JournalVO> getJournalListByBillId(Long idBill, Long idCompany) throws BusinessException {
+		return journalService.getJournalListByBillId(idBill, idCompany);
+	}
+	
+	@Override
+	public JournalVO getJournalDetails(JournalVO journalVO) throws BusinessException {
+		return journalService.getJournalDetails(journalVO);
+	}
+	
+	@Override
+	public void validateJournalTotalAgainstBill(ExOrderBillVO exOrderBillVO) throws BusinessException {
+		validateJournalTotalAgainstBill(exOrderBillVO, 0.0, true);
+	}
+	
+	@Override
+	public void validateJournalTotalAgainstBill(ExOrderBillVO exOrderBillVO, boolean allowEqual) throws BusinessException {
+		validateJournalTotalAgainstBill(exOrderBillVO, 0.0, allowEqual);
+	}
+	
+	@Override
+	public void validateJournalTotalAgainstBill(ExOrderBillVO exOrderBillVO, Double initialAmount, boolean allowEqual) throws BusinessException {
+		Double total = initialAmount;
+		for (JournalVO journalVO : exOrderBillVO.getJournalList()) {
+//			Double totalAmt = 
+//					journalVO.getTotalCrdAmt().doubleValue() == journalVO.getTotalDbtAmt().doubleValue() && journalVO.getTotalCrdAmt().doubleValue() != 0.00 ? journalVO.getTotalCrdAmt().doubleValue() : 0.00;
+			total += journalVO.getTotalCrdAmt().doubleValue();
+		}
+		if (allowEqual) {
+			if (total.compareTo(exOrderBillVO.getBillAmt()) > 0) {
+//				throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_JOURNAL_EXCEED_BILL);
+			}
+		} else {
+			if (total.compareTo(exOrderBillVO.getBillAmt()) >= 0) {
+//				throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_JOURNAL_EXCEED_BILL);
+			}
+		}
+		
+	}
+}

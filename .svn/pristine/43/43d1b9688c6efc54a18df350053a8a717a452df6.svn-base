@@ -1,0 +1,35 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+
+
+<p:dataTable value="#{purchaseBean.lazySuppDataModel}" var="vo" paginator="true" rows="10" widgetVar="varSuppFilterListTable"
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowKey="#{vo.id}" selectionMode="single" filteredValue="#{purchaseBean.filteredObjList}" lazy="true" filterEvent="enter">
+	<p:ajax event="rowSelect" listener="#{paymentBean.handleSupplierSelect}" update=":idAddPayment:idPayee,:idAddPayment:idSupplierNumber" oncomplete="varSuppListDialog.hide()"/>
+	
+	<p:column headerText="Supplier Id" sortBy="#{vo.sysNo}" filterBy="#{vo.sysNo}">
+		<h:outputText value="#{vo.sysNo}"/>
+	</p:column>
+	<p:column headerText="Name" sortBy="#{vo.fullName}" filterBy="#{vo.fullName}">
+		<h:outputText value="#{vo.fullName}"/>
+	</p:column>
+	<p:column headerText="BeneficiaryName" sortBy="#{vo.beneficiaryName}" filterBy="#{vo.beneficiaryName}">
+		<h:outputText value="#{vo.beneficiaryName}"/>
+	</p:column>
+</p:dataTable>
+
+<h:panelGrid columns="1">
+	
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varSuppListDialog.hide()"/>
+</h:panelGrid>
+
+</ui:composition>

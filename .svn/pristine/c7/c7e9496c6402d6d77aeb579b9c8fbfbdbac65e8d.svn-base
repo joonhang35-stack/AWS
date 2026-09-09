@@ -1,0 +1,189 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	  			
+<script type="text/javascript">
+	function rtnUpperCase(evt) {
+		evt = evt || window.event;
+		evt.target.value = evt.target.value.toUpperCase();
+	}
+</script>
+
+<ui:define name="content">
+<p:panel header="User Profile">
+   	<h:form id="idForm">
+   	<p:growl id="msg"/>	
+		<!-- 'Joon Hang - set Mobile no, IC, Address line 1, City, State, Postcode mandatory' -->
+		<!-- 'Joon Hang - remove unsuitable space in Name, mobile, addr1, city, postcode, acctNo' -->
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width: 150px;">
+					<h:outputLabel for="idFullName">Name as IC <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idFullName" label="Name as IC" value="#{userBean.employeeVO.fullName}" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag"
+						style="width:400px" maxlength="255" required="true" validatorMessage="Name as IC is required.">
+						<f:validateRegex pattern=".*\S.*" />
+					</p:inputText>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idEmailID">Email Address</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idEmailID" label="Email Address" value="#{userBean.userVO.emailAddress}" maxlength="50" disabled="true"/>
+				</p:column>
+				<p:column style="width: 150px;">
+					<h:outputLabel for="idMobile">Mobile Number <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputMask id="idMobile" label="Mobile Number" value="#{userBean.userVO.mobileNumber}" maxlength="15" required="true" validatorMessage="Mobile Number is required."
+						onkeypress="return rtnPhoneNo(event);">
+						<f:validateRegex pattern=".*\S.*" />
+					</p:inputMask>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idNickName">NickName </h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idNickName" label="NickName" value="#{userBean.employeeVO.nickName}" maxlength="50" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag"/>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idMsicCode">MSIC Code </h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idMsicCode" label="MSIC Code" value="#{userBean.employeeVO.msicCode}" style="width:180px;">  
+			            <f:selectItem itemLabel="Select One" itemValue="" />  
+			            <f:selectItems value="#{bterp:lookupItemList('e_inv_msic_code')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.code} : #{vo.description}"/>
+			        </h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idNRIC">NRIC <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputMask id="idNRIC" label="NRIC" value="#{userBean.employeeVO.idNo}" mask="999999-99-9999" disabled="#{not userBean.employeeVO.isEditable}" required="true"/>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idTIN">TIN </h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idTIN" label="TIN" value="#{userBean.employeeVO.taxIdNo}" maxlength="20" disabled="#{not userBean.employeeVO.isEditable}" validatorMessage="TIN shouldn't contain spaces."
+						onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag">
+						<f:validateRegex pattern="^\S+$" />
+					</p:inputText>
+				</p:column>
+			</p:row>
+			
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAdd1">Address Line 1 <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idAdd1" label="Address Line 1" value="#{userBean.employeeVO.addr1}" size="50" maxlength="255" required="true" validatorMessage="Address Line 1 is required."
+						onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag">
+						<f:validateRegex pattern=".*\S.*" />
+					</p:inputText>
+				</p:column>
+			</p:row>
+	
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAdd2">Address Line 2 </h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idAdd2" label="Address Line 2" value="#{userBean.employeeVO.addr2}" size="50" maxlength="255" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag" />
+				</p:column>
+			</p:row>
+	
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAdd3">Address Line 3 </h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idAdd3" label="Address Line 3" value="#{userBean.employeeVO.addr3}" size="50" maxlength="255" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag" />
+				</p:column>
+			</p:row>
+	
+			<p:row id="idColumnState">
+				<p:column>
+					<h:outputLabel for="idCity">City <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idCity" label="City" value="#{userBean.employeeVO.city}" maxlength="255" required="true" validatorMessage="City is required."
+						onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag">
+						<f:validateRegex pattern=".*\S.*" />
+					</p:inputText>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idState">State <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idState" label="State" value="#{userBean.employeeVO.state}" effect="fade" required="true">
+						<f:selectItem itemLabel="Select One" itemValue=""/>
+						<f:selectItems value="#{userBean.malaysiaStateList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.name}" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+	
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idPostcode">Postcode <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idPostcode" label="Postcode" value="#{userBean.employeeVO.postcode}" maxlength="10" required="true" validatorMessage="Postcode is required."
+						onkeyup="rtnUpperCase(event);">
+						<f:validateRegex pattern=".*\S.*" />	
+					</p:inputText>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idCountry">Country </h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idCountry" label="Country" value="#{userBean.employeeVO.countryId}">
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{userBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+			
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAcctNo">Account No </h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputMask id="idAcctNo" label="Account No" value="#{userBean.employeeVO.acctNo}" maxlength="20" onkeyup="rtnUpperCase(event);" />
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idBankName">Bank Name </h:outputLabel>
+				</p:column>
+				<p:column>
+					<!-- <p:inputText id="idBankName" label="Bank Name" value="#{userBean.employeeVO.bankName}" maxlength="200" style="width: 300px;"/> -->
+					<h:selectOneMenu id="idBankName" label="Bank Name" value="#{userBean.employeeVO.bankName}" style="width:180px;">  
+		            <f:selectItem itemLabel="Select One" itemValue="" />  
+		            <f:selectItems value="#{bterp:lookupItemList('bank_list')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		        </h:selectOneMenu>
+				</p:column>
+			</p:row>
+			
+		</p:panelGrid>
+		
+		<h:panelGrid columns="1" style="width: 1px;">
+			<p:commandButton value="Edit" actionListener="#{userBean.updateProfileUser}" update="@form,:idLoginCompany"/>
+		</h:panelGrid>
+	</h:form>		
+</p:panel>
+	
+</ui:define>
+</ui:composition>

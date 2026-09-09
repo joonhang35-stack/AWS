@@ -1,0 +1,268 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+<script language="javascript" src="#{request.contextPath}/js/PFCustomExt.js"  />
+<script type="text/javascript">
+
+	//<![CDATA[
+		$(document).ready(function() {
+			//First time set to today's Month and Year
+      $("#ui-datepicker-div .ui-datepicker-month :selected").val();
+      $("#ui-datepicker-div .ui-datepicker-year :selected").val();
+			RefreshScreen ();
+		});
+		
+    function RefreshScreen () {
+	    $('.date-picker').datepicker( {
+	        changeMonth: true,
+	        changeYear: true,
+	        showButtonPanel: true,
+	        dateFormat: 'M yy',
+					maxDate: new Date(), 
+					beforeShow: function() {
+		      	if ((selDate = $(this).val()).length > 0) {
+		      		year = selDate.substring(selDate.length - 4, selDate.length);
+		      		month = jQuery.inArray(selDate.substring(0, selDate.length - 5), $(this).datepicker('option', 'monthNamesShort'));
+	          	$(this).datepicker('option', 'defaultDate', new Date(year, month, 1));
+	          	$(this).datepicker('setDate', new Date(year, month, 1));
+			   		}
+			    },
+	        onClose: function(dateText, inst) { 
+	            var month = $("#ui-datepicker-div .ui-datepicker-month :selected").val();
+	            var year = $("#ui-datepicker-div .ui-datepicker-year :selected").val();
+	            
+	            $(this).datepicker('setDate', new Date(year, month, 1));
+	        }
+	    });
+    }
+	//]]>
+</script>
+<style>
+.ui-datepicker-calendar {
+    display: none;
+    }
+</style>
+
+<p:panel header="Monthly Ticketing Sales" toggleable="true" toggleSpeed="500">
+	<h:form id="idFormMonthlyTicketingSales">
+		<p:growl id="msg"/>
+		<p:panelGrid style="width:700px;">
+			<p:row>
+				<p:column style="width:100px;">
+					<h:outputLabel for="idSalesYearMonth">Date<span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:80px;">
+				 	<p:inputText id="idSalesYearMonth" value="#{monthlyTicketBean.searchParamVO.fromDate}" required="true"
+			    		styleClass="date-picker" style="width:60px;">
+						<f:convertDateTime pattern="MMM yyyy"/>
+					</p:inputText>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:100px;">
+					<h:outputLabel for="idSalesPerson">Sales Person</h:outputLabel>
+				</p:column>
+				<p:column style="width:80px;">
+					<h:selectOneMenu id="idSalesPerson" label="Sales Person" value="#{monthlyTicketBean.sellerID}" effect="fade" >
+						<f:selectItem itemLabel="Select One" itemValue="0"/>
+						<f:selectItems value="#{monthlyTicketBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column style="width:100px;">
+					<h:outputLabel for="idAirlineNo">Airline No</h:outputLabel>
+				</p:column>
+				<p:column style="width:80px;">
+					<h:selectOneMenu id="idAirlineNo" label="Airline No" value="#{monthlyTicketBean.filterAirlineNo}" effect="fade" >
+						<f:selectItem itemLabel="Select One" itemValue=""/>
+						<f:selectItems value="#{monthlyTicketBean.airlineList}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.code}"/>
+					</h:selectOneMenu>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:60px;">
+					<h:outputLabel for="idTourCode">Tour Code</h:outputLabel>
+				</p:column>
+				<p:column style="width:100px;">
+					<h:selectOneMenu id="idTourCode" label="Tour Code" value="#{monthlyTicketBean.filterTourCode}" effect="fade" >
+						<f:selectItem itemLabel="Select One" itemValue=""/>
+						<f:selectItems value="#{monthlyTicketBean.tourCodeList}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.code}"/>
+					</h:selectOneMenu>
+				</p:column>
+				<p:column style="width:80px;">
+					<p:commandButton value="Search" actionListener="#{monthlyTicketBean.searchReport}" 
+											update=":idFormMonthlyTicketingSales" oncomplete="RefreshScreen();pfCustExt.resetDataTable(varMonthlyTicketSalesTable);"/>
+				</p:column> 
+				<p:column style="width:160px;">&nbsp;
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+			<p:dataTable id="idMonthlyTicketSalesList" widgetVar="varMonthlyTicketSalesTable" value="#{monthlyTicketBean.lazyDMMonthlyTicket}" 
+				var="vo" paginator="true" rows="20" lazy="true"
+				paginatorTemplate="#{bterp:pageTemplate()}" rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+				rendered="#{not empty monthlyTicketBean.lazyDMMonthlyTicket}">
+				
+				<f:facet name="header">
+					<h:outputText value="#{monthlyTicketBean.searchParamVO.fromDate}">
+						<f:convertDateTime pattern="MMMMM yyyy"/>  
+					</h:outputText>
+					<h:outputText value=" Ticketing Sales Report (#{monthlyTicketBean.getSellerName(monthlyTicketBean.sellerID)} )" />
+				</f:facet>
+				<p:column>
+			        <f:facet name="header">
+			            <h:outputText value="No." />  
+			        </f:facet> 
+					<h:outputText value="#{vo.rowNumber}"/>
+				</p:column>
+				<p:column sortBy="#{vo.salesPerson}">
+			        <f:facet name="header">
+			            <h:outputText value="Sales Person" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.salesPerson}"/>
+				</p:column>
+				<p:column sortBy="#{vo.airlineNo}">
+			        <f:facet name="header">
+			            <h:outputText value="Airline No(s)" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.airlineNo}"/>
+				</p:column>
+				<p:column sortBy="#{vo.tourCode}" width="80">
+			        <f:facet name="header">
+			            <h:outputText value="Tour Code" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.tourCode}"/>
+				</p:column>
+				<!-- <p:column sortBy="#{vo.ticketNo}" width="130">
+			        <f:facet name="header">
+			            <h:outputText value="Ticket No(s)" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.ticketNo}"/>
+				</p:column> -->
+				<p:column sortBy="#{vo.referenceNoList}" width="140">
+			        <f:facet name="header">
+			            <h:outputText value="Reference No(s)" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.formatedReferenceNoList}" escape="false"/>
+				</p:column>
+				<p:column sortBy="#{vo.dtInvoice}" width="85">
+			        <f:facet name="header">
+			            <h:outputText value="Sales Date" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.dtInvoice}">
+						<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+					</h:outputText>
+				</p:column>
+ 				<p:column sortBy="#{vo.invoiceCode}" width = "85">
+			        <f:facet name="header">
+			            <h:outputText value="Invoice No." />  
+			        </f:facet> 
+<!--  					<h:outputText value="#{vo.invoiceCode}"/>
+ --> 					
+ 					<h:outputText  rendered="#{not empty vo.invoiceCode}" value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'invc').prefixid} #{vo.invoiceCode}"/>
+
+ 				</p:column> 
+  				<p:column sortBy="#{vo.psNo}">
+			        <f:facet name="header">
+			            <h:outputText value="Pax Statement No." />  
+			        </f:facet> 
+					<h:outputText rendered="#{not empty vo.psNo}" value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'pax_statement').prefixid} #{vo.psNo}"/>
+				</p:column>	 			
+										
+				<p:column sortBy="#{vo.totalPax}" width="30">
+			        <f:facet name="header">
+			            <h:outputText value="Pax" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.totalPax}"/>
+				</p:column>
+				<p:column sortBy="#{vo.customerName}" width="150">
+			        <f:facet name="header">
+			            <h:outputText value="Customer Name" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.customerName}" style="text-transform:uppercase;"/>
+				</p:column>
+				<p:column sortBy="#{vo.companyName}" width="150">
+			        <f:facet name="header">
+			            <h:outputText value="Company Name" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.companyName}"/>
+			        <f:facet name="footer" >
+	        			<h:outputText style="float: right; font-weight: bold;" value="Grand Total:"/>
+		        	</f:facet>
+				</p:column>
+				<p:column sortBy="#{vo.sellAmount}" styleClass="txt_right">
+			        <f:facet name="header">
+			            <h:outputText value="Sell" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.sellAmount}">
+						<f:convertNumber pattern="#,##0.00"/>
+		        	</h:outputText>
+			        <f:facet name="footer" styleClass="txt_right">
+		        		<h:outputText style="float: right; font-weight: bold;" value="#{monthlyTicketBean.grandTotalSell}">
+							<f:convertNumber pattern="#,##0.00"/>
+			        	</h:outputText>
+		        	</f:facet>
+				</p:column>
+				<p:column sortBy="#{vo.nettAmount}" styleClass="txt_right">
+			        <f:facet name="header">
+			            <h:outputText value="Nett" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.nettAmount}">
+						<f:convertNumber pattern="#,##0.00"/>
+		        	</h:outputText>
+			        <f:facet name="footer" styleClass="txt_right">
+		        		<h:outputText style="float: right; font-weight: bold;" value="#{monthlyTicketBean.grandTotalNett}">
+							<f:convertNumber pattern="#,##0.00"/>
+			        	</h:outputText>
+		        	</f:facet>
+				</p:column>
+				<p:column sortBy="#{vo.profitAmount}" styleClass="txt_right">
+			        <f:facet name="header">
+			            <h:outputText value="Profit" />  
+			        </f:facet> 
+					<h:outputText value="#{vo.profitAmount}">
+						<f:convertNumber pattern="#,##0.00"/>
+		        	</h:outputText>
+			        <f:facet name="footer" styleClass="txt_right">
+		        		<h:outputText style="float: right; font-weight: bold;" value="#{monthlyTicketBean.grandTotalSell - monthlyTicketBean.grandTotalNett}">
+							<f:convertNumber pattern="#,##0.00"/>
+			        	</h:outputText>
+		        	</f:facet>
+				</p:column>
+			</p:dataTable>
+			<p:panelGrid rendered="#{not empty monthlyTicketBean.lazyDMMonthlyTicket}">
+				<p:row>
+					<p:column>	
+						<!-- <h:commandLink value="Export Excel" styleClass="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ui-button-text" 
+												style="padding: .45em 1em;">  
+					  		<p:graphicImage value="/img/excel.png" width="16" height="12" />  
+		       				<p:dataExporter type="xls" target="idMonthlyTicketSalesList" fileName="#{monthlyTicketBean.exportFileName}" postProcessor="#{monthlyTicketBean.postProcessXLS}"/>  
+						</h:commandLink> -->
+			    
+			    		<p:commandButton icon="ui-icon-print" value="#{msg['common.button.label.print']} Excel" 
+	    					actionListener="#{monthlyTicketBean.printMonthlyTicketSalesReport('XLS')}" ajax="false" style="margin-left:10px"/>
+	    					
+	    				<p:commandButton icon="ui-icon-print" value="#{msg['common.button.label.print']} PDF" 
+	    					actionListener="#{monthlyTicketBean.printMonthlyTicketSalesReport('PDF')}" ajax="false" style="margin-left:10px"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</h:form>
+	</p:panel>
+	
+</ui:define>
+</ui:composition>

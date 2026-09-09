@@ -1,0 +1,1670 @@
+package com.bcs.zsg.acctreport.dao;
+
+import java.math.BigInteger;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Query;
+import org.hibernate.SQLQuery;
+import org.hibernate.Session;
+import org.hibernate.transform.Transformers;
+import org.hibernate.type.DateType;
+import org.hibernate.type.DoubleType;
+import org.hibernate.type.IntegerType;
+import org.hibernate.type.LongType;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.bank.vo.CashBookVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.maintenance.bo.AppSettingBO;
+import com.bcs.zsg.maintenance.helper.ConstantAppSetting;
+import com.bcs.zsg.maintenance.vo.AppSettingVO;
+import com.bcs.zsg.product.vo.TourThemeVO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+public class AccountReportDAOImpl extends BaseHibernateDAO implements AccountReportDAO {
+	
+	@Autowired
+	private AppSettingBO appSettingBO;
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getTourThemeList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TourThemeVO> getTourThemeList() throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		List<TourThemeVO> list = new ArrayList<TourThemeVO>();
+		
+		try {
+			
+			sb.append("select t.id, c.description as tourCatDesc, t.description as 'desc' ").
+			append("from tour_theme t, tour_cat c ").
+			append("where t.id_Parent is null and t.status_cd = :statusCd and c.status_cd = :statusCd ").
+				append("and t.id_tour_cat = c.id ").
+			append("order by c.id, t.seq, t.description ");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("id", LongType.INSTANCE);
+			query.addScalar("tourCatDesc");
+			query.addScalar("desc");
+			query.setParameter("statusCd", CommonConstant.STATUS_CD_ACTIVE);
+			query.setResultTransformer(Transformers.aliasToBean(TourThemeVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getCustomerListing(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CustomerVO> getCustomerListing(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		List<CustomerVO> list = new ArrayList<CustomerVO>();
+		
+		try {
+			sb.append("SELECT ").
+				append("custId, personId, salutation_cd, firstname, lastname, email, corporate, id_pc, pc_type_cd, ").
+				append("(SELECT GROUP_CONCAT(CONCAT(type_cd, ': ', number) separator ', ') FROM person_contact WHERE id_person = A.personId AND status_cd = 'A') AS 'perContacts', ").
+				append("(SELECT GROUP_CONCAT(CONCAT(type_cd, ': ', number) separator ', ') FROM corporate_contact WHERE id_corporate = A.id_corporate AND status_cd = 'A') AS 'corContacts', ").
+				//append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_identity WHERE id_person = A.personId AND status_cd = 'A') AS 'identities', ").
+				append("(SELECT CONCAT_WS(' ', ").
+				append("if(addr_1 = '', null, addr_1), if(addr_2 = '', null, addr_2), if(addr_3 = '', null, addr_3), ").
+				append("if(city = '', null, city), if(state = '', null, state), if(postcode = '', null, postcode), ").
+				append("if(c.name = '', null, c.name)) FROM person_address pa left join country c on c.id = pa.id_country WHERE id_person = A.personId AND pa.type_cd = 'bill') AS 'perAddress', ").
+				append("(SELECT CONCAT_WS(' ', ").
+				append("if(addr_1 = '', null, addr_1), if(addr_2 = '', null, addr_2), if(addr_3 = '', null, addr_3), ").
+				append("if(city = '', null, city), if(state = '', null, state), if(postcode = '', null, postcode), ").
+				append("if(c.name = '', null, c.name)) FROM corporate_address pa left join country c on c.id = pa.id_country WHERE id_corporate = A.id_corporate AND pa.type_cd = 'bill') AS 'corAddress', ").
+				append("corName, code, nickName ").
+				append("FROM (SELECT ").
+				append("c.id_corporate, c.status_cd, c.id AS 'custId', p.id  as personId, p.salutation_cd as salutation_cd, IFNULL(p.first_name, '') as firstname, IFNULL(p.last_name, '') as lastname, ").
+				append("p.nick_name as nickName, p.email as email, o.name AS 'corporate', c.id_pc, c.pc_type_cd, c.corporate_name AS 'corName', c.code AS 'code' ").
+				append("FROM customer c ").
+				append("left join person p on c.id_pc = p.id ").
+				append("left join corporate o on (c.pc_type_cd = 'C' AND c.id_corporate = o.id ) ").
+				append("WHERE id_company = :idCompany and status_cd = :statusCd ");
+				if (searchParamVO.getObj4() != null) {
+					sb.append("AND c.id = :idCustomer ");
+				}
+			sb.append(") A order by ");
+			if (StringUtils.isNotEmpty(searchParamVO.getObj7().toString())) {
+				if (searchParamVO.getObj7().toString().equals("CoN")) {
+					sb.append("corName ");
+				} else if (searchParamVO.getObj7().toString().equals("CuN")) {
+					sb.append("concat(lastname, ' ', firstname) ");
+				} else {
+					sb.append("cast(code as decimal) ");
+				}
+			} else {
+				sb.append("cast(code as decimal) ");
+			}
+			sb.append("asc ");
+			
+			Query query = createSQLQuery(sb.toString());
+			query.setParameter("idCompany", idCompany);
+			if (searchParamVO.getObj4() != null) {
+				query.setParameter("idCustomer", (Long) searchParamVO.getObj4());
+			}
+			query.setParameter("statusCd", CommonConstant.STATUS_CD_ACTIVE);
+			List<Object> objList = query.list();
+			
+			if (CollectionUtils.isNotEmpty(objList)) {
+				for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+					Object[] row = (Object[]) it.next();
+					CustomerVO vo = new CustomerVO();
+					vo.setId(((BigInteger) row[0]).longValue()); 
+					vo.setPersonId(((BigInteger) row[1]).longValue());
+					vo.setSalutationCd((String) row[2]);
+					vo.setFirstName((String) row[3]);
+					vo.setLastName((String) row[4]);
+					vo.setCustName(vo.getSalutationCd().toUpperCase() + " " + vo.getLastName() + " " + vo.getFirstName());
+					vo.setEmail((String) row[5]);
+					vo.setCorporate((String) row[6]);
+					vo.setPersCorpId(((BigInteger) row[7]).longValue());
+					vo.setPcTypeCd((String) row[8]);
+					vo.setPerContacts((String) row[9]);
+					vo.setCorContacts((String) row[10]);
+					if (vo.getPerContacts() == null && vo.getCorContacts() != null) vo.setPerContacts(vo.getCorContacts());
+					else if (vo.getPerContacts() != null && vo.getCorContacts() != null) vo.setPerContacts(vo.getPerContacts() + "," + vo.getCorContacts());
+					if (vo.getPerContacts() != null) {
+						vo.setPerContacts(vo.getPerContacts().replace("mobile", LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "mobile"))
+							.replace("office",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "office"))
+							.replace("home",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "home"))
+							.replace("fax",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "fax")));
+					}
+					if (StringUtils.isEmpty(vo.getEmail())) {
+						vo.setEmail(vo.getPerContacts());
+					} else if (StringUtils.isEmpty(vo.getPerContacts())) {
+						
+					} else {
+						vo.setEmail(vo.getEmail() + ", " + vo.getPerContacts());
+					}
+					vo.setPerAddress((String) row[11]);
+					vo.setCorAddress((String) row[12]);
+					if(vo.getPcTypeCd().equals("C")) {
+						vo.setPerAddress(vo.getCorAddress());
+					}
+					vo.setCorporateName((String) row[13]);
+					vo.setCode((String) row[14]);
+					vo.setNickName((String) row[15]);
+					list.add(vo);
+				}
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+		
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getCustomerPaymentHistory(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getCustomerPaymentHistory(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		List<InvoiceVO> list = new ArrayList<InvoiceVO>();
+		
+		try {
+//			sb.append("select ").
+//				append("iv.doc_type_cd as docTypeCd, c.code as custCd, ").
+//				append("if (c.pc_type_cd = 'C', c.corporate_name, concat(UPPER(c.salutation_cd), ' ', c.last_name, ' ', c.first_name)) as custName, ").
+//				append("concat(if(iv.doc_type_cd = 'C', 'CN', ''), iv.code) as code, ").
+//				append("if (iv.doc_type_cd = 'C', ifnull(cn.cnTourCd, ''), ifnull(tdp.code, '')) as tourCd, ").
+//				append("iv.dt_inv as invoiceDt, ").
+//				append("case when iv.doc_type_cd in ('I','P') and iv.doc_type_status not in ('CV','SP') and cb.id_inv_pmnt is not null then cb.dt_trans else ip.dt_pmnt end as departureDt, ").
+//				append("ip.code as orderCd, ").
+//				append("ip.ref_no as reason, ").
+//				append("if(iv.doc_type_cd = 'C', -1 * ip.amount, ip.amount) as amount ").
+//			append("from invoice iv left join tour_dep tdp on iv.id_tour_dep=tdp.id ").
+//				append("left join (select i.code as inv_no, t.code as cnTourCd from invoice i left join tour_dep t on i.id_tour_dep = t.id where i.id_company = :idCompany and i.doc_type_cd in ('I','P') and i.doc_type_status not in ('CV','SP')) cn on iv.cn_inv_no = cn.inv_no, ").
+//				append("(select cm.id, cm.code, cm.pc_type_cd, cm.corporate_name, ps.salutation_cd, ps.last_name, ps.first_name from customer cm, person ps where cm.id_pc=ps.id) c, ").
+//				append("invoice_pmnt ip left join (select id_inv_pmnt, dt_trans from inv_pmnt_cashbook_link cbl, cash_book cash where cbl.id_cash_book = cash.id and cbl.status_cd = :statusCd) cb on ip.id = cb.id_inv_pmnt ").
+//			append("where iv.id_company = :idCompany and iv.id_customer = c.id and iv.id = ip.id_inv and ip.status_cd = :statusCd and ").
+//				append("iv.status_cd != :statusCdCC and iv.status_cd != :statusCdVD ");
+//				if (searchParamVO.getObj2() != null) sb.append("and date(iv.dt_inv) >= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+//				if (searchParamVO.getObj3() != null) sb.append("and date(iv.dt_inv) <= date('" + sdf.format((Date)searchParamVO.getObj3()) + "') ");
+//				if (searchParamVO.getObj4() != null) sb.append("and case when iv.doc_type_cd = 'C' then 1=1 else date(iv.dt_departure) >= date('" + sdf.format((Date)searchParamVO.getObj4()) + "') end ");
+//				if (searchParamVO.getObj5() != null) sb.append("and case when iv.doc_type_cd = 'C' then 1=1 else date(iv.dt_departure) <= date('" + sdf.format((Date)searchParamVO.getObj5()) + "') end ");
+//				//if (searchParamVO.getObj4() != null) sb.append("and date(iv.dt_departure) >= date('" + sdf.format((Date)searchParamVO.getObj4()) + "') ");
+//				//if (searchParamVO.getObj5() != null) sb.append("and date(iv.dt_departure) <= date('" + sdf.format((Date)searchParamVO.getObj5()) + "') ");
+//				if (searchParamVO.getObj6() != null) sb.append("and iv.id_customer = " + (Long) searchParamVO.getObj6() + " ");
+//			sb.append("order by cast(c.code as decimal) ");
+			
+			sb.append("select ").
+				append("iv.doc_type_cd as docTypeCd, c.code as custCd, ").
+				append("if (c.pc_type_cd = 'C', c.corporate_name, concat(UPPER(c.salutation_cd), ' ', c.last_name, ' ', c.first_name)) as custName, ").
+				append("case when iv.doc_type_cd = 'C' then concat('CN', iv.code) when iv.doc_type_cd = 'P' then concat('PS', iv.ps_no) else iv.code end as code, ").
+				append("case when iv.doc_type_cd = 'C' then if (ifnull(cn_iv.tourCd, '') != '', ifnull(cn_iv.tourCd, ''), cn_ps.tourCd) else ifnull(tdp.code, '') end as tourCd, ").
+				append("iv.dt_inv as invoiceDt, ").
+				append("if (cb.dt_trans is not null, cb.dt_trans, ip.dt_pmnt) as departureDt, ").
+				append("ip.code as orderCd, ").
+				append("ip.ref_no as reason, ").
+				append("if(iv.doc_type_cd = 'C', -1 * ip.amount, ip.amount) as amount, ").
+				append("if(ip.amount != final.amount, final.docNo, '') as refNo, ").
+				append("if(ip.amount != final.amount, final.amount, null) as amtPaid ").
+			append("from invoice iv left join tour_dep tdp on iv.id_tour_dep=tdp.id ").
+				append("left join ( "). // CN refer Invoice
+					append("select i.code as invNo, t.code as tourCd, i.ps_no as psNo ").
+					append("from invoice i left join tour_dep t on i.id_tour_dep = t.id ").
+					append("where i.id_company = :idCompany and i.doc_type_cd = 'I' ").
+				append(") cn_iv on iv.doc_type_cd = 'C' and iv.cn_inv_no = cn_iv.invNo ").
+				append("left join ( "). // CN refer PS
+					append("select i.code as invNo, t.code as tourCd, ps_no as psNo ").
+					append("from invoice i left join tour_dep t on i.id_tour_dep = t.id ").
+					append("where i.id_company = :idCompany and (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') not in ('CV','SP','CL')) ").
+				append(") cn_ps on iv.doc_type_cd = 'C' and iv.cn_ps_no = cn_ps.psNo, ").
+				append("(select cm.id, cm.code, cm.pc_type_cd, cm.corporate_name, ps.salutation_cd, ps.last_name, ps.first_name from customer cm, person ps where cm.id_pc=ps.id) c, ").
+				append("invoice_pmnt ip ").
+				append("left join invoice_pmnt parent on ip.id_parent_pmnt is not null and ip.id_parent_pmnt = parent.id ").
+				append("left join inv_pmnt_cashbook_link link on link.status_cd = :statusCd and  ").
+					append("(case when parent.id_parent_pmnt is not null then parent.id_parent_pmnt when ip.id_parent_pmnt is not null then ip.id_parent_pmnt else ip.id end) = link.id_inv_pmnt ").
+				append("left join cash_book cb on cb.status_cd = :statusCd and link.id_cash_book = cb.id ").
+				append("left join ( ").
+						append("select ip.id, if(i.doc_type_cd = 'P', concat('PS', i.ps_no), i.code) as docNo, ip.amount from invoice i, invoice_pmnt ip where i.id = ip.id_inv and i.doc_type_cd in ('I', 'P') ").
+				append(") final on (case when parent.id_parent_pmnt is not null then parent.id_parent_pmnt when ip.id_parent_pmnt is not null then ip.id_parent_pmnt else ip.id end) = final.id ").
+			append("where iv.id_company = :idCompany and iv.id_customer = c.id and iv.id = ip.id_inv and ip.status_cd = :statusCd and ").
+				append("iv.status_cd != :statusCdCC and iv.status_cd != :statusCdVD ").
+				append("and (iv.doc_type_cd = 'I' OR iv.doc_type_cd = 'C' or (iv.doc_type_cd = 'P' and ifnull(iv.doc_type_status, '') not in ('CV','SP','CL'))) ");
+				if (searchParamVO.getObj2() != null) sb.append("and date(iv.dt_inv) >= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+				if (searchParamVO.getObj3() != null) sb.append("and date(iv.dt_inv) <= date('" + sdf.format((Date)searchParamVO.getObj3()) + "') ");
+				if (searchParamVO.getObj4() != null) sb.append("and case when iv.doc_type_cd = 'C' then 1=1 else date(iv.dt_departure) >= date('" + sdf.format((Date)searchParamVO.getObj4()) + "') end ");
+				if (searchParamVO.getObj5() != null) sb.append("and case when iv.doc_type_cd = 'C' then 1=1 else date(iv.dt_departure) <= date('" + sdf.format((Date)searchParamVO.getObj5()) + "') end ");
+				//if (searchParamVO.getObj4() != null) sb.append("and date(iv.dt_departure) >= date('" + sdf.format((Date)searchParamVO.getObj4()) + "') ");
+				//if (searchParamVO.getObj5() != null) sb.append("and date(iv.dt_departure) <= date('" + sdf.format((Date)searchParamVO.getObj5()) + "') ");
+				if (searchParamVO.getObj6() != null) sb.append("and iv.id_customer = " + (Long) searchParamVO.getObj6() + " ");
+			sb.append("order by cast(c.code as decimal) ");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("custCd");
+			query.addScalar("docTypeCd");
+			query.addScalar("custName");
+			query.addScalar("code");
+			query.addScalar("tourCd");
+			query.addScalar("invoiceDt", DateType.INSTANCE);
+			query.addScalar("departureDt", DateType.INSTANCE);
+			query.addScalar("orderCd");
+			query.addScalar("reason");
+			query.addScalar("amount", DoubleType.INSTANCE);
+			query.addScalar("refNo");
+			query.addScalar("amtPaid", DoubleType.INSTANCE);
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			query.setResultTransformer(Transformers.aliasToBean(InvoiceVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getInvSalesPersonByMonth(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvSalesPersonByMonth(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		List<InvoiceVO> list = new ArrayList<InvoiceVO>();
+		
+		AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_POS_CONFIG_GL_ACCT_TO_EXCLUDE);
+		
+		try {
+			sb.append("SELECT a.salerId, a.salerName, a.invoiceDt, a.code, a.tourCd, a.departureDt, ");
+			sb.append("IF(doc_type_cd = 'C', IF(id_tour_booking IS NOT NULL, numOfPax, IF(raw_reference_iv_amt != raw_iv_amt, 0, -1) * numOfPax), numOfPax) AS numOfPax, ");
+			if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+				sb.append("IF(count_acct_not_exclude > 0, a.amount - amt_dep, 0.00) * IF(a.doc_type_cd = 'C', -1, 1) AS amount, ");
+				sb.append("IF(count_acct_not_exclude > 0, a.amtPaid - amt_dep, 0.00) * IF(a.doc_type_cd = 'C', -1, 1) AS amtPaid, ");
+				sb.append("IF(count_acct_not_exclude > 0, balance, 0.00) AS balance ");
+			} else {
+				sb.append("a.amount * IF(a.doc_type_cd = 'C', -1, 1) AS amount, a.amtPaid * IF(a.doc_type_cd = 'C', -1, 1) AS amtPaid, ");
+				sb.append("balance ");
+			}
+			sb.append("FROM ( ");
+				sb.append("select ").
+					append("iv.id_saler as salerId, ").
+					append("usr.user_name as salerName, ").
+					append("iv.dt_inv as invoiceDt, ").
+					append("concat(if(iv.doc_type_cd = 'C', 'CN', ''), iv.code) as code, ").
+					append("ifnull(tdp.code, '') as tourCd, ").
+					append("iv.dt_departure as departureDt, ").
+					append("cn_iv.id_tour_booking, ").
+					append("IF(iv.doc_type_cd = 'C', IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.amount >= 0 AND inv_item.status_cd = 'A' AND inv_item.id_inv = cn_iv.id), 0), 0) AS raw_reference_iv_amt, ").
+					append("IF(iv.doc_type_cd = 'C', IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.amount >= 0 AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id), 0), 0) AS raw_iv_amt, ").
+					append("IF(iv.doc_type_cd = 'C', (IFNULL(pa.numPax, 0) * ").
+						append("IF((SELECT id_credit_note FROM invoice_pmnt pmnt WHERE pmnt.id_inv = cn_iv.id AND pmnt.status_cd = 'A' AND pmnt_type_cd = 'credit_note' ORDER BY id DESC LIMIT 1) = iv.id, ").
+						append("IF(tb.status_cd = 'CC' || tb.status_cd = 'VD', -1, 0), 0) ").
+					append("), IFNULL(pa.numPax, 0)) AS numOfPax, ").
+					append("iv.amount as amount, ").
+					append("SUM(ifnull(p.amount, 0)) as amtPaid, ").
+					append("ifnull(cn_p.amount, 0) as refInvAmtPaid, ").
+					append("iv.balance as balance ");
+					if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+						sb.append(", iv.doc_type_cd AS doc_type_cd ");
+						sb.append(", IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.id_acct IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id), 0) AS amt_dep ");
+						sb.append(", (SELECT COUNT(id) FROM invoice_item inv_item WHERE inv_item.id_acct NOT IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id) AS count_acct_not_exclude ");
+					}
+				sb.append("from invoice iv ").
+					append("left join invoice cn_iv on cn_iv.code = iv.cn_inv_no ").
+					append("left join tour_booking tb ON tb.id = cn_iv.id_tour_booking ").
+					append("left join tour_dep tdp on IFNULL(iv.id_tour_dep, cn_iv.id_tour_dep)=tdp.id ").
+					append("left join (select pax.id_inv, count(*) as numPax from invoice_pax pax where pax.status_cd = :statusCd group by pax.id_inv) pa on IF(iv.doc_type_cd = 'C',  cn_iv.id, iv.id)= pa.id_inv AND IF(iv.cat_cd = 'to', (CASE WHEN iv.id_tour_booking IS NOT NULL THEN true ELSE false END), true) ").
+					append("left join invoice_pmnt p ON iv.id = p.id_inv AND p.status_cd = :statusCd ").
+					append("left join (select pmnt.id_inv, sum(pmnt.amount) as amount from invoice_pmnt pmnt where pmnt.status_cd = :statusCd group by pmnt.id_inv) cn_p ON cn_iv.id = cn_p.id_inv AND cn_iv.id IS NOT NULL, ").
+					append("employee ep, sec_user usr ").
+				append("where iv.id_company = :idCompany and ").
+					append("iv.status_cd != :statusCdCC and iv.status_cd != :statusCdVD and iv.id_saler=ep.id and ").
+					append("ep.u_sec_user=usr.uuid ");
+					if (searchParamVO.getObj2() != null) sb.append("and date(iv.dt_inv) >= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+					if (searchParamVO.getObj3() != null) sb.append("and date(iv.dt_inv) <= date('" + sdf.format((Date)searchParamVO.getObj3()) + "') ");
+					if (searchParamVO.getObj6() != null) sb.append("and tdp.id = " + searchParamVO.getObj6() + " ");
+					if (searchParamVO.getObj7() != null) sb.append("and iv.id_saler = " + searchParamVO.getObj7() + " ");
+			sb.append(" GROUP BY iv.id ) a ");
+			sb.append("order by a.invoiceDt, a.code ");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("salerId", LongType.INSTANCE);
+			query.addScalar("salerName");
+			query.addScalar("invoiceDt", DateType.INSTANCE);
+			query.addScalar("code");
+			query.addScalar("tourCd");
+			query.addScalar("departureDt", DateType.INSTANCE);
+			query.addScalar("numOfPax", IntegerType.INSTANCE);
+			query.addScalar("amount", DoubleType.INSTANCE);
+			query.addScalar("amtPaid", DoubleType.INSTANCE);
+			query.addScalar("balance", DoubleType.INSTANCE);
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+				List<String> excludeAcctList = Arrays.asList(appSettingVO.getValue().split(","));
+				query.setParameterList("excludeAcct", excludeAcctList);
+			}
+			query.setResultTransformer(Transformers.aliasToBean(InvoiceVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getInvCountryByMonth(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvCountryByMonth(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		List<InvoiceVO> list = new ArrayList<InvoiceVO>();
+		
+		AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_POS_CONFIG_GL_ACCT_TO_EXCLUDE);
+		
+		try {
+			sb.append("SELECT a.region, a.salerId, a.salerName, a.invoiceDt, a.doc_type_cd, a.code, a.tourCd, a.departureDt, ");
+			sb.append("IF(doc_type_cd = 'C', IF(id_tour_booking IS NOT NULL, numOfPax, IF(raw_reference_iv_amt != raw_iv_amt, 0, -1) * numOfPax), numOfPax) AS numOfPax, ");
+			if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+				sb.append("IF(count_acct_not_exclude > 0, a.amount - amt_dep, 0.00) * IF(a.doc_type_cd = 'C', -1, 1) AS amount, ");
+				sb.append("IF(count_acct_not_exclude > 0, a.amtPaid - amt_dep, 0.00) * IF(a.doc_type_cd = 'C', -1, 1) AS amtPaid, ");
+				sb.append("IF(count_acct_not_exclude > 0, balance, 0.00) AS balance ");
+			} else {
+				sb.append("a.amount * IF(a.doc_type_cd = 'C', -1, 1) AS amount, a.amtPaid * IF(a.doc_type_cd = 'C', -1, 1) AS amtPaid, ");
+				sb.append("balance ");
+			}
+			sb.append("FROM ( ");
+				sb.append("select ").
+					append("tdp.region, ").
+					append("iv.id_saler as salerId, ").
+					append("usr.user_name as salerName, ").
+					append("iv.dt_inv as invoiceDt, ").
+					append("concat(if(iv.doc_type_cd = 'C', 'CN', ''), iv.code) as code, ").
+					append("ifnull(tdp.code, '') as tourCd, ").
+					append("iv.dt_departure as departureDt, ").
+					append("cn_iv.id_tour_booking, ").
+					append("IF(iv.doc_type_cd = 'C', IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.amount >= 0 AND inv_item.status_cd = 'A' AND inv_item.id_inv = cn_iv.id), 0), 0) AS raw_reference_iv_amt, ").
+					append("IF(iv.doc_type_cd = 'C', IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.amount >= 0 AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id), 0), 0) AS raw_iv_amt, ").
+					append("IF(iv.doc_type_cd = 'C', (IFNULL(pa.numPax, 0) * ").
+						append("IF((SELECT id_credit_note FROM invoice_pmnt pmnt WHERE pmnt.id_inv = cn_iv.id AND pmnt.status_cd = 'A' AND pmnt_type_cd = 'credit_note' ORDER BY id DESC LIMIT 1) = iv.id, ").
+						append("IF(tb.status_cd = 'CC' || tb.status_cd = 'VD', -1, 0), 0) ").
+					append("), IFNULL(pa.numPax, 0)) AS numOfPax, ").
+					append("iv.amount, ").
+					append("SUM(ifnull(p.amount, 0)) as amtPaid, ").
+					append("iv.balance as balance ");
+					if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+						sb.append(", iv.doc_type_cd AS doc_type_cd ");
+						sb.append(", IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.id_acct IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id), 0) AS amt_dep ");
+						sb.append(", (SELECT COUNT(id) FROM invoice_item inv_item WHERE inv_item.id_acct NOT IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id) AS count_acct_not_exclude ");
+					}
+				sb.append("from invoice iv ").
+					append("left join invoice cn_iv on cn_iv.code = iv.cn_inv_no ").
+					append("left join tour_booking tb ON tb.id = cn_iv.id_tour_booking ").
+					append("left join (select pax.id_inv, count(*) as numPax from invoice_pax pax where pax.status_cd = :statusCd group by pax.id_inv) pa on IF(iv.doc_type_cd = 'C',  cn_iv.id, iv.id)= pa.id_inv AND IF(iv.cat_cd = 'to', (CASE WHEN iv.id_tour_booking IS NOT NULL THEN true ELSE false END), true) ").
+					append("left join invoice_pmnt p ON iv.id = p.id_inv AND p.status_cd = :statusCd ").
+					append("left join (select pmnt.id_inv, sum(pmnt.amount) as amount from invoice_pmnt pmnt where pmnt.status_cd = :statusCd group by pmnt.id_inv) cn_p ON cn_iv.id = cn_p.id_inv AND cn_iv.id IS NOT NULL, ").
+					append("employee ep, sec_user usr, ").
+					append("( ").
+						append("select d.id, d.code, concat(c.description, ' - ', t.description) as 'region' ").
+						append("from tour_theme t, tour_cat c, tour_pkg p, tour_dep d ").
+						append("where t.id_parent is not null and p.type_cd = 'TOUR' ").
+							append("and t.id_tour_cat = c.id ").
+							append("and p.id_tour_theme = t.id ").
+							append("and d.id_tour_pkg = p.id ");
+							if (searchParamVO.getObj6() != null) sb.append("and tdp.id_parent in (" + searchParamVO.getObj6() + ") ");
+					sb.append(") tdp ").
+				append("where iv.id_company = :idCompany and ").
+					append("iv.status_cd != :statusCdCC and iv.status_cd != :statusCdVD and iv.id_saler = ep.id and ").
+					append("ep.u_sec_user = usr.uuid and IFNULL(iv.id_tour_dep, cn_iv.id_tour_dep) = tdp.id ");
+					if (searchParamVO.getObj2() != null) sb.append("and date(iv.dt_inv) >= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+					if (searchParamVO.getObj3() != null) sb.append("and date(iv.dt_inv) <= date('" + sdf.format((Date)searchParamVO.getObj3()) + "') ");
+			sb.append(" GROUP BY iv.id ) a ");
+			sb.append("order by a.region, a.invoiceDt, a.code ");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("region");
+			query.addScalar("salerId", LongType.INSTANCE);
+			query.addScalar("salerName");
+			query.addScalar("invoiceDt", DateType.INSTANCE);
+			query.addScalar("code");
+			query.addScalar("tourCd");
+			query.addScalar("departureDt", DateType.INSTANCE);
+			query.addScalar("numOfPax", IntegerType.INSTANCE);
+			query.addScalar("amount", DoubleType.INSTANCE);
+			query.addScalar("amtPaid", DoubleType.INSTANCE);
+			query.addScalar("balance", DoubleType.INSTANCE);
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+				List<String> excludeAcctList = Arrays.asList(appSettingVO.getValue().split(","));
+				query.setParameterList("excludeAcct", excludeAcctList);
+			}
+			query.setResultTransformer(Transformers.aliasToBean(InvoiceVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getCreditNoteList(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getCreditNoteList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		List<InvoiceVO> list = new ArrayList<InvoiceVO>();
+		
+		try {
+			sb.append("select ").
+				append("c.code as custCd, ").
+				append("if (c.pc_type_cd = 'C', c.corporate_name, concat(UPPER(c.salutation_cd), ' ', c.last_name, ' ', c.first_name)) as custName, ").
+				append("iv.code as code, ").
+//				append("ifnull(cn.cnTourCd, '') as tourCd, ").
+//				append("cn.inv_no as cnInvNo, ").
+//				append("if (ifnull(cn_iv.tourCd, '') != '', ifnull(cn_iv.tourCd, ''), cn_ps.tourCd) as tourCd, ").
+				append("ifnull(td.code, '') AS tourCd, ").
+				append("CONCAT_WS(' / ', concat(iv.cn_inv_no), concat('PS', iv.cn_ps_no)) AS cnInvNo, ").
+				append("iv.dt_inv as invoiceDt, ").
+				append("iv.amount ").
+			append("from invoice iv ").
+//				append("left join (select i.code as inv_no, t.code as cnTourCd from invoice i left join tour_dep t on i.id_tour_dep = t.id where i.id_company = :idCompany and i.doc_type_cd in ('I','P') and i.doc_type_status not in ('CV','SP')) cn on iv.cn_inv_no = cn.inv_no, ").
+//				append("left join ( "). // Invoice
+//					append("select i.code as invNo, t.code as tourCd, i.ps_no as psNo ").
+//					append("from invoice i left join tour_dep t on i.id_tour_dep = t.id ").
+//					append("where i.id_company = :idCompany and i.doc_type_cd = 'I' ").
+//				append(") cn_iv on iv.doc_type_cd = 'C' and iv.cn_inv_no = cn_iv.invNo ").
+//				append("left join ( "). // PS
+//					append("select i.code as invNo, t.code as tourCd, ps_no as psNo ").
+//					append("from invoice i left join tour_dep t on i.id_tour_dep = t.id ").
+//					append("where i.id_company = :idCompany and (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') not in ('CV','SP', 'CL')) ").
+//				append(") cn_ps on iv.doc_type_cd = 'C' and iv.cn_ps_no = cn_ps.psNo, ").
+			append("LEFT JOIN invoice cn_iv ").
+				append("ON iv.id_company = cn_iv.id_company AND iv.doc_type_cd = 'C' AND iv.cn_inv_no IS NOT NULL AND cn_iv.code = iv.cn_inv_no AND cn_iv.doc_type_cd = 'I' ").
+			append("LEFT JOIN invoice cn_ps ");
+				sb.append("ON iv.id_company = cn_ps.id_company AND iv.doc_type_cd = 'C' AND iv.cn_ps_no IS NOT NULL AND cn_ps.ps_no = iv.cn_ps_no AND cn_ps.doc_type_cd = 'P' ").
+			append("LEFT JOIN tour_dep td ON td.id = ifnull(cn_iv.id_tour_dep, cn_ps.id_tour_dep), ").
+				append("(select cm.id, cm.code, cm.pc_type_cd, cm.corporate_name, ps.salutation_cd, ps.last_name, ps.first_name from customer cm, person ps where cm.id_pc=ps.id) c ").
+			append("where iv.id_company = :idCompany and iv.id_customer = c.id and iv.doc_type_cd = 'C' and ").
+				append("iv.status_cd != :statusCdCC and iv.status_cd != :statusCdVD ");
+			if (searchParamVO.getObj2() != null) sb.append("and date(iv.dt_inv) >= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+			if (searchParamVO.getObj3() != null) sb.append("and date(iv.dt_inv) <= date('" + sdf.format((Date)searchParamVO.getObj3()) + "') ");
+			sb.append("order by cast(iv.code as decimal) ");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("custCd");
+			query.addScalar("custName");
+			query.addScalar("code");
+			query.addScalar("tourCd");
+			query.addScalar("cnInvNo");
+			query.addScalar("invoiceDt", DateType.INSTANCE);
+			query.addScalar("amount", DoubleType.INSTANCE);
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			query.setResultTransformer(Transformers.aliasToBean(InvoiceVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getCustomerPaymentHistory(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderBillVO> getBillDetailBySupplier(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		List<ExOrderBillVO> list = new ArrayList<ExOrderBillVO>();
+		
+		// Obj7 is condition to show GL Code in report
+		try {
+			sb.append("SELECT b.dt_bill as billDt, b.code as code, b.cn_no as cnNumber, b.bill_amt as billAmt, b.amt_paid as amtPaid, ").
+				append("b.ex_reason as exReason, d.code as tourCode, d.dt_dep as depDt, s.id as supplierId, s.sys_no as eoCode, c.name as supplierName ");
+			if (searchParamVO.getObj7() != null) sb.append(", gl_code as chequeNo ");
+			sb.append("FROM ex_order_bill b ").
+				append("LEFT JOIN supplier s on s.id = b.id_supplier ").
+				append("LEFT JOIN person p on p.id = s.id_person ").
+				append("LEFT JOIN corporate c on c.id_person = p.id ").
+				append("LEFT JOIN tour_dep d on d.id = b.id_tour_dep ");
+			if (searchParamVO.getObj7() != null) {
+				sb.append("LEFT JOIN ( ").
+					append("SELECT t.sys_no, GROUP_CONCAT(DISTINCT if(a.sub_code != '', CONCAT(a.code, '-', a.sub_code), a.code) SEPARATOR ', ') as gl_code ").
+					append("from account_trans t left join account a on a.id = t.id_acct ").
+					append("where t.id_company = :idCompany and t.sys_cd = 'purc_bill' and t.status_cd = 'A' and t.id_ref is not null ").
+					append("group by t.sys_cd, t.sys_no ").
+				append(") a on a.sys_no = b.code ");
+			}
+			sb.append("WHERE ").
+				append("b.id_company = :idCompany ");
+			if (searchParamVO.getObj2() != null) sb.append("and date(b.dt_bill) >= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+			if (searchParamVO.getObj3() != null) sb.append("and date(b.dt_bill) <= date('" + sdf.format((Date)searchParamVO.getObj3()) + "') ");
+			if (searchParamVO.getObj4() != null) sb.append("and date(d.dt_dep) >= date('" + sdf.format((Date)searchParamVO.getObj4()) + "') ");
+			if (searchParamVO.getObj5() != null) sb.append("and date(d.dt_dep) <= date('" + sdf.format((Date)searchParamVO.getObj5()) + "') ");
+			if (searchParamVO.getObj6() != null) sb.append("and b.id_supplier = :supplierId ");
+				sb.append("and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+			append("order by cast(s.sys_no as decimal), cast(b.code as decimal)");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("billDt", DateType.INSTANCE);
+			query.addScalar("code");
+			query.addScalar("cnNumber");
+			query.addScalar("billAmt", DoubleType.INSTANCE);
+			query.addScalar("amtPaid", DoubleType.INSTANCE);
+			query.addScalar("exReason");
+			query.addScalar("tourCode");
+			query.addScalar("depDt", DateType.INSTANCE);
+			query.addScalar("supplierId", LongType.INSTANCE);
+			query.addScalar("eoCode");
+			query.addScalar("supplierName");
+			if (searchParamVO.getObj7() != null) query.addScalar("chequeNo");
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			if (searchParamVO.getObj6() != null) {
+				query.setParameter("supplierId", (Long) searchParamVO.getObj6());
+			}
+			query.setResultTransformer(Transformers.aliasToBean(ExOrderBillVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getCustomerPaymentHistory(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderBillVO> getBillUnpaidDetailBySupplier(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		List<ExOrderBillVO> list = new ArrayList<ExOrderBillVO>();
+		
+		// Obj7 is condition to show GL Code in report
+		try {
+			sb.append("SELECT b.dt_bill as billDt, b.code as code, b.cn_no as cnNumber, b.bill_amt as billAmt, b.amt_paid as amtPaid, b.bill_amt - b.amt_paid as curBal, ").
+				append("b.ex_reason as exReason, d.code as tourCode, d.dt_dep as depDt, s.id as supplierId, s.sys_no as eoCode, c.name as supplierName ");
+			if (searchParamVO.getObj7() != null) sb.append(", gl_code as chequeNo ");
+			sb.append("FROM ex_order_bill b ").
+				append("LEFT JOIN supplier s on s.id = b.id_supplier ").
+				append("LEFT JOIN person p on p.id = s.id_person ").
+				append("LEFT JOIN corporate c on c.id_person = p.id ").
+				append("LEFT JOIN tour_dep d on d.id = b.id_tour_dep ");
+			if (searchParamVO.getObj7() != null) {
+				sb.append("LEFT JOIN ( ").
+					append("SELECT t.sys_no, GROUP_CONCAT(DISTINCT if(a.sub_code != '', CONCAT(a.code, '-', a.sub_code), a.code) SEPARATOR ', ') as gl_code ").
+					append("from account_trans t left join account a on a.id = t.id_acct ").
+					append("where t.id_company = :idCompany and t.sys_cd = 'purc_bill' and t.status_cd = 'A' and t.id_ref is not null ").
+					append("group by t.sys_cd, t.sys_no ").
+				append(") a on a.sys_no = b.code ");
+			}
+			sb.append("WHERE ").
+				append("b.id_company = :idCompany ");
+			if (searchParamVO.getObj2() != null) sb.append("and date(b.dt_bill) >= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+			if (searchParamVO.getObj3() != null) sb.append("and date(b.dt_bill) <= date('" + sdf.format((Date)searchParamVO.getObj3()) + "') ");
+			if (searchParamVO.getObj4() != null) sb.append("and date(d.dt_dep) >= date('" + sdf.format((Date)searchParamVO.getObj4()) + "') ");
+			if (searchParamVO.getObj5() != null) sb.append("and date(d.dt_dep) <= date('" + sdf.format((Date)searchParamVO.getObj5()) + "') ");
+			if (searchParamVO.getObj6() != null) sb.append("and b.id_supplier = :supplierId ");
+				sb.append("and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+			append("order by cast(s.sys_no as decimal), cast(b.code as decimal)");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("billDt", DateType.INSTANCE);
+			query.addScalar("code");
+			query.addScalar("cnNumber");
+			query.addScalar("billAmt", DoubleType.INSTANCE);
+			query.addScalar("amtPaid", DoubleType.INSTANCE);
+			query.addScalar("curBal", DoubleType.INSTANCE);
+			query.addScalar("exReason");
+			query.addScalar("tourCode");
+			query.addScalar("depDt", DateType.INSTANCE);
+			query.addScalar("supplierId", LongType.INSTANCE);
+			query.addScalar("eoCode");
+			query.addScalar("supplierName");
+			if (searchParamVO.getObj7() != null) query.addScalar("chequeNo");
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			if (searchParamVO.getObj6() != null) {
+				query.setParameter("supplierId", (Long) searchParamVO.getObj6());
+			}
+			query.setResultTransformer(Transformers.aliasToBean(ExOrderBillVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getSupplierList(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<SupplierVO> getSupplierList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		List<SupplierVO> list = new ArrayList<SupplierVO>();
+		
+		try {
+			sb.append("SELECT ").
+				append("sys_no, salutation_cd, firstname, lastname, email, corporate, ").
+				append("(SELECT GROUP_CONCAT(CONCAT(type_cd, ': ', number) separator ', ') FROM corporate_contact WHERE id_corporate = A.id_corporate AND status_cd = :statusCd) AS 'corContacts', ").
+				append("(SELECT CONCAT_WS(' ', ").
+				append("if(addr_1 = '', null, addr_1), if(addr_2 = '', null, addr_2), if(addr_3 = '', null, addr_3), ").
+				append("if(city = '', null, city), if(state = '', null, state), if(postcode = '', null, postcode), ").
+				append("if(c.name = '', null, c.name)) FROM corporate_address pa left join country c on c.id = pa.id_country WHERE id_corporate = A.id_corporate) AS 'corAddress' ").
+			append("FROM (SELECT ").
+				append("o.id as id_corporate, s.sys_no, ").
+				append("p.salutation_cd as salutation_cd, IFNULL(p.first_name, '') as firstname, IFNULL(p.last_name, '') as lastname, ").
+				append("p.email as email, o.name AS 'corporate' ").
+				append("FROM supplier s ").
+				append("left join person p on s.id_person = p.id ").
+				append("left join corporate o on o.id_person = p.id ").
+				append("WHERE s.id_company = :idCompany and s.status_cd = :statusCd ");
+			if (searchParamVO.getObj4() != null) {
+				sb.append("AND s.type_cd = '" + ((String) searchParamVO.getObj4()) + "' ");
+			}
+			sb.append(") A order by ");
+			if (StringUtils.isNotEmpty(searchParamVO.getObj7().toString())) {
+				if (searchParamVO.getObj7().toString().equals("SuN")) {
+					sb.append("corporate ");
+				} else {
+					sb.append("cast(sys_no as decimal) ");
+				}
+			} else {
+				sb.append("cast(sys_no as decimal) ");
+			}
+			sb.append("asc ");
+			
+			Query query = createSQLQuery(sb.toString());
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			List<Object> objList = query.list();
+			
+			if (CollectionUtils.isNotEmpty(objList)) {
+				for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+					Object[] row = (Object[]) it.next();
+					SupplierVO vo = new SupplierVO();
+					vo.setSupplierNo((String) row[0]);
+					vo.setSalutation((String) row[1]);
+					vo.setGivenName((String) row[2]);
+					vo.setLastName((String) row[3]);
+					vo.setFullName(vo.getSalutation().toUpperCase() + " " + vo.getLastName() + " " + vo.getGivenName());
+					vo.setEmail((String) row[4]);
+					vo.setCompanyName((String) row[5]);
+					vo.setContactNo((String) row[6]);
+					vo.setAdd1((String) row[7]);
+					if (vo.getContactNo() != null) {
+						vo.setContactNo(vo.getContactNo()
+							.replace("mobile", LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "mobile"))
+							.replace("office",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "office"))
+							.replace("home",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "home"))
+							.replace("fax",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "fax")));
+					}
+					if (StringUtils.isEmpty(vo.getEmail())) {
+						vo.setEmail(vo.getContactNo());
+					} else if (StringUtils.isEmpty(vo.getContactNo())) {
+						
+					} else {
+						vo.setEmail(vo.getEmail() + ", " + vo.getContactNo());
+					}
+					list.add(vo);
+				}
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+		
+		return list;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CashBookVO> getBankPaymentByPayeeList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		List<CashBookVO> list = new ArrayList<CashBookVO>();
+		
+		try {
+			sb.append("SELECT b.id as idBank, b.name as bankName, c.id_supplier as idSupplier, c.payee, ").
+				append("c.dt_trans as dtTrans, c.sys_no as sysNo, c.credit, c.ref_no as refNo, c.remarks ").
+			append("FROM cash_book c ").
+				append("LEFT JOIN bank b ON b.id = c.id_bank ").
+				append("LEFT JOIN supplier s ON s.id = c.id_supplier ").
+			append("WHERE c.sys_cd = :sysCode AND c.status_cd = :statusCd AND b.id_company = :idCompany ");
+			if (searchParamVO.getObj2() != null) sb.append("and date(c.dt_trans) >= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+			if (searchParamVO.getObj3() != null) sb.append("and date(c.dt_trans) <= date('" + sdf.format((Date)searchParamVO.getObj3()) + "') ");
+			if (searchParamVO.getObj4() != null) sb.append("AND c.id_supplier = " + ((Long) searchParamVO.getObj4()) + " ");
+			if (searchParamVO.getObj5() != null) sb.append("AND s.type_cd = '" + ((String) searchParamVO.getObj5()) + "' ");
+			if (searchParamVO.getObj6() != null) sb.append("AND c.id_bank = ").append((Long) searchParamVO.getObj6()).append(" ");
+			sb.append("ORDER BY b.id, b.name, c.id_supplier, c.payee, c.dt_trans desc ");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("idBank", LongType.INSTANCE);
+			query.addScalar("bankName");
+			query.addScalar("idSupplier", LongType.INSTANCE);
+			query.addScalar("payee");
+			query.addScalar("dtTrans", DateType.INSTANCE);
+			query.addScalar("sysNo");
+			query.addScalar("credit", DoubleType.INSTANCE);
+			query.addScalar("refNo");
+			query.addScalar("remarks");
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("sysCode", CommonConstant.SYS_NUM_CD_BANK_PMNT);
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			
+			query.setResultTransformer(Transformers.aliasToBean(CashBookVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getAPDetailAgingBySupplier(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderBillVO> getAPDetailAgingBySupplier(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		List<ExOrderBillVO> list = new ArrayList<ExOrderBillVO>();
+		
+		try {
+			/*sb.append("SELECT a.*, a.billAmt - a.amtPaid as curBal FROM ( ").
+			append("SELECT b.dt_bill as billDt, b.code as code, b.cn_no as cnNumber, b.bill_amt as billAmt, ").
+				append("(select case when sum(ep.pmnt_amount) is null then 0 else sum(ep.pmnt_amount) end from ex_order_bill_pmnt ep where ep.id_eo_bill = b.id and ep.status_cd = :statusCd and date(ep.dt_pmnt) <= date(:toDate)) as amtPaid, ").
+				//append("b.bill_amt - b.amt_paid as curBal, ").
+				append("b.ex_reason as exReason, d.code as tourCode, d.dt_dep as depDt, s.id as supplierId, s.sys_no as eoCode, c.name as supplierName, ").
+				append("datediff(:toDate, b.dt_bill) as aging, ").
+				append("ifnull(cast(t1.current as decimal), 0.00) as currentAmt, ").
+				append("ifnull(cast(t2.days31_60 as decimal), 0.00) as days3160Amt, ").
+				append("ifnull(cast(t3.days61_90 as decimal), 0.00) as days6190Amt, ").
+				append("ifnull(cast(t4.days91_120 as decimal), 0.00) as days91120Amt, ").
+				append("ifnull(cast(t5.days120After as decimal), 0.00) as days120AftAmt ").
+			append("FROM ex_order_bill b ").
+				append("LEFT JOIN supplier s on s.id = b.id_supplier ").
+				append("LEFT JOIN person p on p.id = s.id_person ").
+				append("LEFT JOIN corporate c on c.id_person = p.id ").
+				append("LEFT JOIN tour_dep d on d.id = b.id_tour_dep ").
+				// Current
+				append("LEFT JOIN ").
+				append("(select b.id_supplier, ifnull(sum(b.bill_amt - ").
+					append("(select case when sum(ep.pmnt_amount) is null then 0 else sum(ep.pmnt_amount) end from ex_order_bill_pmnt ep where ep.id_eo_bill = b.id and ep.status_cd = :statusCd and date(ep.dt_pmnt)<=date(:toDate))),0.00) as current ").
+				append("from ex_order_bill b ").
+				append("where b.id_company = :idCompany and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+					append("and date(b.dt_bill)>=date(date_add(LAST_DAY(date_add(:toDate, interval -1 MONTH)), interval 1 DAY)) ").
+					append("and date(b.dt_bill)<=date(:toDate) ").
+				append("group by b.id_supplier) t1 on t1.id_supplier = b.id_supplier ").
+				// 31-60 Days
+				append("LEFT JOIN ").
+				append("(select  b.id_supplier, ifnull(sum(b.bill_amt - ").
+					append("(select case when sum(ep.pmnt_amount) is null then 0 else sum(ep.pmnt_amount) end from ex_order_bill_pmnt ep where ep.id_eo_bill = b.id and ep.status_cd = :statusCd and date(ep.dt_pmnt)<=date(:toDate))),0.00) as days31_60 ").
+				append("from ex_order_bill b ").
+				append("where b.id_company = :idCompany and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+					append("and date(b.dt_bill)>=date(date_add(LAST_DAY(date_add(:toDate, interval -2 MONTH)), interval 1 DAY)) ").
+					append("and date(b.dt_bill)<=date(LAST_DAY(date_add(:toDate, interval -1 MONTH))) ").
+				append("group by b.id_supplier) t2 on t2.id_supplier = b.id_supplier ").
+				// 61-90 Days
+				append("LEFT JOIN ").
+				append("(select b.id_supplier, ifnull(sum(b.bill_amt - ").
+					append("(select case when sum(ep.pmnt_amount) is null then 0 else sum(ep.pmnt_amount) end from ex_order_bill_pmnt ep where ep.id_eo_bill = b.id and ep.status_cd = :statusCd and date(ep.dt_pmnt)<=date(:toDate))),0.00) as days61_90 ").
+				append("from ex_order_bill b ").
+				append("where b.id_company = :idCompany and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+					append("and date(b.dt_bill)>=date(date_add(LAST_DAY(date_add(:toDate, interval -3 MONTH)), interval 1 DAY)) ").
+					append("and date(b.dt_bill)<=date(LAST_DAY(date_add(:toDate, interval -2 MONTH))) ").
+				append("group by b.id_supplier) t3 on t3.id_supplier = b.id_supplier ").
+				// 91-120 Days
+				append("LEFT JOIN ").
+				append("(select b.id_supplier, ifnull(sum(b.bill_amt - ").
+					append("(select case when sum(ep.pmnt_amount) is null then 0 else sum(ep.pmnt_amount) end from ex_order_bill_pmnt ep where ep.id_eo_bill = b.id and ep.status_cd = :statusCd and date(ep.dt_pmnt)<=date(:toDate))),0.00) as days91_120 ").
+				append("from ex_order_bill b ").
+				append("where b.id_company = :idCompany and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+					append("and date(b.dt_bill)>=date(date_add(LAST_DAY(date_add(:toDate, interval -4 MONTH)), interval 1 DAY)) ").
+					append("and date(b.dt_bill)<=date(LAST_DAY(date_add(:toDate, interval -3 MONTH))) ").
+				append("group by b.id_supplier) t4 on t4.id_supplier = b.id_supplier ").
+				// 120 Days After
+				append("LEFT JOIN ").
+				append("(select b.id_supplier, ifnull(sum(b.bill_amt - ").
+					append("(select case when sum(ep.pmnt_amount) is null then 0 else sum(ep.pmnt_amount) end from ex_order_bill_pmnt ep where ep.id_eo_bill = b.id and ep.status_cd = :statusCd and date(ep.dt_pmnt)<=date(:toDate))),0.00) as days120After ").
+				append("from ex_order_bill b ").
+				append("where b.id_company = :idCompany and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+					append("and date(b.dt_bill)<=date(LAST_DAY(date_add(:toDate, interval -4 MONTH))) ").
+				append("group by b.id_supplier) t5 on t5.id_supplier = b.id_supplier ").
+			append("WHERE ").
+				append("b.id_company = :idCompany ").
+				append("and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+				append("and date(b.dt_bill) between date(:fromDate) and date(:toDate) ");
+				if (searchParamVO.getObj4() != null) sb.append("AND b.id_supplier = " + ((Long) searchParamVO.getObj4()) + " ");
+			sb.append("order by cast(s.sys_no as decimal), cast(b.code as decimal) ").
+			append(") a WHERE (a.billAmt - a.amtPaid) != 0 ");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("billDt", DateType.INSTANCE);
+			query.addScalar("code");
+			query.addScalar("cnNumber");
+			query.addScalar("billAmt", DoubleType.INSTANCE);
+			query.addScalar("amtPaid", DoubleType.INSTANCE);
+			query.addScalar("curBal", DoubleType.INSTANCE);
+			query.addScalar("exReason");
+			query.addScalar("tourCode");
+			query.addScalar("depDt", DateType.INSTANCE);
+			query.addScalar("supplierId", LongType.INSTANCE);
+			query.addScalar("eoCode");
+			query.addScalar("supplierName");
+			query.addScalar("aging", IntegerType.INSTANCE);
+			query.addScalar("currentAmt", DoubleType.INSTANCE);
+			query.addScalar("days3160Amt", DoubleType.INSTANCE);
+			query.addScalar("days6190Amt", DoubleType.INSTANCE);
+			query.addScalar("days91120Amt", DoubleType.INSTANCE);
+			query.addScalar("days120AftAmt", DoubleType.INSTANCE);
+			
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("fromDate", (Date) searchParamVO.getObj2());
+			query.setParameter("toDate", (Date) searchParamVO.getObj3());
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			query.setResultTransformer(Transformers.aliasToBean(ExOrderBillVO.class));*/
+			
+			sb.append("select ").
+				append("t.code, t.billDt, t.departureDt as depDt, t.transType, ").
+				append("t.tourCode, t.supplierId, t.eoCode, t.supplierName, ").
+				append("sum(t.amount) as billAmt, sum(t.payment) as amtPaid, sum(t.balanceDue) as curBal, ").
+				/*/ 1-30 Days
+				append("(case ").
+					append("when ( ").
+						append("(date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -1 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(:toDate) ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days130Amt, ").
+				// 31-60 Days
+				append("(case ").
+					append("when ( ").
+						append("(date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -2 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -1 MONTH))) ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days3160Amt, ").
+				// 61-90 Days
+				append("(case ").
+					append("when ( ").
+						append("(date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -3 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -2 MONTH))) ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days6190Amt, ").
+				// 91-120 Days
+				append("(case ").
+					append("when ( ").
+						append("(date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -4 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -3 MONTH))) ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days91120Amt, ").
+				// 121-150 Days
+				append("(case ").
+					append("when ( ").
+						append("(date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -5 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -4 MONTH))) ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days121150Amt, ").
+				// 150 Days After
+				append("(case ").
+					append("when ( ").
+						append("(date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -5 MONTH))) ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days150AftAmt, ").
+				// Advance Paid
+				append("(case ").
+					append("when (sum(t.balanceDue) < 0) then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as advPaidAmt ").*/
+				// Current Day
+				append("(case ").
+					append("when (date(t.departureDt)>date(:toDate) and ifnull(t.tourCode, '') not like 'ATK - %' and (sum(t.balanceDue) >= 0)) then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as currentAmt, ").
+				// 1-30 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -1 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(:toDate) ").
+							append("and ifnull(t.tourCode, 'ATK - ') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -1 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(:toDate) ").
+							append("and ifnull(t.tourCode, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days130Amt, ").
+				// 31-60 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -2 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -1 MONTH))) ").
+							append("and ifnull(t.tourCode, 'ATK - ') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -2 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -1 MONTH))) ").
+							append("and ifnull(t.tourCode, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days3160Amt, ").
+				// 61-90 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -3 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -2 MONTH))) ").
+							append("and ifnull(t.tourCode, 'ATK - ') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -3 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -2 MONTH))) ").
+							append("and ifnull(t.tourCode, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days6190Amt, ").
+				// 91-120 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -4 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -3 MONTH))) ").
+							append("and ifnull(t.tourCode, 'ATK - ') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -4 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -3 MONTH))) ").
+							append("and ifnull(t.tourCode, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days91120Amt, ").
+				// 121-150 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.billDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -5 MONTH)), interval 1 DAY)) ").
+							append("and date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -4 MONTH))) ").
+							append("and ifnull(t.tourCode, 'ATK - ') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -5 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -4 MONTH))) ").
+							append("and ifnull(t.tourCode, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days121150Amt, ").
+				// 150 Days After
+				append("(case ").
+					append("when ( ").
+						append("((date(t.billDt)<=date(LAST_DAY(date_add(:toDate, interval -5 MONTH))) ").
+							append("and ifnull(t.tourCode, 'ATK - ') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -5 MONTH))) ").
+							append("and ifnull(t.tourCode, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days150AftAmt, ").
+				// Advance Paid
+				append("(case ").
+					append("when (sum(t.balanceDue) < 0) then ").
+						append("sum(t.balanceDue)  ").
+					append("else ").
+						append("0.00 ").
+				append("end) as advPaidAmt ").
+			append("from ( ").
+				append("select a.id, a.dt_bill as billDt, a.code, ifnull(a.amount, 0.0) as 'amount', ifnull(a.payment, 0.0) as 'payment', ").
+					append("ifnull(a.amount, 0.0) - ifnull(a.payment, 0.0) as 'balanceDue', a.id_tour_dep,	a.trans_type as transType, ").
+					append("d.code as tourCode, d.dt_dep as departureDt, s.id as supplierId, s.sys_no as eoCode, c.name as supplierName ").
+				append("from ( ").
+					append("select b.id, b.id_supplier, b.dt_bill, 'Bill' as trans_type, b.code, b.bill_amt as amount, null as payment, b.id_tour_dep ").
+					append("from ex_order_bill b ").
+					append("where b.id_company = :idCompany and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+						append("and date(b.dt_bill) <= date(:toDate) ");
+						if (searchParamVO.getObj4() != null) sb.append("AND b.id_supplier = " + ((Long) searchParamVO.getObj4()) + " ");
+					sb.append("union all ").
+					append("select b.id, b.id_supplier, bp.dt_pmnt as 'dt_bill', 'Payment' as trans_type, b.code, null as amount, bp.pmnt_amount as payment, b.id_tour_dep ").
+					append("from ex_order_bill b, ex_order_bill_pmnt bp ").
+					append("where b.id = bp.id_eo_bill and bp.status_cd = :statusCd and b.id_company = :idCompany and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+						append("and date(bp.dt_pmnt) <= date(:toDate) ");
+						if (searchParamVO.getObj4() != null) sb.append("AND b.id_supplier = " + ((Long) searchParamVO.getObj4()) + " ");
+				sb.append(") a ").
+					append("left join supplier s on s.id = a.id_supplier ").
+					append("left join person p on p.id = s.id_person ").
+					append("left join corporate c on c.id_person = p.id ").
+					append("left join tour_dep d on d.id = a.id_tour_dep ");
+				if (searchParamVO.getObj5() != null) sb.append("where s.type_cd = '" + ((String) searchParamVO.getObj5()) + "' ");
+				sb.append("order by cast(s.sys_no as decimal), cast(a.code as decimal), field(a.trans_type,  'Bill', 'Payment') ").
+			append(") t ").
+			append("group by t.eoCode, t.code having curBal != 0 ").
+			append("order by cast(t.eoCode as decimal), date(t.billDt), cast(t.eoCode as decimal), cast(t.code as decimal) ");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("billDt", DateType.INSTANCE);
+			query.addScalar("code");
+			query.addScalar("billAmt", DoubleType.INSTANCE);
+			query.addScalar("amtPaid", DoubleType.INSTANCE);
+			query.addScalar("curBal", DoubleType.INSTANCE);
+			query.addScalar("tourCode");
+			query.addScalar("depDt", DateType.INSTANCE);
+			query.addScalar("supplierId", LongType.INSTANCE);
+			query.addScalar("eoCode");
+			query.addScalar("supplierName");
+			query.addScalar("currentAmt", DoubleType.INSTANCE);
+			query.addScalar("days130Amt", DoubleType.INSTANCE);
+			query.addScalar("days3160Amt", DoubleType.INSTANCE);
+			query.addScalar("days6190Amt", DoubleType.INSTANCE);
+			query.addScalar("days91120Amt", DoubleType.INSTANCE);
+			query.addScalar("days121150Amt", DoubleType.INSTANCE);
+			query.addScalar("days150AftAmt", DoubleType.INSTANCE);
+			query.addScalar("advPaidAmt", DoubleType.INSTANCE);
+			
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("toDate", (Date) searchParamVO.getObj3());
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			query.setResultTransformer(Transformers.aliasToBean(ExOrderBillVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getPurchasesInAdvance(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderBillVO> getPurchasesInAdvance(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		List<ExOrderBillVO> list = new ArrayList<ExOrderBillVO>();
+		
+		try {
+			sb.append("SELECT ").
+				append("t.code as acctCd, t.subCode as acctSubCd, t.desc as acctDesc, t.subDesc as acctSubDesc, b.dt_bill as billDt, ").
+				append("b.code as code, ifnull(d.code, '') as tourCode, c.name as supplierName, t.amount as itemAmt, b.bill_amt as billAmt ").
+			append("FROM ex_order_bill b ").
+				append("LEFT JOIN supplier s on s.id = b.id_supplier ").
+				append("LEFT JOIN person p on p.id = s.id_person ").
+				append("LEFT JOIN corporate c on c.id_person = p.id ").
+				append("LEFT JOIN tour_dep d on d.id = b.id_tour_dep, ").
+				append("(select ").
+					append("t.sys_no, a.code, a.sub_code as subCode, a.description as 'desc', a.sub_description as subDesc, ").
+					append("case when t.debit = 0.00 then -(t.credit + tax_amount) else t.debit + tax_amount end as amount ").
+				append("from account_trans t left join account a on a.id_company = :idCompany and t.id_acct = a.id ").
+				append("where t.id_company = :idCompany and t.sys_cd = :sysCd and t.id_ref is not null and t.status_cd = :statusCd ").
+				append(") t ").
+			append("WHERE ").
+				append("b.id_company = :idCompany and b.code = t.sys_no ").
+				append("and b.status_cd not in (:statusCdCC, :statusCdVD) ").
+				append("and date(b.dt_bill) between date(:frDate) and date(:toDate) ").
+				append("and s.type_cd != 'SC' ");
+			if (searchParamVO.getObj4() != null) {
+				sb.append("and b.id_tour_dep = :idTourDep ");
+			}
+			sb.append("ORDER BY ").
+				append("DATE_FORMAT(b.dt_bill,'%Y%m'), cast(t.code as decimal), cast(t.subCode as decimal), b.dt_bill, cast(b.code as decimal) ");
+			
+			SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+			query.addScalar("acctCd");
+			query.addScalar("acctSubCd");
+			query.addScalar("acctDesc");
+			query.addScalar("acctSubDesc");
+			query.addScalar("billDt", DateType.INSTANCE);
+			query.addScalar("code");
+			query.addScalar("tourCode");
+			query.addScalar("supplierName");
+			query.addScalar("itemAmt", DoubleType.INSTANCE);
+			query.addScalar("billAmt", DoubleType.INSTANCE);
+			
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("frDate", (Date) searchParamVO.getObj2());
+			query.setParameter("toDate", (Date) searchParamVO.getObj3());
+			query.setParameter("sysCd", CommonConstant.SYS_NUM_CD_PURC_BILL);
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			if (searchParamVO.getObj4() != null) query.setParameter("idTourDep", (Long) searchParamVO.getObj4());
+			query.setResultTransformer(Transformers.aliasToBean(ExOrderBillVO.class));
+			list = query.list();
+			
+		} catch (Exception e) {
+			throw e;
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acctreport.dao.AccountReportDAO#getARDetailAgingByCustomer(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getARDetailAgingByCustomer(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		List<InvoiceVO> list = new ArrayList<InvoiceVO>();
+		Session session = this.getSessionFactory().openSession();
+		
+		String invPrefix = LookupItemUtils.getInvPrefix(idCompany);
+		String psPrefix = LookupItemUtils.getPsPrefix(idCompany);
+		String cnPrefix = LookupItemUtils.getCnPrefix(idCompany);
+		String jrnlPrefix = LookupItemUtils.getJrnlPrefix(idCompany);
+		
+		try {
+			session.getTransaction().setTimeout(240);
+			session.beginTransaction();
+			
+			sb.append("select ").
+				append("t.doc_type_cd as docTypeCd, ").
+//				append("case ").
+//					append("when t.doc_type_cd = 'C' then concat('CN-', t.invoiceNo) ").
+//					append("when t.doc_type_cd = 'P' then concat('PS-', t.invoiceNo) ").
+//					append("else t.invoiceNo ").
+//				append("end as code, ").
+				append("t.invoiceNo as code, ").
+				append("t.groupDocNo, "). // This use for grouping sum total JE will be inside the PS-Payment
+				append("t.invoiceDt, t.departureDt, t.transType, tdp.code as tourCd, ").
+				append("t.custCd, t.custType, ").
+				append("if (t.custType = 'C', t.companyName, t.custName) as custName, ").
+				append("sum(t.amount) as amount, sum(t.payment) as amtPaid, sum(t.balanceDue) as balance, ").
+				// Current Day
+				append("(case ").
+					append("when (date(t.departureDt)>date(:toDate) and ifnull(tdp.code, '') not like 'ATK - %' and (sum(t.balanceDue) >= 0)) then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as currentAmt, ").
+				// 1-30 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.invoiceDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -1 MONTH)), interval 1 DAY)) ").
+							append("and date(t.invoiceDt)<=date(:toDate) ").
+							append("and ifnull(tdp.code, '') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -1 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(:toDate) ").
+							append("and ifnull(tdp.code, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days130Amt, ").
+				// 31-60 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.invoiceDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -2 MONTH)), interval 1 DAY)) ").
+							append("and date(t.invoiceDt)<=date(LAST_DAY(date_add(:toDate, interval -1 MONTH))) ").
+							append("and ifnull(tdp.code, '') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -2 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -1 MONTH))) ").
+							append("and ifnull(tdp.code, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days3160Amt, ").
+				// 61-90 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.invoiceDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -3 MONTH)), interval 1 DAY)) ").
+							append("and date(t.invoiceDt)<=date(LAST_DAY(date_add(:toDate, interval -2 MONTH))) ").
+							append("and ifnull(tdp.code, '') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -3 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -2 MONTH))) ").
+							append("and ifnull(tdp.code, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days6190Amt, ").
+				// 91-120 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.invoiceDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -4 MONTH)), interval 1 DAY)) ").
+							append("and date(t.invoiceDt)<=date(LAST_DAY(date_add(:toDate, interval -3 MONTH))) ").
+							append("and ifnull(tdp.code, '') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -4 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -3 MONTH))) ").
+							append("and ifnull(tdp.code, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days91120Amt, ").
+				// 121-150 Days
+				append("(case ").
+					append("when ( ").
+						append("((date(t.invoiceDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -5 MONTH)), interval 1 DAY)) ").
+							append("and date(t.invoiceDt)<=date(LAST_DAY(date_add(:toDate, interval -4 MONTH))) ").
+							append("and ifnull(tdp.code, '') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)>=date(date_add(LAST_DAY(date_add(:toDate, interval -5 MONTH)), interval 1 DAY)) ").
+							append("and date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -4 MONTH))) ").
+							append("and ifnull(tdp.code, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days121150Amt, ").
+				// 150 Days After
+				append("(case ").
+					append("when ( ").
+						append("((date(t.invoiceDt)<=date(LAST_DAY(date_add(:toDate, interval -5 MONTH))) ").
+							append("and ifnull(tdp.code, '') like 'ATK - %') ").
+							append("or ").
+							append("(date(t.departureDt)<=date(LAST_DAY(date_add(:toDate, interval -5 MONTH))) ").
+							append("and ifnull(tdp.code, '') not like 'ATK - %') ").
+						append(") ").
+						append("and (sum(t.balanceDue) >= 0) ").
+					append(") then ").
+						append("sum(t.balanceDue) ").
+					append("else ").
+						append("0.00 ").
+				append("end) as days150AftAmt, ").
+				// Advance Paid
+				append("(case ").
+					append("when (sum(t.balanceDue) < 0) then ").
+						append("sum(t.balanceDue)  ").
+					append("else ").
+						append("0.00 ").
+				append("end) as advPaidAmt ").
+			append("from ( ").
+				append("select a.id, a.id_customer, a.dt_inv as 'invoiceDt', a.trans_type as 'transType', a.invoiceNo, a.groupDocNo, a.code as 'invNo', ").
+					append("a.ponumber as 'poNumber', ifnull(a.amount, 0.0) as 'amount', ifnull(a.payment, 0.0) as 'payment', ").
+					append("ifnull(a.amount, 0.0) - ifnull(a.payment, 0.0) as 'balanceDue', ").
+					append("case ").
+						append("when a.doc_type_cd = 'I'or a.doc_type_cd = 'P' then a.id_tour_dep ").
+						append("else if(cn.id_tour_dep is not null, cn.id_tour_dep, cnps.id_tour_dep) ").
+					append("end as idTourDep, ").
+					append("case ").
+						append("when a.doc_type_cd = 'I' or a.doc_type_cd = 'P' then a.dt_departure ").
+						append("else if(cn.id_tour_dep is not null, cn.cnDepDt, cnps.psDepDt) ").
+					append("end as departureDt, ").
+					append("cm.code as 'custCd', ").
+					append("cm.pc_type_cd as 'custType', ").
+					append("concat(UPPER(ps.salutation_cd), ' ', ps.last_name, ' ', ps.first_name) as 'custName', ").
+					append("cm.corporate_name as 'companyName', ").
+					append("a.doc_type_cd ").
+				append("from ( ").
+//					append("select i.code as 'invoiceNo', i.id, i.id_customer, i.dt_inv as dt_inv, i.dt_departure, ").
+				append("select ").
+						append("case when i.doc_type_cd = 'I' then concat('" + invPrefix + " ', i.code) when i.doc_type_cd = 'P' then concat('" + psPrefix + " ', i.ps_no) else concat('" + cnPrefix + " ', i.code) end as 'invoiceNo', ").
+						append("case when i.doc_type_cd = 'P' then i.ps_no else i.code end as groupDocNo, ").
+						append("i.id, i.id_customer, i.dt_inv as dt_inv, i.dt_departure, ").
+						append("case when i.doc_type_cd = 'I' then 'Sales Invoice' when i.doc_type_cd = 'P' then 'Pax Statement' else 'Credit Note' end as trans_type, i.code, ").
+						append("'' as ponumber, ").
+						append("case when i.doc_type_cd = 'I' or i.doc_type_cd = 'P' then i.amount else null end as amount, ").
+						append("case when i.doc_type_cd = 'I' or i.doc_type_cd = 'P' then null else i.amount end as payment, ").
+						append("i.cn_inv_no, i.cn_ps_no, i.doc_type_cd, i.id_tour_dep ").
+					append("from invoice i ").
+					append("where i.id_company = :idCompany ").
+						append("and case when (i.doc_type_cd = 'I' or i.doc_type_cd = 'P') then i.status_cd != :statusCdVD else i.status_cd != :statusCdCC and i.status_cd != :statusCdVD end ").
+						append("and date(i.dt_inv) <= date(:toDate) ").
+//						append("and (i.doc_type_cd = 'I' or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') not in ('CV','SP','CL'))) ");
+						append("and (i.doc_type_cd = 'I' or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') in ('OP', 'RW', 'CV'))) ");
+						if (searchParamVO.getObj4() != null) {
+							sb.append("and i.id_customer = :idCustomer ");
+						}
+					sb.append("union all ").
+//					append("select i.code as 'invoiceNo', i.id, i.id_customer, ").
+					append("select ").
+						append("case when i.doc_type_cd = 'I' then concat('" + invPrefix + " ', i.code) when i.doc_type_cd = 'P' then concat('" + psPrefix + " ', i.ps_no) else concat('" + cnPrefix + " ', i.code) end as 'invoiceNo', ").
+						append("case when i.doc_type_cd = 'P' then i.ps_no else i.code end as groupDocNo, ").
+						append("i.id, i.id_customer, ").
+						append("case when (i.doc_type_cd = 'I' or i.doc_type_cd = 'P') and cb.dt_trans is not null then cb.dt_trans else ip.dt_pmnt end as dt_inv, i.dt_departure, ").
+						append("case when i.doc_type_cd = 'I' then 'Payment' when i.doc_type_cd = 'P' then 'PS-Payment' else 'CN-Payment' end as trans_type, ip.code, ").
+						append("ip.ref_no as ponumber, ").
+						append("case when i.doc_type_cd = 'I' or i.doc_type_cd = 'P' then null else ip.amount end as amount, ").
+						append("case when i.doc_type_cd = 'I' or i.doc_type_cd = 'P' then ip.amount else null end as payment, ").
+						append("i.cn_inv_no, i.cn_ps_no, i.doc_type_cd, i.id_tour_dep ").
+//					append("from invoice i, invoice_pmnt ip left join (select id_inv_pmnt, dt_trans from inv_pmnt_cashbook_link cbl, cash_book cash where cbl.id_cash_book = cash.id and cbl.status_cd = :statusCd) cb on ip.id = cb.id_inv_pmnt ").
+					append("from invoice i left join invoice psInv on i.id_company = psInv.id_company  and i.doc_type_cd = 'P' and psInv.doc_type_cd = 'I' and psInv.ps_no = i.ps_no and date(psinv.dt_inv) <= date(:toDate), ").
+					append("invoice_pmnt ip ").
+					append("left join invoice_pmnt parent on ip.id_parent_pmnt is not null and ip.id_parent_pmnt = parent.id ").
+					append("left join inv_pmnt_cashbook_link link on link.status_cd = :statusCd and  ").
+					append("(case when parent.id_parent_pmnt is not null then parent.id_parent_pmnt when ip.id_parent_pmnt is not null then ip.id_parent_pmnt else ip.id end) = link.id_inv_pmnt ").
+					append("left join cash_book cb on cb.status_cd = :statusCd and link.id_cash_book = cb.id ").
+					append("where i.id=ip.id_inv and ip.status_cd = :statusCd and i.id_company = :idCompany ").
+						append("and case when (i.doc_type_cd = 'I' OR i.doc_type_cd = 'P') then i.status_cd != :statusCdVD else i.status_cd != :statusCdCC and i.status_cd != :statusCdVD end ").
+						append("and ").
+//						append("case when (i.doc_type_cd = 'I' or i.doc_type_cd = 'P') and cb.id_inv_pmnt is not null then date(cb.dt_trans) <= date(:toDate) ").
+//						append("else date(ip.dt_pmnt) <= date(:toDate) end ").
+						append("if(cb.dt_trans is not null, cb.dt_trans, ip.dt_pmnt) <= date(:toDate) ").
+//						append("and (i.doc_type_cd = 'I' or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') not in ('CV','SP','CL'))) ");
+//						append("and (i.doc_type_cd = 'I' or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') in ('OP', 'RW'))) ");
+						append("and ((i.doc_type_cd = 'I'  and date(i.dt_inv) <= date(:toDate)) or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and (ifnull(i.doc_type_status, '') in ('OP', 'RW') or (ifnull(i.doc_type_status, '') in ('CV') and psInv.id is null)))) ");
+						if (searchParamVO.getObj4() != null) {
+							sb.append("and i.id_customer = :idCustomer ");
+						}
+					sb.append("union all ").
+					append("select ").
+						append("concat('" + jrnlPrefix + " ', j.sys_no) as 'invoiceNo', i.ps_no as groupDocNo, i.id, i.id_customer, j.dt_journal as dt_inv, i.dt_departure, 'Journal' as trans_type, '' as code, ").
+						append("'' as ponumber, 0 as amount, j.total_amt as payment, '' as cn_inv_no, '' as cn_ps_no, i.doc_type_cd, i.id_tour_dep ").
+					append("from journal j, invoice i ").
+					append("where j.id_ps = i.id and j.id_company = :idCompany and j.type_cd = 'sales' ").
+					append("and j.dt_journal <= date(:toDate) ");
+					if (searchParamVO.getObj4() != null) {
+						sb.append("and i.id_customer = :idCustomer ");
+					}
+				sb.append(") a ").
+				append("left join (select iv.code as inv_no, iv.id_tour_dep, iv.dt_departure as cnDepDt from invoice iv where iv.id_company = :idCompany and iv.doc_type_cd = 'I') cn on a.cn_inv_no = cn.inv_no ").
+				append("left join (select ps.code as ps_no, ps.id_tour_dep, ps.dt_departure as psDepDt from invoice ps where ps.id_company = :idCompany and ps.doc_type_cd = 'P') cnps on a.cn_ps_no = cnps.ps_no, ").
+				append("customer cm, person ps ").
+				append("where a.id_customer = cm.id and cm.id_pc = ps.id ").
+			append(") t left join tour_dep tdp on t.idTourDep = tdp.id ").
+			append("group by t.custCd, t.doc_type_cd, t.groupDocNo having balance != 0 ").
+			append("order by cast(t.custCd as decimal), date(t.invoiceDt), cast(t.custCd as decimal), t.doc_type_cd, cast(t.invoiceNo as decimal) ");
+			
+			SQLQuery query = (SQLQuery) session.createSQLQuery(sb.toString());
+			query.addScalar("invoiceDt", DateType.INSTANCE);
+			query.addScalar("docTypeCd");
+			query.addScalar("code");
+			query.addScalar("tourCd");
+			query.addScalar("departureDt", DateType.INSTANCE);
+			query.addScalar("custCd");
+			query.addScalar("custName");
+			query.addScalar("amount", DoubleType.INSTANCE);
+			query.addScalar("amtPaid", DoubleType.INSTANCE);
+			query.addScalar("balance", DoubleType.INSTANCE);
+			query.addScalar("currentAmt", DoubleType.INSTANCE);
+			query.addScalar("days130Amt", DoubleType.INSTANCE);
+			query.addScalar("days3160Amt", DoubleType.INSTANCE);
+			query.addScalar("days6190Amt", DoubleType.INSTANCE);
+			query.addScalar("days91120Amt", DoubleType.INSTANCE);
+			query.addScalar("days121150Amt", DoubleType.INSTANCE);
+			query.addScalar("days150AftAmt", DoubleType.INSTANCE);
+			query.addScalar("advPaidAmt", DoubleType.INSTANCE);
+			
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("toDate", (Date) searchParamVO.getObj3());
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+			if (searchParamVO.getObj4() != null) {
+				query.setParameter("idCustomer", (Long) searchParamVO.getObj4());
+			}
+			
+			query.setResultTransformer(Transformers.aliasToBean(InvoiceVO.class));
+			list = query.list();
+			
+			session.getTransaction().commit();
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+		} finally {
+			session.close();
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.acct.dao.ChartOfAcctDAO#getSalesInAdvanceList(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctViewVO> getDepositReceived(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		StringBuilder sb = new StringBuilder();
+		
+		String invPrefix = LookupItemUtils.getInvPrefix(idCompany);
+		String psPrefix = LookupItemUtils.getPsPrefix(idCompany);
+		String cnPrefix = LookupItemUtils.getCnPrefix(idCompany);
+		String jrnlPrefix = LookupItemUtils.getJrnlPrefix(idCompany);
+		
+		sb.append("select ").
+			append("t.dtInv, t.dtDep, t.transType, t.invoiceNo, t.groupDocNo, t.invNo, tdp.code as tourCd, ").
+			append("t.custCd, t.custType, t.custName, t.companyName, t.poNumber, ").
+			append("case ").
+				append("when t.doc_type_cd = 'I' or t.doc_type_cd = 'P' or sum(t.amount) = 0.00 then sum(t.amount) ").
+				append("else -1 * sum(t.amount) ").
+			append("end as amount, ").
+			append("case ").
+				append("when t.doc_type_cd = 'I' or t.doc_type_cd = 'P' or sum(t.payment) = 0.00 then sum(t.payment) ").
+				append("else -1 * sum(t.payment) ").
+			append("end as payment, ").
+			append("case ").
+				append("when t.doc_type_cd = 'I' or t.doc_type_cd = 'P' or sum(t.balanceDue) = 0.00 then sum(t.balanceDue) ").
+				append("else -1 * sum(t.balanceDue) ").
+			append("end as balanceDue, ").
+			append("psNo, psDt ").
+		append("from ( ").
+			append("select a.id, a.id_customer, a.dt_inv as 'dtInv', a.trans_type as 'transType', a.invoiceNo, a.groupDocNo, a.code as 'invNo', ").
+				append("concat('" + psPrefix + " ', ivps.ps_no) as psNo, ivps.dt_inv as psDt, ").
+				append("a.ponumber as 'poNumber', ifnull(a.amount, 0.0) as 'amount', ifnull(a.payment, 0.0) as 'payment', ").
+				append("ifnull(a.amount, 0.0) - ifnull(a.payment, 0.0) as 'balanceDue', ").
+				append("case ").
+					append("when a.doc_type_cd = 'I' or a.doc_type_cd = 'P' then a.id_tour_dep ").
+					append("else if(cn.id_tour_dep is not null, cn.id_tour_dep, cnps.id_tour_dep) ").
+				append("end as idTourDep, ").
+				append("case ").
+					append("when a.doc_type_cd = 'I' or a.doc_type_cd = 'P' then a.dt_departure ").
+					append("else if(cn.id_tour_dep is not null, cn.cnDepDt, cnps.psDepDt) ").
+				append("end as dtDep, ").
+				append("cm.code as 'custCd', ").
+				append("cm.pc_type_cd as 'custType', ").
+				append("concat(UPPER(p.salutation_cd), ' ', p.last_name, ' ', p.first_name) as 'custName', ").
+				append("cm.corporate_name as 'companyName', ").
+				append("a.doc_type_cd ").
+			append("from ( ").
+//				append("select i.code as 'invoiceNo', i.ps_no, i.id, i.id_customer, i.dt_inv as dt_inv, i.dt_departure, ").
+				append("select ").
+					append("case when i.doc_type_cd = 'I' then concat('" + invPrefix + " ', i.code) when i.doc_type_cd = 'P' then concat('" + psPrefix + " ', i.ps_no) else concat('" + cnPrefix + " ', i.code) end as 'invoiceNo', ").
+					append("case when i.doc_type_cd = 'P' then i.ps_no else i.code end as groupDocNo, ").
+					append("i.ps_no, i.id, i.id_customer, i.dt_inv as dt_inv, i.dt_departure, ").
+					append("case when i.doc_type_cd = 'I' then 'Sales Invoice' when i.doc_type_cd = 'P' then 'Pax Statement' else 'Credit Note' end as trans_type, i.code, ").
+					append("'' as ponumber, ").
+					append("case when i.doc_type_cd = 'I' or i.doc_type_cd = 'P' then i.amount else null end as amount, ").
+					append("case when i.doc_type_cd = 'I' or i.doc_type_cd = 'P' then null else i.amount end as payment, ").
+					append("i.cn_inv_no, i.cn_ps_no, i.doc_type_cd, i.id_tour_dep ").
+				append("from invoice i left join invoice psInv on i.id_company = psInv.id_company  and i.doc_type_cd = 'P' and psInv.doc_type_cd = 'I' and psInv.ps_no = i.ps_no and date(psinv.dt_inv) <= date(:toDate) ").
+				append("where i.id_company = :idCompany ").
+					append("and case when (i.doc_type_cd = 'I' or i.doc_type_cd = 'P') then i.status_cd != :statusCdVD else i.status_cd != :statusCdCC and i.status_cd != :statusCdVD end ").
+					append("and date(i.dt_inv) <= date(:toDate) ").
+//					append("and (i.doc_type_cd = 'I' or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') not in ('CV','SP'))) ");
+//					append("and (i.doc_type_cd = 'I' or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') in ('OP', 'RW', 'CV'))) ");
+					append("and ((i.doc_type_cd = 'I'  and date(i.dt_inv) <= date(:toDate)) or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and (ifnull(i.doc_type_status, '') in ('OP', 'RW') or (ifnull(i.doc_type_status, '') in ('CV') and psInv.id is null)))) ");
+					if (searchParamVO.getObj6() != null) {
+						sb.append("and i.id_customer = :idCustomer ");
+					}
+				sb.append("union all ").
+//				append("select i.code as 'invoiceNo', i.ps_no, i.id, i.id_customer, ").
+				append("select ").
+					append("case when i.doc_type_cd = 'I' then concat('" + invPrefix + " ', i.code) when i.doc_type_cd = 'P' then concat('" + psPrefix + " ', i.ps_no) else concat('" + cnPrefix + " ', i.code) end as 'invoiceNo', ").
+					append("case when i.doc_type_cd = 'P' then i.ps_no else i.code end as groupDocNo, ").
+					append("i.ps_no, i.id, i.id_customer, ").
+					append("case when (i.doc_type_cd = 'I' or i.doc_type_cd = 'P') and cb.dt_trans is not null then cb.dt_trans else ip.dt_pmnt end as dt_inv, i.dt_departure, ").
+					append("case when i.doc_type_cd = 'I' then 'Payment' when i.doc_type_cd = 'P' then 'PS-Payment' else 'CN-Payment' end as trans_type, ip.code, ").
+					append("ip.ref_no as ponumber, ").
+					append("case when i.doc_type_cd = 'I' or i.doc_type_cd = 'P' then null else ip.amount end as amount, ").
+					append("case when i.doc_type_cd = 'I' or i.doc_type_cd = 'P' then ip.amount else null end as payment, ").
+					append("i.cn_inv_no, i.cn_ps_no, i.doc_type_cd, i.id_tour_dep ").
+				append("from invoice i left join invoice psInv on i.id_company = psInv.id_company  and i.doc_type_cd = 'P' and psInv.doc_type_cd = 'I' and psInv.ps_no = i.ps_no and date(psinv.dt_inv) <= date(:toDate), ").
+					append("invoice_pmnt ip left join (select id_inv_pmnt, dt_trans from inv_pmnt_cashbook_link cbl, cash_book cash where cbl.id_cash_book = cash.id and cbl.status_cd = :statusCd) cb on ip.id = cb.id_inv_pmnt ").
+				append("where i.id=ip.id_inv and ip.status_cd = :statusCd and i.id_company = :idCompany ").
+					append("and case when (i.doc_type_cd = 'I' OR i.doc_type_cd = 'P') then i.status_cd != :statusCdVD else i.status_cd != :statusCdCC and i.status_cd != :statusCdVD end ").
+					append("and ").
+					append("case when (i.doc_type_cd = 'I' or i.doc_type_cd = 'P') and cb.id_inv_pmnt is not null then date(cb.dt_trans) <= date(:toDate) ").
+					append("else date(ip.dt_pmnt) <= date(:toDate) end ").
+//					append("and (i.doc_type_cd = 'I' or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') not in ('CV','SP'))) ");
+//					append("and (i.doc_type_cd = 'I' or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') in ('OP', 'RW'))) ");
+					append("and ((i.doc_type_cd = 'I'  and date(i.dt_inv) <= date(:toDate)) or i.doc_type_cd = 'C' or (i.doc_type_cd = 'P' and (ifnull(i.doc_type_status, '') in ('OP', 'RW') or (ifnull(i.doc_type_status, '') in ('CV') and psInv.id is null)))) ");
+					if (searchParamVO.getObj6() != null) {
+						sb.append("and i.id_customer = :idCustomer ");
+					}
+				sb.append("union all ").
+				append("select ").
+					append("concat('" + jrnlPrefix + " ', j.sys_no) as 'invoiceNo', i.ps_no as groupDocNo, i.ps_no, i.id, i.id_customer, j.dt_journal as dt_inv, i.dt_departure, 'Journal' as trans_type, '' as code, ").
+					append("'' as ponumber, 0 as amount, j.total_amt as payment, '' as cn_inv_no, '' as cn_ps_no, i.doc_type_cd, i.id_tour_dep ").
+				append("from journal j, invoice i left join invoice psInv on i.id_company = psInv.id_company and i.doc_type_cd = 'P' and psInv.doc_type_cd = 'I' and psInv.ps_no = i.ps_no and date(psinv.dt_inv) <= date(:toDate) ").
+				append("where j.id_ps = i.id and j.id_company = :idCompany and j.type_cd = 'sales' ").
+				append("and j.dt_journal <= date(:toDate) ").
+				append("and (i.doc_type_cd = 'P' and ifnull(i.doc_type_status, '') in ('CV') and psInv.id is null) ");
+					if (searchParamVO.getObj6() != null) {
+						sb.append("and i.id_customer = :idCustomer ");
+					}
+			sb.append(") a ").
+			append("left join (select iv.code as inv_no, iv.id_tour_dep, iv.dt_departure as cnDepDt from invoice iv where iv.id_company = :idCompany and iv.doc_type_cd = 'I') cn on a.cn_inv_no = cn.inv_no ").
+			append("left join (select ps.code as ps_no, ps.id_tour_dep, ps.dt_departure as psDepDt from invoice ps where ps.id_company = :idCompany and ps.doc_type_cd = 'P') cnps on a.cn_ps_no = cnps.ps_no ").
+			append("left join (select ps_no, dt_inv from invoice where id_company = :idCompany and doc_type_cd = 'P') ivps on a.ps_no is not null and a.ps_no = ivps.ps_no, ").
+			append("customer cm, person p ").
+			append("where a.id_customer = cm.id and cm.id_pc = p.id ").
+			append("order by cast(cm.code as decimal), cast(a.invoiceNo as decimal), field(a.trans_type,  'Sales Invoice', 'Payment', 'Pax Statement', 'PS-Payment', 'Journal', 'Credit Note', 'CN-Payment') ").
+		append(") t left join tour_dep tdp on t.idTourDep = tdp.id ");
+//		append("where date(t.dtDep) > date(:toDate) ").
+//		append("and ifnull(tdp.code, '') not like 'ATK -%' ");
+		sb.append("where ifnull(tdp.code, '') not like 'ATK -%' and ifnull(tdp.code, '') not like 'ATK-%' ");
+		if (searchParamVO.getObj4() != null) sb.append("and date(t.dtDep) >= date('" + sdf.format((Date)searchParamVO.getObj4()) + "') ");
+		if (searchParamVO.getObj5() != null) sb.append("and date(t.dtDep) <= date('" + sdf.format((Date)searchParamVO.getObj5()) + "') ");
+		sb.append("group by t.custCd, t.doc_type_cd, t.groupDocNo ").
+		append("order by cast(t.custCd as decimal), t.dtInv, cast(t.invNo as decimal), t.dtDep ");
+		
+		SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+		query.addScalar("dtInv", DateType.INSTANCE);
+		query.addScalar("dtDep", DateType.INSTANCE);
+		query.addScalar("transType");
+		query.addScalar("invoiceNo");
+		query.addScalar("tourCd");
+		query.addScalar("custCd");
+		query.addScalar("custType");
+		query.addScalar("custName");
+		query.addScalar("companyName");
+		query.addScalar("poNumber");
+		query.addScalar("amount", DoubleType.INSTANCE);
+		query.addScalar("payment", DoubleType.INSTANCE);
+		//query.addScalar("balance", DoubleType.INSTANCE);
+		query.addScalar("balanceDue", DoubleType.INSTANCE);
+		query.addScalar("psNo");
+		query.addScalar("psDt", DateType.INSTANCE);
+		//query.setParameter("frDate", (Date) searchParamVO.getObj2());
+		query.setParameter("toDate", (Date) searchParamVO.getObj3());
+		query.setParameter("idCompany", idCompany);
+		if (searchParamVO.getObj6() != null) {
+			query.setParameter("idCustomer", (Long) searchParamVO.getObj6());
+		}
+		query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+		query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+		query.setResultTransformer(Transformers.aliasToBean(AcctViewVO.class));
+		return query.list();
+	}
+}

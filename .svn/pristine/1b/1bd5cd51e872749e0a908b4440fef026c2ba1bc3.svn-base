@@ -1,0 +1,279 @@
+package com.bcs.zsg.crm.service;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.helper.CRMCommonConstant;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.core.helper.CollectionUtils;
+import com.bcs.zsg.crm.dao.InvoicePosSalesDAO;
+import com.bcs.zsg.crm.vo.ContactDetailsVO;
+import com.bcs.zsg.crm.vo.InvoicePosSalesBillingVO;
+import com.bcs.zsg.crm.vo.InvoicePosSalesItemVO;
+import com.bcs.zsg.crm.vo.InvoicePosSalesVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+import com.bcs.zsg.sales.vo.InvoicePaxVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.sales.vo.PersonContactVO;
+import com.bcs.zsg.sales.vo.PersonEmailVO;
+
+public class InvoicePosSalesServiceImpl implements InvoicePosSalesService {
+	
+	@Autowired
+	private InvoicePosSalesDAO invoicePosSalesDAO;
+	
+	@Override
+	public void processInvoicePosSales(InvoiceVO invoiceVO) throws BusinessException {
+		if (invoiceVO == null)
+			return;
+		
+		// Will post the invoice which contain booking and category type is tour only
+		if (invoiceVO.getBookingId() == null || !StringUtils.equals(invoiceVO.getCatCd(), CommonConstant.LOOKUP_ITM_INV_CAT_TOUR)) {
+			return;
+		}
+		
+		InvoicePosSalesVO invPosSalesExist = invoicePosSalesDAO.getInvoicePosSales(invoiceVO);
+		
+		if (invPosSalesExist == null) {
+			InvoicePosSalesVO posSalesVO = new InvoicePosSalesVO();
+			posSalesVO.setIdCompany(invoiceVO.getCompanyId());
+			posSalesVO.setIdInvoice(invoiceVO.getId());
+			posSalesVO.setIdCustomer(invoiceVO.getCustomerId());
+			
+			posSalesVO.setIdBooking(invoiceVO.getBookingId());
+			posSalesVO.setInvoiceDt(invoiceVO.getInvoiceDt());
+			posSalesVO.setInvNo(invoiceVO.getCode());
+			posSalesVO.setPsNo(invoiceVO.getPsNo());
+			posSalesVO.setDocTypeCd(invoiceVO.getDocTypeCd());
+			posSalesVO.setDepartureDt(invoiceVO.getDepartureDt());
+			posSalesVO.setCatCd(invoiceVO.getCatCd());
+			posSalesVO.setOrderCd(invoiceVO.getOrderCd());
+			posSalesVO.setAmount(invoiceVO.getAmount());
+			posSalesVO.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_PENDING);
+			posSalesVO.setPaymentStatus(invoiceVO.getStatusCd());
+			posSalesVO.setStatusCode(CommonConstant.STATUS_CD_ACTIVE);
+			
+			Long idPosSales = (Long) invoicePosSalesDAO.insert(posSalesVO);
+			
+			InvoicePosSalesItemVO salesItemVO = null;
+			for (InvoicePaxVO paxVO : invoiceVO.getInvoicePaxList()) {
+				if (StringUtils.isEmpty(paxVO.getItemCode())) continue;
+				salesItemVO = new InvoicePosSalesItemVO();
+				salesItemVO.setIdPosSales(idPosSales);
+				salesItemVO.setIdCustomer(paxVO.getCustId());
+				salesItemVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				
+				for (InvoiceItemVO itemVO : invoiceVO.getInvoiceItemList()) {
+					if (StringUtils.isEmpty(itemVO.getCode()) || StringUtils.isEmpty(paxVO.getItemCode())) break;
+					
+					if (StringUtils.equals(itemVO.getCode(), paxVO.getItemCode())) {
+						salesItemVO.setCode(itemVO.getCode());
+						salesItemVO.setDesc(itemVO.getDesc());
+						salesItemVO.setSubDesc(itemVO.getSubDesc());
+						salesItemVO.setAmount(itemVO.getAmount());
+						break;
+					}
+				}
+				
+				invoicePosSalesDAO.insert(salesItemVO);
+			}
+		}
+	}
+	
+	@Override
+	public List<InvoicePosSalesVO> getInvoicePosSalesList() throws BusinessException {
+		return invoicePosSalesDAO.getInvoicePosSalesList();
+	}
+
+	@Override
+	public InvoicePosSalesBillingVO getBillingDetails(Long idCustomer) throws BusinessException {
+		InvoicePosSalesBillingVO vo = new InvoicePosSalesBillingVO();
+		
+		CustomerVO custVO = invoicePosSalesDAO.getCustomerVO(idCustomer);
+		
+		if (custVO == null) return vo;
+		
+//		vo.setCrmId();
+		vo.setRefcustomerId(custVO.getId());
+		vo.setCustomerNo(custVO.getCode());
+		StringBuilder name = new StringBuilder();
+		if (StringUtils.isNotBlank(custVO.getPersonVO().getSalutation())) {
+			String salutation = LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_SALUTATN, custVO.getPersonVO().getSalutation());
+			name.append(salutation + " ")
+					.append(custVO.getPersonVO().getLastName()).append(" ")
+					.append(custVO.getPersonVO().getGivenName());
+		} else {
+			name.append(custVO.getPersonVO().getLastName()).append(" ").append(custVO.getPersonVO().getGivenName());
+			
+		}
+		vo.setBillingName(name.toString());
+		
+		if (custVO.getPcTypeCd().equals("C")) {
+			vo.setCompanyName(custVO.getCorporateVO().getCompanyName());
+			vo.setBillingAddr1(custVO.getCorBillAddressVO().getAddr1());
+			vo.setBillingAddr2(custVO.getCorBillAddressVO().getAddr2());
+			vo.setBillingAddr3(custVO.getCorBillAddressVO().getAddr3());
+			vo.setCity(custVO.getCorBillAddressVO().getCity());
+			vo.setState(custVO.getCorBillAddressVO().getState());
+			vo.setPostcode(custVO.getCorBillAddressVO().getPostcode());
+			vo.setTaxNo(custVO.getPersonVO().getTaxIdNo());
+			if (CollectionUtils.isNotEmpty((custVO.getPersonVO().getEmailList()))) {
+				vo.setEmail(custVO.getPersonVO().getEmailList().get(0).getEmail());
+				
+				for (PersonEmailVO emailVO : custVO.getPersonVO().getEmailList()) {
+					if (Boolean.TRUE.equals(emailVO.getIsPrimary())) {
+						vo.setEmail(emailVO.getEmail());
+						break;
+					}
+				}
+			}
+			if (CollectionUtils.isNotEmpty((custVO.getCorContactList()))) {
+				List<ContactDetailsVO> contactDetailsList = new ArrayList<ContactDetailsVO>();
+				ContactDetailsVO contactVO = new ContactDetailsVO();
+				for (CorContactVO cVO : custVO.getCorContactList()) {
+					contactVO = new ContactDetailsVO();
+					contactVO.setPhoneNo(cVO.getContactNo());
+					contactVO.setType(cVO.getContactType());
+					contactDetailsList.add(contactVO);
+				}
+				vo.setContactDetailsList(contactDetailsList);
+			}
+		} else {
+			vo.setCompanyName("");
+			vo.setBillingAddr1(custVO.getBillAddressVO().getAddr1());
+			vo.setBillingAddr2(custVO.getBillAddressVO().getAddr2());
+			vo.setBillingAddr3(custVO.getBillAddressVO().getAddr3());
+			vo.setCity(custVO.getBillAddressVO().getCity());
+			vo.setState(custVO.getBillAddressVO().getState());
+			vo.setPostcode(custVO.getBillAddressVO().getPostcode());
+			vo.setTaxNo(custVO.getPersonVO().getTaxIdNo());
+			if (CollectionUtils.isNotEmpty((custVO.getPersonVO().getEmailList()))) {
+				vo.setEmail(custVO.getPersonVO().getEmailList().get(0).getEmail());
+				
+				for (PersonEmailVO emailVO : custVO.getPersonVO().getEmailList()) {
+					if (Boolean.TRUE.equals(emailVO.getIsPrimary())) {
+						vo.setEmail(emailVO.getEmail());
+						break;
+					}
+				}
+			}
+			if (CollectionUtils.isNotEmpty((custVO.getPersonContactList()))) {
+				List<ContactDetailsVO> contactDetailsList = new ArrayList<ContactDetailsVO>();
+				ContactDetailsVO contactVO = new ContactDetailsVO();
+				for (PersonContactVO cVO : custVO.getPersonContactList()) {
+					contactVO = new ContactDetailsVO();
+					contactVO.setPhoneNo(cVO.getNumber());
+					contactVO.setType(cVO.getTypeCd());
+					contactDetailsList.add(contactVO);
+				}
+				vo.setContactDetailsList(contactDetailsList);
+			}
+		}
+		
+		if (CollectionUtils.isNotEmpty((custVO.getPersonVO().getEmailList()))) {
+	}
+			
+		return vo;
+	}
+
+	@Override
+	public void updateInvoicePosSalesStatus(List<InvoicePosSalesVO> invoicePosSalesList) throws BusinessException {
+		invoicePosSalesDAO.updateInvoicePosSalesStatus(invoicePosSalesList);
+	}
+	
+	
+//	private void postCRMSales(String requestBodyJson, String invCode) {
+//		// Post Data Through API
+//		try {
+//			String url = SystemProperty.CRM_API_RECORD_SALES;
+//			URL obj = new URL(url);
+//			
+//			BufferedReader in = null;
+//			if (isHttps(url)) {
+//				HttpsURLConnection con = (HttpsURLConnection) obj.openConnection();
+//				con.setRequestMethod("POST");
+//				con.setRequestProperty("Content-Type", SystemProperty.CUST_POINT_API_REQUEST_HEADER_CONTENT_TYPE);
+//				con.setRequestProperty("ApiKey", SystemProperty.CUST_POINT_REQUEST_HEADER_AUTHORIZATION);
+//				con.setRequestProperty("User-Agent", "Mozilla/5.0");
+//				
+//				byte[] out = requestBodyJson.getBytes(StandardCharsets.UTF_8);
+//				int length = out.length;
+//				
+//				con.setFixedLengthStreamingMode(length);
+//				
+//				// Send post request
+//				con.setDoOutput(true);
+//				DataOutputStream wr = new DataOutputStream(con.getOutputStream());
+//				wr.write(out);
+//				wr.flush();
+//				wr.close();
+//
+//				int responseCode = con.getResponseCode();
+//				System.out.println("\nSending 'POST' request to URL : " + url);
+//				System.out.println("Response Code : " + responseCode);
+//				
+//				in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+//				
+//			} else {
+//				HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+//				con.setRequestMethod("POST");
+//				con.setRequestProperty("Content-Type", SystemProperty.CUST_POINT_API_REQUEST_HEADER_CONTENT_TYPE);
+//				con.setRequestProperty("ApiKey", SystemProperty.CUST_POINT_REQUEST_HEADER_AUTHORIZATION);
+//				con.setRequestProperty("User-Agent", "Mozilla/5.0");
+//					
+//				byte[] out = requestBodyJson.getBytes(StandardCharsets.UTF_8);
+//				int length = out.length;
+//				
+//				con.setFixedLengthStreamingMode(length);
+//				
+//				// Send post request
+//				con.setDoOutput(true);
+//				DataOutputStream wr = new DataOutputStream(con.getOutputStream());
+//				wr.write(out);
+//				wr.flush();
+//				wr.close();
+//
+//				int responseCode = con.getResponseCode();
+//				System.out.println("\nSending 'POST' request to URL : " + url);
+//				System.out.println("Response Code : " + responseCode);
+//				
+//				in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+//			}
+//			
+//			String inputLine;
+//			StringBuffer response = new StringBuffer();
+//
+//			while ((inputLine = in.readLine()) != null) {
+//				response.append(inputLine);
+//			}
+//			in.close();
+//			
+//			Map<String, String> paramsMap = new Gson().fromJson(response.toString(), new TypeToken<Map<String, String>>() {}.getType());
+//			
+//			if (StringUtils.equals(paramsMap.get("successful"), "true")) {
+//				System.out.println("\nCRM Post was successful. Invoice Code : " + invCode);
+//			} else {
+//				System.out.println("\nCRM Post Inv was un-successful. Invoice Code : " + invCode);
+//				System.out.println("Error Code : " + paramsMap.get("errorCode"));
+//				System.out.println("Error Message : " + paramsMap.get("errorMessage"));
+//			}
+//		} catch (IOException e) { }
+//	}
+//	
+//	private boolean isHttps(String url) {
+//        String patter = "^(https)://.*$";
+//        if (url.matches(patter)){
+//            return true;
+//        }else{
+//            return false;
+//        }
+//    }
+	
+}

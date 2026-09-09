@@ -1,0 +1,44 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varEditRegionDialog.show();
+		} else {
+			varEditRegionDialog.hide();
+		}
+	}
+	</script>
+	
+
+
+<h:panelGrid columns="2" style="margin-bottom:10px; width:5px">
+	
+	<h:outputLabel for="idRegionCode">Region Code<span class="required">*</span></h:outputLabel>
+	<p:inputText id="idRegionCode" label="RegionCode" value="#{regionAndCountriesBean.regionVO.regioncode}" style="width:200px" required="true"/>
+	<h:outputLabel for="idRegionName">Region Name<span class="required">*</span></h:outputLabel>
+	<p:inputText id="idRegionName" label="Region Name" value="#{regionAndCountriesBean.regionVO.regionname}" style="width:200px" required="true"/>
+	<h:outputText/>
+	<h:panelGrid id="idButtonGrid" columns="3" style="width: 1px;">
+		<p:commandButton id="idBtnEditSubmit" actionListener="#{regionAndCountriesBean.editRegion}" value="#{msg['common.button.label.save']}" update="@form,:idForm:idRegionTable" oncomplete="onValidation(xhr, status, args)"/>
+		<p:commandButton id="idBtnEditCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{regionAndCountriesBean.resetForm}" update="@form" process="@this" oncomplete="varEditRegionDialog.hide()" global="false">
+			<pe:resetEditableValues for="idEditRegionForm"/>
+		</p:commandButton>
+	</h:panelGrid>
+	<h:outputText/>
+	
+</h:panelGrid>
+<br/>
+<h:outputLabel><span class="required">*</span> - required field</h:outputLabel>
+
+</ui:composition>

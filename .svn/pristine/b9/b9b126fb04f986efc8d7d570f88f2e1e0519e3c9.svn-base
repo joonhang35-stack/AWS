@@ -1,0 +1,1064 @@
+package com.bcs.zsg.purchase.web.bean;
+
+import java.io.Serializable;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+
+import org.apache.commons.lang3.StringUtils;
+import org.primefaces.context.RequestContext;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.EInvoiceConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.CollectionUtils;
+import com.bcs.zsg.maintenance.bo.CustomerProfileUpdateBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.maintenance.vo.SupplierProfileUpdateVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.purchase.bo.BillPymtBO;
+import com.bcs.zsg.purchase.bo.PurchaseBO;
+import com.bcs.zsg.purchase.vo.ContactVO;
+import com.bcs.zsg.purchase.vo.CorAddressVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.purchase.vo.CorporateVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.ExOrderDetailsVO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.purchase.vo.PersonVO;
+import com.bcs.zsg.purchase.vo.PurchaseVO;
+import com.bcs.zsg.purchase.vo.RemarksVO;
+import com.bcs.zsg.purchase.vo.SuppMaintVO;
+import com.bcs.zsg.purchase.vo.SuppPersonInChargeVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.zextra.backend.helper.SysNumGenUtil;
+
+public class PurchaseBean extends AppBackingBean {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	@Autowired
+	protected transient PurchaseBO purchaseBO;
+	@Autowired
+	protected transient RegionBO regionBO;
+	@Autowired
+	protected transient BillPymtBO billPymtBO;
+	@Autowired
+	private transient CustomerProfileUpdateBO customerProfileUpdateBO;
+	
+	protected SupplierVO supplierVO;
+	protected ExOrderVO exOrderVO;
+	protected ExOrderDetailsVO exOrderDetailsVO;
+	protected IdentityVO identityVO;
+	protected ContactVO contactVO;
+	protected CorContactVO corContactVO;
+	protected RemarksVO remarksVO;
+	protected SuppMaintVO suppMaintVO;
+	
+	private Map<String,String> suppliers = new HashMap<String, String>();
+	private List<SuppMaintVO> suppMaintList;
+ 	private List<SupplierVO> supplierList;
+ 	private List<CountryVO> countryList;
+	private List<PurchaseVO> billList;
+	private List<LookupItemVO> pymtTermList;
+	private List<IdentityVO> identityList;
+	private List<Object> suppNameList;
+	private List<AcctVO> liabilityList;
+	
+	// lazy load model
+	private LazyDataModel<SupplierVO> lazySuppDataModel;
+	private TrackingLogUtils trackingLogUtils;
+	
+	private Date date;
+
+	// handle multiple record add/upd/del
+	protected AddUpdDelVO contactAUDVO;
+	protected AddUpdDelVO corContactAUDVO;
+	protected AddUpdDelVO identityAUDVO;
+	protected AddUpdDelVO remarksAUDVO;
+	
+	protected boolean contactAdd;
+	
+	/**
+	 * Initialized
+	 * @throws BusinessException 
+	 */
+	public void init(int flag) throws BusinessException {
+		
+		trackingLogUtils = new TrackingLogUtils(this.getClass());
+		
+		supplierList = new ArrayList<SupplierVO>();
+		pymtTermList = new ArrayList<LookupItemVO>();
+		resetForm();
+		resetIdentityForm();
+		resetContactForm();
+		resetRemarksForm();
+
+		try {
+			liabilityList = billPymtBO.getAPAccount(getSessionInfoBean().getCompanyVO().getId());
+			loadPymtTerm();
+			initSearchParam();
+			
+			/* 	Flag:
+				0 = Bill Payment
+				1 = Bank Payment
+				2 = Supplier
+			*/
+			if (flag == 1) {
+				supplierList = purchaseBO.getSupplierList(getSessionInfoBean().getCompanyVO().getId());
+				loadSupplier();
+			} else if (flag == 2) {
+				loadSupplier();
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.core.web.swf.bean.BaseBackingBean#resetForm()
+	 */
+	@Override
+	public void resetForm() {
+		supplierVO = new SupplierVO();
+		supplierVO.setCode("C");
+		supplierVO.setPersonVO(new PersonVO());
+		supplierVO.setCorporateVO(new CorporateVO());
+		supplierVO.setCorAddressVO(new CorAddressVO());
+		supplierVO.setSuppPicList(new ArrayList<SuppPersonInChargeVO>());
+		identityVO = new IdentityVO();
+		contactAUDVO = new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>());
+		corContactAUDVO = new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>());
+		identityAUDVO = new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>());
+		remarksAUDVO = new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>());
+	}
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void resetEditForm() throws BusinessException {
+		init(2);
+	}
+
+	/**
+	 * Reset identity form
+	 * @throws BusinessException
+	 */
+	public void resetIdentityForm() throws BusinessException {
+		identityVO = new IdentityVO();
+	}
+	
+	/**
+	 * Reset contact form
+	 * @throws BusinessException
+	 */
+	public void resetContactForm() throws BusinessException {
+		setContactAdd(true);
+		contactVO = new ContactVO();
+		corContactVO = new CorContactVO();
+	}
+	
+	/**
+	 * Reset remarks form
+	 * @throws BusinessException
+	 */
+	public void resetRemarksForm() throws BusinessException {
+		remarksVO = new RemarksVO();
+	}
+	
+	/**
+	 * Add Personal Supplier
+	 */
+	public void addPersonalSuppl() {
+		try {
+//			checkLocalSupplierIdentity();
+			
+			for(SupplierVO supp : supplierList){
+				if(StringUtils.equals(supplierVO.getCompanyName(), supp.getFullName())) throw new BusinessException(CommonErrConstant.ERR_SUPP_NAME_DUP);
+			}
+			
+			SystemNumberGenerationVO vo = new SystemNumberGenerationVO();
+			vo.setCode(CommonConstant.SYS_NUM_CD_SUPL);
+			vo.setIdCompany(getSessionInfoBean().getCompanyVO().getId());
+			vo = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(vo));
+			// set supplier type
+			for (AcctVO acctVO : liabilityList) {
+				if (acctVO.getId().equals(supplierVO.getAccountId())) {
+					//supplierVO.setSupplierType(acctVO.getDesc());
+					if (acctVO.getDesc().startsWith("T")) supplierVO.setSupplierType(CommonConstant.DEF_ACCT_TYPE_TC);
+					else supplierVO.setSupplierType(CommonConstant.DEF_ACCT_TYPE_SC);
+					break;
+				}
+			}
+			
+			if (supplierVO.getCode().equals("P")) {
+				insertPersonal(vo);
+			} else if(supplierVO.getCode().equals("C")) {
+				insertCompany(vo);
+			}
+			
+			resetForm();
+			init(2);
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Update Personal and Company Supplier
+	 */
+	public void updatePersonalSuppl() {
+		try {
+//			checkLocalSupplierIdentity();
+			
+			for (SupplierVO supp : supplierList) {
+				if(!supplierVO.getId().equals(supp.getId()) && StringUtils.equals(supplierVO.getFullName(), supp.getFullName()))
+					throw new BusinessException(CommonErrConstant.ERR_SUPP_NAME_DUP);
+			}
+			// set supplier type
+			for (AcctVO acctVO : liabilityList) {
+				if (acctVO.getId().equals(supplierVO.getAccountId())) {
+					//supplierVO.setSupplierType(acctVO.getDesc());
+					if (acctVO.getDesc().startsWith("T")) supplierVO.setSupplierType(CommonConstant.DEF_ACCT_TYPE_TC);
+					else supplierVO.setSupplierType(CommonConstant.DEF_ACCT_TYPE_SC);
+					break;
+				}
+			}
+			
+			updatePersonal(); 
+			resetForm(); 
+			init(2); 
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Delete Personal and Company Supplier
+	 */
+	public void deleteSuppl() {
+		try {
+			trackingLogUtils.startLogs();
+			
+			if( billPymtBO.getSupplierInBills(supplierVO.getId()) == 0) {
+				delSuppl();
+				init(2);
+				successResult();
+				
+			} else {
+				FacesMessage msg  = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Delete supplier failed due to supplier is in used in bill payment", "");
+				if (msg != null) FacesContext.getCurrentInstance().addMessage(null, msg);
+		        RequestContext.getCurrentInstance().addCallbackParam("validateAccountCodeError", true);
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("deleteSuppl");
+		}
+	}
+	
+	private void checkLocalSupplierIdentity() throws BusinessException {
+		if (supplierVO.getCorAddressVO() != null && supplierVO.getCorAddressVO().getCountryId() != null) {
+			if (!supplierVO.getCorAddressVO().getCountryId().equals(CommonConstant.DEF_COUNTRY_ID) &&
+					StringUtils.isEmpty(supplierVO.getPassportNo())) {
+				throw new BusinessException(CommonErrConstant.ERR_CUST_NON_MALAYSIAN_PSS_PRT_REQUIRED);
+			}
+		}
+	}
+	
+	/**
+	 * Add Identity
+	 */
+	public void addIdentity() {
+		try {
+			// if identity list instance is null, create instance
+			if(null == supplierVO.getIdentityList()) supplierVO.setIdentityList(new ArrayList<IdentityVO>());
+			identityList = purchaseBO.getIdentityList();
+			
+			for(IdentityVO vo : identityList){
+				if(identityVO.getIdType().equals(vo.getIdType())){
+					if(identityVO.getIdNo().equals(vo.getIdNo())) throw new BusinessException(CommonErrConstant.ERR_EO_IDENTITY_DUPLICATED);
+				}
+			}
+			
+			if(supplierVO.getAddEdit()){
+				identityVO.setPersonId(supplierVO.getPersonId());
+				identityAUDVO.getAddList().add(identityVO);
+			}
+
+			supplierVO.getIdentityList().add(identityVO);
+			resetIdentityForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit Identity
+	 */
+	public void editIdentity() {
+		try {
+			if(supplierVO.getAddEdit()){
+				identityAUDVO.getUpdList().add(identityVO);
+			}
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 *  Delete Identity
+	 */
+	public void delIdentityList(IdentityVO identityVO) {
+		try {
+			if(supplierVO.getAddEdit()){
+				identityAUDVO.getDelList().add(identityVO);
+			}
+			
+			supplierVO.getIdentityList().remove(identityVO);
+			successResult();
+			resetIdentityForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add Contact
+	 */
+	public void addContact() {
+		try {
+			// if identity list instance is null, create instance
+			if(null == supplierVO.getContactList()) supplierVO.setContactList(new ArrayList<ContactVO>());
+			
+			if (supplierVO.getAddEdit()){
+				if(supplierVO.getCode().equals("C")){
+					if (null == supplierVO.getCorContactList()) supplierVO.setCorContactList(new ArrayList<CorContactVO>());
+					corContactVO.setContactType(contactVO.getContactType());
+					corContactVO.setContactNo(contactVO.getContactNo());
+					corContactVO.setCorporateId(supplierVO.getCorporateVO().getId());
+					supplierVO.getCorContactList().add(corContactVO);
+					corContactAUDVO.getAddList().add(corContactVO);
+					
+				} else {
+					contactVO.setPersonId(supplierVO.getPersonId());
+					contactAUDVO.getAddList().add(contactVO);
+				}
+			}
+			supplierVO.getContactList().add(contactVO);
+			resetContactForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit Individual Contact
+	 */
+	public void editContact() {
+		try {
+			if(supplierVO.getAddEdit()) {
+				contactVO.setPersonId(supplierVO.getPersonId());
+				contactAUDVO.getUpdList().add(contactVO);
+			}
+			resetContactForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void addCorContact() {
+		try {
+			if (null == supplierVO.getCorContactList()) supplierVO.setCorContactList(new ArrayList<CorContactVO>());
+			
+			supplierVO.getCorContactList().add(corContactVO);
+			
+			resetContactForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit Individual Contact
+	 */
+	public void updateCorContact() {
+		try {
+			resetContactForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 *  Delete Individual Contact
+	 */
+	public void delContactList(ContactVO contactVO) {
+		try {
+			if(supplierVO.getAddEdit()){
+				contactVO.setPersonId(supplierVO.getPersonId());
+				contactAUDVO.getDelList().add(contactVO);
+			}
+			supplierVO.getContactList().remove(contactVO);
+			successResult();
+			resetContactForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	/**
+	 *  Delete Individual Contact
+	 */
+	public void delCorContactList(CorContactVO corContactVO) {
+		try {
+			supplierVO.getCorContactList().remove(corContactVO);
+			successResult();
+			resetContactForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void addPic() {
+		try {
+			if (CollectionUtils.isEmpty(supplierVO.getSuppPicList())) supplierVO.setSuppPicList(new ArrayList<SuppPersonInChargeVO>());
+			
+			supplierVO.getSuppPicList().add(new SuppPersonInChargeVO());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void deletePic(SuppPersonInChargeVO vo) {
+		try {
+			supplierVO.getSuppPicList().remove(vo);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add Remarks Details
+	 */
+	public void addRemarks() {
+		try {
+			
+			Date dtnow = new Date();
+			String strdtnow = null;
+			DateFormat dtformat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			strdtnow = dtformat.format(dtnow);
+			dtnow = dtformat.parse(strdtnow);
+			// if identity list instance is null, create instance
+			if(null == supplierVO.getRemarksList()) supplierVO.setRemarksList(new ArrayList<RemarksVO>());
+			remarksVO.setStrTimestamp(strdtnow);
+			remarksVO.setTimestamp(dtnow);
+			
+			if(supplierVO.getAddEdit()){
+				if(supplierVO.getCode().equals("C")){
+					remarksVO.setPersonCorpId((supplierVO.getCorporateVO().getId()));	
+				}else{
+					remarksVO.setPersonCorpId((supplierVO.getPersonId()));
+				}
+				remarksAUDVO.getAddList().add(remarksVO);
+			}
+			
+			supplierVO.getRemarksList().add(remarksVO);
+			resetRemarksForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit Remarks Details
+	 */
+	public void editRemarks() {
+		try {
+			Date dtnow = new Date();
+			String strdtnow = null;
+			DateFormat dtformat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			strdtnow = dtformat.format(dtnow);
+			dtnow = dtformat.parse(strdtnow);
+			
+			if (!supplierVO.getAddEdit()) remarksVO.setTimestamp(dtnow);
+			else {
+				if(supplierVO.getCode().equals("C")) remarksVO.setPersonCorpId(supplierVO.getCorporateVO().getId());
+				else remarksVO.setPersonCorpId(supplierVO.getPersonId());
+				remarksAUDVO.getUpdList().add(remarksVO);
+			}
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 *  Delete Remarks Details
+	 */
+	public void delRemarksList(RemarksVO remarksVO) {
+		try {
+			if(supplierVO.getAddEdit())remarksAUDVO.getDelList().add(remarksVO);
+			supplierVO.getRemarksList().remove(remarksVO);
+			successResult();
+			resetRemarksForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 *  Add is false 
+	 */
+	public void booleanAdd() {
+		try {
+			resetForm();
+			supplierVO.setAddEdit(false);
+			countryList = regionBO.getActualCountryList();
+			supplierVO.setCountryId(CommonConstant.DEF_COUNTRY_ID);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * Load supplier list
+	 */
+	private void loadSupplier() throws BusinessException {
+		//supplierList = purchaseBO.getSupplierList(getSessionInfoBean().getCompanyVO().getId(), false);
+		lazySuppDataModel = new LazySupplierDataModel();
+	}
+	
+	/*
+	 * Load corporate list
+	 */
+	public List<String> loadCorpList(String s) throws BusinessException{
+		List<String> results = new ArrayList<String>();
+		for (SupplierVO vo : supplierList) {
+			//if (vo.getFullName().toLowerCase().startsWith(s.toLowerCase()) && vo.getCode().equals("C")) {
+			if (vo.getFullName().toLowerCase().startsWith(s.toLowerCase())) {
+				results.add(vo.getFullName());
+			}
+		}
+		return results;
+	}
+	
+	/*
+	 * Load Payment Term list
+	 */
+	private void loadPymtTerm() throws BusinessException {
+		pymtTermList = purchaseBO.getPymtTermList("pymt_term");
+	}
+
+	/*
+	 * Insert Personal Supplier
+	 */
+	
+	private void insertPersonal(SystemNumberGenerationVO systemNumberGenerationVO) throws BusinessException{
+		trackingLogUtils.startLogs();
+		purchaseBO.insertPersonal(supplierVO, systemNumberGenerationVO);
+		trackingLogUtils.endLogs("insertPersonal");
+	}
+	
+	/*
+	 * Insert Company Supplier
+	 */
+	
+	private void insertCompany(SystemNumberGenerationVO systemNumberGenerationVO) throws BusinessException{
+		trackingLogUtils.startLogs();
+		purchaseBO.insertCompany(supplierVO, systemNumberGenerationVO);
+		trackingLogUtils.endLogs("insertCompany");
+	}
+	
+	/*
+	 * Update Personal Supplier
+	 */
+	
+	private void updatePersonal() throws BusinessException{
+		trackingLogUtils.startLogs();
+		
+		purchaseBO.updatePersonal(supplierVO, supplierVO.getAddressVO(), supplierVO.getPersonVO(), supplierVO.getCorporateVO(), contactAUDVO, corContactAUDVO, identityAUDVO, remarksAUDVO);
+		
+		//supplierVO.setFullName(supplierVO.getPersonVO().getSalutation() + " " + supplierVO.getPersonVO().getLastName() + " " + supplierVO.getPersonVO().getGivenName());
+		
+		if(supplierVO.getSupplierType().equals("SC")){
+			supplierVO.setSupplierType("Sundry Creditors");
+		}else if(supplierVO.getSupplierType().equals("TC")){
+			supplierVO.setSupplierType("Trade Creditors");
+		}
+		
+		// Update Cash book and Account Trans - [Destination] table if supplier name change
+		purchaseBO.updateAcctTransDestinationSpplr(supplierVO.getCompanyId(), supplierVO.getId());
+		// Update Ex Order Bill and Account Trans - [Accout Id] table if supplier type change TC/SC
+		purchaseBO.updateAcctTransAcctIdSupplr(supplierVO.getCompanyId(), supplierVO.getId());
+		
+		trackingLogUtils.endLogs("updatePersonal");
+	}
+	
+	/*
+	 * Delete Supplier
+	 */
+	
+	private void delSuppl() throws BusinessException{
+		purchaseBO.delSuppl(supplierVO, supplierVO.getAddressVO(), supplierVO.getPersonVO(), supplierVO.getCorporateVO());
+	}
+
+	/**
+	 * On Identity selected
+	 * @param event
+	 */
+	public void onIdentitySelected(IdentityVO vo) {
+		try {
+			resetIdentityForm();
+			identityVO = vo;
+			vo = null;
+			successResult();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Contact selected
+	 * @param event
+	 */
+	public void onContactSelected(ContactVO vo) {
+		try {
+			resetContactForm();
+			contactVO = vo;
+			vo = null;
+		successResult();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Corporate Contact selected
+	 * @param event
+	 */
+	public void onCorContactSelected(CorContactVO vo) {
+		try {
+			resetContactForm();
+			setContactAdd(false);
+			corContactVO = vo;
+			
+			vo = null;
+			successResult();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Remarks selected
+	 * @param event
+	 */
+	public void onRemarksSelected(RemarksVO vo) {
+		try {
+			resetRemarksForm();
+			remarksVO = vo;
+			vo = null;
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Supplier selected
+	 * @param event
+	 */
+	public void onSupplierSelected(SupplierVO suppMainVO) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			supplierVO = purchaseBO.getSupplierDetails(suppMainVO.getId());
+			supplierVO.setAddEdit(true);
+			countryList = regionBO.getActualCountryList();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("onSupplierSelected");
+		}
+	}
+	
+	/**
+	 * On Ventor Type selected
+	 * @param event
+	 */
+	public void onVenTypeSelected() {
+		try { 
+			if(supplierVO.getPersonType().equals("C")){
+				supplierVO.setVenderType(true);
+			}else supplierVO.setVenderType(false);
+			 
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	class LazySupplierDataModel extends LazyDataModel<SupplierVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#load(int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+		 */
+		@Override
+		public List<SupplierVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			try {
+				trackingLogUtils.startLogs();
+				
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", sortField);
+				params.put("sortOrder", sortOrder);
+				params.put("filters", filters);
+				params.put("groupCd", searchParamVO.getObj1());
+				
+				setRowCount(purchaseBO.getSupplierListSize(params));
+				if (getRowCount() > 0) return purchaseBO.getSupplierList(params);
+				
+			} catch (Throwable t) {
+				errorResult(t);
+			} finally {
+				trackingLogUtils.endLogs("LazySupplierDataModel");
+			}
+			return null;
+		}
+		
+		@Override
+		public void setRowIndex(int rowIndex) {
+			/*
+			 * The following is in ancestor (LazyDataModel):
+			 * this.rowIndex = rowIndex == -1 ? rowIndex : (rowIndex % pageSize);
+			 */
+			if (rowIndex == -1 || getPageSize() == 0) {
+				super.setRowIndex(-1);
+			} else super.setRowIndex(rowIndex % getPageSize());
+		}
+	}
+	
+	public String getContactStr(String s) {
+		return LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, s.substring(0, s.indexOf("|"))) + ": " + s.substring(s.indexOf("|") + 1);
+	}
+	
+	/**
+	 * Handle MSIC Code selection
+	 */
+	public void handleMSICCodeSelect() {
+		try {
+//			supplierVO.setBzActDesc(LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_E_INV_MSIC_CODE, supplierVO.getMsicCode()));
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Handle country selection
+	 */
+	public void handleCountrySelected() {
+		try {
+			if (supplierVO.getCorAddressVO().getCountryId() != 129) {
+				if (StringUtils.isBlank(supplierVO.getMsicCode())) {
+					supplierVO.setMsicCode(EInvoiceConstant.MSIC_CODE_NA);
+				}
+			}
+			
+//			supplierVO.setBzActDesc(LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_E_INV_MSIC_CODE, supplierVO.getMsicCode()));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void processEmailSupplierProfileUpdate() {
+		try {
+			List<SupplierProfileUpdateVO> supplierProfileUpdateList = new ArrayList<SupplierProfileUpdateVO>();
+			
+			if (StringUtils.isNotBlank(supplierVO.getPersonVO().getEmail())) {
+				SupplierProfileUpdateVO supplProfileUpdateVO = new SupplierProfileUpdateVO();
+				supplProfileUpdateVO.setIdSupplier(supplierVO.getId());
+				supplProfileUpdateVO.setUuid(UUID.randomUUID().toString());
+				supplProfileUpdateVO.setEmail(supplierVO.getPersonVO().getEmail());
+				supplierProfileUpdateList.add(supplProfileUpdateVO);
+				
+				String sendMessage = "Email sent to " + supplierVO.getPersonVO().getEmail();
+	            FacesMessage facesMessage = new FacesMessage(FacesMessage.SEVERITY_INFO, sendMessage, sendMessage);
+	            FacesContext.getCurrentInstance().addMessage(null, facesMessage);
+				
+	            customerProfileUpdateBO.updateSupplierProfiles(supplierProfileUpdateList, getSessionInfo().getUserVO());
+				
+				successResult();
+			} else {
+				PersonVO psVO = supplierVO.getPersonVO();
+				String supplName = (psVO.getSalutation() != null ? psVO.getSalutation().toUpperCase() : "") + 
+						(psVO.getLastName() != null  ? " " + psVO.getLastName() : "") +
+						(psVO.getGivenName() != null  ? " " + psVO.getGivenName() : "");
+				List<String> unableSentEmailCustList = new ArrayList<String>();
+				unableSentEmailCustList.add(supplName);
+				String unableToSendMessage = "Unable to send email to the supplier " + String.join(", ", unableSentEmailCustList) + ", email can not be blank";
+	            FacesMessage facesMessage = new FacesMessage(FacesMessage.SEVERITY_ERROR, unableToSendMessage, unableToSendMessage);
+	            FacesContext.getCurrentInstance().addMessage(null, facesMessage);
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+		
+	}
+
+	/*******************
+	 * Getter & Setter *
+	 *******************/
+
+	public List<SupplierVO> getSupplierList() {
+		return supplierList;
+	}
+
+
+	public void setSupplierList(List<SupplierVO> supplierList) {
+		this.supplierList = supplierList;
+	}
+
+	public List<PurchaseVO> getBillList() {
+		return billList;
+	}
+
+	public void setBillList(List<PurchaseVO> billList) {
+		this.billList = billList;
+	}
+
+	public Date getDate() {
+		return date;
+	}
+
+	public void setDate(Date date) {
+		this.date = date;
+	}
+
+	/**
+	 * @return the supplierVO
+	 */
+	public SupplierVO getSupplierVO() {
+		return supplierVO;
+	}
+	/**
+	 * @param supplierVO the supplierVO to set
+	 */
+	public void setSupplierVO(SupplierVO supplierVO) {
+		this.supplierVO = supplierVO;
+	}
+
+	public ExOrderVO getExOrderVO() {
+		return exOrderVO;
+	}
+
+	public void setExOrderVO(ExOrderVO exOrderVO) {
+		this.exOrderVO = exOrderVO;
+	}
+
+	public ExOrderDetailsVO getExOrderDetailsVO() {
+		return exOrderDetailsVO;
+	}
+
+	public void setExOrderDetailsVO(ExOrderDetailsVO exOrderDetailsVO) {
+		this.exOrderDetailsVO = exOrderDetailsVO;
+	}
+
+	public IdentityVO getIdentityVO() {
+		return identityVO;
+	}
+
+	public void setIdentityVO(IdentityVO identityVO) {
+		this.identityVO = identityVO;
+	}
+
+	public ContactVO getContactVO() {
+		return contactVO;
+	}
+
+	public void setContactVO(ContactVO contactVO) {
+		this.contactVO = contactVO;
+	}
+
+	public RemarksVO getRemarksVO() {
+		return remarksVO;
+	}
+
+	public void setRemarksVO(RemarksVO remarksVO) {
+		this.remarksVO = remarksVO;
+	}
+
+	public SuppMaintVO getSuppMaintVO() {
+		return suppMaintVO;
+	}
+
+	public void setSuppMaintVO(SuppMaintVO suppMaintVO) {
+		this.suppMaintVO = suppMaintVO;
+	}
+
+	public List<SuppMaintVO> getSuppMaintList() {
+		return suppMaintList;
+	}
+
+	public void setSuppMaintList(List<SuppMaintVO> suppMaintList) {
+		this.suppMaintList = suppMaintList;
+	}
+
+	public Map<String, String> getSuppliers() {
+		return suppliers;
+	}
+
+	public void setSuppliers(Map<String, String> suppliers) {
+		this.suppliers = suppliers;
+	}
+
+	public CorContactVO getCorContactVO() {
+		return corContactVO;
+	}
+
+	public void setCorContactVO(CorContactVO corContactVO) {
+		this.corContactVO = corContactVO;
+	}
+
+	public List<CountryVO> getCountryList() {
+		return countryList;
+	}
+
+	public void setCountryList(List<CountryVO> countryList) {
+		this.countryList = countryList;
+	}
+
+	public List<Object> getSuppNameList() {
+		return suppNameList;
+	}
+
+	public void setSuppNameList(List<Object> suppNameList) {
+		this.suppNameList = suppNameList;
+	}
+
+	/**
+	 * @return the liabilityList
+	 */
+	public List<AcctVO> getLiabilityList() {
+		return liabilityList;
+	}
+
+	/**
+	 * @param liabilityList the liabilityList to set
+	 */
+	public void setLiabilityList(List<AcctVO> liabilityList) {
+		this.liabilityList = liabilityList;
+	}
+
+	public List<LookupItemVO> getPymtTermList() {
+		return pymtTermList;
+	}
+
+	public void setPymtTermList(List<LookupItemVO> pymtTermList) {
+		this.pymtTermList = pymtTermList;
+	}
+
+	public List<IdentityVO> getIdentityList() {
+		return identityList;
+	}
+
+	public void setIdentityList(List<IdentityVO> identityList) {
+		this.identityList = identityList;
+	}
+	
+
+	/**
+	 * @return the lazySuppDataModel
+	 */
+	public LazyDataModel<SupplierVO> getLazySuppDataModel() {
+		return lazySuppDataModel;
+	}
+
+	/**
+	 * @param lazySuppDataModel the lazySuppDataModel to set
+	 */
+	public void setLazySuppDataModel(LazyDataModel<SupplierVO> lazySuppDataModel) {
+		this.lazySuppDataModel = lazySuppDataModel;
+	}
+	
+	public void handleGroupSupplierSelect() {
+		try {
+			
+			loadSupplier();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	public boolean isContactAdd() {
+		return contactAdd;
+	}
+
+	public void setContactAdd(boolean contactAdd) {
+		this.contactAdd = contactAdd;
+	}
+}

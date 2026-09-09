@@ -1,0 +1,60 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+ 
+	<script type="text/javascript">
+		function onValidationPIC(xhr, status, args) {
+			if(!args.validateError) {
+				varEmployeeList.hide();	 
+			} else {	
+				varEmployeeList.show(); 
+			}
+		}
+	</script>
+	
+	<div style="height:150px; overflow:auto;">
+		<p:panelGrid style="margin-bottom:10px;">  
+			<p:row>
+				<p:column style="width: 80px;">
+					<p:outputLabel for="idTxtName" value="Name"/>
+				</p:column>
+				<p:column>
+					<p:inputText id="idTxtName" value="#{roomingListBean.RLVO.description}" required="true" style="margin-right: 5px;" maxlength="100"/> 
+					<p:commandButton icon="ui-icon-search" oncomplete="varEmployeeListDialog.show()" update=":idEmployeeListDialog" process="@this"/>
+				</p:column> 
+			</p:row>
+			<p:row>
+				<p:column>
+					<p:outputLabel for="idTxtPhoneNo" value="Phone No"/>
+				</p:column>
+				<p:column>
+					<p:inputText id="idTxtPhoneNo" value="#{roomingListBean.RLVO.description2}" maxlength="13" required="true" /> 
+					<pe:keyFilter for="idTxtPhoneNo" mask="num" /> 
+				</p:column> 
+			</p:row> 
+			<p:row>
+				<p:column>
+					<p:outputLabel for="idSelDepartment" value="Department"/>
+				</p:column>
+				<p:column>
+					<p:selectOneMenu id="idSelDepartment" value="#{roomingListBean.RLVO.department}" >
+						<f:selectItem itemValue="#{null}" itemLabel="Select One"/>
+						<f:selectItems value="#{bterp:lookupItemList('dept_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+					</p:selectOneMenu>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	
+		<h:panelGrid columns="2" style="width: 10px;">
+			<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{roomingListBean.saveAddEmployee}" update=":idPICForm, :idEditRoomingListForm:idPICListPanel, :idEditRoomingListForm:idTourLeaderListPanel, :idEditRoomingListForm:idTourManagerListPanel" /> 
+			<p:commandButton value="#{msg['common.button.label.cancel']}"  oncomplete="varAddEmployee.hide()" actionListener="#{roomingListBean.resetPIC}" process="@this" update="@form"  global="false">
+				<pe:resetEditableValues for="idPICForm"/>
+			</p:commandButton>
+		</h:panelGrid>
+	</div>
+</ui:composition>

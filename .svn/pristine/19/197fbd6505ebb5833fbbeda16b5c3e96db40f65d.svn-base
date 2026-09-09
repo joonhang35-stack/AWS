@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="sales_in_advance_rpt" language="groovy" pageWidth="756" pageHeight="787" columnWidth="716" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="0b84bc90-9d36-4559-bf71-8a09f9c87b5a">
+	<property name="ireport.zoom" value="1.5"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="companyName" class="java.lang.String"/>
+	<parameter name="slogan" class="java.lang.String"/>
+	<parameter name="address" class="java.lang.String"/>
+	<parameter name="contact" class="java.lang.String"/>
+	<parameter name="fromDate" class="java.util.Date"/>
+	<parameter name="toDate" class="java.util.Date"/>
+	<parameter name="tourCd" class="java.lang.String"/>
+	<parameter name="groupType" class="java.lang.String"/>
+	<field name="dtInv" class="java.util.Date"/>
+	<field name="transType" class="java.lang.String"/>
+	<field name="dtDep" class="java.util.Date"/>
+	<field name="invNo" class="java.lang.String"/>
+	<field name="invoiceNo" class="java.lang.String"/>
+	<field name="tourCd" class="java.lang.String"/>
+	<field name="custCd" class="java.lang.String"/>
+	<field name="custType" class="java.lang.String"/>
+	<field name="custName" class="java.lang.String"/>
+	<field name="companyName" class="java.lang.String"/>
+	<field name="invItemAmt" class="java.lang.Double"/>
+	<field name="amount" class="java.lang.Double"/>
+	<field name="payment" class="java.lang.Double"/>
+	<field name="balance" class="java.lang.Double"/>
+	<field name="code" class="java.lang.String"/>
+	<field name="subCode" class="java.lang.String"/>
+	<field name="desc" class="java.lang.String"/>
+	<field name="subDesc" class="java.lang.String"/>
+	<field name="psDt" class="java.util.Date"/>
+	<field name="psNo" class="java.lang.String"/>
+	<variable name="totalAmtByMonth" class="java.lang.Double" resetType="Group" resetGroup="By Month" calculation="Sum">
+		<variableExpression><![CDATA[$F{amount}]]></variableExpression>
+	</variable>
+	<variable name="totalPmntByMonth" class="java.lang.Double" resetType="Group" resetGroup="By Month" calculation="Sum">
+		<variableExpression><![CDATA[$F{payment}]]></variableExpression>
+	</variable>
+	<variable name="totalInvItemByMonth" class="java.lang.Double" resetType="Group" resetGroup="By Month" calculation="Sum">
+		<variableExpression><![CDATA[$F{invItemAmt}]]></variableExpression>
+	</variable>
+	<variable name="totalAmtByCode" class="java.lang.Double" resetType="Group" resetGroup="Code" calculation="Sum">
+		<variableExpression><![CDATA[$F{amount}]]></variableExpression>
+	</variable>
+	<variable name="totalPmntByCode" class="java.lang.Double" resetType="Group" resetGroup="Code" calculation="Sum">
+		<variableExpression><![CDATA[$F{payment}]]></variableExpression>
+	</variable>
+	<variable name="totalInvItemByCode" class="java.lang.Double" resetType="Group" resetGroup="Code" calculation="Sum">
+		<variableExpression><![CDATA[$F{invItemAmt}]]></variableExpression>
+	</variable>
+	<variable name="grandTotalAmt" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{amount}]]></variableExpression>
+	</variable>
+	<variable name="grandTotalPmnt" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{payment}]]></variableExpression>
+	</variable>
+	<variable name="grandTotalInvItem" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{invItemAmt}]]></variableExpression>
+	</variable>
+	<group name="By Month">
+		<groupExpression><![CDATA[($P{groupType}.equals("I")) ?
+(new SimpleDateFormat("MM/yyyy").format($F{dtInv}))
+:
+(new SimpleDateFormat("MM/yyyy").format($F{dtDep}))]]></groupExpression>
+		<groupHeader>
+			<band height="15">
+				<textField>
+					<reportElement x="0" y="0" width="278" height="15" uuid="f912729b-fa97-4208-9d27-3d755ea3b0ec"/>
+					<textElement textAlignment="Left" verticalAlignment="Top">
+						<font fontName="Arial Unicode MS" size="10" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[($P{groupType}.equals("I")) ?
+(new SimpleDateFormat("MMM yyyy").format($F{dtInv}))
+:
+(new SimpleDateFormat("MMM yyyy").format($F{dtDep}))]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="15">
+				<textField>
+					<reportElement x="0" y="0" width="646" height="15" uuid="f912729b-fa97-4208-9d27-3d755ea3b0ec"/>
+					<textElement textAlignment="Right" verticalAlignment="Top">
+						<font fontName="Arial Unicode MS" size="10" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[(
+($P{groupType}.equals("I")) ?
+(new SimpleDateFormat("MMM yyyy").format($F{dtInv}))
+:
+(new SimpleDateFormat("MMM yyyy").format($F{dtDep}))
+) + " Total:"]]></textFieldExpression>
+				</textField>
+				<textField pattern="#,##0.00;(#,##0.00)">
+					<reportElement x="646" y="0" width="70" height="15" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="8"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{totalInvItemByMonth}]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupFooter>
+	</group>
+	<group name="Code">
+		<groupExpression><![CDATA[$F{code} + $F{subCode}]]></groupExpression>
+		<groupHeader>
+			<band height="15">
+				<textField>
+					<reportElement x="0" y="0" width="716" height="15" uuid="f912729b-fa97-4208-9d27-3d755ea3b0ec"/>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[($F{subCode}.equals("")) ?
+($F{code} + " " + $F{desc})
+:
+($F{code} + "-" + $F{subCode} + " " + $F{desc} + ", " + $F{subDesc})]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+		<groupFooter>
+			<band height="16">
+				<textField>
+					<reportElement x="0" y="1" width="646" height="15" uuid="f912729b-fa97-4208-9d27-3d755ea3b0ec"/>
+					<textElement textAlignment="Right" verticalAlignment="Top">
+						<font fontName="Arial Unicode MS" size="8" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[(($F{subCode}.equals("")) ?
+($F{code} + " " + $F{desc})
+:
+($F{code} + "-" + $F{subCode} + " " + $F{desc} + ", " + $F{subDesc})
+) + " " +
+(
+($P{groupType}.equals("I")) ?
+(new SimpleDateFormat("MMM yyyy").format($F{dtInv}))
+:
+(new SimpleDateFormat("MMM yyyy").format($F{dtDep}))
+) + " Total:"]]></textFieldExpression>
+				</textField>
+				<line>
+					<reportElement positionType="Float" x="646" y="0" width="70" height="1" uuid="01c360f2-a4be-46ef-9c89-d3a5c0d28bde"/>
+				</line>
+				<textField pattern="#,##0.00;(#,##0.00)">
+					<reportElement x="646" y="1" width="70" height="15" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314"/>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial Unicode MS" size="8"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{totalInvItemByCode}]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupFooter>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="120">
+			<textField isBlankWhenNull="true">
+				<reportElement x="0" y="40" width="716" height="20" uuid="9c2b6d44-8649-41e1-9329-5efec8d48501"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="12" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{companyName}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="0" y="0" width="716" height="20" uuid="adfc2d65-b12c-4f66-b81d-91bc3bc7b17f"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Report Print On " + new SimpleDateFormat("dd-MM-yyyy").format(new Date())]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement positionType="Float" x="0" y="60" width="716" height="20" uuid="99c82e2a-1efc-49e6-baa6-66189b7716c0"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS"/>
+				</textElement>
+				<textFieldExpression><![CDATA["As At Date " + (new SimpleDateFormat("dd/MM/yyyy")).format($P{toDate})]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="0" y="20" width="716" height="20" uuid="c2fd52b2-70b6-4690-a1f4-1ee3e4a62bee"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="14" isBold="true"/>
+				</textElement>
+				<text><![CDATA[SALES IN ADVANCE]]></text>
+			</staticText>
+			<textField>
+				<reportElement positionType="Float" x="0" y="80" width="716" height="20" isRemoveLineWhenBlank="true" uuid="99c82e2a-1efc-49e6-baa6-66189b7716c0">
+					<printWhenExpression><![CDATA[$P{tourCd} != null]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Tour Code: " + $P{tourCd}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement positionType="Float" x="0" y="100" width="716" height="20" isRemoveLineWhenBlank="true" uuid="99c82e2a-1efc-49e6-baa6-66189b7716c0">
+					<printWhenExpression><![CDATA[$P{groupType} != null]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Group By: " +
+($P{groupType}.equals("I") ? "Invoice Date" : "Departure Date")]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<columnHeader>
+		<band height="21">
+			<staticText>
+				<reportElement x="163" y="0" width="60" height="20" uuid="6268c6ca-04cc-46fb-8be5-7ff97c274d15"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Doc. No.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="108" y="0" width="55" height="20" uuid="6268c6ca-04cc-46fb-8be5-7ff97c274d15"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Doc. Date]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="278" y="0" width="140" height="20" uuid="6268c6ca-04cc-46fb-8be5-7ff97c274d15"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" isBold="true"/>
+				</textElement>
+				<text><![CDATA[T/Code]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="646" y="0" width="70" height="20" uuid="6268c6ca-04cc-46fb-8be5-7ff97c274d15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Amount]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="223" y="0" width="55" height="20" uuid="6268c6ca-04cc-46fb-8be5-7ff97c274d15"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Dep. Date]]></text>
+			</staticText>
+			<line>
+				<reportElement positionType="Float" x="0" y="20" width="716" height="1" uuid="01c360f2-a4be-46ef-9c89-d3a5c0d28bde"/>
+			</line>
+			<staticText>
+				<reportElement x="418" y="0" width="228" height="20" uuid="6268c6ca-04cc-46fb-8be5-7ff97c274d15"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Cust. Name/Co.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="0" width="50" height="20" uuid="edee33fc-cb7f-4a60-b7ab-05fd183fd31c"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PS Date]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="50" y="0" width="58" height="20" uuid="cfe107e2-aea9-4ce2-b12d-083d977718c2"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PS No.]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="15" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="163" y="0" width="60" height="15" uuid="f912729b-fa97-4208-9d27-3d755ea3b0ec"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{transType} == "Sales Invoice") ?
+$F{invoiceNo}
+:
+($F{transType} == "Pax Statement") ?
+"PS" + $F{invoiceNo}
+:
+($F{transType} == "Credit Note") ?
+"CN" + $F{invoiceNo}
+:
+""]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="108" y="0" width="55" height="15" uuid="f912729b-fa97-4208-9d27-3d755ea3b0ec"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.text.SimpleDateFormat("dd/MM/yyyy").format($F{dtInv})]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="223" y="0" width="55" height="15" uuid="f912729b-fa97-4208-9d27-3d755ea3b0ec"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.text.SimpleDateFormat("dd/MM/yyyy").format($F{dtDep})]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="278" y="0" width="140" height="15" uuid="f912729b-fa97-4208-9d27-3d755ea3b0ec"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{tourCd}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true">
+				<reportElement x="418" y="0" width="228" height="15" uuid="f912729b-fa97-4208-9d27-3d755ea3b0ec"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="8" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{custType}.equals("C")) ? $F{companyName} : $F{custName}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)" isBlankWhenNull="false">
+				<reportElement x="646" y="0" width="70" height="15" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{invItemAmt}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="0" y="0" width="50" height="15" uuid="02960feb-8dfd-45d8-bbb3-94b404cd117f"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.text.SimpleDateFormat("dd/MM/yyyy").format($F{psDt})]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="50" y="0" width="58" height="15" uuid="28a45236-2800-4c75-9f6f-87f8c6724fc2"/>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{psNo}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="20">
+			<textField>
+				<reportElement x="0" y="0" width="683" height="20" uuid="a936c0bd-46a1-43e0-983a-4c25678146b2"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Page "+$V{PAGE_NUMBER}+" of"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="683" y="0" width="33" height="20" uuid="0ffcc091-3eca-48cb-9ee8-33625a73a270"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<summary>
+		<band height="32">
+			<staticText>
+				<reportElement x="0" y="1" width="646" height="15" uuid="6268c6ca-04cc-46fb-8be5-7ff97c274d15"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Grand Total:]]></text>
+			</staticText>
+			<textField pattern="#,##0.00;(#,##0.00)">
+				<reportElement x="646" y="1" width="70" height="15" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="Arial Unicode MS" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{grandTotalInvItem}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement positionType="Float" x="646" y="0" width="70" height="1" uuid="01c360f2-a4be-46ef-9c89-d3a5c0d28bde"/>
+			</line>
+			<line>
+				<reportElement positionType="Float" x="646" y="16" width="70" height="1" uuid="01c360f2-a4be-46ef-9c89-d3a5c0d28bde"/>
+				<graphicElement>
+					<pen lineStyle="Double"/>
+				</graphicElement>
+			</line>
+		</band>
+	</summary>
+</jasperReport>

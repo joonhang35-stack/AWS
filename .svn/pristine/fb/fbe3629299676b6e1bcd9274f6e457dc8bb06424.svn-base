@@ -1,0 +1,49 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	<p:growl id="msg"/>
+	
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varAddPaxNameDialog.show();
+			} else {
+				varAddPaxNameDialog.hide();
+			}
+		}
+	</script>
+	
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idAddPaxName">Pax Name <span class="required">*</span></h:outputLabel></p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAddPaxName" colspan="3" label="Pax Name" value="#{purchaseEOBean.paxNameVO.paxName}" required="true" size="50" maxlength="255"
+					validatorMessage="Pax Name is invalid.">
+					<f:validateRegex pattern="[\x00-\x7F]*"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddPNR">No of Pax </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddPNR" label="PNR" value="#{purchaseEOBean.paxNameVO.pnr}" maxlength="20"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddTicketNo">Ticket No </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddTicketNo" label="Ticket No" value="#{purchaseEOBean.paxNameVO.ticketNo}" maxlength="20"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddPayAmt">Payable Amount </h:outputLabel></p:column>
+			<p:column colspan="3"><p:inputText id="idAddPayAmt" label="Payable Amount" value="#{purchaseEOBean.paxNameVO.payableAmt}" maxlength="20"/></p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseEOBean.addPaxName}" update="@form,:idAddExOrderForm:idTabExOrder:idShowPaxName" rendered="#{purchaseEOBean.add}"/>
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseEOBean.editPaxName}" update="@form,:idAddExOrderForm:idTabExOrder:idShowPaxName" oncomplete="onValidation(xhr, status, args)" rendered="#{not purchaseEOBean.add}"/>
+		<p:commandButton value="Cancel" actionListener="#{purchaseEOBean.resetPaxNameForm}" oncomplete="varAddPaxNameDialog.hide()" update="@form,:idAddEOPaxNameForm" process="@this" />
+	</p:panelGrid>
+</ui:composition>

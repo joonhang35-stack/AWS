@@ -1,0 +1,49 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idExtraFeeName">Extra Fee Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idExtraFeeName" label="Extra Fee Name" value="#{cruiseBean.extraItemChargeVO.typeDesc}" required="true"/></p:column>
+		<p:column><h:outputLabel for="idExtraFeeAmt">Extra Fee Amount <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idExtraFeeAmt" label="Extra Fee Amount" value="#{cruiseBean.extraItemChargeVO.amount}" required="true">
+				<f:convertNumber pattern="#,##0.00"/>
+				<pe:keyFilter regEx="/[\d\.\s,]/"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idIsMisc">Calculate into MISC charges?</h:outputLabel></p:column>
+		<p:column><p:selectBooleanCheckbox id="idIsMisc" value="#{cruiseBean.extraItemChargeVO.isMisc}"/> </p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idIsSum">Sum into Total Charges?</h:outputLabel></p:column>
+		<p:column><p:selectBooleanCheckbox id="idIsSum" value="#{cruiseBean.extraItemChargeVO.isSumIntoTotal}"/> </p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;" rendered="#{empty cruiseBean.cruiseScheduleVO.id}">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{cruiseBean.addExtraItemCharge(0)}" update="@form,:idAddCruiseScheduleForm:idExtraItemCharge" rendered="#{empty cruiseBean.extraItemChargeVO.id and empty cruiseBean.extraItemChargeVO.amount}" oncomplete="calSum()"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{cruiseBean.resetItemChargeForm}" update="@form,:idAddCruiseScheduleForm:idExtraItemCharge,:idEditCruiseSchedulesForm:idExtraItemCharge" oncomplete="varEditScheduleChargeDialog.hide(),calSum()" rendered="#{empty cruiseBean.extraItemChargeVO.id and not empty cruiseBean.extraItemChargeVO.amount}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBean.resetItemChargeForm}" oncomplete="varAddScheduleChargeDialog.hide(),varAddScheduleChargeDialog.hide(),varEditCruiseScheduleDialog.hide(),calSum()" process="@this" update="@form, :idAddScheduleItemChargeForm">
+		<pe:resetEditableValues for="idAddScheduleItemChargeForm,idEditScheduleItemChargeForm"/>
+	</p:commandButton>
+</h:panelGrid>
+<h:panelGrid columns="2" style="width:1px;" rendered="#{not empty cruiseBean.cruiseScheduleVO.id}">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{cruiseBean.addExtraItemCharge(1)}" update="@form,:idEditCruiseSchedulesForm:idExtraItemCharge" rendered="#{empty cruiseBean.extraItemChargeVO.id and empty cruiseBean.extraItemChargeVO.amount}" oncomplete="calSum()"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{cruiseBean.updExtraItemCharge(1)}" update="@form,:idEditCruiseSchedulesForm:idExtraItemCharge" oncomplete="varAddScheduleChargeDialog.hide(),varEditScheduleChargeDialog.hide(),calSum()" rendered="#{not empty cruiseBean.extraItemChargeVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{cruiseBean.resetItemChargeForm}" update="@form,:idAddCruiseScheduleForm:idExtraItemCharge,:idEditCruiseSchedulesForm:idExtraItemCharge" oncomplete="varEditScheduleChargeDialog.hide(),calSum()" rendered="#{empty cruiseBean.extraItemChargeVO.id and not empty cruiseBean.extraItemChargeVO.amount}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBean.resetItemChargeForm}" oncomplete="varAddScheduleChargeDialog.hide(),varEditScheduleChargeDialog.hide()" process="@this" update="@form, :idAddScheduleItemChargeForm" global="false">
+		<pe:resetEditableValues for="idAddScheduleItemChargeForm,idEditScheduleItemChargeForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

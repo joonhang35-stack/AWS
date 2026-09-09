@@ -1,0 +1,166 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	  			
+<script type="text/javascript">
+	function onValidationEditCompanySupplier(xhr, status, args) {
+		if (args.validationFailed) {
+			
+		} else {
+			varEditCompDialog.hide();
+		}
+	}
+    function copyTxt() {
+   	 	var f1 = document.getElementById("idEditCSupplierForm:idAddCompName");
+        var f2 = document.getElementById("idEditCSupplierForm:idAddBenefiName");
+        
+        if (f2.value.length == 0) {
+            f2.value = f1.value;
+    	}
+   }
+</script>
+<div style="height:500px;overflow:auto;">
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idAddTypeVen">Type of Supplier <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+	            <h:selectOneMenu id="idAddTypeVen" label="Type of Supplier" value="#{purchaseBean.supplierVO.accountId}" required="true">
+	       			<f:selectItems value="#{purchaseBean.liabilityList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+	       		</h:selectOneMenu>
+	        </p:column>
+	        
+	        <p:column><h:outputLabel for="idAddSupCat">Supplier Category<span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+			<h:selectOneMenu id="idAddSupCat" label="Supplier Category" value="#{purchaseBean.supplierVO.supplierCat}" required="true">
+	            <f:selectItems value="#{bterp:lookupItemList('supl_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu> 
+	        </p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddCompName">Company Name <span class="required">*</span></h:outputLabel></p:column>
+			<p:column colspan="3"><p:inputText id="idAddCompName" label="Company Name" value="#{purchaseBean.supplierVO.corporateVO.companyName}" required="true" size="50" onblur="copyTxt()"/></p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:fieldset legend="Contact Person ">
+		<p:panelGrid>
+			<p:row>
+				<p:column><h:outputLabel for="idAddDesignation">Designation </h:outputLabel></p:column>
+				<p:column colspan="3">
+				<p:inputText id="idAddDesignation" label="Designation" value="#{purchaseBean.supplierVO.personVO.designation}" size="50"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idAddSalutate">Salutation </h:outputLabel></p:column>
+				<p:column>
+				<h:selectOneMenu id="idAddSalutate" value="#{purchaseBean.supplierVO.personVO.salutation}">  
+		            <f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		        </h:selectOneMenu>
+	        	</p:column>
+	        	<p:column><h:outputLabel for="idAddLastName">Last Name </h:outputLabel></p:column>
+				<p:column><p:inputText id="idAddLastName" label="Last Name" value="#{purchaseBean.supplierVO.personVO.lastName}" /></p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idAddGivenName">Given Name </h:outputLabel></p:column>
+				<p:column><p:inputText id="idAddGivenName" label="Given Name" value="#{purchaseBean.supplierVO.personVO.givenName}" /></p:column>
+			</p:row>
+	 		<p:row>
+				<p:column colspan="4">
+					<p:panel id ="idShowContact" style="border:none">
+						<p:dataTable id="idShowContactList" value="#{purchaseBean.supplierVO.corContactList}" var="contactVO"
+							rendered="#{not empty purchaseBean.supplierVO.corContactList}">
+							<p:column headerText="Contact Type">
+								<h:outputText value="#{bterp:lookupItemDesc('cntc_type', contactVO.contactType)}"/>
+							</p:column>
+							<p:column headerText="Contact No">
+								<h:outputText value="#{contactVO.contactNo}"/>
+							</p:column>
+						</p:dataTable>
+					</p:panel>
+				</p:column>
+			</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddEmail">Email </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddEmail" label="Email ID" value="#{purchaseBean.supplierVO.personVO.email}" /></p:column>
+		</p:row>
+		</p:panelGrid>
+	</p:fieldset>
+		
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idAddAdd1">Address Line 1 </h:outputLabel></p:column>
+			<p:column colspan="3"><p:inputText id="idAddAdd1" label="Suite" value="#{purchaseBean.supplierVO.corAddressVO.addr1}" size="50" /></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddAdd2">Address Line 2 </h:outputLabel></p:column>
+			<p:column colspan="3"><p:inputText id="idAddAdd2" label="Street" value="#{purchaseBean.supplierVO.corAddressVO.addr2}" size="50"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddAdd3">Address Line 3 </h:outputLabel></p:column>
+			<p:column colspan="3"><p:inputText id="idAddAdd3" label="Street" value="#{purchaseBean.supplierVO.corAddressVO.addr3}" size="50"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddCity">City </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddCity" label="City" value="#{purchaseBean.supplierVO.corAddressVO.city}" /></p:column>
+			<p:column><h:outputLabel for="idAddState">State/ Province </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddState" label="State/ Province" value="#{purchaseBean.supplierVO.corAddressVO.state}" /></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddPostcode">Postcode </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddPostcode" label="Postcode" value="#{purchaseBean.supplierVO.corAddressVO.postcode}" /></p:column>
+			<p:column><h:outputLabel for="idAddCountry">Country </h:outputLabel></p:column>
+			<p:column>
+				<h:selectOneMenu id="idAddCountry" value="#{purchaseBean.supplierVO.corAddressVO.countryId}" >  
+	                <f:selectItems value="#{purchaseBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}" />    
+	            </h:selectOneMenu>  
+	        </p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="4">
+				<p:panel id ="idShowRemarks" style="border:none">
+					<p:dataTable id="idShowRemarksList" value="#{purchaseBean.supplierVO.remarksList}" var="remarksVO"
+						rendered="#{not empty purchaseBean.supplierVO.remarksList}">
+						<p:column headerText="Remarks Details">
+							<h:outputText value="#{remarksVO.remarksDetails}"/>
+						</p:column>
+						<p:column headerText="Time Stamp" style="width:0px;text-align:center;white-space:nowrap;">
+							<h:outputText value="#{remarksVO.strTimestamp}"/>
+						</p:column>
+					</p:dataTable>
+				</p:panel>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddAccName">Bank </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddAccName" label="Bank" value="#{purchaseBean.supplierVO.bankName}" style="width:100%"/></p:column>
+			<p:column><h:outputLabel for="idAddAccNo">Account Number </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddAccNo" label="Account Number" value="#{purchaseBean.supplierVO.accountNo}" style="width:100%"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddPymtTerms">Payment Term </h:outputLabel></p:column>
+			<p:column>
+			<h:selectOneMenu id="idAddPymtTerms" value="#{purchaseBean.supplierVO.paymentTerm}">  
+	            <f:selectItems value="#{purchaseBean.pymtTermList}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />  
+	        </h:selectOneMenu>
+			</p:column>
+			<p:column><h:outputLabel for="idAddCrdtLmt">Credit Limit </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddCrdtLmt" label="Credit Limit" value="#{purchaseBean.supplierVO.creditLimit}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddBenefiName">Beneficiary Name </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddBenefiName" label="Beneficiary Name" value="#{purchaseBean.supplierVO.beneficiaryName}" size="50" /></p:column>
+		</p:row>
+	</p:panelGrid>
+</div>
+</ui:composition>

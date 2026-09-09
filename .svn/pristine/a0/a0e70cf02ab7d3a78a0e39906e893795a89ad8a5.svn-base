@@ -1,0 +1,62 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+	<script type="text/javascript">
+		function onValidationEditPmnt(xhr, status, args) { 
+			if(!args.validationFailed ) varEditPymtDialog.hide();
+		}
+	</script>
+	<p:growl id="msg"/>
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idEditBankName">Bank Name </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idEditBankName" label="GL Account" value="#{billPymtBean.billPaymentVO.bankName}" required="true"  readonly="true" disabled="#{billPymtBean.billPaymentVO.dateInPeriodClosed}" style="background:#ccc;"/>
+			</p:column>
+			<p:column><h:outputLabel for="idEditBankAcc">GL Account </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idEditBankAcc" label="GL Account" value="#{billPymtBean.billPaymentVO.bankAcct}" required="true" readonly="true" disabled="#{billPymtBean.billPaymentVO.dateInPeriodClosed}" style="background:#ccc;"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idEditDate">Date </h:outputLabel></p:column>
+			<p:column>
+				<p:calendar pattern="dd-MMM-yyyy" id="idEditDate" label="Date" 
+					mindate="#{bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart}" 
+					maxdate="#{bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd}" navigator="true" showButtonPanel="true"
+					value="#{billPymtBean.billPaymentVO.pymtDt}" readonlyInput="true" disabled="#{billPymtBean.billPaymentVO.dateInPeriodClosed}"/>
+				</p:column>
+			<p:column><h:outputLabel for="idEditChequeNo">Cheque No </h:outputLabel></p:column>
+			<p:column><p:inputText id="idEditChequeNo" label="Cheque No" value="#{billPymtBean.billPaymentVO.refNum}" required="true" disabled="#{billPymtBean.billPaymentVO.dateInPeriodClosed}" maxlength="25"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idEditPayTo">Pay to </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idEditPayTo" label="Pay to" value="#{billPymtBean.billPaymentVO.payee}" required="true" disabled="#{billPymtBean.billPaymentVO.dateInPeriodClosed}"/>  
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idEditAmtPaid">Amount Paid </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idEditAmtPaid" label="Amount Paid" value="#{billPymtBean.billPaymentVO.pmntAmount}" readonly="#{billPymtBean.billPaymentVO.pmntType eq 'M'}" disabled="#{billPymtBean.billPaymentVO.dateInPeriodClosed}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</p:inputText>
+			</p:column>
+			<p:column><h:outputLabel for="idEditMemoTextBox">Memo Text Box </h:outputLabel></p:column>
+			<p:column><p:inputTextarea id="idEditMemoTextBox" label="Memo Text Box" value="#{billPymtBean.billPaymentVO.remarks}" /></p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{billPymtBean.editPayment}" update="@form,:idAddFuncForm:tabView:idBillPmnt,:idAddFuncForm:idEOAmt" oncomplete="onValidationEditPmnt(xhr, status, args)"/>
+		<p:commandButton value="Cancel" actionListener="#{billPymtBean.resetPymtForm}" oncomplete="varEditPymtDialog.hide()" update="@form" process="@this">
+			<pe:resetEditableValues for="idEditPymtForm"/>
+		</p:commandButton>
+	</p:panelGrid>
+</ui:composition>

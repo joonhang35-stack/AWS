@@ -1,0 +1,153 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+
+<script type="text/javascript">
+    function fncLoad() {
+        document.getElementById('idSupplListForm:idAddBtn').onclick();
+    }
+
+	function monitorExporting(start, complete) {
+		if (start) {
+			start();
+		}
+	
+		window.pdfExportingMonitor = setInterval(function() {
+			var exportingComplete = $.cookie('cookie.pdf.exporting');
+	
+			if (exportingComplete === 'true') {
+				if (complete) {
+					complete();
+				}
+				$.cookie('cookie.pdf.exporting', null);
+				clearInterval(window.pdfExportingMonitor);
+			}
+		}, 500);
+	}
+	
+	function start() {
+		statusDialog.show();
+	}
+	
+	function stop() {
+		statusDialog.hide();
+	}
+</script>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Print Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the printing is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+	<p:panel header="Supplier Data Export">
+		<h:form id="idForm">
+			<p:growl id="msg"/>
+			
+			<p:panelGrid style="padding-bottom:5px; border:1px;">
+				<p:row>
+					<p:column style="width: 110px;">
+						<p:selectOneButton id="idPrintType" value="#{supplDataExpBean.searchParamVO.obj1}">
+				            <f:selectItem itemLabel="Excel" itemValue="XLS"/>
+				            <f:selectItem itemLabel="CSV" itemValue="CSV"/>
+				        </p:selectOneButton>
+	    				<p:tooltip for="idPrintType" value="Print as Excel or CSV." trackMouse="true" />
+    				</p:column>
+    				<p:column style="width:120px; padding-top: 10px;padding-bottom: 0px;">
+						<p:selectCheckboxMenu id="idColumnList" value="#{supplDataExpBean.columnList}"
+							label="Print Columns" filter="true" filterMatchMode="startsWith">
+							<f:selectItem itemLabel="Registration no" itemValue="Registrationno"/>
+					        <f:selectItem itemLabel="GST registration no" itemValue="GSTregistrationno"/>
+					        <f:selectItem itemLabel="Email" itemValue="Email"/>
+					        <f:selectItem itemLabel="Contact" itemValue="Contact"/>
+					        <f:selectItem itemLabel="Address" itemValue="Address"/>
+					    </p:selectCheckboxMenu>
+					</p:column>
+					<p:column style="width:70px;"><h:outputLabel for="idDateFrom">Date From</h:outputLabel></p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idDateFrom" value="#{supplDataExpBean.searchParamVO.fromDate}" navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+						</p:calendar>
+					</p:column>
+					<p:column style="width:10px;"><h:outputLabel for="idDateTo">To</h:outputLabel></p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idDateTo" value="#{supplDataExpBean.searchParamVO.toDate}" navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+						</p:calendar>
+					</p:column>
+					<p:column style="width:10px;"><p:separator style="width:2px;height:20px"/></p:column>
+					<p:column style="width:100px">
+						<p:commandButton icon="ui-icon-print" value="Print List" actionListener="#{supplDataExpBean.printSupplierListing()}" ajax="false" onclick="monitorExporting(start,stop)"
+							update="@form,:idForm:idSupplListTable" process="@this"/>
+					</p:column>
+					<p:column>
+						<p:commandButton value="Rq. Upd Profile" actionListener="#{supplDataExpBean.supplierEmailProfileUpdate}" oncomplete="varConfirmSentSupplierProfileUpdateDialog.show()" />
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			
+			<p:dataTable id="idSupplListTable" widgetVar="varSupplierListTable" value="#{supplDataExpBean.lazySupplDataModel}" var="vo" paginator="true" rows="50" rowKey="#{vo.id}" 
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+				rowsPerPageTemplate="50, 100, 200, 500, 1000" emptyMessage="#{msg['cust.tbl.empty.message']}" filteredValue="#{supplDataExpBean.filteredObjList}" lazy="true" filterEvent="enter"
+				selection="#{supplDataExpBean.selectedObjs}">
+			
+				<p:column selectionMode="multiple" style="width:16px;text-align:center" />
+				
+				<p:column headerText="Supplier No" sortBy="#{vo.sysNo}" style="width: 70px;" filterStyle="width:70px;" styleClass="txt_center" filterBy="#{vo.sysNo}">
+					<h:outputText value="#{vo.sysNo}" />
+				</p:column>
+				
+				<p:column headerText="Supplier Name" sortBy="#{vo.fullName}" filterStyle="width:190px;" filterBy="#{vo.fullName}" filterMatchMode="contains">
+					<h:outputText value="#{vo.fullName}" />
+				</p:column>
+				
+				<p:column headerText="Supplier Type" sortBy="#{vo.supplierType}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{vo.supplierType}">
+					<h:outputText value="#{vo.supplierType}" />
+				</p:column>
+				
+				<p:column headerText="Country" sortBy="#{vo.countryName}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{vo.countryName}">
+					<h:outputText value="#{vo.countryName}" />
+				</p:column>
+				
+				<p:column headerText="Supplier Category" sortBy="#{vo.supplierCatName}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{vo.supplierCatName}">
+					<h:outputText value="#{vo.supplierCatName}" />
+				</p:column>
+				
+				<p:column headerText="PIC Contact No" sortBy="#{vo.contactNo}" style="width: 200px;" filterStyle="width:200px;" filterBy="#{vo.contactNo}">
+					 <ui:repeat value="#{vo.contactNo.split(',')}" var="cntc" rendered="#{not empty vo.contactNo}">
+			            <h:outputText value="#{cntc}"/><br/>
+			        </ui:repeat>
+				</p:column>
+				<p:column headerText="PIC Email" sortBy="#{vo.email}" style="width: 190px;" styleClass="txt_center" filterBy="#{vo.email}">
+						<h:outputText value="#{vo.email}" />
+				</p:column>
+				
+			</p:dataTable>
+		</h:form>		
+	</p:panel>
+	
+	<p:confirmDialog widgetVar="varConfirmSentSupplierProfileUpdateDialog" header="Confirmation" message="Are you sure you want to send email for these selected suppliers?"
+			closable="false">
+		<h:form>
+			<p:growl id="msg" />
+			<p:commandButton value="#{msg['common.button.label.yes']}"
+				actionListener="#{supplDataExpBean.processEmailSupplierProfileUpdate}"
+				update="@form,:idForm:idSupplListTable" process="@this"
+				oncomplete="varConfirmSentSupplierProfileUpdateDialog.hide()" />
+			<p:commandButton value="#{msg['common.button.label.no']}"
+				actionListener="#{supplDataExpBean.resetForm}"
+				update="@form,:idForm:idSupplListTable" process="@this"
+				oncomplete="varConfirmSentSupplierProfileUpdateDialog.hide()" />
+		</h:form>
+	</p:confirmDialog>
+</ui:define>
+</ui:composition>

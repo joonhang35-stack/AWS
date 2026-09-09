@@ -1,0 +1,228 @@
+package com.bcs.zsg.common.helper;
+
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.primefaces.json.JSONArray;
+import org.primefaces.json.JSONException;
+import org.primefaces.json.JSONObject;
+
+import com.bcs.zsg.acct.helper.KeycloakProperties;
+import com.bcs.zsg.common.helper.KeycloakConstant.GrantType;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.crm.sec.vo.KeycloakAccessTokenVO;
+import com.bcs.zsg.crm.sec.vo.KeycloakUserVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
+public class KeycloakUtils {
+
+//	private Logger logger = LoggerFactory.getLogger(this.getClass());
+	private static Gson gson = new GsonBuilder()
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .create();
+	
+	public static KeycloakAccessTokenVO getAccessToken(CompanyVO companyVO) throws URISyntaxException, KeyManagementException, NoSuchAlgorithmException, MalformedURLException, IOException, JSONException {
+		
+		// --- get access token ---
+		
+//		URI uri = new URI("http://localhost:8090/realms/myrealm/protocol/openid-connect/token");
+		URI uri = new URI(KeycloakProperties.ENV_BASE_URL_SANDBOX +  KeycloakProperties.API_LOGIN);
+		System.out.println("CYY uri.getPath(): " + uri.getPath());
+		System.out.println("CYY uri.getPath(): " + KeycloakProperties.ENV_BASE_URL_SANDBOX);
+		
+		// open connection
+		HttpURLConnection connection = HttpUtils.openAuthAccessTokenHttpsURLConnection(uri.toURL(), HttpUtils.HTTP_POST, buildAuthBody(companyVO, GrantType.CLIENT_CREDENTIALS, null, null));
+	
+		// get response code
+		int respCode = connection.getResponseCode();
+		System.out.println("CYY respCode: " + respCode);
+		
+		if (respCode == 200) {
+			// get response message from connection
+			String response = HttpUtils.getConnectionResponse(connection);
+			System.out.println("CYY response: " + response);
+		
+			JSONObject jsonResponse = new JSONObject(response);
+		    System.out.println(jsonResponse.toString(4));
+		    
+		    KeycloakAccessTokenVO tokenVO = gson.fromJson(response, KeycloakAccessTokenVO.class);
+		    
+		    return tokenVO;
+		} else {
+			return new KeycloakAccessTokenVO();
+		}
+	}
+	
+	public static KeycloakUserVO getUser(String keycloakUserId, CompanyVO companyVO) throws URISyntaxException, KeyManagementException, NoSuchAlgorithmException, BusinessException, MalformedURLException, IOException, JSONException {
+		
+		// --- get access token ---
+		KeycloakAccessTokenVO tokenVO = getAccessToken(companyVO);
+		
+//		URI uri = new URI("http://localhost:8090/realms/myrealm/protocol/openid-connect/token");
+		URI uri = new URI(KeycloakProperties.ENV_BASE_URL_SANDBOX + KeycloakProperties.API_ADMIN_USERS + keycloakUserId);
+		
+		// open connection
+		HttpURLConnection connection = HttpUtils.openHttpURLConnection(uri.toURL(), HttpUtils.HTTP_GET, tokenVO.getAccessToken());
+	
+		// get response code
+		int respCode = connection.getResponseCode();
+		System.out.println("CYY respCode: " + respCode);
+		
+		if (respCode == 200) {
+			// get response message from connection
+			String response = HttpUtils.getConnectionResponse(connection);
+			System.out.println("CYY response: " + response);
+			System.out.println("CYY response: " + new JSONObject(response).toString(4));
+		
+			KeycloakUserVO keycloakUserVO = gson.fromJson(response, KeycloakUserVO.class);
+			
+			return keycloakUserVO;
+		} else {
+			return new KeycloakUserVO();
+		}
+	}
+	
+	public static List<KeycloakUserVO> getUsersList(CompanyVO companyVO) throws URISyntaxException, KeyManagementException, NoSuchAlgorithmException, BusinessException, MalformedURLException, IOException, JSONException {
+		
+		// --- get access token ---
+		KeycloakAccessTokenVO tokenVO = getAccessToken(companyVO);
+		
+//		URI uri = new URI("http://localhost:8090/realms/myrealm/protocol/openid-connect/token");
+		URI uri = new URI(KeycloakProperties.ENV_BASE_URL_SANDBOX +  KeycloakProperties.API_ADMIN_USERS);
+		
+		// open connection
+		HttpURLConnection connection = HttpUtils.openHttpURLConnection(uri.toURL(), HttpUtils.HTTP_GET, tokenVO.getAccessToken());
+	
+		// get response code
+		int respCode = connection.getResponseCode();
+		System.out.println("CYY respCode: " + respCode);
+		
+		if (respCode == 200) {
+			// get response message from connection
+			String response = HttpUtils.getConnectionResponse(connection);
+			System.out.println("CYY response: " + response);
+		
+			Type listType = new TypeToken<List<KeycloakUserVO>>() {}.getType();
+			List<KeycloakUserVO> userList = gson.fromJson(response, listType);
+			
+			return userList;
+
+//		    return tokenVO;
+		} else {
+//			return new KeycloakAccessTokenVO();
+			return new ArrayList<KeycloakUserVO>();
+		}
+	}
+	
+	public static List<KeycloakUserVO> addKeycloakUser(KeycloakUserVO userVO, CompanyVO companyVO) throws KeyManagementException, NoSuchAlgorithmException, MalformedURLException, IOException, URISyntaxException, JSONException {
+		
+		// --- create user ---
+		
+		Gson gson = new Gson();
+	    String jsonString = gson.toJson(userVO);
+	    System.out.println(jsonString);System.out.println(userVO.getUsername());
+	    JSONObject userRepresentation = new JSONObject(jsonString);
+
+		// --- get access token ---
+		KeycloakAccessTokenVO tokenVO = getAccessToken(companyVO);
+				
+		// URI uri = new URI("http://localhost:8090/realms/myrealm/protocol/openid-connect/token");
+		URI uri = new URI(KeycloakProperties.ENV_BASE_URL_SANDBOX +  KeycloakProperties.API_ADMIN_USERS);
+		System.out.println("CYY uri.getPath(): " + uri.getPath());
+		System.out.println("CYY uri.getPath(): " + KeycloakProperties.ENV_BASE_URL_SANDBOX);
+
+		// open connection
+		HttpURLConnection connection = HttpUtils.openHttpURLConnection(uri.toURL(), HttpUtils.HTTP_POST, tokenVO.getAccessToken(), userRepresentation);
+        
+		// get response code
+		int respCode = connection.getResponseCode();
+		System.out.println("CYY respCode: " + respCode);
+
+		// get response message from connection
+		String response = HttpUtils.getConnectionResponse(connection);
+
+		System.out.println(response);
+		System.out.println(new JSONArray(response).toString(4));
+		
+		return new ArrayList<KeycloakUserVO>();
+	}
+	
+	public static KeycloakAccessTokenVO exchangeAuthCode(String code, String redirectUri, String codeVerifier, CompanyVO companyVO) throws URISyntaxException, KeyManagementException, NoSuchAlgorithmException, MalformedURLException, IOException, JSONException {
+		
+		System.out.println("KeycloakUtils.exchangeAuthCode()");
+		
+		URI uri = new URI(KeycloakProperties.ENV_BASE_URL_SANDBOX + KeycloakProperties.API_LOGIN);
+		System.out.println("CYY uri.getPath(): " + uri.getPath());
+		System.out.println("CYY uri.getPath(): " + KeycloakProperties.ENV_BASE_URL_SANDBOX);
+		
+		HttpURLConnection connection = HttpUtils.openAuthAccessTokenHttpsURLConnection(uri.toURL(), HttpUtils.HTTP_POST, buildAuthBody(companyVO, GrantType.AUTH_CODE, code, redirectUri));
+		
+		int respCode = connection.getResponseCode();
+		System.out.println("CYY respCode: " + respCode);
+		
+		String response = HttpUtils.getConnectionResponse(connection);
+		System.out.println("CYY response: " + response);
+		
+		if (respCode == 200) {
+			JSONObject jsonResponse = new JSONObject(response);
+			System.out.println(new JSONObject(response).toString(4));
+			KeycloakAccessTokenVO tokenVO = gson.fromJson(jsonResponse.toString(), KeycloakAccessTokenVO.class);
+			return tokenVO;
+		} else {
+			return new KeycloakAccessTokenVO();
+		}
+	}
+	
+	/**
+	 * http://localhost:8082/bterp/app/maintenance/keycloakCallback
+	 * @return
+	 */
+	public static String getCallbackUrl() {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(HttpUtils.getAppBaseUrl())
+			.append(KeycloakProperties.CALLBACK);
+		
+		return sb.toString();
+	}
+	
+	public static void validateKeycloakCredentials(CompanyVO companyVO) throws BusinessException {
+		boolean isClientID = !StringUtils.isBlank(companyVO.getKeycloakClientId());
+		boolean isClientSecret = !StringUtils.isBlank(companyVO.getKeycloakClientSecret());
+		if (!isClientID) {
+			throw new BusinessException(CommonErrConstant.ERR_E_INVOICE_API_NO_CLIENT_ID);
+		}
+		if (!(isClientSecret)) {
+			throw new BusinessException(CommonErrConstant.ERR_E_INVOICE_API_NO_CLIENT_SECRET);
+		}
+	}
+	
+	public static String buildAuthBody(CompanyVO companyVO, GrantType grantType, String code, String redirectUri) {
+
+	    StringBuilder body = new StringBuilder();
+
+	    body.append("grant_type=").append(grantType.getValue())
+	        .append("&client_id=").append(companyVO.getKeycloakClientId())
+	        .append("&client_secret=").append(companyVO.getKeycloakClientSecret());
+
+	    if (grantType == GrantType.AUTH_CODE) {
+	        body.append("&code=").append(code)
+	            .append("&redirect_uri=").append(redirectUri);
+	    }
+
+	    return body.toString();
+	}
+}

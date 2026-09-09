@@ -1,0 +1,72 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<p:growl id="msg"/>
+	<p:panelGrid>
+		<p:row>
+			<p:column>
+				<p:outputLabel value="Name" for="idName"/>
+			</p:column>
+			<p:column colspan="3">
+				<p:inputText id="idName" label="Name" value="#{corporateProfileBean.companyNameVO.name}" 
+					style="width: 385px;" required="true" maxlength="255"/>
+       		</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<p:outputLabel value="Short Name" for="idShortName"/>
+			</p:column>
+			<p:column colspan="3">
+				<p:inputText id="idShortName" label="Short Name" value="#{corporateProfileBean.companyNameVO.shortName}" 
+					style="width: 385px;" maxlength="255"/>
+       		</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<p:outputLabel value="Letter Head Url" for="idLetterHeadUrl"/>
+			</p:column>
+			<p:column colspan="3">
+				<p:inputText id="idLetterHeadUrl" label="Letter Head Url" value="#{corporateProfileBean.companyNameVO.letterHeadUrl}" 
+					style="width: 385px;" maxlength="100"/>
+       		</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+        		<p:outputLabel value="Valid From" for="idValidFrom"/>
+       		</p:column>
+			<p:column>
+				<p:calendar id="idValidFrom" value="#{corporateProfileBean.companyNameVO.validFrom}" pattern="dd-MMM-yyyy" 
+					navigator="true" showButtonPanel="true" required="true" maxdate="#{corporateProfileBean.companyNameVO.validTo}">
+					<p:ajax event="dateSelect" update=":idCompanyName:idValidTo" global="false"/>
+				</p:calendar>
+			</p:column>
+			<p:column>
+        		<p:outputLabel value="Valid To" for="idValidTo"/>
+       		</p:column>
+			<p:column>
+				<p:calendar id="idValidTo" value="#{corporateProfileBean.companyNameVO.validTo}" pattern="dd-MMM-yyyy" 
+					navigator="true" showButtonPanel="true" mindate="#{corporateProfileBean.companyNameVO.validFrom}">
+					<p:ajax event="dateSelect" update=":idCompanyName:idValidFrom" global="false"/>
+					<p:ajax event="change" update=":idCompanyName:idValidFrom" global="false"/>
+				</p:calendar>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" 
+				actionListener="#{corporateProfileBean.saveName}" update=":idCompanyForm:idShowNameList, :idCompanyName:msg, :idCompanyName"/>
+		
+		<p:commandButton id="idBtnAddCancel" value="#{msg['common.button.label.cancel']}" 
+				update="@form" process="@this" oncomplete="varCompanyNameDialog.hide()" global="false">
+			<pe:resetEditableValues for="idCompanyName"/>
+		</p:commandButton>
+	</p:panelGrid>
+</ui:composition>

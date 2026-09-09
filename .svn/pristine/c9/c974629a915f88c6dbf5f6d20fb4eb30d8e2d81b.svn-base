@@ -1,0 +1,80 @@
+package com.bcs.zsg.feedback.web.bean;
+
+import java.io.Serializable;
+import java.util.List;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.feedback.bo.FeedbackBO;
+import com.bcs.zsg.mail.bo.EmailingBO;
+import com.bcs.zsg.product.vo.FeedbackVO;
+
+public class FeedbackBean extends AppBackingBean implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient FeedbackBO feedbackBO;
+
+	@Autowired
+	private transient EmailingBO emailingBO;
+
+	private List<FeedbackVO> feedbackList;
+
+	public void init() {
+		try {
+			initSearchParam();
+			resetForm();
+			loadFeedbacks();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void loadFeedbacks() {
+		try {
+			feedbackList = feedbackBO.getAllFeedbacks();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void handleSendFeedbackEmail(FeedbackVO vo) {
+		try {
+			System.out.println("FeedbackBean.handleSendFeedbackEmail() - tourBookingId: " + vo.getTourBookingId());
+			List<FeedbackVO> list = feedbackBO.getInvoiceForFeedback(vo.getTourBookingId());
+			if (CollectionUtils.isNotEmpty(list)) {
+				emailingBO.sendCustomerFeedbackEmail(list);
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_INFO, "Feedback email sent successfully.", ""));
+			} else {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_WARN, "No eligible invoice found for this booking.", ""));
+			}
+			loadFeedbacks();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	@Override
+	public void resetForm() {
+		feedbackList = null;
+	}
+
+	public List<FeedbackVO> getFeedbackList() {
+		return feedbackList;
+	}
+
+	public void setFeedbackList(List<FeedbackVO> feedbackList) {
+		this.feedbackList = feedbackList;
+	}
+}

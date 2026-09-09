@@ -1,0 +1,39 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+	<p:panel header="Online Booking Config">
+		<h:form id="idForm">
+			<p:growl id="msg"/>
+			<ui:repeat id="idOnlineBookingConfigTable" value="#{onlineBookingConfigBean.onlineBookingConfigVOList}" var="vo">
+			<p:panelGrid>
+			<p:row>
+				<p:column  headerText="Description" style="width: 150px;">
+					<h:outputText value="#{vo.description}"/>
+				</p:column>
+				<p:column  headerText="Value">
+					<p:inputText  value="#{vo.value}" rendered="#{vo.code != 'sales_id'}"/>
+					<p:selectOneMenu value="#{vo.value}" rendered="#{vo.code == 'sales_id'}">
+						<f:selectItem itemLabel="Select One"/>
+						<f:selectItems value="#{onlineBookingConfigBean.employeeList}" var="ep" itemLabel="#{ep.userVO.name}" itemValue="#{ep.id}"/>
+					</p:selectOneMenu>				
+				</p:column>
+			</p:row>
+			</p:panelGrid>
+			</ui:repeat>
+			
+			<h:panelGrid columns="2" style="margin-top: 15px; width: 10px;">
+				<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{onlineBookingConfigBean.updateOnlineBookingConfig}" update=":idForm" />
+			</h:panelGrid>
+		</h:form>		
+	</p:panel>
+</ui:define>
+</ui:composition>

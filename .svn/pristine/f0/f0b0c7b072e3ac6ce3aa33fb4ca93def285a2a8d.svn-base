@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.springframework.org/schema/webflow http://www.springframework.org/schema/webflow/spring-webflow.xsd"
+      start-state="roomingList_form">
+	
+	<!-- backing bean, extends com.bcs.zsg.component.common.web.swf.bean.AppBackingBean -->
+	<var name="roomingListBean" class="com.bcs.zsg.product.web.bean.RoomingListBean"/>
+	<var name="custBean" class="com.bcs.zsg.sales.web.bean.CustomerBean"/>
+	
+	<!-- <on-entry>
+		<evaluate expression="roomingListBean.init()"/>
+	</on-entry> -->
+	<on-start>
+		<evaluate expression="roomingListBean.init()"/>
+		<evaluate expression="custBean.init(1)"/>
+    </on-start>
+	
+	<view-state id="roomingList_form" view="/WEB-INF/flows/product/roomingList/roomingList_form.xhtml">
+		<transition on="addRoomingList" to="add_rooming_list" />
+	</view-state>
+	
+	<view-state id="add_rooming_list" view="/WEB-INF/flows/product/common/add_rooming_list.xhtml" >
+		<!-- <on-entry>
+			<evaluate expression="branchBean.initDetails()"/>
+		</on-entry> -->
+		
+		<transition on="save" to="roomingList_form"/>
+		<transition on="cancel" to="roomingList_form"/>
+	</view-state>
+	
+	<end-state id="finish"/>
+	
+</flow>

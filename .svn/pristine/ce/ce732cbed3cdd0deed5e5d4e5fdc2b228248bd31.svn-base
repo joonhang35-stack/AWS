@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<!-- Cache Manager -->
+	<bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+		<property name="configLocation" value="classpath:ehcache.xml"/>
+	</bean>
+
+	<!-- Caches -->
+	<bean id="defaultCache" class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+		<property name="cacheManager" ref="cacheManager"/>
+		<property name="cacheName" value="defaultCache"/>
+		<property name="maxElementsInMemory" value="5000"/>
+		<property name="eternal" value="false"/>
+		<property name="overflowToDisk" value="false"/>
+		<property name="timeToIdle" value="600"/>
+		<property name="timeToLive" value="900"/>
+		<property name="memoryStoreEvictionPolicy" value="LRU"/>
+	</bean>
+	
+	<bean id="shortLivedCache" class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+		<property name="cacheManager" ref="cacheManager"/>
+		<property name="cacheName" value="shortLivedCache"/>
+		<property name="maxElementsInMemory" value="50"/>
+		<property name="eternal" value="false"/>
+		<property name="overflowToDisk" value="false"/>
+		<property name="timeToIdle" value="60"/>
+		<property name="timeToLive" value="120"/>
+		<property name="memoryStoreEvictionPolicy" value="LRU"/>
+	</bean>
+
+	<!-- Services -->
+    <bean id="cacheService" class="com.bcs.zsg.core.cache.service.impl.CacheServiceImpl">
+    	<property name="cache" ref="defaultCache"/>
+    </bean>
+    
+    <bean id="shortLivedCacheService" class="com.bcs.zsg.core.cache.service.impl.CacheServiceImpl">
+    	<property name="cache" ref="shortLivedCache"/>
+    </bean>
+
+</beans>

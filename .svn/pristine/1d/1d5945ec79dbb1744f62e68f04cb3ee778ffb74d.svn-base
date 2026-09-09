@@ -1,0 +1,217 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+				xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml"
+				xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+				
+<script type="text/javascript"></script>
+
+<ui:define name="content">
+	<link rel="stylesheet" href="https://unpkg.com/primeicons/primeicons.css" />
+	<p:panel header="Keycloak Config" toggleable="true" toggleSpeed="500">
+		<h:form id="idForm">
+			<p:growl id="msg"/>
+			<p:commandButton value="Get Access Token" actionListener="#{configBean.getAccessToken}"/>
+			<p:commandButton value="Get Users List" actionListener="#{configBean.getUsersList}" update=":idForm"/>
+			<p:commandButton value="Add User" actionListener="#{configBean.onAddKeycloakUser}" update=":idForm :idAddKeycloakUserDialog" oncomplete="varAddKeycloakUserDialog.show()"/>
+			<!-- <p:commandButton value="Add Adv. User" actionListener="#{configBean.onAddKeycloakUser}" update=":idForm :idAddKeycloakAdvUserDialog" oncomplete="varAddKeycloakAdvUserDialog.show()"/> -->
+			<p:commandButton value="Login" actionListener="#{configBean.onLogin}" update=":idForm :idLoginDialog" oncomplete="varLoginDialog.show()"/>
+			<p:commandButton value="Forget Password" actionListener="#{configBean.onForgetPassword}" update=":idForm :idForgetPsDialog" oncomplete="varForgetPsDialog.show()"/>
+			<!-- <h:outputLink 
+			    value="https://uat.applevacations.my:8443/realms/myrealm/protocol/openid-connect/registrations?client_id=myclient&amp;response_type=code&amp;scope=openid&amp;redirect_uri=https://uat.applevacations.my:2031/aws_uat/app/maintenance/keycloakCallback"
+			    target="_blank"> -->
+			<!-- <h:outputLink 
+			    value="http://localhost:8090/realms/myrealm/protocol/openid-connect/registrations?client_id=myclient&amp;response_type=code&amp;scope=openid&amp;redirect_uri=http://localhost:8082/bterp/app/maintenance/keycloakCallback"
+			    target="_blank"> -->
+			<h:outputLink 
+			    value="#{configBean.keycloakRegisterForm}"
+			    target="_blank">
+			    <p:commandButton value="Register via Keycloak" type="button" icon="pi pi-user-plus"/>
+			</h:outputLink>
+			<p:commandButton value="Get CRM Membership List" actionListener="#{configBean.loadCRMMembershipList}" update=":idForm"/>
+			<p:commandButton value="Get Redemption Catalog" actionListener="#{configBean.getRedemptionCatalog}" update=":idForm"/>
+			
+			<!-- <p:panel header="Configuration" toggleable="true">
+				<p:panelGrid id="idPanelConfig">
+					<p:row>
+						<p:column style="width: 350px;">
+							<p:outputLabel id="idSubmitScheduler" value="Auto Submit Scheduler">
+								<i class="fa fa-info-circle" aria-hidden="true" />
+							</p:outputLabel> 
+							<pe:tooltip for="idSubmitScheduler" shared="true" position="top left" showDelay="300">
+								<h:outputText value="This scheduler will automatically submit invoices to the e-Invoice system on a daily basis." escape="false" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<p:selectOneRadio style="width: 180px">
+								<f:selectItem itemLabel="On" itemValue="Y"/>
+                				<f:selectItem itemLabel="Off" itemValue="N"/>
+							</p:selectOneRadio>
+						</p:column>
+					</p:row>
+					
+				</p:panelGrid>
+				
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Save" update=":idForm"/>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel> -->
+			
+			<p:dataTable id="idUserTable" widgetVar="varUserTable" value="#{configBean.keycloakUserList}"
+				var="vo" paginator="true" rows="20" paginatorTemplate="#{bterp:pageTemplate()}" lazy="true" 
+				rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" emptyMessage="#{msg['tbl.empty.message']}" 
+				filterEvent="enter" style="margin-top: 10px;" headerText="">
+				
+				<f:facet name="header">
+        			Keycloak User List
+    			</f:facet>
+    			
+    			<p:column headerText="Action" style="width: 20px;" styleClass="txt_center">
+					<p:column headerText="Delete" style="text-align:center;">
+						<p:commandButton icon="ui-icon-close" actionListener="#{configBean.deleteKeycloakUser(vo)}" update="idUserTable" process="@this" />
+					</p:column>
+				</p:column>
+    			
+    			<p:column headerText="ID" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.id}" sortBy="#{vo.id}">
+					<h:outputText value="#{vo.id}"></h:outputText>
+				</p:column>
+    
+				<p:column headerText="Username" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.username}" sortBy="#{vo.username}">
+					<h:outputText value="#{vo.username}"></h:outputText>
+				</p:column>
+				
+				<p:column headerText="First Name" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.firstName}" sortBy="#{vo.firstName}">
+					<h:outputText value="#{vo.firstName}"></h:outputText>
+				</p:column>
+				
+				<p:column headerText="Last Name" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.lastName}" sortBy="#{vo.lastName}">
+					<h:outputText value="#{vo.lastName}"></h:outputText>
+				</p:column>
+				
+				<p:column headerText="Email" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.email}" sortBy="#{vo.email}">
+					<h:outputText value="#{vo.email}">
+						<!-- <f:convertDateTime pattern="#{config['date.display.pattern']}" /> -->
+					</h:outputText>
+				</p:column>
+				
+				<p:column headerText="Email Verified" style="width: 120px;" styleClass="txt_center">
+					<h:outputText value="Yes" rendered="#{vo.emailVerified}"></h:outputText>
+					<h:outputText value="No" rendered="#{not vo.emailVerified}"></h:outputText>
+					<p:commandButton value="Send Verify Email" actionListener="#{configBean.sendVerifyEmail(vo)}" rendered="#{not vo.emailVerified}"/>
+					<p:commandButton value="Manual Verify Email" actionListener="#{configBean.manualVerifyEmail(vo)}" rendered="#{not vo.emailVerified}" update="idUserTable"/>
+				</p:column>
+				
+				<p:column headerText="Identity" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.attributes.identity}" sortBy="#{vo.attributes.identity}">
+					<h:outputText value="#{vo.attributes.identity}" rendered="#{not empty vo.attributes}">
+						<!-- <f:convertDateTime pattern="#{config['date.display.pattern']}" /> -->
+					</h:outputText>
+				</p:column>
+				
+			</p:dataTable>
+			
+			<p:dataTable id="idCRMMembershipTable" widgetVar="varCRMMembershipTable" value="#{configBean.lazyCRMMembershipDataModel}"
+				var="vo" paginator="true" rows="20" paginatorTemplate="#{bterp:pageTemplate()}" lazy="true" 
+				rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" emptyMessage="#{msg['tbl.empty.message']}" 
+				filterEvent="enter" style="margin-top: 10px;" headerText="">
+				
+				<f:facet name="header">
+        			CRM Membership List
+    			</f:facet>
+    			
+    			<p:column headerText="Delete" style="width: 20px;" styleClass="txt_center">
+					<p:commandButton icon="ui-icon-close" actionListener="#{configBean.delCRMMembership(vo)}" update="idCRMMembershipTable" />
+					<!-- <i class="fa fa-unlink"></i> -->
+				</p:column>
+				
+				<p:column headerText="Unlink" style="width: 20px;" styleClass="txt_center">
+					<p:commandLink actionListener="#{configBean.unlinkCRMMembership(vo)}" update="idCRMMembershipTable" rendered="#{not empty vo.idCustomer}">
+		    			<i class="fa fa-unlink" />
+		    		</p:commandLink>
+				</p:column>
+				
+				<p:column headerText="Customer ID" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.idCustomer}" sortBy="#{vo.idCustomer}">
+					<h:outputText value="#{vo.idCustomer}"></h:outputText>
+				</p:column>
+    			
+    			<p:column headerText="Keycloak ID" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.keycloakId}" sortBy="#{vo.keycloakId}">
+					<h:outputText value="#{vo.keycloakId}"></h:outputText>
+				</p:column>
+    
+				<p:column headerText="Keycloak Username" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.keycloakUsername}" sortBy="#{vo.keycloakUsername}">
+					<h:outputText value="#{vo.keycloakUsername}"></h:outputText>
+				</p:column>
+				
+			</p:dataTable>
+		</h:form>
+	</p:panel>
+	
+	<!-- <p:dialog id="idAccountListDialog" header="Account List" widgetVar="varAccountListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+		<h:form id="idAccountListForm">
+			<p:dataTable id="idAccountListTable" widgetVar="varAccountListTable" value="#{acctBean.lazyAcctDataModel}" var="vo" paginator="true" rows="20" 
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+				filterEvent="enter" lazy="true" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{posUploadConfigBean.handleAccountSelect}" update=":idForm:idTableAccountExcludeList" oncomplete="varAccountListDialog.hide();"/>
+				
+				<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}">
+					<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+					<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+				</p:column>
+				<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}">
+					<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+					<h:outputText value="#{vo.desc}-#{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+				</p:column>
+			</p:dataTable>
+			<h:panelGrid columns="1">
+				<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varAccountListDialog.hide();"/>
+			</h:panelGrid>
+		</h:form>
+	</p:dialog> -->
+	
+	<p:dialog id="idAddKeycloakUserDialog" header="Add Keycloak User"
+		widgetVar="varAddKeycloakUserDialog" modal="true" resizable="false"
+		dynamic="true" draggable="true" closable="true" style="height: 80%">
+		<h:form id="idAddKeycloakUserForm">
+			<ui:include src="add_keycloak_user.xhtml" />
+		</h:form>
+	</p:dialog>
+	
+	<p:dialog id="idAddKeycloakAdvUserDialog" header="Add Keycloak User"
+		widgetVar="varAddKeycloakAdvUserDialog" modal="true" resizable="false"
+		dynamic="true" draggable="true" closable="true" style="height: 80%">
+		<h:form id="idAddKeycloakAdvUserForm">
+			<ui:include src="add_keycloak_adv_user.xhtml" />
+		</h:form>
+	</p:dialog>
+	
+	<p:dialog id="idLoginDialog" header="Login"
+		widgetVar="varLoginDialog" modal="true" resizable="false"
+		dynamic="true" draggable="true" closable="true" style="height: 80%">
+		<h:form id="idLoginForm">
+			<ui:include src="login.xhtml" />
+		</h:form>
+	</p:dialog>
+	
+	<p:dialog id="idForgetPsDialog" header="Login"
+		widgetVar="varForgetPsDialog" modal="true" resizable="false"
+		dynamic="true" draggable="true" closable="true" style="height: 80%">
+		<h:form id="idForgetPsForm">
+			<ui:include src="forget_password.xhtml" />
+		</h:form>
+	</p:dialog>
+
+</ui:define>
+</ui:composition>

@@ -1,0 +1,26 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	  			
+	<p:panelGrid>
+		<p:row>
+		<p:column><h:outputLabel for="idAddRemarks">Remarks Description </h:outputLabel></p:column>
+		<p:column>
+		<p:inputTextarea rows="10" cols="50" id="idAddRemarks" value="#{purchaseBean.remarksVO.remarksDetails}"></p:inputTextarea>
+        </p:column>
+        </p:row>
+		
+	</p:panelGrid>
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseBean.addRemarks}" update="@form,:idAddSupplierForm:idShowRemarks,:idAddCSupplierForm:idShowRemarks,:idEditPCustomerForm:idShowRemarks,:idEditCSupplierForm:idShowRemarks" rendered="#{empty billPymtBean}"/>
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseBean.addRemarks}" update="@form,:idAddSupplierForm:idShowRemarks" rendered="#{not empty billPymtBean}"/>
+		<p:commandButton value="Cancel" onclick="varRemarksDialog.hide()" process="@this">
+			<pe:resetEditableValues for="idAddSupplierForm"/>
+		</p:commandButton>
+	</p:panelGrid>
+</ui:composition>

@@ -1,0 +1,337 @@
+package com.bcs.zsg.sales.web.bean;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.cfg.sec.bo.UserBO;
+import com.bcs.zsg.cfg.sec.helper.EmployeeNameComparator;
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.db.bterp.vo.report.MonthlyTicketingSalesViewVO;
+import com.bcs.zsg.maintenance.bo.SystemNumberGenerationBO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.product.bo.AirlineBO;
+import com.bcs.zsg.product.vo.AirlineVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.sales.bo.MonthlyTicketingBO;
+
+import net.sf.jasperreports.engine.JasperPrint;
+
+public class MonthlyTicketingReportBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient MonthlyTicketingBO monthlyTicketBO;
+
+	@Autowired
+	private transient UserBO userBO;
+
+	@Autowired
+	private transient AirlineBO airlineBO;
+	
+	@Autowired
+	private transient SystemNumberGenerationBO systemNumberGenerationBO;
+	
+	private LazyDataModel<MonthlyTicketingSalesViewVO> lazyDMMonthlyTicket;
+	private List<MonthlyTicketingSalesViewVO> listFullExportMonthlyTicketingSalesVO;
+	private Map<String, Object> monthlyFilterParam;
+	
+	private List<EmployeeViewVO> employeeList;
+
+	private List<AirlineVO> airlineList;
+	private List<TourDepartureVO> tourCodeList;
+	
+	private Long sellerID;
+	private String exportFileName, prefixValue, filterAirlineNo, filterTourCode;
+	private Double grandTotalSell, grandTotalNett;
+	
+	@Override
+	public void resetForm() {
+		employeeList = null;
+		airlineList = null;
+		tourCodeList = null;
+		
+		grandTotalSell = 0.00;
+		grandTotalNett = 0.00;
+		
+		searchParamVO = new SearchParamVO();
+		searchParamVO.setFromDate(new Date());
+		exportFileName = "MonthlyTicketingSales";
+	}
+
+	public void init() throws BusinessException {
+		resetForm();
+		loadEmployeeList();
+		loadAirlineList();
+		loadTourCodeList();
+		
+		initPrefixVal();
+		SystemNumberGenerationVO invSNGVO;
+		invSNGVO = systemNumberGenerationBO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_INVC, this.getSessionInfoBean().getCompanyVO().getId());
+		invSNGVO.setCode(CommonConstant.SYS_NUM_CD_INVC);
+		setPrefixValue(invSNGVO.getPrefixid());
+	}
+
+	/**
+	 * Load tour departure list
+	 */
+	public void loadEmployeeList() {
+		try {
+			employeeList = userBO.getEmployeeViewList(this.getSessionInfoBean().getCompanyVO().getId(), "-tick");
+			Collections.sort(employeeList, new EmployeeNameComparator());
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	public void loadAirlineList() {
+		try {
+			airlineList = airlineBO.getAirlineList();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public void loadTourCodeList() {
+		try {
+			tourCodeList = (List<TourDepartureVO>) monthlyTicketBO.getTourCodeList();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public String getSellerName(Long idSeller) {
+		try {
+			for (EmployeeViewVO vo : employeeList) {
+				if (vo.getId().longValue() == idSeller.longValue()) {
+					return vo.getUserVO().getName();
+				}
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return "";
+	}
+	
+	public void searchReport() {
+		setLazyDMMonthlyTicket(new LazyMonthlyTicketListDataModel());
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM");
+        exportFileName = "MonthlyTicketingSales_" + dateFormat.format(searchParamVO.getFromDate()) +
+        					(getSellerID() == 0 ? "" : "_" + getSellerName(sellerID)) +
+                					(!getFilterAirlineNo().equals("") ? "_" + getFilterAirlineNo() : "") +
+                					(!getFilterTourCode().equals("") ? "_" + getFilterTourCode() : "");
+	}
+
+	public void postProcessXLS(Object document) throws IOException {
+    }
+	
+	@SuppressWarnings("unchecked")
+	public void printMonthlyTicketSalesReport(String xlsOrPDf) {
+		try {
+			listFullExportMonthlyTicketingSalesVO = new ArrayList<MonthlyTicketingSalesViewVO>();
+
+			if(monthlyFilterParam == null) {
+				monthlyFilterParam = new HashMap<String, Object>();
+				monthlyFilterParam.put("filters", new HashMap<String, String>());
+				monthlyFilterParam.put("sortOrder", CommonConstant.SORT_ASC);
+				monthlyFilterParam.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+				monthlyFilterParam.put("idSeller", (getSellerID() == 0 ? null : sellerID));
+				monthlyFilterParam.put("idAirline", (!getFilterAirlineNo().equals("") ? getFilterAirlineNo() : null));
+				monthlyFilterParam.put("tourCode", (!getFilterTourCode().equals("") ? getFilterTourCode() : null));
+				monthlyFilterParam.put("dateMonthYear", searchParamVO.getFromDate());
+			}
+			monthlyFilterParam.remove("first");
+			monthlyFilterParam.put("first", 0);
+			monthlyFilterParam.remove("pageSize");
+			monthlyFilterParam.put("pageSize", 10000000);	//Use max pagesize for query
+			
+			listFullExportMonthlyTicketingSalesVO = (List<MonthlyTicketingSalesViewVO>) monthlyTicketBO.getListMonthlyTicket(monthlyFilterParam);
+
+			for(MonthlyTicketingSalesViewVO tmpVO : listFullExportMonthlyTicketingSalesVO) {
+//				tmpVO.setInvoiceCode(getPrefixValue() + " " + tmpVO.getInvoiceCode()); //will be concat in jasper
+
+				tmpVO.setTicketNo(tmpVO.getTicketNo() != null ? tmpVO.getTicketNo().replace(" ", ""): tmpVO.getTicketNo());
+			}
+			SimpleDateFormat ftDate = new SimpleDateFormat("MMMMM yyyy");
+			HashMap<String, Object> map = new HashMap<String, Object>();
+			map.put("companyName", getSessionInfoBean().getCompanyVO().getName());
+			map.put("salesPerson", getSellerName(getSellerID()));
+			map.put("monthYear", ftDate.format(searchParamVO.getFromDate()));
+			map.put("idAirline", monthlyFilterParam.get("idAirline"));
+			map.put("tourCode", monthlyFilterParam.get("tourCode"));
+			map.put("monthlyTicketingSalesList", listFullExportMonthlyTicketingSalesVO);
+			map.put("IS_IGNORE_PAGINATION", true);
+			map.put("invPrefixVal", invPrefixVal);
+			map.put("psPrefixVal", psPrefixVal);
+			
+			if (CollectionUtils.isEmpty(listFullExportMonthlyTicketingSalesVO)) throw new BusinessException("ERR_NO_RESULT");
+			
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(listFullExportMonthlyTicketingSalesVO, map, 
+						CommonConstant.JAS_RPT_MONTHLY_TICKET_SALES);
+			
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, exportFileName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, exportFileName);
+			}
+//			ReportUtils.printReport(jasperPrint, getExportFileName());
+			listFullExportMonthlyTicketingSalesVO.clear();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**********************
+	 * Lazy loading model *
+	 **********************/
+	class LazyMonthlyTicketListDataModel extends LazyDataModel<MonthlyTicketingSalesViewVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#load(int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+		 */
+		@SuppressWarnings("unchecked")
+		@Override
+		public List<MonthlyTicketingSalesViewVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			try {
+
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", (sortField == null ? "airlineNo" : sortField));
+				params.put("sortOrder", sortOrder);
+				params.put("filters", new HashMap<String, String>(filters));
+				params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+				params.put("idSeller", (getSellerID() == 0 ? null : sellerID));
+				params.put("idAirline", (!getFilterAirlineNo().equals("") ? getFilterAirlineNo() : null));
+				params.put("tourCode", (!getFilterTourCode().equals("") ? getFilterTourCode() : null));
+				params.put("dateMonthYear", searchParamVO.getFromDate());
+				
+				setRowCount(monthlyTicketBO.getListSizeMonthlyTicket(params));
+				updateFilterParam(params);
+				if (getRowCount() > 0) {
+					MonthlyTicketingSalesViewVO grandTotal = monthlyTicketBO.getMonthlyTicketGrandTotal(params);
+					grandTotalSell = grandTotal.getSellAmount();
+					grandTotalNett = grandTotal.getNettAmount();
+					
+					return (List<MonthlyTicketingSalesViewVO>) monthlyTicketBO.getListMonthlyTicket(params);
+				}
+			} catch (Throwable t) {
+				t.printStackTrace();
+				errorResult(t);
+			}
+			return null;
+		}
+		
+	}
+	
+	private void updateFilterParam(Map<String, Object> params) {
+		this.monthlyFilterParam = params;
+	}
+
+	/*******************
+	 * Getter & Setter *
+	 *******************/
+	
+	public LazyDataModel<MonthlyTicketingSalesViewVO> getLazyDMMonthlyTicket() {
+		return lazyDMMonthlyTicket;
+	}
+
+	public void setLazyDMMonthlyTicket(LazyDataModel<MonthlyTicketingSalesViewVO> lazyDMMonthlyTicket) {
+		this.lazyDMMonthlyTicket = lazyDMMonthlyTicket;
+	}
+
+	public List<EmployeeViewVO> getEmployeeList() {
+		return employeeList;
+	}
+
+	public void setEmployeeList(List<EmployeeViewVO> employeeList) {
+		this.employeeList = employeeList;
+	}
+
+	public Long getSellerID() {
+		return sellerID;
+	}
+
+	public void setSellerID(Long sellerID) {
+		this.sellerID = sellerID;
+	}
+
+	public String getExportFileName() {
+		return exportFileName;
+	}
+
+	public void setExportFileName(String exportFileName) {
+		this.exportFileName = exportFileName;
+	}
+
+	public String getPrefixValue() {
+		return prefixValue;
+	}
+
+	public void setPrefixValue(String prefixValue) {
+		this.prefixValue = prefixValue;
+	}
+
+	public List<AirlineVO> getAirlineList() {
+		return airlineList;
+	}
+
+	public String getFilterAirlineNo() {
+		return filterAirlineNo;
+	}
+
+	public void setFilterAirlineNo(String airlineNo) {
+		this.filterAirlineNo = airlineNo;
+	}
+
+	public String getFilterTourCode() {
+		return filterTourCode;
+	}
+
+	public void setFilterTourCode(String filterTourCode) {
+		this.filterTourCode = filterTourCode;
+	}
+
+	public List<TourDepartureVO> getTourCodeList() {
+		return tourCodeList;
+	}
+
+	public Double getGrandTotalSell() {
+		return grandTotalSell;
+	}
+
+	public void setGrandTotalSell(Double grandTotalSell) {
+		this.grandTotalSell = grandTotalSell;
+	}
+
+	public Double getGrandTotalNett() {
+		return grandTotalNett;
+	}
+
+	public void setGrandTotalNett(Double grandTotalNett) {
+		this.grandTotalNett = grandTotalNett;
+	}
+	
+}

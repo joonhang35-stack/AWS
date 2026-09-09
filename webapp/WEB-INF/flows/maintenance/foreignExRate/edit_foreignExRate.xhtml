@@ -1,0 +1,47 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varEditForeignExRateDialog.show();
+		} else {
+			varEditForeignExRateDialog.hide();
+		}
+	}
+	</script>
+<h:panelGrid columns="2" style="margin-bottom:10px; width:5px">
+	
+	<h:outputLabel for="idCode">Currency Code<span class="required">*</span></h:outputLabel>
+	<p:inputText id="idCode" label="Code" value="#{foreignExRateBean.foreignExRateVO.code}" style="width:100px" required="true"/>
+	<h:outputLabel for="idDescription">Currency Description<span class="required">*</span></h:outputLabel>
+	<p:inputText id="idDescription" label="Code" value="#{foreignExRateBean.foreignExRateVO.description}" style="width:100px" required="true"/>
+	<h:outputLabel for="idExchangeRate">Exchange Rate<span class="required">*</span></h:outputLabel>
+	<p:inputText id="idExchangeRate" label="Exchange Rate" value="#{foreignExRateBean.foreignExRateVO.exchangeRate}" style="width:100px" required="true"/>
+	<h:outputLabel for="idDtTime">Updated Date and Time<span class="required">*</span></h:outputLabel>
+	<h:outputText id="idDtTime" label="DtTime" value="#{foreignExRateBean.foreignExRateVO.updatedDate}" style="width:100px" required="true"/>
+	<h:outputLabel for="idUpdUser">Updated User<span class="required">*</span></h:outputLabel>
+	<h:outputText id="idUpdUser" label="UpdUser" value="#{foreignExRateBean.foreignExRateVO.updatedBy}" style="width:100px" required="true"/>
+	<h:outputText/>
+	<h:panelGrid id="idButtonGrid" columns="3" style="width: 1px;">
+		<p:commandButton id="idBtnEditSubmit" actionListener="#{foreignExRateBean.editForeignExRate}" value="#{msg['common.button.label.save']}" update="@form,:idForm:idForeignExchangeRateTable" oncomplete="onValidation(xhr, status, args)"/>
+		<p:commandButton id="idBtnEditCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{foreignExRateBean.resetForm}" update="@form" process="@this" oncomplete="varEditForeignExRateDialog.hide()" global="false">
+			<pe:resetEditableValues for="idEditForeignExRateForm"/>
+		</p:commandButton>
+	</h:panelGrid>
+	<h:outputText/>
+	
+</h:panelGrid>
+<br/>
+<h:outputLabel><span class="required">*</span> - required field</h:outputLabel>
+
+</ui:composition>

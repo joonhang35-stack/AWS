@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="general_ledger_details_rpt" pageWidth="572" pageHeight="802" columnWidth="572" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="a1e6027b-9c00-4fd5-920a-a4d275467a1a">
+	<property name="ireport.zoom" value="3.0"/>
+	<property name="ireport.x" value="1365"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="isShowSource" class="java.lang.Boolean"/>
+	<parameter name="showColumnType" class="java.lang.String"/>
+	<parameter name="isShowQty" class="java.lang.Boolean"/>
+	<field name="transDt" class="java.util.Date"/>
+	<field name="source" class="java.lang.String"/>
+	<field name="destination" class="java.lang.String"/>
+	<field name="code" class="java.lang.String"/>
+	<field name="debit" class="java.lang.Double"/>
+	<field name="credit" class="java.lang.Double"/>
+	<field name="sysPrefix" class="java.lang.String"/>
+	<field name="sysCode" class="java.lang.String"/>
+	<field name="sysNo" class="java.lang.String"/>
+	<field name="reducingBal" class="java.lang.Double"/>
+	<field name="taxCode" class="java.lang.String"/>
+	<field name="desc" class="java.lang.String"/>
+	<field name="qty" class="java.lang.Integer"/>
+	<field name="invoiceNo" class="java.lang.String"/>
+	<field name="jrnlNo" class="java.lang.String"/>
+	<field name="invNo" class="java.lang.String"/>
+	<field name="psNo" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="15" splitType="Stretch">
+			<printWhenExpression><![CDATA[$F{debit} != 0 || $F{credit} != 0]]></printWhenExpression>
+			<textField>
+				<reportElement x="0" y="0" width="45" height="15" uuid="6f8097da-ff49-45c1-91bd-554039bf5f6e"/>
+				<textElement textAlignment="Left" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[(new SimpleDateFormat("dd-MMM-yyyy")).format($F{transDt})]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="259" y="0" width="22" height="15" uuid="6f8097da-ff49-45c1-91bd-554039bf5f6e"/>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{code}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="281" y="0" width="48" height="15" uuid="6f8097da-ff49-45c1-91bd-554039bf5f6e"/>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{sysPrefix} + " " + $F{sysNo}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)">
+				<reportElement x="167" y="0" width="58" height="15" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314"/>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{reducingBal}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)">
+				<reportElement x="45" y="0" width="53" height="15" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314">
+					<printWhenExpression><![CDATA[$P{isShowQty}]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{debit}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)">
+				<reportElement x="98" y="0" width="53" height="15" uuid="e31cbc9e-0587-44e4-a299-1fd6fe5de314">
+					<printWhenExpression><![CDATA[$P{isShowQty}]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{credit}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="229" y="0" width="30" height="15" uuid="6f8097da-ff49-45c1-91bd-554039bf5f6e"/>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{taxCode}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="380" y="0" width="192" height="15" uuid="6f8097da-ff49-45c1-91bd-554039bf5f6e">
+					<printWhenExpression><![CDATA[$P{isShowSource} && $P{showColumnType}.isEmpty()]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{destination} + " " + $F{source}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="380" y="0" width="192" height="15" uuid="6f8097da-ff49-45c1-91bd-554039bf5f6e">
+					<printWhenExpression><![CDATA[!$P{isShowSource} && $P{showColumnType}.isEmpty()]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{destination} + " " + $F{source}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="380" y="0" width="225" height="15" uuid="90f6fb9c-1599-42d1-ba31-bed8d4aaa38d">
+					<printWhenExpression><![CDATA[$P{isShowSource} && !$P{showColumnType}.isEmpty()]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{destination} + " " + $F{source}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="380" y="0" width="225" height="15" uuid="6173ab7d-121c-44b2-b76d-935202b34cbc">
+					<printWhenExpression><![CDATA[!$P{isShowSource} && !$P{showColumnType}.isEmpty()]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{destination} + " " + $F{source}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="607" y="0" width="170" height="15" uuid="c97a0bcb-c159-48b5-8de5-1178a52023be">
+					<printWhenExpression><![CDATA[!$P{showColumnType}.isEmpty() && ("TC".equals($P{showColumnType}) || "DESC".equals($P{showColumnType}))]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{desc}]]></textFieldExpression>
+			</textField>
+			<textField pattern="">
+				<reportElement x="151" y="0" width="16" height="15" uuid="9949442d-0073-4b10-a900-5bc0e607b89c">
+					<printWhenExpression><![CDATA[$F{qty} != 0 && $P{isShowQty}]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{qty}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)">
+				<reportElement x="105" y="0" width="60" height="15" uuid="0330b681-ba38-4b0b-816a-3a0297d75848">
+					<printWhenExpression><![CDATA[!$P{isShowQty}]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{credit}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.00;(#,##0.00)">
+				<reportElement x="45" y="0" width="60" height="15" uuid="7e4fa2b7-83e6-416d-b6f6-3d92db0258b3">
+					<printWhenExpression><![CDATA[!$P{isShowQty}]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{debit}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="329" y="0" width="48" height="15" uuid="2dba7d89-6e7b-4a9b-bc11-f03232663494"/>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{invoiceNo}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="607" y="0" width="50" height="15" uuid="3850daf9-2b7c-473c-addc-3a7ef9575928">
+					<printWhenExpression><![CDATA[!$P{showColumnType}.isEmpty() && "RV".equals($P{showColumnType})]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{jrnlNo}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="657" y="0" width="50" height="15" uuid="8ce491e4-8a2a-472e-a75d-1db88c8cede0">
+					<printWhenExpression><![CDATA[!$P{showColumnType}.isEmpty() && "RV".equals($P{showColumnType})]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{invNo}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="707" y="0" width="50" height="15" uuid="8bcbd013-4a14-4382-80b9-a739f9423451">
+					<printWhenExpression><![CDATA[!$P{showColumnType}.isEmpty() && "RV".equals($P{showColumnType})]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial Unicode MS" size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{psNo}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

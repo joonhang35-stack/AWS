@@ -1,0 +1,41 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+<h:panelGrid columns="2" style="margin-bottom:10px;">
+	<h:outputLabel for="idSeqNo">Sequence Number</h:outputLabel>
+	<p:inputText label="Sequence Number" id="idSeqNo" value="#{bterpBean.tmpMsgVO.seqNo}" maxlength="4" style="width:50px"/>
+	<h:outputLabel for="idCatCode">Category</h:outputLabel>
+	<h:selectOneMenu id="idCatCode" value="#{bterpBean.tmpMsgVO.catCode}">
+		<!-- <f:selectItems value="#{zsg:referenceDataList('TMP_MSG_TOUR')}" var="n" itemLabel="#{n.value}" itemValue="#{n.code}"/> -->
+		<f:selectItems value="#{bterp:lookupItemList('inv_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	</h:selectOneMenu>
+	<h:outputLabel for="idCode">Code <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idCode" label="Code" value="#{bterpBean.tmpMsgVO.code}" maxlength="80" style="width:200px" required="true"/>
+	<h:outputLabel for="idDesc">Description <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idDesc" label="Description" value="#{bterpBean.tmpMsgVO.desc}" maxlength="80" style="width:350px" required="true"/>
+	<h:outputLabel for="idRemarks">Message <span class="required">*</span></h:outputLabel>
+	<p:inputTextarea rows="10" cols="50" id="idRemarks" label="Message" value="#{bterpBean.tmpMsgVO.remarks}" counter="idDisplay" counterTemplate="{0} characters remaining." maxlength="1000" style="width:350px;" required="true" autoResize="false"/>
+	<h:outputLabel for="idDisplay"> </h:outputLabel>
+	<h:outputText id="idDisplay" />
+</h:panelGrid>
+<h:panelGrid id="idButtonGrid" columns="3" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{bterpBean.addTmpMsg}" update="@form" rendered="#{empty bterpBean.tmpMsgVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{bterpBean.updTmpMsg}" update="@form" rendered="#{not empty bterpBean.tmpMsgVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{bterpBean.loadList}" update="@form,:idForm:idTmpMsgList" process="@this" oncomplete="varTmpMsgList.clearFilters();varAddTmpMsg.hide();">
+		<pe:resetEditableValues for="idAddForm"/>
+	</p:commandButton>
+	<p:commandButton value="#{msg['common.button.label.new']}" actionListener="#{bterpBean.resetForm}" update="@form" rendered="#{not empty bterpBean.tmpMsgVO.id}"/>
+</h:panelGrid>
+
+
+		
+</ui:composition>

@@ -1,0 +1,262 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Tour Packages" toggleable="true" toggleSpeed="500">
+	<h:form id="idTourPkgForm">
+		<h:panelGrid columns="2" style="width:210px;">
+			<h:outputLabel for="idTourCat">Category:</h:outputLabel>
+			<h:selectOneMenu id="idTourCat" value="#{tourPkgBean.searchParamVO.obj2}" effect="fade">
+				<f:selectItem itemLabel="Select One"/>
+				<f:selectItems value="#{tourPkgBean.tourCatViewList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+				<p:ajax event="change" listener="#{tourPkgBean.handleTourFNECatSelect(true)}" update="@form,:idAddTourThemeForm"/>
+			</h:selectOneMenu>
+		</h:panelGrid>
+		<h:panelGrid columns="2" style="width:250px;">
+			<p:commandButton value="Add Country/Theme" actionListener="#{tourPkgBean.handleAcct}" oncomplete="varAddTourThemeDialog.show()" update=":idAddTourThemeForm"/>
+		</h:panelGrid>
+		
+		<p:panel rendered="#{empty tourPkgBean.searchParamVO.obj2}">
+			<h:outputText value="Please select category."/>
+		</p:panel>
+		
+		<p:panel rendered="#{not empty tourPkgBean.searchParamVO.obj2 and empty tourPkgBean.tourThemeList}">
+			<h:outputText value="Please add theme."/>
+		</p:panel>
+		
+		<p:accordionPanel id="idTourPkgList" value="#{tourPkgBean.tourThemeList}" var="vo">
+			<p:tab title="#{vo.desc}">
+				<p:panelGrid>
+					<p:row>
+						<p:column><p:commandButton icon="ui-icon-plus" value="Package" action="#{tourPkgBean.handleAddTourPkgFNESelect(vo)}" oncomplete="varAddTourPkgDialog.show()" update=":idAddTourPkgForm"/></p:column>
+						<p:column style="text-align:right;">
+							<p:commandButton icon="ui-icon-pencil" action="#{tourPkgBean.handleTourThemeSelect(vo)}" oncomplete="varEditTourThemeDialog.show()" update=":idEditTourThemeForm"/>
+							<p:commandButton icon="ui-icon-close" action="#{tourPkgBean.handleTourThemeSelect(vo)}" oncomplete="varDelTourThemeDialog.show()"/>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<ui:repeat value="#{vo.children}" var="child">
+					<p:panelGrid>
+						<p:row>
+							<p:column style="background:#{config['table.header.color']};"><h:outputText value="#{child.desc}"/></p:column>
+							<p:column style="width:35px; background:#{config['table.header.color']}; text-align:right;">
+								<p:commandLink styleClass="ui-icon ui-icon-plus" actionListener="#{tourPkgBean.handleAddTourPkgSelect(child)}" oncomplete="varAddTourPkgDialog.show()" update=":idAddTourPkgForm" style="float:left;"/>
+								<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{tourPkgBean.handleTourThemeSelect(child)}" oncomplete="varDelTourThemeDialog.show()" style="float:left;"/>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+					<p:dataTable value="#{child.tourPkgList}" var="tourPkgVO">
+						<p:column style="width:30px;">
+							<!--p:commandButton icon="ui-icon-pencil" actionListener="#{tourPkgBean.setTourPkgVO(tourPkgVO)}" update=":idEditTourPkgForm" oncomplete="varEditTourPkgDialog.show()"/-->
+							<p:commandLink styleClass="ui-icon ui-icon-pencil" actionListener="#{tourPkgBean.setTourPkgVO(tourPkgVO)}" update=":idEditTourPkgForm" oncomplete="varEditTourPkgDialog.show()"/>
+						</p:column>
+						<p:column style="width:30px;">
+							<!--p:commandButton icon="ui-icon-close" actionListener="#{tourPkgBean.setTourPkgVO(tourPkgVO)}" oncomplete="varDelTourPkgDialog.show()"/-->
+							<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{tourPkgBean.setTourPkgVO(tourPkgVO)}" oncomplete="varDelTourPkgDialog.show()"/>
+						</p:column>
+						<p:column>
+							<h:outputLink target="_blank" value="#{request.contextPath}#{tourPkgBean.urlEncoder(tourPkgVO.reserved1)}"><h:outputText value="#{tourPkgVO.nameEn} #{tourPkgVO.nameZh} #{tourPkgVO.nameOther}"/></h:outputLink>
+						</p:column>
+					</p:dataTable>
+				</ui:repeat>
+				
+				<p:dataTable value="#{vo.tourPkgList}" var="tourPkgVO" style="margin-top:10px;" rendered="#{empty vo.children}">
+					<p:column style="width:30px;">
+						<p:commandLink styleClass="ui-icon ui-icon-pencil" actionListener="#{tourPkgBean.setTourPkgVO(tourPkgVO)}" update=":idEditTourPkgForm" oncomplete="varEditTourPkgDialog.show()"/>
+					</p:column>
+					<p:column style="width:30px;">
+						<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{tourPkgBean.setTourPkgVO(tourPkgVO)}" oncomplete="varDelTourPkgDialog.show()"/>
+					</p:column>
+					<p:column>
+						<h:outputLink target="_blank" value="#{request.contextPath}#{tourPkgBean.urlEncoder(tourPkgVO.reserved1)}/#{tourPkgBean.urlEncoder(tourPkgVO.reserved2)}"><h:outputText value="#{tourPkgVO.nameEn} #{tourPkgVO.nameZh} #{tourPkgVO.nameOther}"/></h:outputLink>
+					</p:column>
+				</p:dataTable>
+			</p:tab>
+		</p:accordionPanel>
+		<h:panelGrid columns="2" style="width:250px;">
+			<p:commandButton value="Add Country/Theme" actionListener="#{tourPkgBean.handleAcct}" oncomplete="varAddTourThemeDialog.show()" update=":idAddTourThemeForm"/>
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - ADD TOUR THEME
+-->
+<p:dialog widgetVar="varAddTourThemeDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Tour Theme" />
+	</f:facet>
+	
+	<h:form id="idAddTourThemeForm">
+		<ui:include src="../common/add_theme.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - EDIT TOUR THEME
+-->
+<p:dialog widgetVar="varEditTourThemeDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Tour Theme" />
+	</f:facet>
+	
+	<h:form id="idEditTourThemeForm">
+		<ui:include src="../common/add_theme.xhtml" />
+	</h:form>
+</p:dialog>
+	
+<!--
+	DIALOG - DELETE TOUR THEME
+-->
+<p:confirmDialog header="Delete Country/Theme" widgetVar="varDelTourThemeDialog" message="Are you sure want to delete this tour theme?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{tourPkgBean.delTourTheme}" update="@form,:idTourPkgForm" oncomplete="varDelTourThemeDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{tourPkgBean.resetForm}" oncomplete="varDelTourThemeDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - ADD TOUR PACKAGE
+-->
+<p:dialog widgetVar="varAddTourPkgDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Tour Package" />
+	</f:facet>
+	
+	<div style="height:470px; overflow:auto;">
+	<h:form id="idAddTourPkgForm" enctype="multipart/form-data">
+		<ui:include src="fne_add_pkg.xhtml" />
+	</h:form>
+	</div>
+</p:dialog>
+
+<!--
+	DIALOG - EDIT TOUR PACKAGE
+-->
+<p:dialog widgetVar="varEditTourPkgDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Tour Package" />
+	</f:facet>
+	
+	<div style="height:470px; overflow:auto;">
+	<h:form id="idEditTourPkgForm" enctype="multipart/form-data">
+		<ui:include src="fne_add_pkg.xhtml" />
+	</h:form>
+	</div>
+</p:dialog>
+	
+<!--
+	DIALOG - DELETE TOUR PACKAGE
+-->
+<p:confirmDialog header="Delete Tour Package" widgetVar="varDelTourPkgDialog" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{tourPkgBean.delTourPkg}" update="@form,:idTourPkgForm" oncomplete="varDelTourPkgDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{tourPkgBean.resetForm}" oncomplete="varDelTourPkgDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+	
+<!--
+	DIALOG - DELETE TOUR ITINERY
+-->
+<p:confirmDialog header="Delete Itinery" widgetVar="varDelTourItineryDialog" message="Are you sure want to delete this itinery?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{tourPkgBean.delTourItinery}" update="@form,:idEditTourPkgForm:idTravelItinery" oncomplete="varDelTourItineryDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" onclick="varDelTourItineryDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - ACCOUNT LIST
+-->
+<p:dialog widgetVar="varAcctListDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<ui:include src="../common/acct_list.xhtml" />
+</p:dialog>
+
+
+
+<!--
+	DIALOG - ROOM PRICE
+-->
+<p:dialog id="idRoomPriceDialog" widgetVar="varRoomPriceDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+<f:facet name="header">
+<h:outputFormat value="Item"/>
+</f:facet>
+<h:form id="idRoomPriceForm">
+<ui:include src="../common/add_room_price.xhtml"/>
+</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ROOM TYPE LIST
+		<p:dataTable value="#{tourPkgBean.roomTypeList}" var="vo" paginator="true" rows="10" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="5, 10, 15" rowKey="#{vo.id}" selectionMode="single">
+			<p:ajax event="rowSelect" listener="#{tourPkgBean.handleRoomTypeSelect}" update="@form,:idAddTourPkgForm:idRoomPriceListPanel,:idEditTourPkgForm:idRoomPriceListPanel" oncomplete="varRoomTypeListDialog.hide()"/>
+			 
+			<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}">
+				<h:outputText value="#{vo.desc}" /> 
+			</p:column>
+		</p:dataTable>
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varRoomTypeListDialog.hide()" process="@this"/>
+		</h:panelGrid>
+-->
+<p:dialog widgetVar="varRoomTypeListDialog" header="Room Type List" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idRoomTypeListForm">   
+		<p:dataTable  id="idRoomTypeTable"  value="#{tourPkgBean.tourRoomTypeList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+			  	<p:ajax event="rowSelect" listener="#{tourPkgBean.handleRoomTypeSelect}" update="@form,:idRoomPriceForm:idAddTourPackageItemPanel" oncomplete="varRoomTypeListDialog.hide()"/>
+			 
+			<p:column headerText="Description" sortBy="#{vo.desc}"  >
+				<h:outputText value="#{vo.desc}" /> 
+			</p:column>
+
+		</p:dataTable>
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varRoomTypeListDialog.hide()" process="@this"/>
+		</h:panelGrid>	
+	</h:form>	
+</p:dialog>
+
+<!--
+	DIALOG - ADD ITINERY
+-->
+<p:dialog widgetVar="varAddItineryDialog" header="Tour Itinerary" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddCustItineryForm" enctype="multipart/form-data">
+		<p:growl id="msg"/>
+		<p:panelGrid>
+			<p:row>
+				<p:column>
+					<p:fileUpload id="idTourItinery" fileUploadListener="#{tourPkgBean.handleFileUpload}" mode="advanced" auto="true" sizeLimit="#{bterp:globalConfigValue('GLOBAL', 'PATH_PDF_FILE_SIZE')}" allowTypes="/(\.|\/)(pdf)$/" description="*.pdf" update="msg,:idAddTourPkgForm:idTravelItinery,:idEditTourPkgForm:idTravelItinery" oncomplete="varAddItineryDialog.hide()"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<h:panelGrid columns="2" style="width:1px;">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{tourPkgBean.resetTourItineryForm}" oncomplete="varAddItineryDialog.hide()" process="@this" update="@form">
+				<pe:resetEditableValues for="idItineryName"/>
+			</p:commandButton>
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+</ui:define>
+</ui:composition>
+
+

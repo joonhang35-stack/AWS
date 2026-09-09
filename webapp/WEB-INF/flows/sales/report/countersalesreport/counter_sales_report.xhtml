@@ -1,0 +1,279 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+
+<script language="javascript" src="#{request.contextPath}/js/PFCustomExt.js"  />
+<script type="text/javascript">
+	//<![CDATA[
+	$(document).ready(function() {
+		//First time set to today's Month and Year
+   		$("#ui-datepicker-div .ui-datepicker-month :selected").val();
+   		$("#ui-datepicker-div .ui-datepicker-year :selected").val();
+		RefreshScreen();
+	});
+		
+    function RefreshScreen () {
+	    $('.date-picker-month-year').datepicker( {
+	        changeMonth: true,
+	        changeYear: true,
+	        showButtonPanel: true,
+	        dateFormat: 'M yy',
+			maxDate: new Date(), 
+			beforeShow: function(input) {
+				$(input).datepicker("widget").addClass('hide-calendar');
+		      	if ((selDate = $(this).val()).length > 0) {
+		      		year = selDate.substring(selDate.length - 4, selDate.length);
+		      		month = jQuery.inArray(selDate.substring(0, selDate.length - 5), $(this).datepicker('option', 'monthNamesShort'));
+	          		$(this).datepicker('option', 'defaultDate', new Date(year, month, 1));
+	          		$(this).datepicker('setDate', new Date(year, month, 1));
+				}
+		    },
+	        onClose: function(dateText, inst) { 
+	            var month = $("#ui-datepicker-div .ui-datepicker-month :selected").val();
+	            var year = $("#ui-datepicker-div .ui-datepicker-year :selected").val();
+	            
+	            $(this).datepicker('setDate', new Date(year, month, 1));
+	        }
+	    });
+	    
+	    $('#startDate').focusin(function(){
+			$('.ui-datepicker-calendar').css("display","none");
+    	});
+    }
+    
+    function monitorExporting(start, complete) {
+    	if (start) {
+    		start();
+    	}
+
+    	window.pdfExportingMonitor = setInterval(function() {
+    		var exportingComplete = $.cookie('cookie.pdf.exporting');
+
+    		if (exportingComplete === 'true') {
+    			if (complete) {
+    				complete();
+    			}
+    			$.cookie('cookie.pdf.exporting', null);
+    			clearInterval(window.pdfExportingMonitor);
+    		}
+    	}, 500);
+    }
+
+    function start() {
+    	statusDialog.show();
+    }
+
+    function stop() {
+    	statusDialog.hide();
+    }
+	//]]>
+</script>
+<style>
+	.hide-calendar .ui-datepicker-calendar {
+	    display: none;
+	}
+	.ui-selectonemenu-item .ui-selectonemenu-list-item:hover {
+		
+	}
+</style>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Report Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the report is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+<p:panel header="Counter Sales Report" toggleable="true" toggleSpeed="500">
+	<h:form id="idForm">
+		<p:growl id="msg"/>
+		
+		<p:panelGrid id="idPanelFilter">
+			<p:row>
+				<p:column style="width:110px;">
+					<p:outputLabel value="Report Type" />
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column colspan="3">
+					<h:selectOneMenu id="idSelReportType" label="Date Range" value="#{counterSalesReportBean.reportType}" effect="fade" style="margin-right: 20px;">
+						<f:selectItem itemLabel = "By Individual Sales" itemValue= "IS" />
+						<f:selectItem itemLabel = "By Department Sales" itemValue= "DS" />
+						<f:selectItem itemLabel = "By Region Sales" itemValue= "RS" />
+						<p:ajax event="change" update=":idForm"/>
+					</h:selectOneMenu>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{counterSalesReportBean.print('PDF')}" ajax="false" style="margin-right: 20px;" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [EXCEL]" actionListener="#{counterSalesReportBean.print('XLSX')}" ajax="false" style="margin-right: 20px;" onclick="monitorExporting(start,stop)"/>
+				</p:column>
+				<!-- <p:column colspan="2">
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{counterSalesReportBean.print('PDF')}" ajax="false" style="margin-right: 20px;"/>
+					<p:commandButton icon="ui-icon-print" value="Print [EXCEL]" actionListener="#{counterSalesReportBean.print('XLSX')}" ajax="false" style="margin-right: 20px;"/>
+				</p:column> -->
+			</p:row>
+			<p:row>
+				<p:column>
+					<p:outputLabel value="Date Range" />
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idSelDateRange" label="Date Range" value="#{counterSalesReportBean.dateRange}" effect="fade" style="margin-right: 20px;">
+						<f:selectItem itemLabel = "Daily" itemValue= "D" />
+						<f:selectItem itemLabel = "Monthly" itemValue= "M" />
+						<f:selectItem itemLabel = "Quarterly" itemValue= "Q" />
+						<f:selectItem itemLabel = "Yearly" itemValue= "Y" />
+						<f:selectItem itemLabel = "Custom" itemValue= "C" />
+						<p:ajax event="change" listener="#{counterSalesReportBean.handleDateRangeChange}" update=":idForm:idPanelFilter" oncomplete="RefreshScreen();" global="false"/>
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<p:outputLabel value="Invoice Date" />
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:110px;" rendered="#{counterSalesReportBean.dateRange eq 'Y'}">
+					<h:selectOneMenu id="idSelYear" value="#{counterSalesReportBean.year}" effect="fade" required="true">
+			            <f:selectItems value="#{counterSalesReportBean.yearList}" var="#{year}" itemLabel="#{year}" itemValue="#{year}"/>
+			            <p:ajax event="change" listener="#{counterSalesReportBean.handleYearChange}" update=":idForm:idPanelFilter" global="false"/>
+			        </h:selectOneMenu>
+				</p:column>
+				<p:column style="width:110px;" rendered="#{counterSalesReportBean.dateRange eq 'Q'}">
+					<h:selectOneMenu id="idSelQuarter" value="#{counterSalesReportBean.quarter}" effect="fade" 
+			        	autoWidth="false" style="width:105px;">
+						<f:selectItem itemLabel = "First Quarter" itemValue= "1" />
+						<f:selectItem itemLabel = "Second Quarter" itemValue= "2" />
+						<f:selectItem itemLabel = "Third Quarter" itemValue= "3" />
+						<f:selectItem itemLabel = "Forth Quarter" itemValue= "4" />
+						<p:ajax event="change" listener="#{counterSalesReportBean.handleQuarterChange}" update=":idForm:idPanelFilter" global="false"/>
+			        </h:selectOneMenu>
+				</p:column>
+				<p:column rendered="#{counterSalesReportBean.dateRange eq 'M'}">
+					<p:inputText id="idDtMonthYear" value="#{counterSalesReportBean.monthYear}" required="true"
+			    		styleClass="date-picker-month-year" style="width:88px;">
+						<f:convertDateTime pattern="MMM yyyy"/>
+					</p:inputText>
+				</p:column>
+				<p:column rendered="#{counterSalesReportBean.dateRange eq 'D'}">
+					<p:calendar id="idDtDaily" label="Date" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{counterSalesReportBean.dateFrom}" required="true" size="12"/>
+					<p:watermark for="idDtDaily" value="Date" />
+				</p:column>
+				<p:column style="width:110px;" rendered="#{counterSalesReportBean.dateRange ne 'D' and counterSalesReportBean.dateRange ne 'M'and counterSalesReportBean.dateRange ne 'C'}">
+					<p:inputText id="idDtFrom" value="#{counterSalesReportBean.dateFrom}" readonly="true" style="background:#ccc">
+						<f:convertDateTime pattern="dd-MMM-yyyy"/>
+					</p:inputText>
+				</p:column>
+				<p:column rendered="#{counterSalesReportBean.dateRange ne 'D' and counterSalesReportBean.dateRange ne 'M' and counterSalesReportBean.dateRange ne 'C'}">
+					<p:inputText id="idDtTo" value="#{counterSalesReportBean.dateTo}" readonly="true" style="background:#ccc">
+						<f:convertDateTime pattern="dd-MMM-yyyy"/>
+					</p:inputText>
+				</p:column>
+				<p:column style="width:110px;" rendered="#{counterSalesReportBean.dateRange eq 'C'}">
+					<p:calendar id="idDtFromCustom" pattern="dd-MMM-yyyy" value="#{counterSalesReportBean.dateFrom}" navigator="true" showButtonPanel="true" maxdate="#{counterSalesReportBean.dateTo}">
+						<p:ajax event="dateSelect" global="false" update=":idForm:idDtToCustom"/>
+					</p:calendar>
+					<p:watermark for="idDtFromCustom" value="Date To"/>
+				</p:column>
+				<p:column rendered="#{counterSalesReportBean.dateRange eq 'C'}">
+					<p:calendar id="idDtToCustom" pattern="dd-MMM-yyyy" value="#{counterSalesReportBean.dateTo}" navigator="true" showButtonPanel="true" mindate="#{counterSalesReportBean.dateFrom}">
+						<p:ajax event="dateSelect" global="false" update=":idForm:idDtFromCustom"/>
+					</p:calendar>
+					<p:watermark for="idDtToCustom" value="Date To"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:panelGrid>
+			<p:row rendered="#{counterSalesReportBean.reportType eq 'RS'}">
+				<p:column style="width:110px;">
+					<p:outputLabel value="Region" />
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column colspan="3">
+					<p:selectCheckboxMenu id="idSelRegion" value="#{counterSalesReportBean.idRegionList}"
+						label="Region List" filter="true" filterMatchMode="startsWith">
+				        <f:selectItems value="#{counterSalesReportBean.tourCatViewVOList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.desc}"/>
+				    </p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column style="width:110px;">
+					<p:outputLabel value="Country" />
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu id="idSelCountry" value="#{counterSalesReportBean.idCountryList}"
+						label="Country List" filter="true" filterMatchMode="startsWith" onHide="executeOnOnhide();">
+				        <f:selectItems value="#{counterSalesReportBean.tourCountryVOList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.desc}"/>
+				    </p:selectCheckboxMenu>
+				    
+				     <p:remoteCommand name="executeOnOnhide" actionListener="#{counterSalesReportBean.handleCountryChange}"
+				        update=":idForm:idSelProduct" process="@this, :idForm:idSelCountry" global="false"/>  
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<p:outputLabel value="Product" />
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu id="idSelProduct" value="#{counterSalesReportBean.idProductList}"
+						label="Product List" filter="true" filterMatchMode="startsWith">
+				        <f:selectItems value="#{counterSalesReportBean.tourThemeVOList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.desc}"/>
+				    </p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{counterSalesReportBean.reportType eq 'IS'}">
+				<p:column>
+					<p:outputLabel value="Sales Person" />
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column colspan="3">
+					<h:selectOneMenu id="idSelSalesPerson" value="#{counterSalesReportBean.salesPerson}" effect="fade"
+						style="width:175px;">
+						<f:selectItem itemLabel = "All" itemValue= "#{null}" />
+						<f:selectItems value="#{counterSalesReportBean.employeeList}" var="vo" itemLabel="#{vo.userVO.name}" itemValue="#{vo.id}" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{counterSalesReportBean.reportType eq 'DS'}">
+				<p:column>
+					<p:outputLabel value="Department" />
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column colspan="3">
+					<p:selectCheckboxMenu id="idSelDepartment" value="#{counterSalesReportBean.idDepartmentList}"
+						label="Department List" filter="true" filterMatchMode="startsWith">
+				        <f:selectItems value="#{bterp:lookupItemList('dept_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+				    </p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	</h:form>
+</p:panel>
+
+</ui:define>
+</ui:composition>

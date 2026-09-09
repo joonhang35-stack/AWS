@@ -1,0 +1,192 @@
+package com.bcs.zsg.common.helper;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.faces.model.SelectItem;
+
+import com.bcs.zsg.acct.vo.FinancialPeriodLockVO;
+import com.bcs.zsg.common.service.LookupItemService;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BeanFactory;
+import com.bcs.zsg.maintenance.vo.GlobalConfigVO;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.security.web.bean.BterpSessionInfoBean;
+
+/**
+ * Called from JSF taglib functions.
+ */
+public class LookupItemUtils {
+
+	private static LookupItemService lookupItemServie;
+	private static BterpSessionInfoBean sessionInfoBean;
+	
+	/**
+	 * 
+	 * @param category
+	 * @return
+	 */
+	@SuppressWarnings("rawtypes")
+	public static List getLookupItemList(String category) {
+		return getLookupItemService().getLookupItemList(category);
+	}
+	
+	/**
+	 * 
+	 * @param category
+	 * @param typeCd
+	 * @return
+	 */
+	public static LookupItemVO getLookupItemVO(String category, String typeCd) {
+		return getLookupItemService().getLookupItemVO(category, typeCd);
+	}
+	
+	/**
+	 * 
+	 * @param category
+	 * @param typeCd
+	 * @return
+	 */
+	public static String getLookupItemDesc(String category, String typeCd) {
+		return getLookupItemService().getLookupItemDesc(category, typeCd);
+	}
+	
+	/**
+	 * 
+	 * @param category : MaintConstant.GLOBAL_CD_GLOBAL
+	 * @return
+	 */
+	@SuppressWarnings("rawtypes")
+	public static List getGlobalConfigList(String category) {
+		return getLookupItemService().getGlobalConfigList(category);
+	}
+	
+	/**
+	 * 
+	 * @param category : MaintConstant.GLOBAL_CD_GLOBAL
+	 * @param code : MaintConstant.GLOBAL_CD_FINANCIAL_DATE / MaintConstant.GLOBAL_CD_KIV_EXP / ETC.
+	 * @return
+	 */
+	public static GlobalConfigVO getGlobalConfigVO(String category, String code) {
+		return getLookupItemService().getGlobalConfigVO(category, code);
+	}
+	
+	/**
+	 * 
+	 * @param category : MaintConstant.GLOBAL_CD_GLOBAL
+	 * @param code : MaintConstant.GLOBAL_CD_FINANCIAL_DATE / MaintConstant.GLOBAL_CD_KIV_EXP / ETC.
+	 * @return
+	 */
+	public static String getGlobalConfigValue(String category, String code) {
+		return getLookupItemService().getGlobalConfigValue(category, code);
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public static FinancialPeriodLockVO getFinPeriodLockVO(Long idCompany) {
+		return getLookupItemService().getFinPeriodLockVO(idCompany);
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public static boolean isNotificationAvailable() {
+		return getLookupItemService().isNotificationAvailable(getSessionInfoBean().getUserVO());
+	}
+	
+	/**
+	 * 
+	 * @param idCompany
+	 * @return
+	 */
+	public static SystemNumberGenerationVO getSysNumGenVO(Long idCompany, String code) {
+		return getLookupItemService().getSysNumGenVO(idCompany, code);
+	}
+	
+	public static boolean isDateInFinPeriodClosed(Long idCompany, Date date) throws BusinessException {
+		return getLookupItemService().isDateInFinPeriodClosed(idCompany, date);
+	}
+	
+	public static Integer getFinPeriodClosedStatus(Long idCompany, Date date) throws BusinessException {
+		return getLookupItemService().getFinPeriodClosedStatus(idCompany, date);
+	}
+	
+	public static String getPsPrefix(Long idCompany) {
+		return LookupItemUtils.getSysNumGenVO(idCompany, CommonConstant.SYS_NUM_CD_PAX_STMT).getPrefixid();
+	}
+	
+	public static String getInvPrefix(Long idCompany) {
+		return LookupItemUtils.getSysNumGenVO(idCompany, CommonConstant.SYS_NUM_CD_INVC).getPrefixid();
+	}
+	
+	public static String getCnPrefix(Long idCompany) {
+		return LookupItemUtils.getSysNumGenVO(idCompany, CommonConstant.SYS_NUM_CD_CRDT_NOTE).getPrefixid();
+	}
+	
+	public static String getJrnlPrefix(Long idCompany) {
+		return LookupItemUtils.getSysNumGenVO(idCompany, CommonConstant.SYS_NUM_CD_JRNL).getPrefixid();
+	}
+	
+	public static String getRnPrefix(Long idCompany) {
+		return LookupItemUtils.getSysNumGenVO(idCompany, CommonConstant.SYS_NUM_CD_RFND_NOTE).getPrefixid();
+	}
+	
+	/*
+	 * 
+	 * @return
+	 */
+	private static LookupItemService getLookupItemService() {
+		if (lookupItemServie == null)
+			lookupItemServie = BeanFactory.getBean("lookupItemService", LookupItemService.class);
+		
+		return lookupItemServie;
+	}
+	
+	/*
+	 * 
+	 * @return
+	 */
+	private static BterpSessionInfoBean getSessionInfoBean() {
+		if (sessionInfoBean == null)
+			sessionInfoBean = BeanFactory.getBean("sessionInfoBean", BterpSessionInfoBean.class);
+		
+		return sessionInfoBean;
+	}
+	
+	public static String getGSTProcessStatus(Long idCompany, Date date) throws BusinessException {
+		return getLookupItemService().getGSTProcessStatus(idCompany, date);
+	}
+	
+	public static boolean getFinAndGSTPeriodClosedStatus(Long idCompany, Date date, boolean isAccountManager) throws BusinessException {
+		return getLookupItemService().getFinAndGSTPeriodClosedStatus(idCompany, date, isAccountManager);
+	}
+	
+	public static String getTableName(String sysCd) {
+		
+		String table = "";
+		
+		if (sysCd.equals(CommonConstant.SYS_NUM_CD_INVC) || sysCd.equals(CommonConstant.SYS_NUM_CD_PAX_STMT) || sysCd.equals(CommonConstant.SYS_NUM_CD_CRDT_NOTE)) {
+			table = "invoice";
+		} else if (sysCd.equals(CommonConstant.SYS_NUM_CD_PURC_BILL)) {
+			table = "ex_order_bill";
+		}
+		
+		return table;
+	}
+	
+	public static SelectItem[] createFilterOptions(String category) {
+		List<LookupItemVO> lookupItemList = getLookupItemList(category);
+		SelectItem[] options = new SelectItem[lookupItemList.size() + 1];  
+		  
+        options[0] = new SelectItem("", "All");  
+        for(int i = 0; i < lookupItemList.size(); i++) {  
+            options[i + 1] = new SelectItem(lookupItemList.get(i).getCode(), lookupItemList.get(i).getDescription());  
+        }  
+		
+        return options;
+	}
+}

@@ -1,0 +1,183 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+
+<script type="text/javascript">
+    function fncLoad() {
+        document.getElementById('idCustListForm:idAddBtn').onclick();
+    }
+
+	function monitorExporting(start, complete) {
+		if (start) {
+			start();
+		}
+	
+		window.pdfExportingMonitor = setInterval(function() {
+			var exportingComplete = $.cookie('cookie.pdf.exporting');
+	
+			if (exportingComplete === 'true') {
+				if (complete) {
+					complete();
+				}
+				$.cookie('cookie.pdf.exporting', null);
+				clearInterval(window.pdfExportingMonitor);
+			}
+		}, 500);
+	}
+	
+	function start() {
+		statusDialog.show();
+	}
+	
+	function stop() {
+		statusDialog.hide();
+	}
+</script>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Print Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the printing is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+	<p:panel header="Customer Data Export">
+		<h:form id="idForm">
+			<p:growl id="msg"/>
+			
+			<p:panelGrid style="padding-bottom:5px; border:1px;">
+				<p:row>
+					<p:column style="width: 110px;">
+						<p:selectOneButton id="idPrintType" value="#{custDataExpBean.searchParamVO.obj1}">
+				            <f:selectItem itemLabel="Excel" itemValue="XLS"/>
+				            <f:selectItem itemLabel="CSV" itemValue="CSV"/>
+				        </p:selectOneButton>
+	    				<p:tooltip for="idPrintType" value="Print as Excel or CSV." trackMouse="true" />
+    				</p:column>
+    				<p:column style="width: 210px;">
+						<p:selectOneButton id="idCustType" value="#{custDataExpBean.searchParamVO.obj2}">
+							<f:selectItem itemLabel="All" itemValue="" default="true" />
+				            <f:selectItem itemLabel="Individual" itemValue="P" />
+				            <f:selectItem itemLabel="Corporate" itemValue="C"/>
+				            <p:ajax event="change" oncomplete="varCustomerListTable.clearFilters()" update=":idForm:idCustListTable" />
+				        </p:selectOneButton>
+	    				<p:tooltip for="idCustType" value="Print as customer type." trackMouse="true" />
+    				</p:column>
+    				<p:column style="width:120px; padding-top: 10px;padding-bottom: 0px;">
+						<p:selectCheckboxMenu id="idColumnList" value="#{custDataExpBean.columnList}"
+							label="Print Columns" filter="true" filterMatchMode="startsWith">
+							<f:selectItem itemLabel="Company name" itemValue="Companyname"/>
+							<f:selectItem itemLabel="Registration no" itemValue="Registrationno"/>
+					        <f:selectItem itemLabel="GST registration no" itemValue="GSTregistrationno"/>
+					        <f:selectItem itemLabel="Nickname" itemValue="Nickname"/>
+					        <f:selectItem itemLabel="TIN" itemValue="TIN"/>
+					        <f:selectItem itemLabel="Gender" itemValue="Gender"/>
+					        <f:selectItem itemLabel="Nationality" itemValue="Nationality"/>
+					        <f:selectItem itemLabel="DOB" itemValue="DOB"/>
+					        <f:selectItem itemLabel="Age" itemValue="Age"/>
+					        <f:selectItem itemLabel="Spoken language" itemValue="Spokenlanguage"/>
+					        <f:selectItem itemLabel="Meals code" itemValue="Mealscode"/>
+					        <f:selectItem itemLabel="Contact" itemValue="Contact"/>
+					        <f:selectItem itemLabel="Email" itemValue="Email"/>
+					        <f:selectItem itemLabel="Class" itemValue="Class"/>
+					        <f:selectItem itemLabel="Complication" itemValue="Complication"/>
+					        <f:selectItem itemLabel="Billing address" itemValue="Billingaddress"/>
+					        <f:selectItem itemLabel="Mailing address" itemValue="Mailingaddress"/>
+					        <f:selectItem itemLabel="Remarks" itemValue="Remarks"/>
+					    </p:selectCheckboxMenu>
+					</p:column>
+					<p:column style="width:70px;"><h:outputLabel for="idDateFrom">Date From</h:outputLabel></p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idDateFrom" value="#{custDataExpBean.searchParamVO.fromDate}" navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+						</p:calendar>
+					</p:column>
+					<p:column style="width:10px;"><h:outputLabel for="idDateTo">To</h:outputLabel></p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idDateTo" value="#{custDataExpBean.searchParamVO.toDate}" navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+						</p:calendar>
+					</p:column>
+					<p:column style="width:10px;"><p:separator style="width:2px;height:20px"/></p:column>
+					<p:column style="width:100px">
+						<p:commandButton icon="ui-icon-print" value="Print List" actionListener="#{custDataExpBean.printCustomerListing()}" ajax="false" onclick="monitorExporting(start,stop)"
+							update="@form,:idForm:idCustListTable" process="@this"/>
+					</p:column>
+					<p:column>
+						<p:commandButton value="Rq. Upd Profile" actionListener="#{custDataExpBean.customerEmailProfileUpdate}" oncomplete="varConfirmSentCustomerProfileUpdateDialog.show()" />
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			
+			<p:dataTable id="idCustListTable" widgetVar="varCustomerListTable" value="#{custDataExpBean.lazyCustDataModel}" var="vo" paginator="true" rows="50" rowKey="#{vo.id}" 
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+				rowsPerPageTemplate="50, 100, 200, 500, 1000" emptyMessage="#{msg['cust.tbl.empty.message']}" filteredValue="#{custDataExpBean.filteredObjList}" lazy="true" filterEvent="enter"
+				selection="#{custDataExpBean.selectedObjs}">
+			
+				<p:column selectionMode="multiple" style="width:16px;text-align:center" />
+				
+				<p:column headerText="Customer No" sortBy="#{vo.code}" filterBy="#{vo.code}">
+					<h:outputText value="#{vo.code}" />
+				</p:column>
+				
+				<p:column headerText="Customer Name" sortBy="#{vo.custName}" filterBy="#{vo.custName}" filterMatchMode="contains">
+					<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.salutationCd)} #{vo.custName}" />
+				</p:column>
+				
+				<p:column headerText="NickName" sortBy="#{vo.nickName}" filterBy="#{vo.nickName}" filterMatchMode="contains">
+					<h:outputText value="#{vo.nickName}" />
+				</p:column>
+				
+				<p:column headerText="Company Name" sortBy="#{vo.corporateName}" filterBy="#{vo.corporateName}" filterMatchMode="contains">
+					<h:outputText value="#{vo.corporateName}" />
+				</p:column>
+				
+				<p:column headerText="Class" sortBy="#{vo.classes}" filterBy="#{vo.classes}">
+			    	<h:outputText value="#{vo.classes}"/>
+				</p:column>
+				
+				<p:column headerText="Contact" sortBy="#{vo.perContacts}" filterBy="#{vo.perContacts}">
+	 			   <ui:repeat value="#{vo.perContacts.split(',')}" var="cntc" varStatus="status" rendered="#{not empty vo.perContacts}">
+	    			    <h:outputText value="#{custDataExpBean.getContactStrWithCountryPair(cntc, vo.countryCode)}"/>
+	   			     <br/>
+				    </ui:repeat>
+				</p:column>
+				
+				<p:column headerText="Identity" sortBy="#{vo.identities}" filterBy="#{vo.identities}" filterMatchMode="contains">
+			        <ui:repeat value="#{vo.identities.split(',')}" var="identity" rendered="#{not empty vo.identities}">
+			            <h:outputText value="#{custDataExpBean.getIdentityStr(identity)}"/><br/>
+			        </ui:repeat>
+				</p:column>
+				
+				<p:column headerText="Email" sortBy="#{vo.email}" filterBy="#{vo.email}">
+					<h:outputText value="#{vo.email}" />
+				</p:column>
+				
+			</p:dataTable>
+		</h:form>		
+	</p:panel>
+	
+	<p:confirmDialog widgetVar="varConfirmSentCustomerProfileUpdateDialog" header="Confirmation" message="Are you sure you want to send email for these selected customers?"
+			closable="false">
+		<h:form>
+			<p:growl id="msg" />
+			<p:commandButton value="#{msg['common.button.label.yes']}"
+				actionListener="#{custDataExpBean.processEmailCustomerProfileUpdate}"
+				update="@form,:idForm:idCustListTable" process="@this"
+				oncomplete="varConfirmSentCustomerProfileUpdateDialog.hide()" />
+			<p:commandButton value="#{msg['common.button.label.no']}"
+				actionListener="#{custDataExpBean.resetForm}"
+				update="@form,:idForm:idCustListTable" process="@this"
+				oncomplete="varConfirmSentCustomerProfileUpdateDialog.hide()" />
+		</h:form>
+	</p:confirmDialog>
+</ui:define>
+</ui:composition>

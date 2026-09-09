@@ -1,0 +1,302 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Credit Note Issuance" toggleable="true" toggleSpeed="500">
+<h:form id="idCreditNoteIssuanceForm">
+	<p:panel>
+		<h:panelGrid columns="5" style="width:520px">
+			<h:outputLabel for="idFromDate">From Date</h:outputLabel>
+			<p:calendar id="idFromDate" navigator="true" showButtonPanel="true"/>
+			<h:outputLabel for="idToDate">To Date</h:outputLabel>
+			<p:calendar id="idToDate" navigator="true" showButtonPanel="true"/>
+			<p:commandButton value="Search"/>
+		</h:panelGrid>
+	</p:panel>
+	
+	<h:panelGrid columns="2" style="margin-top:5px; width:1px">
+		<p:commandButton value="Add" onclick="varAddCreditNoteDialog.show()"/>
+		<p:commandButton value="Delete"/>
+	</h:panelGrid>
+	
+	<p:dataTable style="margin-top:5px" widgetVar="varCreditNoteTable">
+		<f:facet name="header">
+			<h:panelGrid columns="2" style="width:380px">
+				<h:outputText value="Search all fields:"/>
+				<p:inputText onkeyup="varCreditNoteTable.filter()" size="35"/>
+			</h:panelGrid>
+		</f:facet>
+		<p:column headerText="Select" style="width:5px;" styleClass="txt_center">
+			<p:selectBooleanCheckbox value=""/>
+		</p:column>
+		<p:column headerText="Credit Note No."></p:column>
+		<p:column headerText="Company Code"></p:column>
+		<p:column headerText="Project Code"></p:column>
+		<p:column headerText="Type of Invoice"></p:column>
+		<p:column headerText="A/R Account"></p:column>
+	</p:dataTable>
+	
+	<h:panelGrid columns="2" style="margin-top:5px; width:1px">
+		<p:commandButton value="Add" onclick="varAddCreditNoteDialog.show()"/>
+		<p:commandButton value="Delete"/>
+	</h:panelGrid>
+</h:form>
+</p:panel>
+
+<p:dialog header="Add Credit Note" widgetVar="varAddCreditNoteDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade">
+	<p:scrollPanel style="width:1100px; height:500px" scrollMode="native">
+		<h:form id="idAddCreditNoteForm">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<p:panel>
+							<p:panelGrid>
+								<p:row>
+									<p:column><h:outputLabel for="idSoldTo">SOLD TO</h:outputLabel></p:column>
+									<p:column><p:inputText id="idSoldTo"/></p:column>
+									<p:column><p:commandButton value="Add Customer" onclick="varAddCustomerDialog.show()"/></p:column>
+								</p:row>
+								<p:row>
+									<p:column colspan="3">
+										<h:panelGrid columns="2">
+											<h:outputText value="Company:"/>
+											<h:outputText value="ABC Company"/>
+											<h:outputText value="Name:"/>
+											<h:outputText value="Tam Huey Shian"/>
+											<h:outputText value="Address:"/>
+											<h:outputText value="Lot 2-21 2nd Floor Plaza Berjaya, Jalan Imbi 55100 KL."/>
+											<h:outputText value="Tel:"/>
+											<h:outputText value="03-21452505"/>
+											<h:outputText value="Fax:"/>
+											<h:outputText value="03-21452509"/>
+										</h:panelGrid>
+									</p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:panel>
+					</p:column>
+					<p:column>
+						<p:panelGrid>
+							<p:row>
+								<p:column><h:outputLabel>CREDIT NOTE NO:</h:outputLabel></p:column>
+								<p:column><p:inputText label="CREDIT NOTE NO" readonly="true" style="background:#ccc"/></p:column>
+							</p:row>
+							<p:row>
+								<p:column><h:outputLabel>Company Code:</h:outputLabel></p:column>
+								<p:column>
+									<h:selectOneMenu label="Company Code" effect="fade">
+										<f:selectItem itemLabel="Select One"/>
+									</h:selectOneMenu>
+								</p:column>
+								<p:column><h:outputLabel>Forex Code:</h:outputLabel></p:column>
+								<p:column>
+									<h:selectOneMenu label="Forex Code" effect="fade">
+										<f:selectItem itemLabel="Select One"/>
+									</h:selectOneMenu>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column><h:outputLabel>Project Code:</h:outputLabel></p:column>
+								<p:column>
+									<h:selectOneMenu label="Project Code" effect="fade">
+										<f:selectItem itemLabel="Select One"/>
+									</h:selectOneMenu>
+								</p:column>
+								<p:column><h:outputLabel>Forex Rate:</h:outputLabel></p:column>
+								<p:column><p:inputText label="Forex Rate"/></p:column>
+							</p:row>
+							<p:row>
+								<p:column><h:outputLabel>A/R Account:</h:outputLabel></p:column>
+								<p:column>
+									<h:selectOneMenu label="A/R Account" effect="fade">
+										<f:selectItem itemLabel="Select One"/>
+									</h:selectOneMenu>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column colspan="2">TRADE DEBTOR CTRL A/C</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="2">
+						<p:panel>
+							<h:panelGrid columns="6">
+								<h:outputLabel>INVOICE DATE</h:outputLabel>
+								<h:outputLabel>ATTENTION TO</h:outputLabel>
+								<h:outputLabel>PAYMENT TERMS</h:outputLabel>
+								<h:outputLabel>SALES PERSON</h:outputLabel>
+								<h:outputLabel>CATEGORY</h:outputLabel>
+								<h:outputLabel>TOUR CODE</h:outputLabel>
+								<p:calendar label="INVOICE DATE" navigator="true" showButtonPanel="true"/>
+								<p:inputText label="ATTENTION TO"/>
+								<h:selectOneMenu label="PAYMENT TERMS" effect="fade">
+									<f:selectItem itemLabel="Select One"/>
+								</h:selectOneMenu>
+								<h:selectOneMenu label="SALES PERSON" effect="fade">
+									<f:selectItem itemLabel="Select One"/>
+								</h:selectOneMenu>
+								<h:selectOneMenu label="CATEGORY" effect="fade">
+									<f:selectItem itemLabel="Select One"/>
+								</h:selectOneMenu>
+								<h:selectOneMenu label="TOUR CODE" effect="fade">
+									<f:selectItem itemLabel="Select One"/>
+								</h:selectOneMenu>
+								<h:outputLabel>DEP DATE</h:outputLabel>
+								<h:outputLabel>YOUR ORDER #</h:outputLabel>
+								<h:outputLabel>XO#</h:outputLabel>
+								<h:outputLabel>ISSUED BY</h:outputLabel>
+								<h:outputLabel>ORDER SOURCE</h:outputLabel>
+								<h:outputLabel>SHIPPED VIA</h:outputLabel>
+								<p:calendar label="DEP DATE" navigator="true" showButtonPanel="true"/>
+								<p:inputText label="YOUR ORDER #"/>
+								<h:selectOneMenu label="XO#" effect="fade">
+									<f:selectItem itemLabel="Select One"/>
+								</h:selectOneMenu>
+								<h:selectOneMenu label="ISSUED BY" effect="fade">
+									<f:selectItem itemLabel="Select One"/>
+								</h:selectOneMenu>
+								<h:selectOneMenu label="ORDER SOURCE" effect="fade">
+									<f:selectItem itemLabel="Select One"/>
+								</h:selectOneMenu>
+								<h:selectOneMenu label="SHIPPED VIA" effect="fade">
+									<f:selectItem itemLabel="Select One"/>
+								</h:selectOneMenu>
+							</h:panelGrid>
+						</p:panel>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="2">
+						<p:panel>
+							<h:panelGrid columns="2" style="width:1px">
+								<p:commandButton value="Add" onclick="varAddInvoiceDetailsDialog.show()"/>
+								<p:commandButton value="Delete"/>
+							</h:panelGrid>
+							
+							<p:dataTable scrollabl="true" scrollWidth="1000" scrollHeight="300">
+								<p:column headerText="Select">
+									<p:selectBooleanCheckbox/>
+								</p:column>
+								<p:column headerText="Tour Code"></p:column>
+								<p:column headerText="Description"></p:column>
+								<p:column headerText="Sales Acct"></p:column>
+								<p:column headerText="Disc"></p:column>
+								<p:column headerText="Tax"></p:column>
+								<p:column headerText="Qty"></p:column>
+								<p:column headerText="Forex Price"></p:column>
+								<p:column headerText="Price"></p:column>
+								<p:column headerText="Forex Amount"></p:column>
+								<p:column headerText="Amount"></p:column>
+							</p:dataTable>
+						</p:panel>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:panelGrid>
+							<h:outputLabel>COMMENTS</h:outputLabel>
+							<p:inputTextarea label="Comments" rows="10" cols="75"/>
+							<p:panelGrid>
+								<p:row>
+									<p:column><p:selectBooleanCheckbox/></p:column>
+									<p:column><h:outputLabel>Credit Used?</h:outputLabel></p:column>
+									<p:column><p:selectBooleanCheckbox/></p:column>
+									<p:column><h:outputLabel>CN Printed</h:outputLabel></p:column>
+									<p:column></p:column>
+								</p:row>
+							</p:panelGrid>
+						</h:panelGrid>
+					</p:column>
+					<p:column>
+						<h:panelGrid columns="3">
+							<h:outputText/>
+							<h:outputText value="SUBTOTAL:"/>
+							<p:inputText value="190.00" readonly="true"/>
+							<h:outputText/>
+							<h:outputText value="FREIGHT:"/>
+							<p:inputText value="0.00" readonly="true"/>
+							<h:outputText value="Tax 1:"/>
+							<h:selectOneMenu effect="fade">
+								<f:selectItem itemLabel="Select One"/>
+							</h:selectOneMenu>
+							<p:inputText value="0.00" readonly="true"/>
+							<h:outputText value="Tax 2:"/>
+							<h:selectOneMenu effect="fade">
+								<f:selectItem itemLabel="Select One"/>
+							</h:selectOneMenu>
+							<p:inputText value="0.00" readonly="true"/>
+							<h:outputText/>
+							<h:outputText value="OTHER:"/>
+							<p:inputText value="0.00" readonly="true"/>
+							<h:outputText/>
+							<h:outputText value="TOTAL" style="color:#ff0000"/>
+							<p:inputText value="190.00" readonly="true"/>
+							<h:outputText/>
+							<h:outputText value="AMOUNT DUE" style="color:#ff0000"/>
+							<p:inputText value="0.00" readonly="true"/>
+						</h:panelGrid>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="2">
+						<p:fieldset legend="Payment">
+							<p:panelGrid columns="2" style="width:1px">
+								<p:commandButton value="Add" onclick="varAddPaymentDetailsDialog.show()"/>
+								<p:commandButton value="Delete"/>
+							</p:panelGrid>
+							<p:dataTable>
+								<p:column headerText="Select">
+									<p:selectBooleanCheckbox/>
+								</p:column>
+								<p:column headerText="DATE PAID"></p:column>
+								<p:column headerText="CK"></p:column>
+								<p:column headerText="OR NO"></p:column>
+								<p:column headerText="CHEQUE #/PAY TYPE"></p:column>
+								<p:column headerText="AMT PAID (F)"></p:column>
+								<p:column headerText="AMT PAID"></p:column>
+								<p:column headerText="ISSUED BY"></p:column>
+								<p:column headerText="CUSTOMER NO"></p:column>
+								<p:column headerText="RECEIVED FROM"></p:column>
+								<p:column headerText="MEMO"></p:column>
+							</p:dataTable>
+						</p:fieldset>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</h:form>
+	</p:scrollPanel>
+</p:dialog>
+
+<p:dialog header="Add Customer" widgetVar="varAddCustomerDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade"
+	style="width:100%; height:100%">
+	<h:form id="idAddCustomerForm">
+		<ui:include src="../../common/add_customer.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog header="Add Credit Note Details" widgetVar="varAddInvoiceDetailsDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade">
+	<h:form id="idAddInvoiceDetailsForm">
+		<ui:include src="../../common/add_invoice_details.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog header="Add Payment Details" widgetVar="varAddPaymentDetailsDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade">
+	<h:form id="idAddPaymentDetailsForm">
+		<ui:include src="add_payment_details.xhtml"/>
+	</h:form>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

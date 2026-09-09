@@ -1,0 +1,256 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<script type="text/javascript">
+	function onCruiseCabinValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddCruiseCabinDialog.hide();
+		}
+	}
+
+	function onTransferValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAvailableTourDepListDialog.hide();
+			varTransferConfirmationDialog.hide();
+			varAddBookingDialog.hide();
+		}
+	}
+</script>
+<p:panel header="Cruise Booking List" toggleable="true" toggleSpeed="500">
+	<h:form id="idBookingListForm">
+		<p:growl id="growl"/>
+		
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width: 100px;">
+					<h:selectOneMenu id="idTypeCd" value="#{cruiseBookingBean.searchParamVO.obj1}" effect="fade">  
+						<f:selectItems value="#{zsg:referenceDataList('BOOK_PMNT_STATUS')}" var="n" itemLabel="#{n.value}" itemValue="#{n.code}"/>
+						<p:ajax event="change" listener="#{cruiseBookingBean.handleBookTypeSelect}" oncomplete="varBookingList.clearFilters()" update="@form"/><!--  oncomplete="varBookingList.clearFilters()" -->
+					</h:selectOneMenu>
+				</p:column>
+				<p:column style="width: 5px;">
+					<p:selectBooleanCheckbox value="#{cruiseBookingBean.isPersonal}">  
+		            	<p:ajax update="growl, :idBookingListForm:idBookingList" listener="#{cruiseBookingBean.bookingSearch}"/>  
+		        	</p:selectBooleanCheckbox> 
+				</p:column>
+				<p:column style="width: 10px;padding-left: 0px;">
+					<h:outputText value="Personal" />
+				</p:column>
+				<p:column style="width: 10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width: 80px;">
+					<h:outputText value="Order Source" />
+				</p:column>
+				<p:column>
+					<h:selectOneMenu value="#{cruiseBookingBean.searchParamVO.obj2}" effect="fade">
+						<f:selectItem itemLabel="All" itemValue="#{null}"/>
+						<f:selectItems value="#{bterp:lookupItemList('ordr_sorc')}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}"/>
+						<p:ajax event="change" listener="#{cruiseBookingBean.handleOrderTypeSelect}" oncomplete="varBookingList.clearFilters()" update="@form"/>
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:dataTable id="idBookingList" value="#{cruiseBookingBean.lazyDataModel}" var="vo" widgetVar="varBookingList" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="10, 20, 30" lazy="true" filterEvent="enter">
+			<p:column headerText="Edit" style="width:50px;">
+<!-- 				<p:commandButton icon="ui-icon-pencil" actionListener="#{cruiseBookingBean.setBookingViewVO(vo)}" oncomplete="varAddBookingDialog.show()" update=":idBookingListForm:idBookingList, :idAddBookingDialog" disabled="#{vo.pmntStatusCd eq 'KIVEXP' or (vo.statusCode eq 'CC' or vo.statusCode eq 'VD') or sessionInfoBean.employeeVO.department.contains('sale')}"/> -->
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{cruiseBookingBean.setBookingViewVO(vo)}" oncomplete="varAddBookingDialog.show()" update=":idBookingListForm:idBookingList, :idAddBookingDialog" disabled="#{sessionInfoBean.employeeVO.department.contains('agent')}"/>
+			</p:column>
+			<p:column headerText="Delete" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-close" actionListener="#{cruiseBookingBean.setBookingViewVO(vo)}" oncomplete="varCancelBookingDialog.show()" disabled="#{vo.pmntStatusCd eq 'KIVEXP' or (vo.statusCode eq 'CC' or vo.statusCode eq 'VD') or sessionInfoBean.employeeVO.department.contains('agent')}"
+					rendered="#{cruiseBookingBean.allowVoid}"/>
+			</p:column>
+			<p:column style="width:50px;" rendered="#{!cruiseBookingBean.bookingAllowReactivate}">
+				<p:commandButton value="#{vo.pmntStatusCd eq 'FULL' ? 'Inv' : 'Pay'}" actionListener="#{cruiseBookingBean.makeBookingPayment_eInvoice(vo)}" disabled="#{((vo.pmntStatusCd eq 'KIVEXP') and vo.idCompany eq sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIVEXP' or vo.pmntStatusCd eq 'FULL') and vo.idCompany ne sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIV' or vo.pmntStatusCd eq 'DEP') and vo.idCompany ne sessionInfoBean.companyVO.id) or (vo.statusCode eq 'CC' or vo.statusCode eq 'VD')}"/>
+<!-- 				<p:commandButton value="#{vo.pmntStatusCd eq 'FULL' ? 'Inv' : 'Pay'}" actionListener="#{cruiseBookingBean.makeBookingPayment(vo)}" disabled="#{((vo.pmntStatusCd eq 'KIVEXP') and vo.idCompany eq sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIVEXP' or vo.pmntStatusCd eq 'FULL') and vo.idCompany ne sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIV' or vo.pmntStatusCd eq 'DEP') and vo.idCompany ne sessionInfoBean.companyVO.id)}"/> -->
+			</p:column>
+			<p:column headerText="Booking&lt;br/&gt;No" filterBy="#{vo.id}" sortBy="#{vo.id}" style="width:80px; text-align:center;">
+				<h:outputText value="#{vo.id}"/>
+			</p:column>
+			<p:column headerText="Booking&lt;br/&gt;Date" filterBy="#{vo.createdDate}" sortBy="#{vo.createdDate}" styleClass="txt_center"><h:outputText value="#{vo.createdDate}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+			<p:column headerText="Expiry&lt;br/&gt;Date" filterBy="#{vo.dtExp}" sortBy="#{vo.dtExp}" styleClass="txt_center"><h:outputText value="#{vo.dtExp}" rendered="#{vo.pmntStatusCd eq 'KIV' or vo.pmntStatusCd eq 'KIVEXP'}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+			<p:column headerText="Customer Name" filterBy="#{vo.lastName} #{vo.firstName}" sortBy="#{vo.lastName} #{vo.firstName}" styleClass="txt_center">
+				<p:commandLink actionListener="#{cruiseBookingBean.setBookingViewVO(vo)}" update=":idBookingDetailsDialog" oncomplete="varBookingDetailsDialog.show()" style="color:#CC2EFA;">
+					<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.salutationCd)} #{vo.lastName} #{vo.firstName}" style="text-transform:uppercase;"/>
+				</p:commandLink>
+			</p:column>
+			<p:column headerText="Tour&lt;br/&gt;Code" filterBy="#{vo.tourCode}" sortBy="#{vo.tourCode}" styleClass="txt_center">
+				<h:outputText value="#{vo.tourCode}"/>
+			</p:column>
+			<p:column headerText="Departure&lt;br/&gt;Date" filterBy="#{vo.dtDep}" sortBy="#{vo.dtDep}" styleClass="txt_center">
+				<h:outputText value="#{vo.dtDep}">
+					<f:convertDateTime pattern="dd-MMM-yyyy" />
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Pax" sortBy="#{vo.quantity}" style="width:50px;text-align:right">
+				<h:outputText value="#{vo.quantity}" />   
+			</p:column>
+			<p:column headerText="Cabin Qty" sortBy="#{vo.cabinQty}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.cabinQty}"/>
+			</p:column>
+			<p:column headerText="Pmnt&lt;br/&gt;Status" sortBy="#{vo.pmntStatusCd}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.pmntStatusCd}"/>
+			</p:column>
+			<p:column headerText="Status" sortBy="#{vo.statusCode}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.statusCode}"/>
+			</p:column>
+			<p:column headerText="Invoice&lt;br/&gt;Status" sortBy="#{vo.invStatusCd}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.invStatusCd}"/>
+			</p:column>
+			<p:column headerText="Updated&lt;br/&gt;Time" filterBy="#{vo.updatedDate}" ssortBy="#{vo.updatedDate}" style="width:100px; text-align:center;">
+				<h:outputText value="#{vo.updatedDate}">
+					<f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss"/>
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Staff" filterBy="#{vo.staff}" sortBy="#{vo.staff}" styleClass="txt_center">
+				<h:outputText value="#{vo.staff}"/>
+			</p:column>
+			<p:column style="width:50px;" rendered="#{cruiseBookingBean.bookingAllowReactivate}">
+				<p:commandButton value="#{vo.pmntStatusCd eq 'FULL' ? 'Inv' : 'Pay'}" actionListener="#{cruiseBookingBean.makeBookingPayment_eInvoice(vo)}" process="@this"
+					rendered="#{vo.pmntStatusCd ne 'KIVEXP' and vo.statusCode ne 'CC' and vo.statusCode ne 'VD'}"
+					disabled="#{((vo.pmntStatusCd eq 'KIVEXP') and vo.idCompany eq sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIVEXP' or vo.pmntStatusCd eq 'FULL') and vo.idCompany ne sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIV' or vo.pmntStatusCd eq 'DEP') and vo.idCompany ne sessionInfoBean.companyVO.id) or (vo.statusCode eq 'CC' or vo.statusCode eq 'VD')}"/>
+				<p:commandButton value="Reactivate" actionListener="#{cruiseBookingBean.setBookingViewVO(vo)}" styleClass="ui-state-error"
+					oncomplete="varReactivateConfirmationDialog.show()" process="@this" update=":idReactivateConfirmationDialog"
+					rendered="#{(vo.pmntStatusCd eq 'KIVEXP' or vo.statusCode eq 'CC' or vo.statusCode eq 'VD') and vo.idCompany eq sessionInfoBean.companyVO.id}"/>
+			</p:column>
+			<p:column headerText="Mail" style="width:1px; font-size:10px; text-align:center;"><h:outputLink styleClass="ui-icon ui-icon-mail-closed" value="#{request.contextPath}/app/emailtmp/cruisebookingemailtmp?tourDepId=#{vo.id}&amp;bookingId=#{vo.id}" target="_blank"/></p:column>
+		</p:dataTable>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - BOOKING DETAILS
+-->
+<p:dialog id="idBookingDetailsDialog" header="Booking Details" widgetVar="varBookingDetailsDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idBookingDetailsForm">
+		<ui:include src="booking_details.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ADD BOOKING
+-->
+<p:dialog id="idAddBookingDialog" header="Book Cruise" widgetVar="varAddBookingDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddInvoiceForm">
+		<ui:include src="../cruise/add_booking.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - CUSTOMER LIST
+-->
+<p:dialog id="idCustListDialog" header="Customer List" widgetVar="varCustListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idCustListForm">
+		<ui:include src="../cruise/customer_list.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ADD CUSTOMER
+-->
+<p:dialog id="idAddCustDialog" header="Customer" widgetVar="varAddCustDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddCustForm">
+		<ui:include src="../cruise/add_customer.xhtml" />
+	</h:form>
+</p:dialog>
+
+	
+<!--
+	DIALOG - CANCEL BOOKING
+-->
+<p:confirmDialog widgetVar="varCancelBookingDialog" message="Are you sure want to cancel this booking?">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{cruiseBookingBean.cancelBooking}" update="@form,:idBookingListForm" oncomplete="varCancelBookingDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{cruiseBookingBean.resetForm}" oncomplete="varCancelBookingDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - AVAILABLE TOUR DEPARTURE LIST
+-->
+<p:dialog header="Booking Cruise Departure List 2" widgetVar="varAvailableTourDepListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAvailableTourDepList">
+		<ui:include src="../cruise/available_cruise_dep_list.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - TRANSFER CONFIRMATION
+-->
+<p:confirmDialog widgetVar="varTransferConfirmationDialog" header="Confirmation" message="Are you sure want to do transfer?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{cruiseBookingBean.handleTransfer(true)}" update="@form,:idBookingListForm:idBookingList" oncomplete="onTransferValidation(xhr, status, args)"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" onclick="varTransferConfirmationDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!-- DIALOG - ADD CATEGORY -->
+<p:dialog id="idAddCruiseCabinDialog" widgetVar="varAddCruiseCabinDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Cruise Cabin" />
+	</f:facet>
+	<h:form id="idAddCruiseCabinForm">
+		<ui:include src="../cruise/add_cruise_cabin.xhtml" />
+	</h:form>
+</p:dialog>
+
+
+<!--
+	DIALOG - REACTIVATE CONFIRMATION
+-->
+<p:confirmDialog id="idReactivateConfirmationDialog" widgetVar="varReactivateConfirmationDialog" header="Reactivate Booking Confirmation" closable="false">
+	<f:facet name="message">
+		<p>Are you sure want to reactivate Booking No <b><h:outputText value="#{cruiseBookingBean.bookingViewVO.id}"/></b>?</p><p>Please make sure you have available slot in tour departure <b><h:outputText value="#{cruiseBookingBean.bookingViewVO.tourCode}"/></b>!</p>
+	</f:facet>
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{cruiseBookingBean.reactivateBooking}" update="@form,:idBookingListForm:idBookingList" oncomplete="if (!args.validationFailed) varReactivateConfirmationDialog.hide();"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" onclick="varReactivateConfirmationDialog.hide()" global="false"/>
+	</h:form>
+</p:confirmDialog>
+
+<!-- DIALOG - TOUR HISTORY -->
+<p:dialog id="idTourHistCustDialog" widgetVar="varTourHistCustDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Tour History"/>
+	</f:facet>
+	<h:form id="idTourHistCustForm">
+		<ui:include src="../../common/tourHist_cust.xhtml">
+			<ui:param name="salesBean" value="#{custBean}" />
+		</ui:include>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - TOUR DEPARTURE MORE INFO -->
+<p:dialog id="idTourDepMoreInfoDialog" widgetVar="varTourDepMoreInfoDialog" header="More Info" modal="true" resizable="false" dynamic="true" draggable="true" closable="false" style="width:100% !important;">
+	<h:form id="idTourDepMoreInfoForm">
+		<ui:include src="../cruise/more_info.xhtml" />
+	</h:form>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

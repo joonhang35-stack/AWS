@@ -1,0 +1,246 @@
+package com.bcs.zsg.maintenance.web.bean;
+
+import static com.bcs.zsg.core.helper.BaseConstant.PAD_UNDERSCORE;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.helper.SchedulerUtils;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.bo.AppSettingBO;
+import com.bcs.zsg.maintenance.helper.ConstantAppSetting;
+import com.bcs.zsg.maintenance.vo.AppSettingVO;
+import com.bcs.zsg.scheduler.FeedbackEmailJob;
+import com.bcs.zsg.scheduler.helper.EnumJobKey;
+
+public class FeedbackEmailConfigBean extends AppBackingBean {
+
+    private static final long serialVersionUID = 1L;
+
+    @Autowired
+    private transient AppSettingBO appSettingBO;
+
+    private List<AppSettingVO> appSettingVOList;
+
+    private SimpleDateFormat dateFormat;
+
+    private String isScheduled;
+    private Date schedulerTime;
+
+    @Override
+    public void resetForm() {
+        isScheduled = "N";
+        schedulerTime = new Date();
+        dateFormat = new SimpleDateFormat("HH:mm");
+    }
+
+    /**
+     * Auto register scheduler during startup
+     */
+    @PostConstruct
+    public void autoRegisterScheduler() {
+
+        try {
+
+            System.out.println("Initializing Feedback Email Scheduler...");
+
+            resetForm();
+            loadAppSettingData();
+
+            System.out.println("Scheduler Enabled: " + isScheduled);
+
+            if ("Y".equalsIgnoreCase(isScheduled)) {
+
+                String time = dateFormat.format(schedulerTime);
+
+                String cron = convertToCron(time);
+
+                System.out.println("Registering Feedback Scheduler Cron: " + cron);
+
+                SchedulerUtils.scheduleJob(
+                        cron,
+                        EnumJobKey.FEEDBACK_EMAIL_JOB,
+                        FeedbackEmailJob.class,
+                        "FeedbackEmailDailySchedule");
+
+                System.out.println("Feedback Scheduler Registered Successfully");
+
+            } else {
+
+                System.out.println("Feedback Scheduler Disabled");
+
+                SchedulerUtils.removeJob(
+                        EnumJobKey.FEEDBACK_EMAIL_JOB,
+                        "FeedbackEmailDailySchedule");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void init() {
+        resetForm();
+        loadAppSettingData();
+    }
+
+    public void loadAppSettingData() {
+
+        try {
+
+            appSettingVOList =
+                    appSettingBO.getAppSettingList(
+                            ConstantAppSetting.MODULE_MAINT.getValue());
+
+            for (AppSettingVO vo : appSettingVOList) {
+
+                String key = vo.getModule().concat("_").concat(vo.getCode());
+
+                if (StringUtils.equals(
+                        key,
+                        ConstantAppSetting.MAINT_FEEDBACK_EMAIL_SCHEDULER_TIME.getValue())) {
+
+                    if (StringUtils.isNotBlank(vo.getValue())) {
+
+                        schedulerTime = dateFormat.parse(vo.getValue());
+                    }
+
+                } else if (StringUtils.equals(
+                        key,
+                        ConstantAppSetting.MAINT_FEEDBACK_EMAIL_SCHEDULER.getValue())) {
+
+                    isScheduled = vo.getValue();
+                }
+            }
+
+        } catch (BusinessException | ParseException e) {
+            e.printStackTrace();
+            errorResult(e);
+        }
+    }
+
+    /**
+     * Convert HH:mm -> Quartz Cron
+     */
+    private String convertToCron(String time) {
+
+        if (StringUtils.isBlank(time)) {
+            return "0 0 0 * * ?";
+        }
+
+        String[] split = time.split(":");
+
+        String hour = split[0];
+        String minute = split[1];
+
+        return "0 " + minute + " " + hour + " * * ?";
+    }
+
+    public void saveAppSettingData() {
+
+        try {
+
+            // 1. Save UI values into VO
+            for (AppSettingVO vo : appSettingVOList) {
+
+                String key = vo.getModule().concat("_").concat(vo.getCode());
+
+                if (StringUtils.equals(
+                        key,
+                        ConstantAppSetting.MAINT_FEEDBACK_EMAIL_SCHEDULER_TIME.getValue())) {
+
+                    vo.setValue(dateFormat.format(schedulerTime));
+
+                } else if (StringUtils.equals(
+                        key,
+                        ConstantAppSetting.MAINT_FEEDBACK_EMAIL_SCHEDULER.getValue())) {
+
+                    vo.setValue(isScheduled);
+                }
+            }
+
+            // 2. Update DB
+            appSettingBO.update(appSettingVOList);
+
+            // 3. Register / Remove Quartz Job
+            for (AppSettingVO vo : appSettingVOList) {
+
+                String codeOnly =
+                        ConstantAppSetting.MAINT_FEEDBACK_EMAIL_SCHEDULER_TIME
+                                .getValue()
+                                .split(PAD_UNDERSCORE, 2)[1];
+
+                if (StringUtils.equals(vo.getCode(), codeOnly)) {
+
+                    boolean enabled =
+                            "Y".equals(
+                                    appSettingBO.getAppSettingByCode(
+                                            ConstantAppSetting.MAINT_FEEDBACK_EMAIL_SCHEDULER)
+                                            .getValue());
+
+                    if (enabled) {
+
+                        String cron = convertToCron(vo.getValue());
+
+                        System.out.println(
+                                "Scheduling Feedback Email with cron: " + cron);
+
+                        SchedulerUtils.scheduleJob(
+                                cron,
+                                EnumJobKey.FEEDBACK_EMAIL_JOB,
+                                FeedbackEmailJob.class,
+                                "FeedbackEmailDailySchedule");
+
+                    } else {
+
+                        SchedulerUtils.removeJob(
+                                EnumJobKey.FEEDBACK_EMAIL_JOB,
+                                "FeedbackEmailDailySchedule");
+                    }
+                }
+            }
+
+            successResult();
+
+            loadAppSettingData();
+
+        } catch (Throwable t) {
+            t.printStackTrace();
+            errorResult(t);
+        }
+    }
+
+    // ================= GETTERS / SETTERS =================
+
+    public String getIsScheduled() {
+        return isScheduled;
+    }
+
+    public void setIsScheduled(String isScheduled) {
+        this.isScheduled = isScheduled;
+    }
+
+    public Date getSchedulerTime() {
+        return schedulerTime;
+    }
+
+    public void setSchedulerTime(Date schedulerTime) {
+        this.schedulerTime = schedulerTime;
+    }
+
+    public List<AppSettingVO> getAppSettingVOList() {
+        return appSettingVOList;
+    }
+
+    public void setAppSettingVOList(List<AppSettingVO> appSettingVOList) {
+        this.appSettingVOList = appSettingVOList;
+    }
+}

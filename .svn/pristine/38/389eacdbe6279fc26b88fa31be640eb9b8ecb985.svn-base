@@ -1,0 +1,119 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+<p:panel header="Staff Sales Summary - Booking" toggleable="true" toggleSpeed="500">
+<h:form id="salesSmmryForm">
+<h:panelGrid columns="8" cellpadding="0" cellspacing="2" style="margin-bottom:10px; width:850px">
+	<h:outputLabel>Date From</h:outputLabel>
+	<p:calendar value="#{salesSmmryBean.searchParamVO.fromDate}" id="idFromDate" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+	<h:outputLabel>Date To</h:outputLabel>
+	<p:calendar value="#{salesSmmryBean.searchParamVO.toDate}" id="idToDate" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+	<h:outputLabel>Sales Person</h:outputLabel>
+	<h:selectOneMenu id="idSalesPerson" label="Sales Person" value="#{salesSmmryBean.searchParamVO.obj1}" effect="fade" >
+		<f:selectItem itemLabel="All" itemValue=""/>
+		<f:selectItems value="#{salesSmmryBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+	</h:selectOneMenu>
+	<p:commandButton value="Search" actionListener="#{salesSmmryBean.search}" update="@form"/>
+</h:panelGrid>
+
+<p:dataTable id="idSalesSmmryTable" value="#{salesSmmryBean.salesSmmryList}" widgetVar="varSalesSmmryTable" var="vo"  paginator="true" rows="20" 
+	paginatorTemplate="#{bterp:pageTemplate()}" rowKey="#{vo.salerId}" selectionMode="single"
+	rowsPerPageTemplate="20, 30, 50" filteredValue="#{salesSmmryBean.filteredObjList}" lazy="true" filterEvent="enter">
+	<p:ajax event="rowSelect" listener="#{salesSmmryBean.handleSalesSmmrySelect}" update=":idSalesSmmryListDialog" oncomplete="varSalesSmmryListDialog.show();"/>
+	
+	<p:column width="35">
+		<f:facet name="header"><h:outputText value="Seq No" /></f:facet>
+		<h:outputText value="#{vo.rowNumber}" />
+	</p:column>
+	
+	<!-- <p:column filterBy="#{vo.salerId}" sortBy="#{vo.salerId}" filterMatchMode="contains">
+        <f:facet name="header">
+            <h:outputText value="Saler id" />  
+        </f:facet> 
+		<h:outputText value="#{vo.salerId}"/>
+	</p:column> -->
+	
+	<p:column filterBy="#{vo.salerName}" sortBy="#{vo.salerName}" filterMatchMode="contains">
+        <f:facet name="header">
+            <h:outputText value="Saler Name" />  
+        </f:facet> 
+		<h:outputText value="#{vo.salerName}"/>
+	</p:column>
+	
+	<p:column sortBy="#{vo.kiv}" styleClass="txt_right">
+		<f:facet name="header"><h:outputText value="KIV" /></f:facet>
+		<h:outputText value="#{vo.kiv}"/>
+	</p:column>
+	
+	<p:column sortBy="#{vo.depPaid}" styleClass="txt_right">
+		<f:facet name="header"><h:outputText value="Deposit Paid" /></f:facet>
+		<h:outputText value="#{vo.depPaid}"/>
+	</p:column>
+	
+	<p:column sortBy="#{vo.paidinfull}" styleClass="txt_right">
+		<f:facet name="header"><h:outputText value="Paid In Full" /></f:facet>
+		<h:outputText value="#{vo.paidinfull}"/>
+	</p:column>
+	
+	<p:column sortBy="#{vo.expired}" styleClass="txt_right">
+		<f:facet name="header"><h:outputText value="Expired" /></f:facet>
+		<h:outputText value="#{vo.expired}"/>
+	</p:column>
+	
+	<p:column sortBy="#{vo.cancelled}" styleClass="txt_right">
+		<f:facet name="header"><h:outputText value="Cancelled" /></f:facet>
+		<h:outputText value="#{vo.cancelled}"/>
+	</p:column>
+
+</p:dataTable>
+</h:form>
+</p:panel>
+
+<!--
+	DIALOG - Sales Summary Details LIST
+-->
+<p:dialog id="idSalesSmmryListDialog" header="Sales #{salesSmmryBean.salerName}" widgetVar="varSalesSmmryListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idSalesSmmryListForm">
+		<p:dataTable id="idSalesSmmryListTable" widgetVar="varSalesSmmryListTable" value="#{salesSmmryBean.salesSmmryDetailList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" filterEvent="enter">
+			
+			<p:column headerText="Saler Name" filterBy="#{vo.salerName}" sortBy="#{vo.salerName}" styleClass="txt_center">
+				<h:outputText value="#{vo.salerName}"/>
+			</p:column>
+			<p:column headerText="Tour Code" filterBy="#{vo.tourCode}" sortBy="#{vo.tourCode}" styleClass="txt_center">
+				<h:outputText value="#{vo.tourCode}"/>
+			</p:column>
+			<p:column headerText="Booking ID" filterBy="#{vo.id}" sortBy="#{vo.id}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.id}"/>
+			</p:column>
+			<p:column headerText="Pmnt Status" filterBy="#{vo.pmntStatusCd}" sortBy="#{vo.pmntStatusCd}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.pmntStatusCd}"/>
+			</p:column>
+			<p:column headerText="Status" filterBy="#{vo.statusCode}" sortBy="#{vo.statusCode}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.statusCode}"/>
+			</p:column>
+			<p:column headerText="Customer Name" filterBy="#{vo.lastName} #{vo.firstName}" sortBy="#{vo.lastName} #{vo.firstName}" styleClass="txt_center">
+				<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.salutationCd)} #{vo.lastName} #{vo.firstName}" style="text-transform:uppercase;"/>
+			</p:column>
+			<p:column headerText="Booking Date" filterBy="#{vo.createdDate}" sortBy="#{vo.createdDate}" styleClass="txt_center"><h:outputText value="#{vo.createdDate}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+			<p:column headerText="Expiry Date" filterBy="#{vo.dtExp}" sortBy="#{vo.dtExp}" styleClass="txt_center"><h:outputText value="#{vo.dtExp}" rendered="#{vo.pmntStatusCd eq 'KIV' or vo.pmntStatusCd eq 'KIVEXP'}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+
+		</p:dataTable>
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varSalesSmmryListDialog.hide();"/>
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

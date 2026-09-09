@@ -1,0 +1,87 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idAirline">Airline <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idAirline" value="#{ticketingBean.ticketingVO.idAirline}" required="true" effect="fade">
+				<f:selectItems value="#{ticketingBean.airlineList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+			</h:selectOneMenu>
+       </p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idDestination">Destination <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idDestination" label="Destination" value="#{ticketingBean.ticketingVO.destination}" required="true" style="width:200px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idDesc">Description <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idDesc" label="Description" value="#{ticketingBean.ticketingVO.desc}" required="true" style="width:200px;"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idFareFrom">Net Price <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idFareFrom" label="Fare From" value="#{ticketingBean.ticketingVO.priceFrom}" required="true">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText><h:outputLabel for="idFareTo">Selling Price <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column> 
+			<p:inputText id="idFareTo" label="Fare To" value="#{ticketingBean.ticketingVO.priceTo}" required="true">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idSalesPeriodFrom">Sales Period <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:calendar pattern="dd-MMM-yyyy" id="idSalesPeriodFrom" label="Sales Period From" value="#{ticketingBean.ticketingVO.dtBookStart}" required="true" navigator="true" showButtonPanel="true">
+				<p:watermark for="idSalesPeriodFrom" value="From Date" />
+			</p:calendar>
+		</p:column>
+		<p:column>
+			<p:calendar pattern="dd-MMM-yyyy" id="idSalesPeriodTo" label="Sales Period To" value="#{ticketingBean.ticketingVO.dtBookEnd}" required="true" navigator="true" showButtonPanel="true">
+				<p:watermark for="idSalesPeriodTo" value="To Date" />
+			</p:calendar>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idTravelPeriodFrom">Travel Period <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:calendar pattern="dd-MMM-yyyy" id="idTravelPeriodFrom" label="Travel Period" value="#{ticketingBean.ticketingVO.dtTrvlStart}" required="true" navigator="true" showButtonPanel="true">
+				<p:watermark for="idTravelPeriodFrom" value="From Date" />
+			</p:calendar>
+		</p:column>
+		<p:column>
+			<p:calendar pattern="dd-MMM-yyyy" id="idTravelPeriodTo" label="Travel Period To" value="#{ticketingBean.ticketingVO.dtTrvlEnd}" required="true" navigator="true" showButtonPanel="true">
+				<p:watermark for="idTravelPeriodTo" value="To Date" />
+			</p:calendar>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idBlkOutPeriod">Black Out Period </h:outputLabel></p:column>
+		<p:column colspan="2"><p:inputTextarea rows="10" cols="50" id="idBlkOutPeriod" label="Black Out Period" value="#{ticketingBean.ticketingVO.remarks}"></p:inputTextarea></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idIsPromo">Is Promo </h:outputLabel></p:column>
+		<p:column><p:selectBooleanButton id="idIsPromo" label="Is Promo" value="#{ticketingBean.ticketingVO.isPromo}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/></p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid columns="3" style="width: 1px;">
+	<c:if test="#{not sessionInfoBean.employeeVO.department.contains('sale')}">
+		<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{ticketingBean.addTicket}" update="@form,:idTicketingForm" rendered="#{empty ticketingBean.ticketingVO.id}"/>
+		<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{ticketingBean.updTicket}" update="@form,:idTicketingForm" oncomplete="varEditTicketingDialog.hide()" rendered="#{not empty ticketingBean.ticketingVO.id}"/>
+	</c:if>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{ticketingBean.resetTicketingForm}" oncomplete="varAddTicketingDialog.hide(),varEditTicketingDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddTicketForm,idEditTicketForm"/>
+	</p:commandButton>
+</p:panelGrid>
+</ui:composition>

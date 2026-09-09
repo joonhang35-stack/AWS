@@ -1,0 +1,272 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+
+<script type="text/javascript">
+function monitorExporting(start, complete) {
+	if (start) {
+		start();
+	}
+
+	window.pdfExportingMonitor = setInterval(function() {
+		var exportingComplete = $.cookie('cookie.pdf.exporting');
+
+		if (exportingComplete === 'true') {
+			if (complete) {
+				complete();
+			}
+			$.cookie('cookie.pdf.exporting', null);
+			clearInterval(window.pdfExportingMonitor);
+		}
+	}, 500);
+}
+
+function start() {
+	statusDialog.show();
+}
+
+function stop() {
+	statusDialog.hide();
+}
+</script>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Report Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the report is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+<p:panel header="Debtor Report" toggleable="true" toggleSpeed="500">
+	<h:form id="idFormAccountReport">
+		<p:growl id="msg"/>
+		<p:panelGrid style="width:650px;">
+			<p:row>
+				<p:column style="width:100px;">
+					<h:outputLabel for="idReportType">Report Type <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idReportType" label="Report Type" value="#{acctRptBean.reportType}" effect="fade">
+						<p:ajax event="change" listener="#{acctRptBean.handleSelectReportType}" update="idFormAccountReport" />
+						<f:selectItem itemLabel="Select One" itemValue=""/>
+						<f:selectItem itemLabel="Customer List" itemValue="DA"/>
+						<f:selectItem itemLabel="Customer Payment History" itemValue="DB"/>
+						<f:selectItem itemLabel="Invoice Salesperson Analysis by Month" itemValue="DC"/>
+						<f:selectItem itemLabel="Invoice Country Analysis by Month" itemValue="DD"/>
+						<f:selectItem itemLabel="Credit Note List" itemValue="DE"/>
+						<f:selectItem itemLabel="A/R Detail Aging by Customer" itemValue="DF"/>
+						<f:selectItem itemLabel="Deposit Received" itemValue="DG"/>
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{acctRptBean.printReport('PDF')}" rendered="#{acctRptBean.reportType != ''}" ajax="false" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{acctRptBean.printReport('XLS')}" rendered="#{acctRptBean.reportType != ''}" ajax="false" onclick="monitorExporting(start,stop)"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:panelGrid id="idSearchTypeA" style="width:550px;">
+			<p:row rendered="#{acctRptBean.reportType == 'DB' ||
+								acctRptBean.reportType == 'DC' ||
+								acctRptBean.reportType == 'DD' ||
+								acctRptBean.reportType == 'DE' ||
+								acctRptBean.reportType == 'DF' ||
+								acctRptBean.reportType == 'DG'}">
+				<p:column style="width:110px;" rendered="#{acctRptBean.reportType != 'DE' and acctRptBean.reportType != 'DG'}">
+					<h:outputLabel>Invoice Date <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:120px;" rendered="#{acctRptBean.reportType == 'DG'}">
+					<h:outputLabel>Invoice Date Before <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:110px;" rendered="#{acctRptBean.reportType == 'DE'}">
+					<h:outputLabel>Credit Note Date <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:80px;" rendered="#{acctRptBean.reportType != 'DF' and acctRptBean.reportType != 'DG'}">
+				 	<p:calendar id="idInvoiceDateFr" label="Invoice Date From" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{acctRptBean.searchParamVO.obj2}"/>
+					<p:watermark for="idInvoiceDateFr" value="Invoice Date From" />
+				</p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idInvoiceDateTo" label="Invoice Date To" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{acctRptBean.searchParamVO.obj3}"/>
+					<p:watermark for="idInvoiceDateTo" value="Invoice Date To" />
+				</p:column>
+				<p:column style="width:80px;" rendered="#{acctRptBean.reportType == 'DF' || acctRptBean.reportType == 'DG'}"></p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'DB' ||
+								acctRptBean.reportType == 'DG'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Departure Date </h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:80px;">
+				 	<p:calendar id="idDepartureDateFr" label="Departure Date From" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{acctRptBean.searchParamVO.obj4}"/>
+					<p:watermark for="idDepartureDateFr" value="Departure Date From" />
+				</p:column>	
+				<p:column style="width:80px;">
+					<p:calendar id="idDepartureDateTo" label="Departure Date To" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{acctRptBean.searchParamVO.obj5}"/>
+					<p:watermark for="idDepartureDateTo" value="Departure Date To" />
+				</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'DA' ||
+								acctRptBean.reportType == 'DB' ||
+								acctRptBean.reportType == 'DF' ||
+								acctRptBean.reportType == 'DG'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Customer</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+				<p:panel id="idCustDetails">
+					<p:inputText label="Customer Details" value="#{acctRptBean.custDetailsVO.companyName}" readonly="true" style="background:#ccc;" rendered="#{acctRptBean.custDetailsVO.custType == 'C'}"/>
+					<p:inputText label="Customer Details" value="#{acctRptBean.custDetailsVO.contPersonName}" readonly="true" style="background:#ccc;" rendered="#{acctRptBean.custDetailsVO.custType != 'C'}"/>
+					&nbsp;
+					<p:commandButton icon="ui-icon-search" update=":idCustListForm" oncomplete="varCustListDialog.show()" process="@this" rendered="#{empty acctRptBean.custDetailsVO.custId}"/>
+					<p:commandButton icon="ui-icon-close" actionListener="#{acctRptBean.custClear}" update=":idFormAccountReport:idCustDetails" process="@this" rendered="#{not empty acctRptBean.custDetailsVO.custId}"/>
+				</p:panel>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'DC'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Tour Code</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+				<p:panel id="idTourCd">
+					 <p:inputText label="Tour Code" value="#{acctRptBean.tourDepVO.code}" readonly="true" size="30"/>
+					 &nbsp;
+			        <p:commandButton icon="ui-icon-search" actionListener="#{acctRptBean.loadTour}" update=":idTourCodeList" oncomplete="varTourCodeList.show()" process="@this" rendered="#{empty acctRptBean.tourDepVO.id}"/>
+					<p:commandButton icon="ui-icon-close" actionListener="#{acctRptBean.clearTourCode}" update=":idFormAccountReport:idTourCd" process="@this" rendered="#{not empty acctRptBean.tourDepVO.id}"/>
+				</p:panel>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'DA'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Order By</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+					<h:selectOneMenu label="Order By" value="#{acctRptBean.orderType}">  
+			            <f:selectItem itemLabel="All" itemValue="" />  
+			            <f:selectItem itemLabel="Customer Code" itemValue="CC" /> 
+			            <f:selectItem itemLabel="Company Name" itemValue="CoN" />
+			            <f:selectItem itemLabel="Customer Name" itemValue="CuN" />
+			        </h:selectOneMenu>
+	        	</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'DC'}">
+				<p:column>
+					<h:outputLabel>Sales Person</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+				 	<h:selectOneMenu id="idSalesPerson" label="Sales Person" value="#{acctRptBean.searchParamVO.obj7}" effect="fade" >
+						<f:selectItem itemLabel="All" itemValue=""/>
+						<f:selectItems value="#{acctRptBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'DD'}">
+				<p:column>
+					<h:outputLabel>Regions</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu id="idRegion" value="#{acctRptBean.selectedRegions}" label="Regions"
+						filter="true" filterMatchMode="contains" panelStyle="width:550px">
+						<f:selectItems value="#{acctRptBean.tourThemeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.tourCatDesc} - #{vo.desc}"/>
+					</p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			
+			<p:row rendered="#{acctRptBean.reportType == 'DB' ||
+								acctRptBean.reportType == 'DG'}">
+				<p:column>
+					<h:outputLabel>Ignore Pagination</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectBooleanButton value="#{acctRptBean.ignorePagination}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+				</p:column>
+			</p:row>
+			
+		</p:panelGrid>
+	</h:form>
+</p:panel>
+
+<p:dialog id="idCustListDialog" header="Customer List" widgetVar="varCustListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" closable="false" onShow="initializeFilters()">
+	<h:form id="idCustListForm">
+		<ui:include src="../common/customer_list.xhtml" />
+	</h:form>
+	<script type="text/javascript">
+        function initializeFilters() {
+            var filters = document.querySelectorAll('#idCustListDialog input.ui-column-filter');
+            filters.forEach(function(filter) {
+                filter.setAttribute('enterkeyhint', 'enter');
+            });
+        }
+    </script>
+</p:dialog>
+
+<!--
+	DIALOG - TOUR DEPARTURE LIST
+-->
+<p:dialog header="Tour Departure List" id="idTourCodeList" widgetVar="varTourCodeList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true" onShow="initializeFilters()">
+	<div style="overflow:auto; width:800px !important; height:500px !important;">
+	<h:form id="idTourDepListForm">
+		<p:dataTable value="#{acctRptBean.tourList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+			<p:ajax event="rowSelect" listener="#{acctRptBean.handleTourCodeSelect}" oncomplete="varTourCodeList.hide()"  update=":idFormAccountReport:idTourCd" />
+			<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:200px;">
+				<h:outputText value="#{vo.code}" />   
+			</p:column>
+			<p:column headerText="Departure Date" sortBy="#{vo.dtDep}" filterBy="#{acctRptBean.dateFormat(vo.dtDep, 'dd-MMM-yyyy')}" filterMatchMode="contains" style="width:60px;">
+				<h:outputText value="#{vo.dtDep}" >
+					<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+				</h:outputText> 
+			</p:column>
+			<p:column headerText="Package" sortBy="#{vo.packageDesc}" filterBy="#{vo.packageDesc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.packageDesc}" />   
+			</p:column>
+		</p:dataTable> 
+	</h:form>
+	</div>
+	<script type="text/javascript">
+        function initializeFilters() {
+            var filters = document.querySelectorAll('#idTourCodeList input.ui-column-filter');
+            filters.forEach(function(filter) {
+                filter.setAttribute('enterkeyhint', 'enter');
+            });
+        }
+    </script>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

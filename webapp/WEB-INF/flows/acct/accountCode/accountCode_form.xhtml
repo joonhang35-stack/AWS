@@ -1,0 +1,214 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+
+<script type="text/javascript">
+    function fncLoad() {
+        document.getElementById('idCustListForm:idAddBtn').onclick();
+    }
+
+	function monitorExporting(start, complete) {
+		if (start) {
+			start();
+		}
+	
+		window.pdfExportingMonitor = setInterval(function() {
+			var exportingComplete = $.cookie('cookie.pdf.exporting');
+	
+			if (exportingComplete === 'true') {
+				if (complete) {
+					complete();
+				}
+				$.cookie('cookie.pdf.exporting', null);
+				clearInterval(window.pdfExportingMonitor);
+			}
+		}, 500);
+	}
+	
+	function start() {
+		statusDialog.show();
+	}
+	
+	function stop() {
+		statusDialog.hide();
+	}
+	
+	document.addEventListener('DOMContentLoaded', function() {
+	    var filters = document.querySelectorAll('input.ui-column-filter');
+	    filters.forEach(function(filter) {
+	        filter.setAttribute('enterkeyhint', 'enter');
+	    });
+	});
+</script>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Print Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the printing is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+<p:panel header="Tour Departure Account Code Maintenance">
+<h:form id="idForm">
+<p:growl id="msg"/>
+
+<p:panelGrid style="padding-bottom:5px; border:1px;">
+	<p:row>
+		<p:column style="width: 110px;">
+			<p:selectOneButton id="idPrintType" value="#{accountCodeBean.searchParamVO.obj1}">
+	            <f:selectItem itemLabel="Excel" itemValue="XLS"/>
+	            <f:selectItem itemLabel="CSV" itemValue="CSV"/>
+	        </p:selectOneButton>
+  				<p:tooltip for="idPrintType" value="Print as Excel or CSV." trackMouse="true" />
+ 		</p:column>
+		<p:column style="width:70px;"><h:outputLabel for="idDateFrom">Date From</h:outputLabel></p:column>
+		<p:column style="width:80px;">
+			<p:calendar id="idDateFrom" value="#{accountCodeBean.searchParamVO.fromDate}" navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+			</p:calendar>
+		</p:column>
+		<p:column style="width:10px;"><h:outputLabel for="idDateTo">To</h:outputLabel></p:column>
+		<p:column style="width:80px;">
+			<p:calendar id="idDateTo" value="#{accountCodeBean.searchParamVO.toDate}" navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+			</p:calendar>
+		</p:column>
+		<p:column style="width:70px; padding-top: 10px;padding-bottom: 0px;">
+			<p:selectCheckboxMenu id="idYearList" value="#{accountCodeBean.selectedYearList}" label="Years">
+		        <f:selectItems value="#{accountCodeBean.yearList}" var="year" itemValue="#{year}" itemLabel="#{year}"/>
+		    </p:selectCheckboxMenu>
+		</p:column>
+		<p:column style="width:130px;">
+			<p:selectBooleanCheckbox value="#{accountCodeBean.searchParamVO.obj2}" itemLabel="Include Inactive" style="width:130px; display:block;"/>
+		</p:column>
+		<p:column style="width:10px;"><p:separator style="width:2px;height:20px"/></p:column>
+		<p:column>
+			<p:commandButton icon="ui-icon-print" value="Print" actionListener="#{accountCodeBean.printAccountCodeList()}" ajax="false"
+				onclick="monitorExporting(start,stop)" process="@this"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<p:dataTable id="idTourDepList" widgetVar="varTourAcctCodeList" value="#{accountCodeBean.tourDepVOList}" var="vo" paginator="true" rows="20" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="10, 20, 30" rowStyleClass="#{vo.groupColor eq 0 ? 'group-color-one' : 'group-color-two'}" filteredValue="#{accountCodeBean.filteredObjList}"
+	filterEvent="enter">
+	
+	<!-- <p:columnGroup type="header">
+		<p:row> 
+			<p:column rowspan="2" headerText="Edit" style="width:50px;" /> 
+			<p:column rowspan="2" headerText="Tour Code" style="font-size:10px;" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains"/> 
+			<p:column rowspan="2" headerText="Dep Date" style="width:100px; font-size:10px;" sortBy="#{vo.dtDep}"/> 
+			<p:column rowspan="2" headerText="Tour Category" style="font-size:10px;" sortBy="#{vo.tourCategoryName}" filterBy="#{vo.tourCategoryName}" filterMatchMode="contains"/> 
+			<p:column rowspan="2" headerText="Country" style="font-size:10px;" sortBy="#{vo.countryName}"  filterBy="#{vo.countryName}" filterMatchMode="contains"/> 
+			<p:column rowspan="2" headerText="Package Name" style="font-size:10px;" sortBy="#{vo.packageName}"  filterBy="#{vo.packageName}" filterMatchMode="contains"/>  
+			<p:column rowspan="2" headerText="Tour Account" style="font-size:10px;" sortBy="#{vo.tourAcc}"  filterBy="#{vo.tourAcc}" filterMatchMode="contains"/>  
+			<p:column rowspan="2" headerText="Insurance Account" style="font-size:10px;" sortBy="#{vo.insurAcc}"  filterBy="#{vo.insurAcc}" filterMatchMode="contains"/>  
+			<p:column rowspan="2" headerText="Visa Account" style="font-size:10px;" sortBy="#{vo.visaAcc}"  filterBy="#{vo.visaAcc}" filterMatchMode="contains"/>  
+			<p:column rowspan="2" headerText="Status" style="width:300px; font-size:10px;"/> 
+		</p:row> 
+	</p:columnGroup> -->
+	 
+	<p:column headerText="Edit" style="width:50px;" styleClass="txt_center">
+		<p:commandButton icon="ui-icon-pencil" action="#{accountCodeBean.handleAccountDepSelect(vo)}" oncomplete="varEditAccCodeDialog.show()" update=":idEditAccCodeDialog,:idAcctListTableForm:idAcctListTable" />
+	</p:column>
+	<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:120px; font-size:10px; text-align:center;"><h:outputText value="#{vo.code}"/></p:column>
+	<p:column headerText="Dep Date" sortBy="#{vo.dtDep}" style="width:100px; font-size:10px;text-align:center;"><h:outputText value="#{vo.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+	<p:column headerText="Tour Category" sortBy="#{vo.tourCategoryName}" filterBy="#{vo.tourCategoryName}" filterMatchMode="contains" style="font-size:10px; text-align:center;"><h:outputText value="#{vo.tourCategoryName}"/></p:column>
+	<p:column headerText="Country" sortBy="#{vo.countryName}" filterBy="#{vo.countryName}" filterMatchMode="contains" style="width:100px; font-size:10px; text-align:center;"><h:outputText value="#{vo.countryName}"/></p:column> 
+	<p:column headerText="Package Name" sortBy="#{vo.packageName}"  filterBy="#{vo.packageName}" filterMatchMode="contains" style="font-size:10px; text-align:center;"><h:outputText value="#{vo.packageName}"/></p:column>
+	<p:column headerText="Tour Account" sortBy="#{vo.tourAcc}"  filterBy="#{vo.tourAcc}" filterMatchMode="contains" style="width:120px; font-size:10px; text-align:center;"><h:outputText value="#{vo.tourAcc}"/></p:column>
+	<p:column headerText="Insurance Account" sortBy="#{vo.insurAcc}"  filterBy="#{vo.insurAcc}" filterMatchMode="contains" style="width:80px; font-size:10px; text-align:center;"><h:outputText value="#{vo.insurAcc}"/></p:column>
+	<p:column headerText="Visa Account" sortBy="#{vo.visaAcc}" filterBy="#{vo.visaAcc}" filterMatchMode="contains" style="width:80px; font-size:10px; text-align:center;"><h:outputText value="#{vo.visaAcc}"/></p:column>
+	<p:column headerText="Status" style="width:80px; font-size:10px; text-align:center;"><h:outputText value="#{bterp:lookupItemDesc('acc_code_status', vo.accCodeStatusCd)}"/></p:column>
+</p:dataTable>
+</h:form>		
+</p:panel>
+	 
+<!--
+	DIALOG - UPDATE Account Code
+-->
+<p:dialog id="idEditAccCodeDialog" widgetVar="varEditAccCodeDialog" header="Update Account Code" modal="true" resizable="false" dynamic="true" draggable="true" 
+	closable="false">
+	<h:form id="idEditAccCodeForm">
+		<ui:include src="../common/add_acc_code.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!-- <p:dialog id="idAcctSubCatDialog" widgetVar="varAcctSubCatDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+		<f:facet name="header">
+			<h:outputFormat value="General Ledger Account (G/L Acct) Details" />
+		</f:facet>
+		<h:form id="idAddAcctSubCatForm">
+		<ui:include src="../common/add_gl_acct.xhtml"/>
+		</h:form>
+</p:dialog> -->
+
+<!--
+	DIALOG - ACCOUNT SUB CAT LIST
+-->
+<p:dialog id="idAcctSubCatList" widgetVar="varAcctSubCatList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<h:form id="idAcctListTableForm">
+		<p:dataTable widgetVar="varAcctListTable" id="idAcctListTable" value="#{accountCodeBean.acctList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+			filterEvent="enter"
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single">
+			<p:ajax event="rowSelect" listener="#{accountCodeBean.handleSubAcctSelect}" oncomplete="varAcctSubCatList.hide()" update=":idEditAccCodeForm:idEditAccCodePanel" process="@this"/>
+			 
+			<p:column headerText="Account No" sortBy="#{vo.code}-#{vo.subCode}" filterBy="#{empty vo.subCode ? vo.code : vo.code.concat('-').concat(vo.subCode)}" filterMatchMode="contains">
+				<h:outputText value="#{vo.code}" />  
+				<h:outputText value="-#{vo.subCode}" rendered="#{not empty vo.subDesc}" />
+			</p:column>
+			<p:column headerText="Description" sortBy="#{vo.desc}, #{vo.subDesc}" filterBy="#{empty vo.subDesc ? vo.desc : vo.desc.concat(',').concat(vo.subDesc)}" filterMatchMode="contains">
+				<h:outputText value="#{vo.desc}" />
+				<h:outputText value=", #{vo.subDesc}" rendered="#{not empty vo.subDesc}" />
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:dialog>
+
+<!-- <p:dialog id="idBankAcctListDialog" widgetVar="varBankAcctListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<p:dataTable value="#{depositBean.acctViewList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single">
+		<p:ajax event="rowSelect" listener="#{depositBean.handleBankSelect}"  oncomplete="varBankAcctListDialog.hide()"/>
+		
+		<p:column headerText="Code" sortBy="#{vo.code}" filterBy="#{vo.code}">
+			<h:outputText value="#{vo.code}"/>
+		</p:column>
+		<p:column headerText="Sub Code" sortBy="#{vo.sub_code}" filterBy="#{vo.sub_code}">
+			<h:outputText value="#{vo.sub_code}"/>
+		</p:column>
+		<p:column headerText="Description" sortBy="#{vo.description}" filterBy="#{vo.description}">
+			<h:outputText value="#{vo.description}"/>
+		</p:column>
+	</p:dataTable>
+</p:dialog> -->
+
+<p:dialog id="idGSTListDialog" widgetVar="varGSTListDialog" header="GST Output Tax" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<p:dataTable id="idOutputTaxCodeList" value="#{accountCodeBean.outputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+		<p:ajax event="rowSelect" listener="#{accountCodeBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" update=":idEditAccCodeForm:idEditAccCodePanel"/>
+		<p:column headerText="No." width="25" style="text-align:right;">
+			<h:outputText value="#{vo.seqNo}"/>
+		</p:column>
+		<p:column headerText="Code" width="50">
+			<h:outputText value="#{vo.code}" />
+		</p:column>
+		<p:column headerText="Description" >
+			<h:outputText value="#{vo.description}" />
+		</p:column>
+		<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+			<h:outputText value="#{vo.rate}"/>
+		</p:column>
+	</p:dataTable>
+</p:dialog>
+</ui:define>
+</ui:composition>

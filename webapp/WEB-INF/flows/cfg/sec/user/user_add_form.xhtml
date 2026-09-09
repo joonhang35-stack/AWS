@@ -1,0 +1,340 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddUserDialog.show();
+		} else {
+			varAddUserDialog.hide();
+		}
+	}
+</script>
+<style type="text/css">
+	.old {
+		background-color: #cccccc !important;
+		background-image: none !important;
+		color: #eeeeee !important;
+	}
+</style>
+
+<div style="height:500px;overflow:auto;">
+<p:panelGrid>
+
+	<p:row>
+		<p:column style="width:150px;">
+			<h:outputLabel for="idUserName">User Name <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idUserName" label="User Name" value="#{userBean.userVO.name}" style="width:200px" required="true"/>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idUserCode">Login ID <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idUserCode" label="Login ID" value="#{userBean.userVO.loginId}" required="true"/>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idPassword" rendered="#{empty userBean.userVO.uuid}">Password <span class="required">*</span></h:outputLabel>
+			<h:outputLabel for="idPassword" rendered="#{not empty userBean.userVO.uuid}">Password <span class="required">**</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:password id="idPassword" label="Password" value="#{userBean.changePasswordVO.newPassword}" maxlength="30" match="idConfirmPassword" required="#{(empty userBean.userVO.uuid) ? true : false }">
+				<f:validateLength minimum="8" maximum="30"/>
+			</p:password>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idConfirmPassword" rendered="#{empty userBean.userVO.uuid}">Confirm Password <span class="required">*</span></h:outputLabel>
+			<h:outputLabel for="idConfirmPassword" rendered="#{not empty userBean.userVO.uuid}">Confirm Password <span class="required">**</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:password id="idConfirmPassword" label="Confirm Password" value="#{userBean.changePasswordVO.confirmPassword}" maxlength="30" required="#{(empty userBean.userVO.uuid) ? true : false }">
+				<f:validateLength minimum="8" maximum="30"/>
+			</p:password>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idStatus">Status <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idStatus" value="#{userBean.userVO.statusCode}" required="true">
+				<f:selectItems value="#{zsg:referenceDataList('STATUS')}" var="n" itemValue="#{n.code}" itemLabel="#{n.value}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idEmailID">Email Address</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idEmailID" label="Email Address" value="#{userBean.userVO.emailAddress}"/>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idMobile">Mobile Number</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idMobile" label="Mobile Number" value="#{userBean.userVO.mobileNumber}"/>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<p:commandButton value="Add Company" actionListener="#{userBean.setCompanyAdd(true)}" oncomplete="varCompanyDialog.show()" update=":idCompanyDialog" immediate="true"/>
+		</p:column>
+		<p:column>
+			<p:panel id ="idCompanyListPanel" style="border:none">
+				<p:dataTable id="idCompanyListTable" value="#{userBean.employeeList}" var="employeeVO" rowKey="#{employeeVO.companyId}"
+					rowStyleClass="#{employeeVO.statusCode eq 'D' ? 'old' : null}" rendered="#{not empty userBean.employeeList}">
+					<p:column headerText="Edit" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-pencil" actionListener="#{userBean.onCompanySelected(employeeVO)}" oncomplete="varCompanyDialog.show()" process="@this" update=":idCompanyDialog" disabled="#{employeeVO.statusCode eq 'D'}"/>
+					</p:column>
+					<p:column headerText="Delete" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-close" actionListener="#{userBean.deleteCompany(employeeVO)}" update=":idAddUserForm:idCompanyListPanel" process="@this" rendered="#{employeeVO.statusCode ne 'D'}"/>
+						<p:commandButton icon="ui-icon-check" actionListener="#{userBean.enableCompany(employeeVO)}" update=":idAddUserForm:idCompanyListPanel" process="@this" rendered="#{employeeVO.statusCode eq 'D'}"/>
+					</p:column>
+					<p:column headerText="Company">
+						<h:outputText value="#{userBean.getCompanyName(employeeVO.companyId)}"/>
+					</p:column>
+					<p:column headerText="Default Company" style="text-align:center;">
+						<h:outputText value="Y" rendered="#{employeeVO.isDefaultComp}"/>
+						<h:outputText value="N" rendered="#{not employeeVO.isDefaultComp}"/>
+					</p:column>
+				</p:dataTable>
+			</p:panel>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idDepartment">Department</h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idDepartment" label="Department" value="#{userBean.department}">  
+	            <f:selectItem itemLabel="Select One" itemValue=""/>
+	            <f:selectItems value="#{bterp:lookupItemList('dept_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu>
+        </p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel>Customer</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCustomer" value="#{userBean.customerName}" readonly="true" style="background:#ccc;width: 250px; margin-right: 5px;" />
+			<p:commandButton icon="ui-icon-search" actionListener="#{userBean.loadCustomer}" oncomplete="varCustListDialog.show()" update=":idCustListDialogDialog" process="@this" style="margin-right: 5px;"/>
+			<p:commandButton icon="ui-icon-close" actionListener="#{userBean.clearCustomer}" update=":idAddUserForm:idCustomer" process="@this"/>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel>Role(s)</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:pickList id="idUserRolePickList" label="Role(s)" value="#{userBean.roleListModel}" var="vo" itemValue="#{vo}" itemLabel="#{vo.roleName}"
+				converter="#{userBean.roleConverter}">
+				<f:facet name="sourceCaption">Available Role(s)</f:facet>
+				<f:facet name="targetCaption">Assigned Role(s)</f:facet>
+			</p:pickList>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column colspan="2">
+			<p:panel id="idPanelStaffInfo" header="Staff Info" toggleable="true">
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idCategory">Categorize </h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idCategory" label="Categorize" value="#{userBean.employeeInfoVO.category}">  
+					            <f:selectItem itemLabel="Select One" itemValue=""/>
+					            <f:selectItems value="#{bterp:lookupItemList('usr_staff_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+					        </h:selectOneMenu>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idFullName">Name as IC </h:outputLabel>
+						</p:column>
+						<p:column colspan="3">
+							<p:inputText id="idFullName" label="Name as IC" value="#{userBean.employeeInfoVO.fullName}" style="width:400px" maxlength="255" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idNickName">NickName </h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idNickName" label="NickName" value="#{userBean.employeeInfoVO.nickName}" maxlength="50" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag"/>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idMsicCode">MSIC Code </h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idMsicCode" label="MSIC Code" value="#{userBean.employeeInfoVO.msicCode}" style="width:180px;">  
+					            <f:selectItem itemLabel="Select One" itemValue="" />  
+					            <f:selectItems value="#{bterp:lookupItemList('e_inv_msic_code')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.code} : #{vo.description}"/>
+					        </h:selectOneMenu>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idIsEditable">NRIC &amp; TIN editable </h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:selectBooleanButton id="idIsEditable" value="#{userBean.employeeInfoVO.isEditable}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idNRIC">NRIC </h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputMask id="idNRIC" label="NRIC" value="#{userBean.employeeInfoVO.idNo}" mask="999999-99-9999"/>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idTIN">TIN </h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idTIN" label="TIN" value="#{userBean.employeeInfoVO.taxIdNo}" maxlength="20" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag"/>
+						</p:column>
+					</p:row>
+					
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idAdd1">Address Line 1 </h:outputLabel>
+						</p:column>
+						<p:column colspan="3">
+							<p:inputText id="idAdd1" label="Address Line 1" value="#{userBean.employeeInfoVO.addr1}" size="50" maxlength="255" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag"/>
+						</p:column>
+					</p:row>
+
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idAdd2">Address Line 2 </h:outputLabel>
+						</p:column>
+						<p:column colspan="3">
+							<p:inputText id="idAdd2" label="Address Line 2" value="#{userBean.employeeInfoVO.addr2}" size="50" maxlength="255" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag"/>
+						</p:column>
+					</p:row>
+
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idAdd3">Address Line 3 </h:outputLabel>
+						</p:column>
+						<p:column colspan="3">
+							<p:inputText id="idAdd3" label="Address Line 3" value="#{userBean.employeeInfoVO.addr3}" size="50" maxlength="255" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag"/>
+						</p:column>
+					</p:row>
+
+					<p:row id="idColumnState">
+						<p:column>
+							<h:outputLabel for="idCity">City </h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idCity" label="City" value="#{userBean.employeeInfoVO.city}" maxlength="255" onkeyup="this.value=this.value.toUpperCase()" autocomplete="ignore-flag"/>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idState">State </h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idState" label="State" value="#{userBean.employeeInfoVO.state}" effect="fade">
+								<f:selectItem itemLabel="Select One" itemValue=""/>
+								<f:selectItems value="#{userBean.malaysiaStateList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.name}"/>
+							</h:selectOneMenu>
+						</p:column>
+					</p:row>
+
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idPostcode">Postcode </h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idPostcode" label="Postcode" value="#{userBean.employeeInfoVO.postcode}" maxlength="10"/>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idCountry">Country </h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idCountry" label="Country" value="#{userBean.employeeInfoVO.countryId}">
+								<f:selectItem itemLabel="Select One" itemValue="" />
+								<f:selectItems value="#{userBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+							</h:selectOneMenu>
+						</p:column>
+					</p:row>
+					
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idIsAccessSystem">Access To System </h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:selectBooleanButton id="idIsAccessSystem" value="#{userBean.employeeInfoVO.isAccessSystem}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+						</p:column>
+					</p:row>
+					
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idAcctNo">Account No </h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputMask id="idAcctNo" label="Account No" value="#{userBean.employeeInfoVO.acctNo}" maxlength="20"/>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idBankName">Bank Name </h:outputLabel>
+						</p:column>
+						<p:column>
+							<!-- <p:inputText id="idBankName" label="Bank Name" value="#{userBean.employeeInfoVO.bankName}" maxlength="200"/> -->
+							<h:selectOneMenu id="idBankName" label="Bank Name" value="#{userBean.employeeInfoVO.bankName}" style="width:180px;">  
+					            <f:selectItem itemLabel="Select One" itemValue="" />  
+					            <f:selectItems value="#{bterp:lookupItemList('bank_list')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+					        </h:selectOneMenu>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+</div>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="Add" actionListener="#{userBean.addNewUser}" update="@form,:idDataForm:idUserList,:idLoginCompany" rendered="#{empty userBean.userVO.uuid}"/>
+	<p:commandButton value="Edit" actionListener="#{userBean.updateUser}" update="@form,:idDataForm:idUserList,:idLoginCompany" oncomplete="onValidation(xhr, status, args)" rendered="#{not empty userBean.userVO.uuid}"/>
+	<p:commandButton value="Cancel" actionListener="#{userBean.resetForm}" update="@form" process="@this" oncomplete="varAddUserDialog.hide()" global="false">
+		<pe:resetEditableValues for="idAddUserForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+<br/>
+<h:outputLabel><span class="required">*&nbsp;&nbsp;</span> - required field</h:outputLabel>
+<br/>
+<h:outputLabel rendered="#{not empty userBean.userVO.uuid}"><span class="required">**</span> - leave blank if no password change is required</h:outputLabel>
+
+</ui:composition>

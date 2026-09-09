@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<!-- Startup Item -->
+	<!-- <bean id="integrationStartupItem" class="com.bcs.zsg.component.integration.helper.IntegrationStartupItem"/> -->
+	
+	<bean id="integrationStartupItem" class="com.bcs.zsg.web.AppStartupItem"/> 
+
+	<!-- Integration Module -->
+    <bean id="integrationProcessor" class="com.bcs.zsg.component.integration.processor.impl.IntegrationProcessorImpl" scope="prototype"/>
+
+    <bean id="integrationConfigManager" class="com.bcs.zsg.component.integration.config.IntegrationConfigManager" scope="singleton">
+        <property name="configFiles" ref="integrationConfigList"/>
+    </bean>
+
+    <!-- Adapter -->
+    <bean id="adapterFactory" class="com.bcs.zsg.component.integration.adapter.IntegrationAdapterFactory" scope="singleton">
+        <property name="beanMapping">
+            <props>
+                <prop key="jms">jmsAdapter</prop>
+                <prop key="file">fileAdapter</prop>
+                <prop key="http">httpAdapter</prop>
+                <prop key="simulator">simulatorAdapter</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="jmsAdapter" class="com.bcs.zsg.component.integration.adapter.impl.JMSAdapterImpl" scope="prototype"/>
+    <bean id="fileAdapter" class="com.bcs.zsg.component.integration.adapter.impl.FileAdapterImpl" scope="prototype"/>
+    <bean id="httpAdapter" class="com.bcs.zsg.component.integration.adapter.impl.HttpAdapterImpl" scope="prototype"/>
+	
+    <bean id="simulatorAdapter" class="com.bcs.zsg.component.integration.adapter.impl.SimulatorAdapterImpl" scope="prototype">
+    	<property name="messagePath" value="src/com/bcs/zsg/bterp/sample/gateway/"/>
+    	<property name="messageExt" value=".xml"/>
+    	<property name="isCached" value="false"/>
+    </bean>
+
+    <!-- Transformers -->
+    <bean id="transformerFactory" class="com.bcs.zsg.component.integration.transform.TransformerFactory" scope="singleton">
+        <property name="beanMapping">
+            <props>
+                <prop key="xslt">xsltTransformer</prop>
+                <prop key="object2xml">object2XmlTransformer</prop>
+                <prop key="xml2object">xml2ObjectTransformer</prop>
+                <prop key="csv">csvTransformer</prop>
+                <prop key="velocity">velocityTransformer</prop>
+                <prop key="url">urlParamTransformer</prop>
+                <prop key="string">stringTransformer</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="xsltTransformer" class="com.bcs.zsg.component.integration.transform.impl.XSLTTransformerImpl"/>
+    <bean id="xml2ObjectTransformer" class="com.bcs.zsg.component.integration.transform.impl.XML2ObjectTransformerImpl"/>
+    <bean id="object2XmlTransformer" class="com.bcs.zsg.component.integration.transform.impl.Object2XMLTransformerImpl"/>
+    <bean id="csvTransformer" class="com.bcs.zsg.component.integration.transform.impl.CsvTransformerImpl"/>
+    <bean id="velocityTransformer" class="com.bcs.zsg.component.integration.transform.impl.VelocityTransformerImpl">
+        <property name="velocityEngine" ref="velocityEngine"/>
+    </bean>
+    <bean id="urlParamTransformer" class="com.bcs.zsg.component.integration.transform.impl.URLParamTransformerImpl">
+        <property name="velocityEngine" ref="velocityEngine"/>
+    </bean>
+    <bean id="stringTransformer" class="com.bcs.zsg.component.integration.transform.impl.StringTransformerImpl"/>
+
+    <!-- velocity -->
+    <bean id="velocityEngine" class="org.springframework.ui.velocity.VelocityEngineFactoryBean">
+        <property name="velocityPropertiesMap">
+            <map>
+                <entry key="resource.loader" value="class"/>
+                <entry key="class.resource.loader.class" value="org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader"/>
+                <entry key="input.encoding" value="UTF-8"/>
+                <entry key="output.encoding" value="UTF-8"/>
+            </map>
+        </property>
+    </bean>
+    
+    <!-- Base Gateway Manager -->
+    <bean id="baseGatewayManager" class="com.bcs.zsg.component.integration.gateway.BaseGatewayManager" abstract="true"/>
+	
+	<!-- Free Marker Config -->
+	<bean id="freeMarkerConfigurationFactory" class="org.springframework.ui.freemarker.FreeMarkerConfigurationFactoryBean">
+	    <property name="templateLoaderPath" value="/WEB-INF/resources/"/>
+	    <property name="preferFileSystemAccess" value="false"/>
+	</bean>
+</beans>

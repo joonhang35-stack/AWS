@@ -1,0 +1,151 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+	<ui:define name="content">
+		<p:panel header="Customer" toggleable="true" toggleSpeed="500">
+		
+			<p:panelGrid>
+				<p:row>
+					<p:column><h:outputLabel for="idRQPax2">Name: </h:outputLabel></p:column>
+					<p:column><p:inputText id="idLabel100" label="Reason For Expense" value="" size="40"/></p:column>
+					<p:column><h:outputLabel for="idRQPax2">Company: </h:outputLabel></p:column>
+					<p:column><p:inputText id="idLabel101" label="Reason For Expense" value="" size="40"/></p:column>
+					<p:column><h:outputLabel for="idRQPax2">With Balance: </h:outputLabel></p:column>
+					<p:column><p:inputText id="idLabel102" label="Reason For Expense" value="" size="40"/></p:column>
+				</p:row>
+				<p:row>
+					<p:column><h:outputLabel for="idRQPax2">Supplier: </h:outputLabel></p:column>
+					<p:column><p:inputText id="idLabel103" label="Reason For Expense" value="" size="40"/></p:column>
+					<p:column><p:commandButton value="Search"/></p:column>
+				</p:row>
+					
+			</p:panelGrid>
+			
+			<p:commandButton value="Payment" onclick="varSupplSelectDialog.show()" immediate="true"/>
+			<p:commandButton value="Cancel"/>
+			<br/><br/>
+			<p:dataTable id="idPurBillPmntTable" widgetVar="purBillPmntTable" value="#{purchaseBean.billList}" var="purBillPmnt" paginator="true" rows="20" 
+					paginatorTemplate="#{bterp:pageTemplate()}" 
+					rowsPerPageTemplate="20, 30, 50" emptyMessage="#{msg['cust.tbl.empty.message']}">
+
+			<p:column headerText="Select" style="width: 5px;" styleClass="txt_center">
+					<p:selectBooleanCheckbox value=""/>
+			</p:column>
+				
+			<p:column headerText="Edit" style="width:60px">
+					<p:rowEditor />
+			</p:column>
+			
+			<p:column headerText="Supplier Name" sortBy="#{purBillPmnt.suppliername}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.suppliername}">
+					<h:outputText value="#{purBillPmnt.suppliername}" />
+			</p:column>
+			
+			<p:column headerText="Due Date" sortBy="#{purBillPmnt.duedt}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.duedt}">
+					<h:outputText value="#{purBillPmnt.duedt}" />
+			</p:column>
+			
+			<p:column headerText="Invoice Date" sortBy="#{purBillPmnt.invoicedt}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.invoicedt}">
+					<h:outputText value="#{purBillPmnt.invoicedt}" />
+			</p:column>
+			
+			<p:column headerText="Invoice No" sortBy="#{purBillPmnt.invoiceno}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.invoiceno}">
+					<h:outputText value="#{purBillPmnt.invoiceno}" />
+			</p:column>
+			
+			<p:column headerText="XO No" sortBy="#{purBillPmnt.suppliername}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.suppliername}">
+					<h:outputText value="#{purBillPmnt.suppliername}" />
+			</p:column>
+			
+			<p:column headerText="CN No" sortBy="#{purBillPmnt.suppliername}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.suppliername}">
+					<h:outputText value="#{purBillPmnt.suppliername}" />
+			</p:column>
+			
+			<p:column headerText="Total Amount" sortBy="#{purBillPmnt.amount}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.amount}">
+					<h:outputText value="#{purBillPmnt.amount}" />
+			</p:column>
+				
+			<p:column headerText="Total Paid" sortBy="#{purBillPmnt.billid}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.billid}">
+					<h:outputText value="#{purBillPmnt.billid}" />
+			</p:column>
+			
+			<p:column headerText="Cur Bal" sortBy="#{purBillPmnt.purchaseorder}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.purchaseorder}">
+					<h:outputText value="#{purBillPmnt.purchaseorder}" />
+			</p:column>
+			
+			<p:column headerText="Overdue Status" sortBy="#{purBillPmnt.eono}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.eono}">
+					<h:outputText value="#{purBillPmnt.eono}" />
+			</p:column>
+			
+			<p:columnGroup type="footer">  
+		            <p:row>  
+		            	<p:column footerText="" colspan="6"/> 
+		                <p:column footerText="Totals:"  style="text-align:right"  />  
+		  
+		                <p:column footerText="$1,000,000" />  
+		  
+		                <p:column footerText="$2,000,000" />  
+		                
+		                <p:column footerText="$3,000,000" />  
+		                
+		                <p:column footerText="" colspan="2"/>
+		            </p:row>  
+		        </p:columnGroup> 
+		        
+			</p:dataTable>
+			
+			<p:commandButton value="Payment" onclick="varSupplSelectDialog.show()" immediate="true"/>
+			<p:commandButton value="Cancel"/>
+		</p:panel>
+
+		<p:dialog id="idMultiBillsPayDialog" widgetVar="varMultiBillsPayDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" >
+				
+			<f:facet name="header">
+				<h:outputFormat value="Multiple Bills Payment" />
+			</f:facet>
+			<h:form id="idMultiBillsPayForm">
+			<ui:include src="../../common/bill_payment/multibills_payment.xhtml"/>
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idSupplSelectDialog" widgetVar="varSupplSelectDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" >
+				
+			<f:facet name="header">
+				<h:outputFormat value="Supplier Selection" />
+			</f:facet>
+			<h:form id="idSupplSelectForm">
+				<p:panelGrid>
+					<p:row>
+						<p:column><h:outputLabel for="idRQPax2">Name: </h:outputLabel></p:column>
+						<p:column>
+							<h:selectOneMenu value="">  
+					            <f:selectItem itemLabel="Select One" itemValue="" /> 
+				        	</h:selectOneMenu>
+			        	</p:column>
+			        </p:row>
+			        <p:row>
+			        	<p:column><p:commandButton value="Submit" onclick="varMultiBillsPayDialog.show()" process="@this"/></p:column>
+						<p:column><p:commandButton value="Cancel" onclick="varSupplSelectDialog.hide()" process="@this" /></p:column>
+					</p:row>
+				</p:panelGrid>
+			</h:form>
+		</p:dialog>
+		<p:dialog id="idPrintDialog" widgetVar="varPrintDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" >
+				
+			<f:facet name="header">
+				<h:outputFormat value="Supplier Statement Filter" />
+			</f:facet>
+			<h:form id="idPrintForm">
+			<ui:include src="../../common/print.xhtml"/>
+			</h:form>
+		</p:dialog>
+	</ui:define>
+</ui:composition>

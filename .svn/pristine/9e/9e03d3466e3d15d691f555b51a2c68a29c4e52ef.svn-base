@@ -1,0 +1,350 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+				xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	<p:tabView id="idTab">
+		<p:tab id="idTabList" title="Package Info">
+			<p:panel header="#{cruiseBookingBean.tourPkgVO.numDays}D/#{cruiseBookingBean.tourPkgVO.numNights}N #{cruiseBookingBean.tourPkgVO.nameEn} #{cruiseBookingBean.tourPkgVO.nameZh} #{cruiseBookingBean.tourPkgVO.nameOther}" style="border:0;">
+				<div style="height:450px; overflow:auto;">
+				<h:outputText value="#{fn:replace(cruiseBookingBean.tourPkgVO.highLight, '\\n', '&lt;br/&gt;')}" escape="false"/>
+				<br/>
+				<h:outputText value="Tour Price" style="font-weight:bold;"/>
+				<div class="ui-datatable ui-widget">
+					<table>
+							<thead>
+								<tr>
+									<th rowspan="2" class="ui-state-default" style="padding: 5px;"><h:outputText
+											value="Cabin" /></th>
+									<th colspan="4" class="ui-state-default" style="padding: 5px;"><h:outputText
+											value="Adult (RM)" /></th>
+									<th colspan="2" class="ui-state-default" style="padding: 5px;"><h:outputText
+											value="Child (RM)" /></th>
+									<th colspan="1" class="ui-state-default" style="padding: 5px;"><h:outputText
+											value="Infant (RM)" /></th>				
+								</tr>
+								<tr>
+									<th class="ui-state-default" style="padding: 5px;"><h:outputText value="1ST/2ND" /></th>
+									<th class="ui-state-default"><h:outputText value="3RD" /></th>
+									<th class="ui-state-default"><h:outputText value="4TH" /></th>
+									<th class="ui-state-default"><h:outputText value="SGL" /></th>
+									<th class="ui-state-default"><h:outputText value="3RD" /></th>
+									<th class="ui-state-default"><h:outputText value="4TH" /></th>
+									<th class="ui-state-default"><h:outputText value="INF" /></th>
+								</tr>
+							</thead>
+							<tbody class="ui-datatable-data ui-widget-content">
+								<ui:repeat var="cabinVO" value="#{cruiseBookingBean.tourDepVO.tourCruiseCabinList}">
+									<tr>
+										<td style="text-align: center; padding: 5px;">
+											<h:outputText value="#{cabinVO.cruiseCabinCd}"/>
+										</td>
+										<td style="text-align: center; padding: 5px;">
+											<h:outputText value="#{cabinVO.priceTwn}">
+												<f:convertNumber pattern="#,##0.00" />
+											</h:outputText>
+										</td>
+										<td style="text-align: center; padding: 5px;">
+											<h:outputText value="#{cabinVO.price3}">
+												<f:convertNumber pattern="#,##0.00" />
+											</h:outputText>
+										</td>
+										<td style="text-align: center; padding: 5px;">
+											<h:outputText value="#{cabinVO.price4}">
+												<f:convertNumber pattern="#,##0.00" />
+											</h:outputText>
+										</td>
+										<td style="text-align: center; padding: 5px;">
+											<h:outputText value="#{cabinVO.priceSgl}">
+												<f:convertNumber pattern="#,##0.00" />
+											</h:outputText>
+										</td>
+										<td style="text-align: center; padding: 5px;">
+											<h:outputText value="#{cabinVO.price3Chd}">
+												<f:convertNumber pattern="#,##0.00" />
+											</h:outputText>
+										</td>
+										<td style="text-align: center; padding: 5px;">
+											<h:outputText value="#{cabinVO.price4Chd}">
+												<f:convertNumber pattern="#,##0.00" />
+											</h:outputText>
+										</td>
+										<td style="text-align: center; padding: 5px;">
+											<h:outputText value="#{cabinVO.priceInf}">
+												<f:convertNumber pattern="#,##0.00" />
+											</h:outputText>
+										</td>
+									</tr>
+								</ui:repeat>
+							</tbody>
+						</table>
+				</div>
+				<h:outputText value="Remarks (Departure)" style="font-weight:bold;"/>
+					<br/>
+					<h:outputText
+						value="#{fn:replace(cruiseBookingBean.tourDepVO.fullRemarks, '\\n', '&lt;br/&gt;')}"
+						escape="false" style="font-size:10px;"
+						rendered="#{not empty cruiseBookingBean.tourDepVO.invRemarks}" />
+					<br /><br />
+					<h:outputText value="Remarks (Package)" style="font-weight:bold;"/>
+					<br/>
+					<h:outputText
+						value="#{fn:replace(cruiseBookingBean.tourPkgVO.fullRemarks, '\\n', '&lt;br/&gt;')}"
+						escape="false" style="font-size:10px;"
+						rendered="#{not empty cruiseBookingBean.tourPkgVO.fullRemarks}" />
+					<br /> <br />
+				<h:outputText value="Cruise" style="font-weight:bold;"/>
+				<div class="ui-datatable ui-widget">
+					<table>
+							<thead>
+								<tr>
+									<th class="ui-state-default" style="padding: 5px;">Port</th>
+									<th class="ui-state-default" style="padding: 5px;">Visa</th>
+									<th class="ui-state-default" style="padding: 5px;">A/C</th>
+									<th class="ui-state-default" style="padding: 5px;">Gratuities Fees</th>
+									<th class="ui-state-default" style="padding: 5px;">**Others</th>
+									<th class="ui-state-default" style="padding: 5px;">Port Tax</th>
+									<th class="ui-state-default" style="padding: 5px;">YQ &amp; Fuel</th>
+									<th class="ui-state-default" style="padding: 5px;">Travel<br />Insurance</th>
+									<th class="ui-state-default" style="padding: 5px;">Deviation</th>
+									<th class="ui-state-default" style="padding: 5px;">Total(RM)</th>
+									<!-- <th class="ui-state-default" style="padding: 5px;">Grp Tkt<br />Validity</th -->
+									
+								</tr>
+							</thead>
+							<tbody class="ui-datatable-data ui-widget-content">
+								<tr>
+									<td style="text-align: center; padding: 5px;"><h:outputText
+											value="#{cruiseBookingBean.tourDepVO.cruiseVO.code}" /></td>
+									<td style="text-align: center;"><h:outputText
+											value="#{cruiseBookingBean.tourDepVO.cruiseVisa}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText></td>
+									<td style="text-align: center;"><h:outputText
+											value="#{cruiseBookingBean.tourDepVO.cruiseAC}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText></td>
+									<td style="text-align: center;"><h:outputText
+											value="#{cruiseBookingBean.tourDepVO.cruiseTipping}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText></td>
+									<td style="text-align: center;"><h:outputText
+											value="#{cruiseBookingBean.tourDepVO.cruiseExtra}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText></td>
+									<td style="text-align: center;"><h:outputText
+											value="#{cruiseBookingBean.tourDepVO.cruiseAptAdt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText></td>
+									<td style="text-align: center;"><h:outputText
+											value="#{cruiseBookingBean.tourDepVO.cruiseYqAdt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText></td>
+									<td style="text-align: center;"><h:outputText
+											value="#{cruiseBookingBean.tourDepVO.cruiseTrvlIns}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText></td>
+									<td style="text-align: center;">
+										<h:outputText value="#{cruiseBookingBean.tourDepVO.cruiseDeviation}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</td>	
+									<td style="text-align: center;"><h:outputText
+											value="#{cruiseBookingBean.tourDepVO.cruiseTotAdt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText></td>
+								</tr>
+							</tbody>
+						</table>
+				</div>
+				<h:outputText value="Cruise Remarks:" style="font-size:11px; font-weight:bold;"/><br/>
+				<h:outputText value="#{cruiseBookingBean.tourDepVO.cruiseScheduleVO.remarks}" style="font-size:11px;"/>
+				<br/>
+				<br/>
+				<h:outputText value="**Others:" style="font-size:11px; font-weight:bold;"/>
+					<br />
+					<p:panelGrid style="width:400px;">
+						<c:if test="#{not empty cruiseBookingBean.tourDepVO.cruiseScheduleVO.extraItemChargeList}">
+							<c:forEach
+								items="#{cruiseBookingBean.tourDepVO.cruiseScheduleVO.extraItemChargeList}"
+								var="chargeVO">
+								<p:row>
+									<p:column style="width:350px;">
+										<h:outputText value="#{chargeVO.typeDesc}" />
+									</p:column>
+									<p:column style="width:50px;">
+										<h:outputText value="#{chargeVO.amount}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</p:column>
+								</p:row>
+							</c:forEach>
+						</c:if>
+						<c:if test="#{not empty cruiseBookingBean.tourDepVO.extraItemChargeList}">
+							<c:forEach items="#{cruiseBookingBean.tourDepVO.extraItemChargeList}" var="extraVO">
+								<p:row>
+									<p:column style="width:550px;">
+										<h:outputText value="#{extraVO.desc}" />
+									</p:column>
+									<p:column style="width:50px;">
+										<h:outputText value="#{extraVO.amount}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</p:column>
+								</p:row>
+							</c:forEach>
+						</c:if>
+					</p:panelGrid>
+				<br/>
+				<c:if test="#{cruiseBookingBean.tourDepVO.isShowCruise ne null ? cruiseBookingBean.tourDepVO.isShowCruise : false}">
+				<h:outputText value="Flight Schedule (Subject to change)" style="font-weight:bold;"/>
+				<br/>
+				<h:outputText value="No flight schedule selected." style="color:#FF0000; font-size:10px;" rendered="#{empty cruiseBookingBean.tourDepVO.cruiseScheduleVO}"/>
+				<p:dataTable value="#{cruiseBookingBean.tourDepVO.cruiseScheduleVO.cruiseScheduleItemList}" var="itemVO" style="margin-bottom:5px;" rendered="#{not empty cruiseBookingBean.tourDepVO.cruiseScheduleVO}">
+					<p:column headerText="Seq" style="width:50px"><h:outputText value="#{itemVO.seq}"/></p:column>
+					<p:column headerText="Type" style="width:80px"><h:outputText value="#{itemVO.typeCd}"/></p:column>
+					<p:column headerText="Dep Date" style="width:100px">
+						<h:outputText value="#{itemVO.departureDate}">
+							<f:convertDateTime pattern="dd-MMM-yyyy"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Arr Date" style="width:100px">
+						<h:outputText value="#{itemVO.arrivalDate}" >
+							<f:convertDateTime pattern="dd-MMM-yyyy"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Flight Code" style="width:80px"><h:outputText value="#{itemVO.flightCd}"/></p:column>
+					<p:column headerText="From" style="width:80px"><h:outputText value="#{itemVO.fromAirportCd}"/></p:column>
+					<p:column headerText="To" style="width:80px"><h:outputText value="#{itemVO.toAirportCd}"/></p:column>
+					<p:column headerText="ETD" style="width:80px"><h:outputText value="#{itemVO.etd}"/></p:column>
+					<p:column headerText="ETA" style="width:80px">
+						<h:outputText value="#{itemVO.eta}" rendered="#{not itemVO.isNextDay}"/>
+						<h:outputText value="#{itemVO.eta}+1" rendered="#{itemVO.isNextDay}"/>
+					</p:column>
+					<p:column headerText="Remarks" style="width:200px"><h:outputText value="#{itemVO.remarks}"/></p:column>
+				</p:dataTable>
+				<br/>
+				<br/>
+				</c:if>
+				<h:outputText value="Hotel Stay" style="font-weight:bold;"/>
+				<br/>
+				<h:outputText value="No hotel selected." style="color:#FF0000; font-size:10px;" rendered="#{empty cruiseBookingBean.tourDepVO.tourHotelList}"/>
+				<p:dataTable value="#{cruiseBookingBean.tourDepVO.tourHotelList}" var="vo" rendered="#{not empty cruiseBookingBean.tourDepVO.tourHotelList}">
+					<!--p:column headerText="No. of Nights" style="width:50px;"><h:outputText value="#{vo.nightNum}"/></p:column-->
+					<p:column headerText="From Date" style="width:100px;"><h:outputText value="#{vo.fromDate}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+					<p:column headerText="To Date" style="width:100px;"><h:outputText value="#{vo.toDate}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+					<p:column headerText="Hotel Name"><h:outputText value="#{vo.hotelVO.name}"/></p:column>
+					<p:column headerText="Stars"><h:outputText value="#{vo.hotelVO.starCd}"/></p:column>
+					<p:column headerText="Website"><h:outputText value="#{vo.hotelVO.website}"/></p:column>
+				</p:dataTable>
+				<!--br/>
+				<h:outputText value="Discount"/>&nbsp;&nbsp;
+				<h:outputText value="#{cruiseBookingBean.tourDepVO.tfairDiscount}"><f:convertNumber pattern="RM#,##0.00"/></h:outputText-->
+				<br/><br/>
+				<h:outputText value="Itinerary" style="font-weight:bold;"/>
+				<p:panelGrid>
+					<c:forEach items="#{cruiseBookingBean.tourDepVO.tourItineryList}" var="itineryVO">
+						<p:row>
+							<p:column style="width:100px;">
+								<h:outputText value="English" rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'EN'}"/>
+								<h:outputText value="Chinese/Malay" rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'ZH'}"/>
+							</p:column>
+							<p:column>
+								<h:outputLink target="_blank" value="#{request.contextPath}#{itineryVO.path}/#{cruiseBookingBean.urlEncoder(itineryVO.name)}" rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'EN'}" style="color:#0040FF;"><h:outputText value="#{itineryVO.name}"/></h:outputLink>
+								<h:outputLink target="_blank" value="#{request.contextPath}#{itineryVO.path}/#{cruiseBookingBean.urlEncoder(itineryVO.name)}" rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'ZH'}" style="color:#0040FF;"><h:outputText value="#{itineryVO.name}"/></h:outputLink>
+							</p:column>
+						</p:row>
+					</c:forEach>
+				</p:panelGrid>
+				</div>
+				</p:panel>
+		</p:tab>
+		<p:tab id="idTabCms" title="Itinerary CMS" rendered="#{cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO ne null}">
+			<p:panel
+				header="#{cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.title}"
+				style="border:0;">
+				<div style="height: 450px; overflow: auto;">
+					<p:panelGrid id="idPanelDailyItineraryItem">
+						<p:row>
+							<p:column>
+								<p:selectOneButton value="#{cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.langCd}">
+									<f:selectItem itemLabel="ENGLISH" itemValue="ENG" />
+									<f:selectItem itemLabel="CHINESE" itemValue="ZH" />
+									<p:ajax global="false"
+										update=":idTourDepMoreInfoForm:idTab:idTableDailyItineraryItem" />
+								</p:selectOneButton>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+		
+					<p:dataTable id="idTableDailyItineraryItem"
+						value="#{cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.langCd eq 'ENG' ? cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.dailyItineraryItemEngVOList : cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.dailyItineraryItemZhVOList}"
+						var="subVo" style="margin: 10px; width: 1100px;" rows="10" paginator="true"
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+						rowsPerPageTemplate="10,15,20">
+						<p:column headerText="Seq" style="width:50px; text-align:center;">
+							<h:outputText value="#{subVo.seq}" />
+						</p:column>
+						<p:column headerText="Title" style="width:200px;">
+							<h:outputText value="#{subVo.title}" escape="false"/>
+						</p:column>
+						<p:column headerText="Hotel" style="width:200px;">
+							<h:outputText value="#{subVo.hotel}" escape="true" style="white-space: pre-wrap"/>
+						</p:column>
+						<p:column headerText="Meals" style="width:200px;">
+							<h:outputText value="#{subVo.meals}" escape="true" style="white-space: pre-wrap"/>
+						</p:column>
+						<p:column headerText="Description">
+							<h:outputText value="#{subVo.description}" escape="false"/>
+						</p:column>
+						<p:column headerText="Remark" style="width:200px">
+							<h:outputText value="#{subVo.remarks}" escape="true" style="white-space: pre-wrap"/>
+						</p:column>
+					</p:dataTable>
+					
+					<br />
+					<br />
+					<h:outputText value="Itinerary" />
+					<p:panelGrid>
+						<p:row>
+							<p:column style="width:100px;">
+								<h:outputText value="English" />
+							</p:column>
+							<p:column>
+								<c:if test="#{not empty cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.pkgItineryMap['DAILY_ITINERARY_CUSTEN'].name}">
+									<h:outputLink target="_blank"
+										value="#{request.contextPath}#{cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.pkgItineryMap['DAILY_ITINERARY_CUSTEN'].path}/#{cruiseBookingBean.urlEncoder(cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.pkgItineryMap['DAILY_ITINERARY_CUSTEN'].name)}"
+										style="color:#0040FF;">
+										<h:outputText value="#{cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.pkgItineryMap['DAILY_ITINERARY_CUSTEN'].name}" />
+									</h:outputLink>
+								</c:if>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column style="width:100px;">
+								<h:outputText value="Chinese/Malay" />
+							</p:column>
+							<p:column>
+								<c:if test="#{not empty cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.pkgItineryMap['DAILY_ITINERARY_CUSTZH'].name}">
+									<h:outputLink target="_blank"
+										value="#{request.contextPath}#{cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.pkgItineryMap['DAILY_ITINERARY_CUSTZH'].path}/#{cruiseBookingBean.urlEncoder(cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.pkgItineryMap['DAILY_ITINERARY_CUSTZH'].name)}"
+										style="color:#0040FF;">
+										<h:outputText value="#{cruiseBookingBean.tourDepVO.tourPackageDailyItineraryVO.pkgItineryMap['DAILY_ITINERARY_CUSTZH'].name}" />
+									</h:outputLink>
+								</c:if>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</div>
+			</p:panel>
+		</p:tab>
+	</p:tabView>
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBookingBean.resetForm}" onclick="varTourDepMoreInfoDialog.hide()"/>
+	</h:panelGrid>
+</ui:composition>

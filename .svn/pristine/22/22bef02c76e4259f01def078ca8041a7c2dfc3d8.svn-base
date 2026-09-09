@@ -1,0 +1,712 @@
+<!-- Backup of previous design of split panel -->
+
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<p:growl id="msg" />
+
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varSplitPaxStatementDialog.show();
+			} else {
+				varSplitPaxStatementDialog.hide();
+			}
+		}
+	</script>
+	
+	<style>
+		.panel-grid-table tr, .panel-grid-table td {
+			border: 1px solid #ddd !important;
+			
+			.right-black-border {
+				border-right-color: #000 !important;
+			}
+		}
+		
+		.panel-grid-table tr:last-child td, 
+		.panel-grid-table tr:nth-last-child(2) td {
+			background: #F89880 url() 50% 50% repeat-x;
+			border: 1px solid #ff4d00 !important;
+			border-top: 1px solid #ddd !important;
+		}
+		
+		.panel-grid-table tr:first-child td,
+		.panel-grid-table tr:nth-child(2) td {
+			background: #F89880 url() 50% 50% repeat-x;
+			border: 1px solid #ff4d00 !important;
+		}
+		
+		.panel-grid-table td:nth-child(1) {
+			word-wrap: normal !important;
+			text-wrap: nowrap !important;
+		}
+		
+		.panel-grid-table tr:nth-child(even) {
+			background: #fbf7df;
+		}
+		
+		/**** idInvoiceItemTable3 ****/
+		
+		.nowrap {
+			word-wrap: normal !important;
+			text-wrap: nowrap !important; 
+		}
+		
+		.panel-grid-table3 tr:nth-child(even) {
+			background: #fbf7df;
+		}
+		
+		.panel-grid-table3 tr, .panel-grid-table3 td {
+			border: 1px solid #ddd !important;
+			text-align: center;
+			
+			.right-black-border {
+				border-right-color: #000 !important;
+			}
+		}
+		
+		.panel-grid-table3 tr:nth-child(3n+5) td:not(:nth-child(-n+1)) {
+			border-bottom: 1px solid #000 !important;
+		}  
+		
+		/* footer */
+		.panel-grid-table3 tr:last-child td/* , 
+		.panel-grid-table3 tr:nth-last-child(2) td */ {
+			background: #F89880 url() 50% 50% repeat-x;
+			border: 1px solid #ff4d00 !important;
+			border-top: 1px solid #ddd !important;
+		}
+		
+		/* header */
+		.panel-grid-table3 tr:first-child td /* , 
+		.panel-grid-table3 tr:nth-child(2) td */ {
+			background: #F89880 url() 50% 50% repeat-x;
+			border: 1px solid #ff4d00 !important;
+		}
+		
+		/* header border-bottom */
+		.panel-grid-table3 tr:nth-child(3) td {
+			border-top: 1px solid #ff4d00 !important;
+		}
+		
+		/* first column, second column */
+		.panel-grid-table3 td:first-child,
+		.panel-grid-table3 tr:nth-child(3n) td:nth-child(2) {
+			background: #F89880 url() 50% 50% repeat-x;
+			border: 1px solid #ff4d00 !important;
+		}
+		
+		/**** idInvoiceItemTable3 ****/
+		
+		.custom-scroll-panel {
+			overflow: auto;
+		}
+		
+		.light-yellow {
+    		background: #fbf7df !important;
+  		}
+  		
+  		input[type=number]::-webkit-inner-spin-button,
+	    input[type=number]::-webkit-outer-spin-button {
+	        -webkit-appearance: none;
+	        margin: 0;
+	    }
+	</style>
+
+	<p:tabView id="idTab" styleClass="custom-scroll-panel" activeIndex="#{salesBean.activeTab}" dynamic="true" cache="false">
+	
+		<p:ajax event="tabChange" update=":idSplitPaxStatementForm:idTab :idSplitPaxStatementForm:msg" />
+		
+		<p:tab title="Invoice Details" >		
+			<!-- <p:dataTable style="margin-bottom: 10px;" value="#{salesBean.splitInvoiceList}" var="vo">
+				<p:column headerText="Header">#{vo.code}</p:column>
+				<p:column headerText="Header">#{vo.code}</p:column>
+				<p:column headerText="Header">#{vo.code}</p:column>
+				<p:columnGroup type="footer">
+					<p:row>
+						<p:column>666</p:column>
+						<p:column>666</p:column>
+						<p:column>666</p:column>
+					</p:row>
+					<p:row>
+						<p:column>666</p:column>
+						<p:column>666</p:column>
+						<p:column>666</p:column>
+					</p:row>
+				</p:columnGroup>
+			</p:dataTable>	 -->
+			
+			<!-- <p:dataTable value="#{}"></p:dataTable> -->
+			
+			<h:panelGrid columns="2" style="width: 1px; margin-bottom: 10px">
+				<p:commandButton id="idBtnNext1" value="Next"
+					process="@this"
+					update=":idSplitPaxStatementForm:idTab :idSplitPaxStatementForm:msg"
+					actionListener="#{salesBean.setActiveTab(salesBean.activeTab + 1, true)}">
+				</p:commandButton>
+			</h:panelGrid>
+			
+			<p:panelGrid id="idInvoiceItemTable3" styleClass="panel-grid-table3" style="width:100%">
+				<!-- Header -->
+				<p:row>
+					<p:column colspan="2">Items</p:column>
+					<p:column>Original</p:column>
+					<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+						<p:column styleClass="nowrap">Pax Stmt #{invoiceVO.code}</p:column>
+					</c:forEach>
+					<p:column>Actual</p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="2">Quantity Controller</p:column>
+					<p:column></p:column>
+					<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+						<p:column>
+							<p:inputText value="#{invoiceVO.numOfPax}" styleClass="txt_center" type="number" style="width:20px;">
+								<p:ajax event="change" 
+									listener="#{salesBean.onChangeItemPax(invoiceVO)}"
+									update=":idSplitPaxStatementForm:idTab" />
+							</p:inputText>
+						</p:column>
+					</c:forEach>
+					<p:column></p:column>
+				</p:row>
+				<c:forEach items="#{salesBean.invoiceVO.invoiceItemList}" var="vo" varStatus="loop">
+					<p:row>
+						<p:column width="200" rowspan="3" styleClass="txt_center" >
+							#{vo.desc}
+						</p:column>
+						<p:column width="30" styleClass="txt_center">Qty</p:column>
+						<p:column>#{salesBean.invoiceVO.invoiceItemList[loop.index].qty}</p:column>
+						<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+							<!-- <p:column>#{invoiceVO.invoiceItemList[loop.index].qty}</p:column> -->
+							<p:column>
+								<p:inputText value="#{invoiceVO.invoiceItemList[loop.index].qty}" type="number" styleClass="txt_center" style="width:20px;">
+									<p:ajax event="change" 
+										listener="#{salesBean.onChangeSubItem(invoiceVO.invoiceItemList[loop.index])}"
+										update=":idSplitPaxStatementForm:idTab" />
+										
+									<!-- <p:ajax event="change" 
+										listener="#{salesBean.onUpdateAjax(event, invoiceVO.invoiceItemList[loop.index])}"
+										update=":idSplitPaxStatementForm:idTab:idInvoiceItemTable3"
+										process=":idSplitPaxStatementForm:idTab:idInvoiceItemTable3,@this" /> -->
+								</p:inputText>
+							</p:column>
+						</c:forEach>
+						<p:column>#{salesBean.summaryInvoiceVO.invoiceItemList[loop.index].qty}</p:column>
+					</p:row>
+					<p:row>
+						<p:column width="70" styleClass="txt_center nowrap">Unit Price</p:column>
+						<p:column>#{salesBean.invoiceVO.invoiceItemList[loop.index].unitPrice}</p:column>
+						<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+							<p:column>#{invoiceVO.invoiceItemList[loop.index].unitPrice}</p:column>
+						</c:forEach>
+						<p:column></p:column>
+					</p:row>
+					<p:row>
+						<p:column width="70" styleClass="txt_center">Amount</p:column>
+						<p:column>#{salesBean.invoiceVO.invoiceItemList[loop.index].amount}</p:column>
+						<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+							<p:column>#{invoiceVO.invoiceItemList[loop.index].amount}</p:column>
+						</c:forEach>
+						<p:column>#{salesBean.summaryInvoiceVO.invoiceItemList[loop.index].amount}</p:column>
+					</p:row>
+				</c:forEach>
+				
+				<p:row>
+					<p:column colspan="2">Total</p:column>
+					<p:column>#{salesBean.invoiceVO.amount}</p:column>
+					<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+						<p:column>#{invoiceVO.amount}</p:column>
+					</c:forEach>
+					<p:column>#{salesBean.summaryInvoiceVO.amount}</p:column>
+				</p:row>
+				<!-- <p:row>
+					<p:column colspan="2">Items</p:column>
+					<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+						<p:column>#{invoiceVO.amount}</p:column>
+					</c:forEach>
+				</p:row> -->
+			</p:panelGrid>
+			
+			<p:panelGrid id="idInvoiceItemTable2" styleClass="panel-grid-table" style="width:20px; display: none">
+				<!-- Header -->
+				<p:row>
+			 		<p:column rowspan="2">Pax Stmt</p:column>
+			 		<p:column rowspan="2" width="45" styleClass="right-black-border">Total Amount</p:column>
+			 		<c:forEach items="#{salesBean.invoiceVO.invoiceItemList}" var="vo">
+					    <p:column colspan="3" style="word-wrap: break-word; white-space: normal; text-align: center" styleClass="right-black-border">#{vo.desc}</p:column>
+					</c:forEach>
+			 	</p:row>
+			 	<p:row>
+			 		<c:forEach items="#{salesBean.invoiceVO.invoiceItemList}" var="vo">
+					    <p:column width="30" styleClass="txt_center">Qty</p:column>
+					    <p:column width="70" styleClass="txt_center">Unit Price</p:column>
+					    <p:column width="70" styleClass="right-black-border txt_center">Amount</p:column>
+					</c:forEach>
+			 	</p:row>
+			 	<!-- Body -->
+				<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+					<p:row>
+						<p:column styleClass="right-black-border">
+							<h:outputText value="Pax Stmt #{invoiceVO.code}"  />
+						</p:column>
+						<p:column styleClass="right-black-border">
+							<h:outputText value="#{invoiceVO.amount}"/>
+						</p:column>
+						<c:forEach items="#{invoiceVO.invoiceItemList}" var="vo">
+							<p:column width="30">
+						    	<p:inputText value="#{vo.qty}" style="width:20px;">
+									<p:ajax event="change" 
+									listener="#{salesBean.onChangeSubItem(vo)}"
+									update=":idSplitPaxStatementForm:idTab:idInvoiceItemTable2"
+									process=":idSplitPaxStatementForm:idTab:idInvoiceItemTable2,@this" />
+								</p:inputText>
+						    </p:column>
+						    <p:column width="70">
+						    	<!-- <p:inputText value="#{vo.unitPrice}" style="width:60px;">
+									<f:convertNumber pattern="#,##0.00" />
+									<p:ajax event="change" 
+									listener="#{salesBean.onChangeSubItem(vo)}"
+									update=":idSplitPaxStatementForm:idTab:idInvoiceItemTable2"
+									process=":idSplitPaxStatementForm:idTab:idInvoiceItemTable2" />
+								</p:inputText> -->
+								<h:outputText value="#{vo.unitPrice}"/>
+						    </p:column>
+						    <p:column width="70" styleClass="right-black-border">
+						    	<!-- <p:inputText value="#{vo.amount}" style="width:60px;">
+									<f:convertNumber pattern="#,##0.00" />
+									<p:ajax event="change"  />
+								</p:inputText> -->
+								<h:outputText value="#{vo.amount}"/>
+						    </p:column>
+						</c:forEach>
+					</p:row>
+				</c:forEach>
+				<!-- Footer -->
+				<p:row>
+					<p:column>Original Amount</p:column>
+					<p:column styleClass="right-black-border">#{salesBean.invoiceVO.amount}</p:column>
+			 		<c:forEach items="#{salesBean.invoiceVO.invoiceItemList}" var="vo">
+					    <p:column width="30" styleClass="txt_center">#{vo.qty}</p:column>
+					    <p:column width="70" styleClass="txt_center">#{vo.unitPrice}</p:column>
+					    <p:column width="70" styleClass="txt_center right-black-border">#{vo.amount}</p:column>
+					</c:forEach>
+			 	</p:row>
+			 	<p:row>
+					<p:column>Actual Amount</p:column>
+					<p:column styleClass="right-black-border">#{salesBean.summaryInvoiceVO.amount}</p:column>
+			 		<c:forEach items="#{salesBean.summaryInvoiceVO.invoiceItemList}" var="vo">
+					    <p:column width="30" styleClass="txt_center">#{vo.qty}</p:column>
+					    <p:column width="70" styleClass="txt_center"></p:column>
+					    <p:column width="70" styleClass="txt_center right-black-border">#{vo.amount}</p:column>
+					</c:forEach>
+			 	</p:row>
+			</p:panelGrid>
+		
+			<!-- <p:dataTable id="idInvoiceItemTable" scrollable="true" scrollWidth="1000"
+				rowIndexVar="rowIndex" rowKey="#{rowIndex}"
+				value="#{salesBean.splitInvoiceList}" var="invoiceVO">
+				 <p:columnGroup type="header">
+				 	<p:row>
+				 		<p:column headerText="Sub" rowspan="2" width="45"></p:column>
+				 		<c:forEach items="#{invoiceVO.invoiceItemList}" var="vo">
+						    <p:column headerText="#{vo.desc}" colspan="3" style="word-wrap: break-word; white-space: normal;"></p:column>
+						</c:forEach>
+				 	</p:row>
+				 	<p:row>
+				 		<c:forEach items="#{invoiceVO.invoiceItemList}" var="vo">
+						    <p:column headerText="Qty" width="30"></p:column>
+						    <p:column headerText="Unit" width="70"></p:column>
+						    <p:column headerText="Price" width="70"></p:column>
+						</c:forEach>
+				 	</p:row>
+				 </p:columnGroup>
+				
+				<p:column width="45">
+					<h:outputText value="Sub #{invoiceVO.code}" style="word-wrap: break-word; white-space: normal;"/>
+				</p:column>
+				
+				<c:forEach items="#{invoiceVO.invoiceItemList}" var="vo" varStatus="loop">
+				    <p:column width="30">
+				    	<p:inputText id="idQty" value="#{vo.qty}" style="width:20px;">
+							<p:ajax event="change" 
+							listener="#{salesBean.onChangeSubItem(vo)}"
+							update=":idSplitPaxStatementForm:idTab:idInvoiceItemTable,@this,@parent,@form"
+							process=":idSplitPaxStatementForm:idTab:idInvoiceItemTable,@form,:idSplitPaxStatementForm,:idSplitPaxStatementForm:idTab"
+							oncomplete="console.log(#{vo.qty})" immediate="true" />
+						</p:inputText>
+				    </p:column>
+				    <p:column width="70">
+				    	<p:inputText value="#{vo.unitPrice}" style="width:60px;">
+							<f:convertNumber pattern="#,##0.00" />
+							<p:ajax event="change" process=":idSplitPaxStatementForm:idTab:idInvoiceItemTable" />
+						</p:inputText>
+				    </p:column>
+				    <p:column width="70">
+				    	<p:inputText value="#{vo.amount}" style="width:60px;">
+							<f:convertNumber pattern="#,##0.00" />
+							<p:ajax event="change" process=":idSplitPaxStatementForm:idTab:idInvoiceItemTable" />
+						</p:inputText>
+				    </p:column>
+				</c:forEach>
+				
+				<p:columns value="#{invoiceVO.invoiceItemList}" var="vo"  width="212" columnIndexVar="colIndex">
+					
+					<p:inputText id="id1" value="#{vo.qty}" style="width:20px;">
+						<p:ajax event="change" 
+							process=":idSplitPaxStatementForm:idTab:idInvoiceItemTable" 
+							update="id1 id3"
+							listener="#{salesBean.onChangeSubItem(vo)}" />
+					</p:inputText>
+				
+					<p:inputText value="#{vo.unitPrice}" style="width:70px; margin-left:16px;">
+						<f:convertNumber pattern="#,##0.00" />
+						<p:ajax event="change" 
+							process=":idSplitPaxStatementForm:idTab:idInvoiceItemTable" 
+							update="@this @parent"
+							listener="#{salesBean.onChangeSubItem(vo)}"
+							 />
+					</p:inputText>
+				
+					<p:inputText id="id3" value="#{vo.amount}" style="width:70px; margin-left:6px;">
+						<f:convertNumber pattern="#,##0.00" />
+						<p:ajax event="change" 
+							process=":idSplitPaxStatementForm:idTab:idInvoiceItemTable"
+							 />
+					</p:inputText>
+					
+				</p:columns>
+				
+				
+			</p:dataTable> -->
+			
+			<h:panelGrid columns="2" style="width: 1px; margin-top: 20px">
+				<p:commandButton value="Next"
+					process="@this"
+					update=":idSplitPaxStatementForm:idTab :idSplitPaxStatementForm:msg"
+					actionListener="#{salesBean.setActiveTab(salesBean.activeTab + 1, true)}">
+				</p:commandButton>
+			</h:panelGrid>
+		</p:tab>
+		<p:tab title="Passengers">
+		
+			<h:panelGrid columns="2" style="width: 1px; margin-bottom: 10px">
+				<p:commandButton value="Previous"
+					process="@this"
+					update=":idSplitPaxStatementForm:idTab :idSplitPaxStatementForm:msg"
+					actionListener="#{salesBean.setActiveTab(salesBean.activeTab - 1, true)}">
+				</p:commandButton>
+				<p:commandButton value="Next"
+					process="@this"
+					update=":idSplitPaxStatementForm:idTab :idSplitPaxStatementForm:idTab:idInvoicePaxTable :idSplitPaxStatementForm:msg"
+					actionListener="#{salesBean.setActiveTab(salesBean.activeTab + 1, true)}">
+				</p:commandButton>
+			</h:panelGrid>
+
+			<p:panelGrid id="idInvoicePaxTable" style="width: 20px">
+				<p:row>
+					<c:forEach items="#{salesBean.splitInvoiceList}" var="vo">
+					    <p:column>
+					        <h:outputLabel value="Pax Stmt #{vo.code}"/>                     
+					    </p:column>
+					    <!-- <p:column></p:column> -->
+					</c:forEach>
+				</p:row>
+				<p:row>
+					<c:forEach items="#{salesBean.splitInvoiceList}" var="vo">
+					    <p:column>
+					        <p:inputText label="Customer Details" value="#{vo.custDetailsVO.companyName}"
+								readonly="true" style="background:#ccc" rendered="#{vo.custDetailsVO.custType == 'C'}"/>
+							<p:inputText label="Customer Details"
+								value="#{vo.custDetailsVO.contPersonName}"
+								readonly="true" style="background:#ccc" rendered="#{vo.custDetailsVO.custType != 'C'}"/>
+							&nbsp;
+							<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.onSelectSplitCust(vo)}" oncomplete="varSplitCustListDialog.show()" update=":idSplitCustListDialog" process="@this"/>
+							&nbsp;
+							<p:commandButton icon="ui-icon-refresh" widgetVar="varRefreshCustDetails" actionListener="#{salesBean.loadNewCustomer(custBean.custDetailsVO)}" update=":idAddInvoiceForm:idCustDetails,:idAddInvoiceForm:idAttTo, :idAddInvoiceForm:idTotalUPoint, :idAddInvoiceForm:idTotalVoucher" process="@this" style="display:none;" />
+							<p:commandButton icon="ui-icon-plus" process="@this"
+								 actionListener="#{custBean.onCustomerSelected(salesBean.isAddNewCust(true), null)}" oncomplete="varEditCustDialog.show()" update=":idEditCustDialog" style="display:none;" />&nbsp;
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{custBean.onCustomerSelected(salesBean.isAddNewCust(false), salesBean.custDetailsVO.custId)}" process="@this" update=":idEditCustDialog" oncomplete="varEditCustDialog.show()" rendered="#{salesBean.custDetailsVO.custId ne null}" disabled="#{salesBean.disableEditCustomer}" style="display:none;" />&nbsp;
+							<p:commandButton icon="ui-icon-info" actionListener="#{custBean.onOnlineBookingCustomerSelected(salesBean.invoiceVO.bookingId)}" process="@this" update=":idOnlineBookingCustDialog" oncomplete="varOnlineBookingCustDialog.show()" rendered="#{salesBean.invoiceVO.orderCd eq 'online_booking'}"/>
+						                  
+					    </p:column>
+					</c:forEach>
+				</p:row>
+				<p:row>
+				<!-- <p:column>
+				<p:selectCheckboxMenu id="Sdsvs"  label="Passenger List"
+								style="vertical-align:middle; white-space: nowrap;"
+								
+								
+								filter="true" filterMatchMode="contains">
+								<f:selectItems value="#{salesBean.invoiceVO.invoicePaxList}"
+									var="invoicePaxVO" itemValue="#{invoicePaxVO.id}" 
+									itemLabel="#{bterp:lookupItemDesc('salutatn', invoicePaxVO.custDetailsVO.salutation)} #{invoicePaxVO.custDetailsVO.lastName} #{invoicePaxVO.custDetailsVO.firstName}" />
+								<p:ajax event="change" process="@this" update="Sdsvs"></p:ajax>
+							</p:selectCheckboxMenu>  
+							</p:column> -->
+							
+					<c:forEach items="#{salesBean.splitInvoiceList}" var="vo">
+					    <p:column>
+					        <p:selectCheckboxMenu id="idMenu#{vo.code}" label="Passenger List"
+								style="vertical-align:middle; white-space: nowrap;"
+								value="#{vo.selectedPaxIds}"
+								onHide="executeOnClassOnhide();"
+								filter="true" filterMatchMode="contains">
+								<f:selectItems value="#{salesBean.invoiceVO.invoicePaxList}"
+									var="invoicePaxVO" itemValue="#{invoicePaxVO.id}" 
+									itemDisabled="#{not salesBean.canSelectSplitPax(vo, invoicePaxVO)}"
+									itemLabel="#{bterp:lookupItemDesc('salutatn', invoicePaxVO.custDetailsVO.salutation)} #{invoicePaxVO.custDetailsVO.lastName} #{invoicePaxVO.custDetailsVO.firstName}" />
+								<!-- <p:ajax event="change" process="@this" update="@this"></p:ajax> -->
+							</p:selectCheckboxMenu>  
+							
+							<p:remoteCommand name="executeOnClassOnhide"
+								actionListener="#{salesBean.onChangeSubPax}"
+								update=":idSplitPaxStatementForm:idTab:idInvoicePaxTable" />
+							 
+					    </p:column>
+					    
+					</c:forEach>
+					
+				</p:row>
+				<p:row>
+					<c:forEach items="#{salesBean.splitInvoiceList}" var="vo">
+						<p:column style="vertical-align: top; white-space: nowrap;">
+					    	<c:forEach items="#{vo.invoicePaxList}" var="invoicePaxVO">
+					    		<h:outputText value="#{bterp:lookupItemDesc('salutatn', invoicePaxVO.custDetailsVO.salutation)} #{invoicePaxVO.custDetailsVO.lastName} #{invoicePaxVO.custDetailsVO.firstName}"></h:outputText>
+					    		<br />
+					    	</c:forEach>
+					    </p:column>
+					   </c:forEach>
+				</p:row>
+			</p:panelGrid>
+			
+			<!-- <p:dataTable id="idInvoicePaxTable" scrollable="true" scrollWidth="1000"
+				rowIndexVar="rowIndex" rowKey="#{invoiceVO.code}"
+				 var="invoiceVO" editable="true">
+				
+   				<p:columns value="#{salesBean.splitInvoiceList}" var="vo" width="100">
+					<f:facet name="header">
+						<h:outputText id="idHeader" value="#{vo.code}" style="word-wrap: break-word; white-space: normal;">
+							<p:tooltip for="idHeader">#{vo.code}</p:tooltip>
+						</h:outputText>
+					</f:facet> 
+					
+					<p:inputText  >
+						888
+					</p:inputText>
+				</p:columns>
+			</p:dataTable> -->
+			
+			<h:panelGrid columns="2" style="width: 1px; margin-top: 20px">
+				<p:commandButton value="Previous"
+					update=":idSplitPaxStatementForm:idTab :idSplitPaxStatementForm:msg"
+					actionListener="#{salesBean.setActiveTab(salesBean.activeTab - 1, true)}">
+				</p:commandButton>
+				<p:commandButton value="Next"
+					update=":idSplitPaxStatementForm:idTab :idSplitPaxStatementForm:idTab:idInvoicePaxTable :idSplitPaxStatementForm:msg"
+					actionListener="#{salesBean.setActiveTab(salesBean.activeTab + 1, true)}">
+				</p:commandButton>
+			</h:panelGrid>
+		</p:tab>
+		<p:tab title="Invoice Payment">
+			<!-- <p:commandButton style="margin-bottom: 15px;" actionListener="#{salesBean.onChangeSubPayment}" update=":idSplitPaxStatementForm:idTab:idInvoicePaymentTable" value="Calculate Total"></p:commandButton>
+			<p:outputLabel>Click this button to calculate total of payment amount</p:outputLabel> -->
+			
+			<p:panelGrid id="idInvoicePaymentTable2" styleClass="panel-grid-table" style="width:20px">
+				<p:row>
+			 		<p:column width="45">Pax Stmt</p:column>
+			 		<p:column width="45">Total Amount Paid</p:column>
+			 		<c:forEach items="#{salesBean.invoiceVO.invoicePaymentList}" var="vo" varStatus="loop">
+					    <p:column style="text-align: center">Payment # #{loop.index + 1}</p:column>
+					</c:forEach>
+			 	</p:row>
+			 	<p:row></p:row>
+				<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+					<p:row>
+						<p:column width="45">
+							<h:outputText value="Pax Stmt #{invoiceVO.code}" style="word-wrap: break-word; white-space: normal;"/>
+						</p:column>
+						<p:column>
+							<h:outputText value="#{invoiceVO.amtPaid}"/>
+						</p:column>
+						<c:forEach items="#{invoiceVO.invoicePaymentList}" var="vo">
+							<p:column>
+								<p:inputText value="#{vo.amount}" style="width:70px;" type="number">
+									<p:ajax event="change" 
+										update=":idSplitPaxStatementForm:idTab"
+										listener="#{salesBean.onChangeSubPayment}"
+										 />
+								</p:inputText>
+							</p:column>
+						</c:forEach>
+					</p:row>
+				</c:forEach>
+				<p:row>
+					<p:column>Original Amount</p:column>
+					<p:column>#{salesBean.invoiceVO.amtPaid}</p:column>
+			 		<c:forEach items="#{salesBean.invoiceVO.invoicePaymentList}" var="vo">
+					    <p:column style="text-align: center">#{vo.amount}</p:column>
+					</c:forEach>
+			 	</p:row>
+			 	<p:row>
+					<p:column>Actual Amount</p:column>
+					<p:column>#{salesBean.summaryInvoiceVO.amtPaid}</p:column>
+			 		<c:forEach items="#{salesBean.summaryInvoiceVO.invoicePaymentList}" var="vo">
+					    <p:column style="text-align: center">#{vo.amount}</p:column>
+					</c:forEach>
+			 	</p:row>
+			</p:panelGrid>
+			
+			<!-- <p:dataTable id="idInvoicePaymentTable" scrollable="true" scrollWidth="1000" 
+				rowIndexVar="rowIndex" rowKey="#{invoiceVO.code}"
+				value="#{salesBean.splitInvoiceList}" var="invoiceVO">
+				<p:column headerText="Pax Stmt" width="45">
+					<h:outputText value="Pax Stmt #{invoiceVO.code}" style="word-wrap: break-word; white-space: normal;"/>
+				</p:column>
+				<p:column headerText="Total" width="45">
+					<h:outputText value="#{invoiceVO.amtPaid}"/>
+				</p:column>
+				
+   				<p:columns value="#{invoiceVO.invoicePaymentList}" var="vo" width="100" columnIndexVar="itemIndex">
+					<f:facet name="header">
+						<h:outputText id="idHeader" value="Payment # #{itemIndex + 1}" style="word-wrap: break-word; white-space: normal;">
+							<p:tooltip for="idHeader">#{itemIndex + 1}</p:tooltip>
+						</h:outputText>
+					</f:facet> 
+					
+					<p:inputText value="#{vo.amount}" style="width:60px;" >
+						<f:convertNumber pattern="#,##0.00" />
+						<p:ajax event="change" 
+							
+							listener="#{salesBean.onChangeSubPayment}"
+							process=":idSplitPaxStatementForm:idTab:idInvoicePaymentTable" />
+					</p:inputText>
+				</p:columns>
+				
+				<p:columnGroup type="footer">
+					<p:row>
+						<p:column width="45">Actual</p:column>
+						<p:column width="45">#{salesBean.summaryInvoiceVO.amtPaid}</p:column>
+						<c:forEach items="#{salesBean.summaryInvoiceVO.invoicePaymentList}" var="vo">
+			                <p:column width="100">#{vo.amount}</p:column>
+			            </c:forEach>
+					</p:row>
+					<p:row>
+						<p:column width="45">Original</p:column>
+						<p:column width="45">#{salesBean.invoiceVO.amtPaid}</p:column>
+						<c:forEach items="#{salesBean.invoiceVO.invoicePaymentList}" var="vo">
+			                <p:column>#{vo.amount}</p:column>
+			            </c:forEach>
+					</p:row>
+				</p:columnGroup>
+			</p:dataTable> -->
+			
+			<h:panelGrid columns="2" style="width: 1px; margin-top: 20px">
+				<p:commandButton value="Previous"
+					update=":idSplitPaxStatementForm:idTab :idSplitPaxStatementForm:msg"
+					actionListener="#{salesBean.setActiveTab(salesBean.activeTab - 1, true)}">
+				</p:commandButton>
+				<p:commandButton value="Next"
+					update=":idSplitPaxStatementForm:idTab :idSplitPaxStatementForm:msg"
+					actionListener="#{salesBean.setActiveTab(salesBean.activeTab + 1, true)}">
+				</p:commandButton>
+			</h:panelGrid>
+		</p:tab>
+		<p:tab title="Summary">
+			<c:forEach items="#{salesBean.splitInvoiceList}" var="invoiceVO">
+				<p:panel header="Pax Statement #{invoiceVO.code}" toggleable="true" collapsed="true" style="margin-top: 10px">
+					<p:dataTable value="#{invoiceVO.invoiceItemList}" var="invoiceItemVO" paginator="true" rows="20"
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50, 100">
+						<f:facet name="header">
+				            Invoice Details
+				        </f:facet>
+						<p:column headerText="Description" style="width:250px;">
+							<h:outputText value="#{invoiceItemVO.desc}"/>
+						</p:column>
+						<p:column headerText="Qty">
+							<h:outputText value="#{invoiceItemVO.qty}"/>
+						</p:column>
+						<p:column headerText="Amount">
+							<h:outputText value="#{invoiceItemVO.amount}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>
+					</p:dataTable>
+					<p:dataTable style="margin-top: 10px" value="#{invoiceVO.invoicePaxList}" var="invoicePaxVO" paginator="true" rows="10" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50">
+						<f:facet name="header">
+				            Invoice Passengers
+				        </f:facet>
+						<p:column headerText="Name">
+							<h:outputText value="#{bterp:lookupItemDesc('salutatn', invoicePaxVO.custDetailsVO.salutation)} #{invoicePaxVO.custDetailsVO.lastName} #{invoicePaxVO.custDetailsVO.firstName}" />
+						</p:column>
+						<p:column headerText="Age">
+							<h:outputText value="#{invoicePaxVO.custDetailsVO.age}"/>
+						</p:column>
+					</p:dataTable>
+					<p:dataTable style="margin-top: 10px" value="#{invoiceVO.invoicePaymentList}" var="invPmntVO" paginator="true" rows="11" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50">
+						<f:facet name="header">
+				            Invoice Payments
+				        </f:facet>
+						<p:column headerText="Date">
+							<h:outputText value="#{invPmntVO.pmntDt}">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>
+							</h:outputText>
+						</p:column>
+						<p:column headerText="BD Date">
+							<h:outputText value="#{invPmntVO.cashBookDt}">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Payment Type">
+							<h:outputText value="#{bterp:lookupItemDesc('pymt_type', invPmntVO.pmntTypeCd)}"/>
+						</p:column>
+						<p:column headerText="Reference No">
+							<h:outputText value="#{invPmntVO.refNo}"/>
+						</p:column>
+						<p:column headerText="Payment For">
+							<h:outputText value="#{invPmntVO.pmntFor}"/>
+						</p:column>
+						<p:column headerText="Recieved From">
+							<h:outputText value="#{invPmntVO.recievedFr}"/>
+						</p:column>
+						<p:column headerText="Amount">
+							<!--h:outputText value="#{invPmntVO.amount}"/-->
+							<h:outputText value="#{invPmntVO.amount}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>
+					</p:dataTable>
+				</p:panel>
+			</c:forEach>
+			<h:panelGrid columns="2" style="width: 1px; margin-top: 15px">
+				<p:commandButton value="Previous"
+					update=":idSplitPaxStatementForm:idTab"
+					actionListener="#{salesBean.setActiveTab(salesBean.activeTab - 1, true)}">
+				</p:commandButton>
+				<p:column></p:column>
+				<p:commandButton value="#{msg['common.button.label.save']}"
+					update=":idSplitPaxStatementForm:msg"
+					actionListener="#{salesBean.splitPaxStatement}"
+					oncomplete="if (args &amp;&amp; !args.validationFailed) varSplitPaxStatementDialog.hide();" />
+				<p:commandButton value="#{msg['common.button.label.cancel']}"
+					process="@this"
+					oncomplete="varSplitPaxStatementDialog.hide();" />
+			</h:panelGrid>
+		</p:tab>
+	</p:tabView>
+</ui:composition>

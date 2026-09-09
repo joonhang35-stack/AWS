@@ -1,0 +1,288 @@
+<project name="bterp" default="build-war" basedir="../.">
+
+	<!-- compile pattern -->
+	<!--
+	
+	Compile war file (First time use)
+	ant -Dcust=aws -Dfullname="Apple Vacations Sdn Bhd" -Daccount=true -Dpayment=true build-war
+	ant -Dcust=ubingo -Dfullname="UbinGO Vacations Sdn Bhd" -Daccount=true -Dpayment=true build-war
+
+	ant -Dcust=aws -Dfullname="Apple Vacations Sdn Bhd" -Daccount=true -Dpayment=true patch-zip
+	ant -Dcust=ubingo -Dfullname="UbinGO Vacations Sdn Bhd" -Daccount=true -Dpayment=true patch-zip
+	
+	sample script to clone from awsdb to ubingodb
+	sed 's/,NO_AUTO_CREATE_USER//g' aws_20240404_030001_fulldata.sql > ubingo_20240404_030001_fulldata1.sql
+	sed 's/INFORMATION_SCHEMA/PERFORMANCE_SCHEMA/g' ubingo_20240404_030001_fulldata1.sql > ubingo_20240404_030001_fulldata2.sql
+	-->
+
+	<!-- build timestamp -->
+	<taskdef resource="net/sf/antcontrib/antlib.xml">
+		<classpath>
+			<pathelement location="${basedir}/lib/ant-contrib-1.0b3.jar" />
+		</classpath>
+	</taskdef>
+
+	<tstamp>
+		<format property="build.timestamp" pattern="yyMMddHHmmss" />
+	</tstamp>
+
+	<!-- ant properties -->
+	<loadproperties srcFile="build/config/build.properties" />
+	<property environment="env" />
+
+	<property name="src.java.dir" value="src" />
+	<property name="build.config.dir" value="build/config" />
+
+	<property name="build.dir" value="build" />
+	<property name="build.lib.dir" value="${build.dir}/lib" />
+	<property name="build.temp.dir" value="${build.dir}/temp" />
+	<property name="build.dist.dir" value="${build.dir}/dist" />
+	<property name="build.classes.dir" value="${build.dir}/classes" />
+
+	<property name="web.dir" value="webapp" />
+	<property name="web.inf.dir" value="${web.dir}/WEB-INF" />
+	<property name="web.lib.dir" value="${web.dir}/WEB-INF/lib" />
+	<property name="web.classes.dir" value="${web.dir}/WEB-INF/classes" />
+
+	<property name="dist.dir" value="${build.dir}/dist" />
+	<property name="dist.war.dir" value="${dist.dir}/${cust}-war" />
+	<property name="dist.temp.dir" value="${dist.dir}/${cust}-temp" />
+
+	<property name="dist.war.upload.dir" value="${dist.war.dir}/upload" />
+
+	<path id="app.classpath">
+		<fileset dir="${web.lib.dir}">
+			<include name="**/*" />
+		</fileset>
+		<fileset dir="${env.CATALINA_HOME}/lib">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<target name="load-properties">
+		<fail message="Customer name not set! Please set customer name [lohai, karihai, bloodyhai] (Example, -Dcust=lohai)" unless="cust" />
+		<property file="build/config/build-${cust}.properties" />
+		<echo>Loading properties file for environment [${cust}]</echo>
+	</target>
+
+	<target name="build-clean">
+		<delete dir="${build.lib.dir}" failonerror="false" />
+		<delete dir="${build.temp.dir}" failonerror="false" />
+		<delete dir="${build.deploy.dir}" failonerror="false" />
+		<delete dir="${build.classes.dir}" failonerror="false" />
+		<!-- delete dir="${dist.dir}" failonerror="false"/ -->
+	</target>
+
+	<target name="clean-temp">
+		<delete dir="${build.lib.dir}" failonerror="false" />
+	</target>
+
+	<target name="build-manifest" depends="build-clean">
+		<mkdir dir="${dist.temp.dir}" />
+		<manifest file="${dist.temp.dir}/MANIFEST.MF">
+			<attribute name="Implementation-Vendor" value="${app.vendor}" />
+			<attribute name="Implementation-Title" value="${app.name}" />
+			<attribute name="Implementation-Version" value="${app.version}-b${build.timestamp}" />
+			<attribute name="Class-Path" value="${app.manifest.classpath}" />
+		</manifest>
+	</target>
+
+	<target name="prepare-build-classes">
+		<native2ascii encoding="UTF-8" src="${src.java.dir}" dest="${build.classes.dir}" includes="*.ini" />
+	</target>
+
+	<!-- Compile for Development -->
+	<target name="dev-clean">
+		<delete dir="${web.classes.dir}" failonerror="false" />
+	</target>
+
+	<target name="dev-prepare" depends="compile" description="Copy context.xml to %CATALINA_HOME%">
+		<mkdir dir="${web.classes.dir}" />
+
+		<copy file="${build.config.dir}/tomcat/context.xml" tofile="${env.CATALINA_HOME}/conf/Catalina/localhost/${app.name}.xml" failonerror="yes" overwrite="yes">
+			<filterset>
+				<filter token="DOC_BASE" value="${basedir}/${web.dir}" />
+			</filterset>
+		</copy>
+
+	</target>
+
+	<target name="compile" description="Compile the java classes into webapp/WEB-INF/classes">
+		<delete dir="${dist.war.dir}" failonerror="false" />
+		<delete dir="${dist.temp.dir}" failonerror="false" />
+
+		<delete dir="${web.classes.dir}" failonerror="false" />
+		<mkdir dir="${web.classes.dir}" />
+		<javac srcdir="${src.java.dir}" destdir="${web.classes.dir}" nowarn="off" defaultexcludes="on" fork="yes" debug="true" includeantruntime="false">
+			<compilerarg value="-Xlint:deprecation" />
+			<classpath refid="app.classpath" />
+		</javac>
+		<copy todir="${web.classes.dir}">
+			<fileset dir="${src.java.dir}">
+				<include name="**/*.xsl" />
+				<include name="**/*.xml" />
+				<include name="**/*.properties" />
+				<include name="**/*.vm" />
+				<include name="META-INF/**/*.*" />
+				<exclude name="**/message*.properties" />
+				<exclude name="**/error_message*.properties" />
+			</fileset>
+		</copy>
+
+		<native2ascii encoding="UTF-8" src="${src.java.dir}" dest="${web.classes.dir}" includes="*.properties" />
+
+	</target>
+
+	<target name="modify" description="Modify customised files for customer">
+		<copy todir="${dist.war.dir}">
+			<fileset dir="${web.dir}">
+				<exclude name="test/**" />
+				<exclude name="snapshots/**" />
+			</fileset>
+		</copy>
+		<copy file="${build.config.dir}/tomcat/context.xml" tofile="${dist.war.dir}/META-INF/context.xml" failonerror="yes" overwrite="yes">
+			<filterset>
+				<filter token="DOC_BASE" value="${cust}" />
+			</filterset>
+		</copy>
+
+		<delete>
+			<fileset dir="${dist.war.upload.dir}">
+				<include name="**/*" />
+			</fileset>
+		</delete>
+
+		<if>
+			<equals arg1="${cust}" arg2="ubingo" />
+			<then>
+				<replaceregexp file="${dist.war.dir}/WEB-INF/web.xml" match="home" replace="ubingo" byline="true" />
+			</then>
+			<else>
+				<echo message="Remain same base theme" />
+			</else>
+		</if>
+
+		<replaceregexp file="${dist.war.dir}/WEB-INF/classes/app.properties" match="app.name=aws" replace="app.name=${cust}" byline="true" />
+		<replaceregexp file="${dist.war.dir}/WEB-INF/classes/app.properties" match="aws" replace="${cust}-admin" byline="true" />
+		<replaceregexp file="${dist.war.dir}/WEB-INF/classes/jdbc.properties" match="aws" replace="${cust}" byline="true" />
+		<if>
+			<equals arg1="${cust}" arg2="ubingo" />
+			<then>
+				<echo message="Replacing message.properties and email.properties" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/message.properties" match="common.company.name=Apple Vacations Sdn. Bhd." replace="common.company.name=UbinGO Vacations Sdn. Bhd." byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/message.properties" match="common.title=Apple Web System \(AWS\)" replace="common.title=UbinGO Web System \(UWS\)" byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/message.properties" match="common.year.begin=1996" replace="common.year.begin=2025" byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/message_zh.properties" match="common.company.name=Apple Vacations Sdn. Bhd." replace="common.company.name=UbinGO Vacations Sdn. Bhd." byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/message_zh.properties" match="common.title=Apple Web System \(AWS\)" replace="common.title=UbinGO Web System \(UWS\)" byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/email.properties" match="mail.logo=/img/aws/header_logo.png" replace="mail.logo=/img/${cust}/header_logo.png" byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/email.properties" match="applevacations.my" replace="ubingo.my" byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/email.properties" match="Apple Web System" replace="UbinGO Web System" byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/config.properties" match="sys.app.code=AWS" replace="sys.app.code=UBINGO" byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/config.properties" match="title.bg.color=#7C51A1" replace="title.bg.color=#ff4d00" byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/classes/config.properties" match="table.header.color=#D0A9F5" replace="table.header.color=#F3CFC6" byline="true" />
+				<replaceregexp file="${dist.war.dir}/WEB-INF/flows/home/home.xhtml" match="Apple Web System \(AWS\)" replace="UbinGO Web System \(UWS\)" byline="true" />
+				
+				<!-- <replaceregexp match="\/\* TOUR_DEP_TABLE_HEADER_COLOR_REPLACE_CSS \*\/"
+					replace=".tourDepListClass .ui-widget-header { background: #ff4d00 !important; }" byline="true">
+					<fileset dir="${dist.war.dir}/WEB-INF/flows" includes="**/*.xhtml"/>
+				</replaceregexp> -->
+			</then>
+			<else>
+				<echo message="Remain no change on message.properties" />
+			</else>
+		</if>
+		<replaceregexp file="${dist.war.dir}/META-INF/context.xml" match="aws" replace="${cust}" byline="true" />
+		<replaceregexp file="${dist.war.dir}/WEB-INF/classes/logback.xml" match="aws" replace="${cust}" byline="true" />
+		<replaceregexp file="${dist.war.dir}/WEB-INF/classes/logback.xml" match="bterp" replace="${cust}" byline="true" />
+		<replaceregexp file="${dist.war.dir}/WEB-INF/views/layouts/main.xhtml" match="aws" replace="${cust}" byline="true" />
+	</target>
+
+	<target name="deletion" description="Delete properties files that do not want to be overwritten">
+		<delete>
+			<fileset dir="${dist.war.dir}/WEB-INF/classes">
+				<include name="email.properties" />
+			</fileset>
+			<fileset dir="${dist.war.dir}/WEB-INF/classes">
+				<include name="app.properties" />
+			</fileset>
+			<fileset dir="${dist.war.dir}/WEB-INF/classes">
+				<include name="jdbc.properties" />
+			</fileset>
+			<fileset dir="${dist.war.dir}/WEB-INF/classes">
+				<include name="system.properties" />
+			</fileset>
+			<fileset dir="${dist.war.dir}/META-INF">
+				<include name="context.xml" />
+			</fileset>
+			<fileset dir="${dist.war.dir}/pdf/t_and_c">
+				<include name="STANDARD TERMS AND CONDITIONS FOR OUTBOUND TOUR PACKAGES*.pdf" />
+			</fileset>
+		</delete>
+
+	</target>
+
+	<target name="build-war" depends="compile,build-manifest,modify">
+
+		<property name="current.dir" location="${user.dir}" />
+		<echo message="Current directory: ${current.dir}" />
+
+		<war destfile="${dist.dir}/${cust}-admin.war" manifest="${dist.temp.dir}/MANIFEST.MF" webxml="${dist.war.dir}/WEB-INF/web.xml">
+			<fileset dir="${dist.war.dir}">
+				<exclude name="WEB-INF/lib/**" />
+				<exclude name="WEB-INF/classes/**" />
+			</fileset>
+			<lib dir="${dist.war.dir}/WEB-INF/lib" />
+			<classes dir="${dist.war.dir}/WEB-INF/classes" />
+		</war>
+
+		<!--delete dir="${dist.war.dir}" failonerror="false"/-->
+	</target>
+
+	<target name="build-zip" depends="compile,build-manifest,modify">
+		<property name="current.dir" location="${user.dir}" />
+		<echo message="Current directory: ${current.dir}" />
+
+		<war destfile="${dist.dir}/${cust}-admin.zip" manifest="${dist.temp.dir}/MANIFEST.MF" webxml="${dist.war.dir}/WEB-INF/web.xml">
+			<fileset dir="${dist.war.dir}">
+				<exclude name="WEB-INF/lib/**" />
+				<exclude name="WEB-INF/classes/**" />
+			</fileset>
+			<lib dir="${dist.war.dir}/WEB-INF/lib" />
+			<classes dir="${dist.war.dir}/WEB-INF/classes" />
+		</war>
+
+	</target>
+
+	<target name="patch-war" depends="compile,build-manifest,modify,deletion">
+
+		<property name="current.dir" location="${user.dir}" />
+		<echo message="Current directory: ${current.dir}" />
+
+		<war destfile="${dist.dir}/${cust}-admin.war" manifest="${dist.temp.dir}/MANIFEST.MF" webxml="${dist.war.dir}/WEB-INF/web.xml">
+			<fileset dir="${dist.war.dir}">
+				<exclude name="WEB-INF/lib/**" />
+				<exclude name="WEB-INF/classes/**" />
+			</fileset>
+			<classes dir="${dist.war.dir}/WEB-INF/classes" />
+		</war>
+
+		<delete dir="${dist.war.dir}" failonerror="false" />
+		<delete dir="${dist.temp.dir}" failonerror="false" />
+	</target>
+
+	<target name="patch-zip" depends="compile,build-manifest,modify,deletion">
+
+		<property name="current.dir" location="${user.dir}" />
+		<echo message="Current directory: ${current.dir}" />
+
+		<war destfile="${dist.dir}/${cust}-admin.zip" manifest="${dist.temp.dir}/MANIFEST.MF" webxml="${dist.war.dir}/WEB-INF/web.xml">
+			<fileset dir="${dist.war.dir}">
+				<exclude name="WEB-INF/classes/**" />
+			</fileset>
+			<classes dir="${dist.war.dir}/WEB-INF/classes" />
+		</war>
+
+		<delete dir="${dist.temp.dir}" failonerror="false" />
+	</target>
+
+</project>

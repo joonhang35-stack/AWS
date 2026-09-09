@@ -1,0 +1,136 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:150px"><h:outputLabel>Number of <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText label="Days" value="#{tourPkgBean.tourPkgVO.numDays}" required="true" style="width:50px"/> Days</p:column>
+		<p:column><p:inputText label="Nights" value="#{tourPkgBean.tourPkgVO.numNights}" required="true" style="width:50px"/> Nights</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idTourCode">Tour Code <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="2"><p:inputText label="Tour Code" id="idTourCode" value="#{tourPkgBean.tourDepVO.code}" maxlength="20" required="true" style="width:100px"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idPkgName">Package Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="2"><p:inputText label="Package Name" id="idPkgName" value="#{tourPkgBean.tourPkgVO.nameEn}" required="true" style="width:300px"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idPkgNameZh">Chinese Name</h:outputLabel></p:column>
+		<p:column colspan="2"><p:inputText label="Chinese Name" id="idPkgNameZh" value="#{tourPkgBean.tourPkgVO.nameZh}" style="width:300px"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Price <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="2"><h:outputLabel for="idPriceFrom">Net Price <span class="required">*</span></h:outputLabel><p:inputText label="Price from" id="idPriceFrom" value="#{tourPkgBean.tourPkgVO.priceFrom}"><f:convertNumber pattern="#,##0.00"/></p:inputText> 
+		<h:outputLabel for="idPriceTo">Selling Price <span class="required">*</span></h:outputLabel>
+		<p:inputText label="Price to" id="idPriceTo" value="#{tourPkgBean.tourPkgVO.priceTo}"><f:convertNumber pattern="#,##0.00"/></p:inputText></p:column>
+	</p:row>
+	<p:row> 
+			<p:column>
+				<p:commandButton value="Items" actionListener="#{tourPkgBean.setRoomPriceAdd(true)}" oncomplete="varRoomPriceDialog.show()" immediate="true"/>
+			</p:column> 
+	
+			<p:column colspan="3">	 
+				<p:panel id ="idRoomPriceListPanel" style="border:none">
+					<p:dataTable id="idRoomPriceListTable" value="#{tourPkgBean.tourPkgVO.tourPackageRoomPriceList}" var="roomPriceVO" rowKey="#{roomPriceVO.roomName}" selectionMode="single" rendered="#{not empty tourPkgBean.tourPkgVO.tourPackageRoomPriceList}">
+			<p:column headerText="Edit" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{tourPkgBean.onRoomPriceSelected(roomPriceVO)}" oncomplete="varRoomPriceDialog.show()" process="@this" update=":idRoomPriceDialog"/>
+						</p:column> 
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{tourPkgBean.deleteRoomPrice(roomPriceVO)}"  update="@form,:idAddTourPkgForm:idRoomPriceListPanel,:idEditTourPkgForm:idRoomPriceListPanel"   process="@this"/> 
+					</p:column>
+						<p:column headerText="Room Name">
+							<h:outputText value="#{roomPriceVO.roomName}"/>
+						</p:column>
+						<p:column headerText="Price From">
+							<h:outputText value="#{roomPriceVO.priceFrom}"> 
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Price To">
+							<h:outputText value="#{roomPriceVO.priceTo}">   
+							</h:outputText>
+						</p:column>
+					</p:dataTable>
+				</p:panel>
+			</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Booking <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>Start Date <p:calendar pattern="dd-MMM-yyyy" label="Booking Start Date" value="#{tourPkgBean.tourPkgVO.dtBookStart}" required="true" navigator="true" showButtonPanel="true"/></p:column>
+		<p:column>End Date <p:calendar pattern="dd-MMM-yyyy" label="Booking End Date" value="#{tourPkgBean.tourPkgVO.dtBookEnd}" required="true" navigator="true" showButtonPanel="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Travel <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>Start Date <p:calendar pattern="dd-MMM-yyyy" label="Travel Start Date" value="#{tourPkgBean.tourPkgVO.dtTravelStart}" required="true" navigator="true" showButtonPanel="true"/></p:column>
+		<p:column>End Date <p:calendar pattern="dd-MMM-yyyy" label="Travel End Date" value="#{tourPkgBean.tourPkgVO.dtTravelEnd}" required="true" navigator="true" showButtonPanel="true"/></p:column>
+	</p:row>
+	<p:row>
+		<!--p:column><h:outputLabel>Travel Itinery</h:outputLabel></p:column>
+		<p:column colspan="2">
+			<p:panelGrid id="idTravelItinery">
+				<p:row rendered="#{empty tourPkgBean.tourItineryVO.name}">
+					<p:column>
+						<p:fileUpload fileUploadListener="#{tourPkgBean.handleFileUpload}" mode="advanced" sizeLimit="#{bterp:globalConfigValue('GLOBAL', 'PATH_PDF_FILE_SIZE')}" allowTypes="/(\.|\/)(pdf)$/" description="*.pdf" update="msg"/>
+					</p:column>
+				</p:row>
+				<p:row rendered="#{not empty tourPkgBean.tourItineryVO.name}">
+					<p:column style="width:15px;"><p:commandLink styleClass="ui-icon ui-icon-close" onclick="varDelTourItineryDialog.show()"/></p:column>
+					<p:column><h:outputText value="#{tourPkgBean.tourItineryVO.name}"/></p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column-->
+		<p:column><p:commandButton value="Tour Itinerary" process="@this" onclick="varAddItineryDialog.show()"/></p:column>
+		<p:column>
+			<p:panelGrid id="idTravelItinery" style="border:0">
+				<p:row rendered="#{empty tourPkgBean.tourItineryVO.name}">
+					<p:column><h:outputText value="#{tourPkgBean.tourPkgVO.reserved2}"/></p:column>
+				</p:row>
+				<p:row rendered="#{not empty tourPkgBean.tourItineryVO.name}">
+					<p:column><h:outputText value="#{tourPkgBean.tourItineryVO.name}"/></p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid id="idParentPkgRow">
+	<p:row>
+		<p:column style="width:150px"><h:outputLabel for="idIsOptional">Is Optional</h:outputLabel></p:column>
+		<p:column id="idIsOptionalCol" colspan="2">
+			<p:selectBooleanButton label="Is Optional" id="idIsOptional" value="#{tourPkgBean.tourPkgVO.isOptional}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close">
+				<p:ajax listener="#{tourPkgBean.handleOptionChange}" update="idParentPkgRow"/>
+			</p:selectBooleanButton>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{tourPkgBean.tourPkgVO.isOptional}">
+		<p:column style="width:150px"></p:column>
+		<p:column>
+			<h:selectOneMenu id="idParentPkg" value="#{tourPkgBean.tourPkgVO.idParent}" required="true" effect="fade">
+				<f:selectItem itemLabel="Select One"/>
+				<f:selectItems value="#{tourPkgBean.tourPkgList}" var="vo" itemLabel="#{vo.nameEn}" itemValue="#{vo.id}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:150px"><h:outputLabel for="idIsNew">Is New</h:outputLabel></p:column>
+		<p:column><p:selectBooleanButton label="Is New" id="idIsNew" value="#{tourPkgBean.tourPkgVO.isNew}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idIsPromo">Is Promo</h:outputLabel></p:column>
+		<p:column><p:selectBooleanButton label="Is Promo" id="idIsPromo" value="#{tourPkgBean.tourPkgVO.isPromo}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/></p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{tourPkgBean.addTourPkg}" update="@form,:idTourPkgForm" rendered="#{empty tourPkgBean.tourPkgVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{tourPkgBean.updTourPkg}" update="@form,:idTourPkgForm" oncomplete="varEditTourPkgDialog.hide()" rendered="#{not empty tourPkgBean.tourPkgVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{tourPkgBean.resetForm}" onclick="varAddTourPkgDialog.hide(),varEditTourPkgDialog.hide()" process="@this" update="@form" />
+</h:panelGrid>
+</ui:composition>

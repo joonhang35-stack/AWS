@@ -1,0 +1,184 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddInvoiceDetailsDialog.show();
+		} else {
+			varAddInvoiceDetailsDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid id="idInvDetailsPenal">
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idCode">Code</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCode" label="Code" value="#{salesBean.invoiceItemVO.code}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idDesc">Description <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<!-- <p:column>
+			<p:inputTextarea id="idDesc" label="Description" value="#{salesBean.invoiceItemVO.desc}" maxlength="100" required="true">
+				<p:ajax event="change" listener="#{salesBean.onInvoiceItemChange}"/>
+			</p:inputTextarea>
+		</p:column> -->
+		<p:column>
+			<p:inputTextarea id="idDesc" label="Description" value="#{salesBean.invoiceItemVO.desc}" maxlength="100" required="true"
+				readonly="true" style="background:#ccc"/>
+		</p:column>
+		<p:column>
+			<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.loadInvEOItemList}" oncomplete="varInvEOItemListDialog.show()" update="@form,:idInvEOItemListDialog" process="@this"
+				disabled="#{salesBean.docTypeCd eq 'I' and (salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid')}"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idSubDesc">Sub Description</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputTextarea id="idSubDesc" label="Sub Description" value="#{salesBean.invoiceItemVO.subDesc}" maxlength="100"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idSalesAcct">Sales Account <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idSalesAcct" label="Sales Account" value="#{salesBean.invoiceItemVO.salesAcctCd}" required="true" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;"/>
+			&nbsp;
+			<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.loadAcctList}" oncomplete="varAcctListDialog.show()" update=":idAcctListForm" process="@this" rendered="#{(salesBean.docTypeCd eq 'I' or salesBean.docTypeCd eq 'P') and salesBean.saveAccCodeOnly}"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idAcctDesc"></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAcctDesc" label="Account Desc" value="#{salesBean.invoiceItemVO.salesAcctDesc}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{salesBean.GSTPeriod}">
+		<p:column>
+			<h:outputLabel for="idGSTCode">GST Code</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idGSTCode" label="GST Code" value="#{salesBean.invoiceItemVO.taxCode}" required="true" maxlength="0" readonly="true" style="background:#ccc;"/>
+		</p:column>
+		<p:column>
+			<!-- <p:commandButton icon="ui-icon-search" oncomplete="varGSTListDialog.show()" update=":idGSTListDialog" process="@this" rendered="#{salesBean.docTypeCd=='C' and salesBean.invoiceVO.taxCodeEnable}"/> -->
+			<p:commandButton icon="ui-icon-search" oncomplete="varGSTListDialog.show()" update=":idGSTListDialog" process="@this" rendered="#{salesBean.docTypeCd=='C' and salesBean.GSTPeriod}"/>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{salesBean.GSTPeriod}">
+		<p:column>
+			<h:outputLabel for="idGSTRate">GST Rate (%)</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idGSTRate" label="GST Rate (%)" value="#{salesBean.invoiceItemVO.taxRate}" required="true" maxlength="0" readonly="true" style="background:#ccc;"/>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{salesBean.invoiceVO.catCd == 'ti'}">
+		<p:column>
+			<h:outputLabel for="idAirline">Airline</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:selectOneMenu id="idAirline" label="Airline" value="#{salesBean.invoiceItemVO.airlineId}" filter="true" filterMatchMode="contains">
+				<f:selectItem itemLabel="Select One"/>
+	        	<f:selectItems value="#{salesBean.airlineList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.desc} (#{vo.code})"/>
+		    </p:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idQty">Quantity <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idQty" label="Quantity" value="#{salesBean.invoiceItemVO.qty}" size="4" maxlength="4" required="true"
+			readonly="#{salesBean.docTypeCd eq 'I' and (salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid')}"
+				style="#{salesBean.docTypeCd eq 'I' and (salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid') ? 'background:#ccc' : ''}">
+				<p:ajax event="change" update="idGSTAmt,idAmt,idExGSTAmt,idUnitPrice,:idAddInvoiceDetailsForm:msg" listener="#{salesBean.handleAmountIncludeTaxChange}"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{salesBean.invoiceVO.catCd == 'ti'}">
+		<p:column>
+			<h:outputLabel for="idNetPrice">Net Price</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idNetPrice" label="Net Price" value="#{salesBean.invoiceItemVO.netPrice}" maxlength="10">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idUnitPrice">#{salesBean.GSTPeriod ? 'Unit Price Inc. GST' : 'Unit Price'} <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idUnitPrice" label="Price Inc. GST" value="#{salesBean.invoiceItemVO.unitPrice}" required="true" maxlength="10"
+				readonly="#{salesBean.docTypeCd eq 'I' and (salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid')}"
+				style="#{salesBean.docTypeCd eq 'I' and (salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid') ? 'background:#ccc' : ''}">
+				<p:ajax event="change" update="idGSTAmt,idAmt,idExGSTAmt,idUnitPrice,:idAddInvoiceDetailsForm:msg" listener="#{salesBean.handleAmountIncludeTaxChange}"/>
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{salesBean.GSTPeriod}">
+		<p:column>
+			<h:outputLabel for="idGSTAmt">GST Amount</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idGSTAmt" label="GST Amount" value="#{salesBean.invoiceItemVO.taxAmount}" required="true" maxlength="10" readonly="#{not salesBean.invPmntAuthVO.accountManager and not salesBean.invPmntAuthVO.invItemsGSTFreeText}" style="background:#{salesBean.invPmntAuthVO.accountManager or salesBean.invPmntAuthVO.invItemsGSTFreeText ? '' : '#ccc'}">
+				<p:ajax event="change" update="idGSTAmt,idAmt,idExGSTAmt,idUnitPrice,:idAddInvoiceDetailsForm:msg" listener="#{salesBean.handleGSTAmtChange}"/>
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{salesBean.GSTPeriod}">
+		<p:column>
+			<h:outputLabel for="idExGSTAmt">Total Exc. GST <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idExGSTAmt" label="Total Exc. GST" value="#{salesBean.invoiceItemVO.amount}" readonly="true" style="background:#ccc">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idAmt">#{salesBean.GSTPeriod ? 'Total Inc. GST' : 'Amount'} <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<!-- <p:inputText id="idAmt" label="Total Inc. GST" value="#{salesBean.invoiceItemVO.taxIncAmt}" required="true" maxlength="10"> -->
+			<p:inputText id="idAmt" label="Total Inc. GST" value="#{salesBean.invoiceItemVO.taxIncAmt}" readonly="true" style="background:#ccc">
+				<p:ajax event="change" update="idGSTAmt,idAmt,idExGSTAmt,idUnitPrice,:idAddInvoiceDetailsForm:msg" listener="#{salesBean.handleAmountIncludeTaxChange}"/>
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{salesBean.addInvItem}" update="@form,:idAddInvoiceForm:idInvDetailsTab:idInvItemListTable,:idAddInvoiceForm:idTtlAmt,:idAddInvoiceForm:idAmtDue,:idAddInvoiceForm:idTtlGST,:idAddInvoiceForm:idEmailPayment,:idAddInvoiceForm:idTourFareAmt,:idAddInvoiceForm:idAirTicketAmt,:idAddInvoiceForm:idVoucherAmt,:idAddInvoiceForm:idDisbAmt,:idAddInvoiceForm:idAmountPanel" rendered="#{salesBean.invItemAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{salesBean.updateInvItem}" update="@form,:idAddInvoiceForm:idInvDetailsTab:idInvItemListTable,:idAddInvoiceForm:idTtlAmt,:idAddInvoiceForm:idAmtDue,:idAddInvoiceForm:idTtlGST,:idAddInvoiceForm:idEmailPayment,:idAddInvoiceForm:idTourFareAmt,:idAddInvoiceForm:idAirTicketAmt,:idAddInvoiceForm:idVoucherAmt,:idAddInvoiceForm:idDisbAmt,:idAddInvoiceForm:idAmountPanel" oncomplete="onValidation(xhr, status, args)" rendered="#{not salesBean.invItemAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetInvItemForm}" update="@form" process="@this" oncomplete="varAddInvoiceDetailsDialog.hide()" global="false">
+		<pe:resetEditableValues for="idAddInvoiceDetailsForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

@@ -1,0 +1,389 @@
+ package com.bcs.zsg.acct.vo;
+
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.vo.BaseVO;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+
+public class JournalVO extends BaseVO {
+
+	private static final long serialVersionUID = 1L;
+
+	private String reason;
+	private String reference;
+	private String sysNo;
+	private Double totalAmt;
+	private Date journalDt;
+	private Long id;
+	private Long companyId;
+	private String typeCd;
+	private Long idBill;
+	private Long idInv;
+	private Long idPs;
+	
+	// journal report use
+	private String code;
+	private String subCode;
+	private String desc;
+	private String subDesc;
+	private Double amount;
+	private Double debit;
+	private Double credit;
+	private String taxCode;
+	private Float taxRate;
+	private Double taxAmount = 0.0;
+	private Long idTourDep;
+	private String idDpt;
+	private String tourCd;
+	
+	// journal details
+	private JournalVO oriObj;
+	private List<AcctTransVO> journalCartList;
+	private BigDecimal totalCrdAmt, totalDbtAmt;
+	private AddUpdDelVO journalItemsVO;
+	private boolean isDateInFinPeriodClosed;
+	
+	// bill
+	private List<ExOrderBillVO> billList; // just in case a journal will link to multiple bills
+	private String billIDs; // just in case a journal will link to multiple bills
+	private String billDates; // just in case a journal will link to multiple bills
+	private String billSuppliers; // just in case a journal will link to multiple bills
+	private ExOrderBillVO exOrderBillVO;
+	
+	// for view
+	private AmountCalcViewVO amountCalcViewVO;
+	
+	public void calcJourItemTotal(boolean isCalGLItems) throws BusinessException {
+		totalCrdAmt = new BigDecimal("0.00");
+		totalDbtAmt = new BigDecimal("0.00");
+		
+		for(AcctTransVO journalItem : journalCartList){
+			if(journalItem.getCredit() != 0.00) {
+				journalItem.setAmount(journalItem.getCredit());
+				totalCrdAmt = totalCrdAmt.add(new BigDecimal(String.valueOf(journalItem.getCredit()))
+												.add(new BigDecimal(String.valueOf(journalItem.getDTaxAmount()))) );
+				
+			} else {
+				journalItem.setAmount(journalItem.getDebit());
+				totalDbtAmt = totalDbtAmt.add(new BigDecimal(String.valueOf(journalItem.getDebit()))
+												.add(new BigDecimal(String.valueOf(journalItem.getDTaxAmount()))) );
+				
+			}
+		}
+		
+		updateTaxableAmount(isCalGLItems);
+	}
+	
+	private void updateTaxableAmount(boolean isCalGLItems) throws BusinessException {
+		if (isCalGLItems) calculateGLItemsAmount(journalCartList);
+		
+		amountCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amountCalcViewVO, false, journalCartList, null, false);
+	}
+	
+	private void calculateGLItemsAmount(List<AcctTransVO> list) throws BusinessException {
+		for (AcctTransVO vo : list) {
+			vo.setTaxAmount(vo.getAmount() < 0 ? -vo.getTaxAmount() : vo.getTaxAmount());
+			
+			BigDecimal amount = new BigDecimal(String.valueOf(vo.getAmount()));
+			BigDecimal taxAmount = new BigDecimal(vo.getTaxAmount().toString());
+			
+			vo.setAmountIncludeTax(amount.add(taxAmount).doubleValue());
+		}
+	}
+	
+	public boolean isDateInFinPeriodClosed() {
+		return isDateInFinPeriodClosed;
+	}
+
+	public void setDateInFinPeriodClosed(boolean isDateInFinPeriodClosed) {
+		this.isDateInFinPeriodClosed = isDateInFinPeriodClosed;
+	}
+
+	public ExOrderBillVO getExOrderBillVO() {
+		return exOrderBillVO;
+	}
+
+	public void setExOrderBillVO(ExOrderBillVO exOrderBillVO) {
+		this.exOrderBillVO = exOrderBillVO;
+	}
+
+	public JournalVO getOriObj() {
+		return oriObj;
+	}
+
+	public void setOriObj(JournalVO oriObj) {
+		this.oriObj = oriObj;
+	}
+
+	public AddUpdDelVO getJournalItemsVO() {
+		return journalItemsVO;
+	}
+
+	public void setJournalItemsVO(AddUpdDelVO journalItemsVO) {
+		this.journalItemsVO = journalItemsVO;
+	}
+
+	public Long getIdBill() {
+		return idBill;
+	}
+
+	public void setIdBill(Long idBill) {
+		this.idBill = idBill;
+	}
+
+	public Long getIdInv() {
+		return idInv;
+	}
+
+	public void setIdInv(Long idInv) {
+		this.idInv = idInv;
+	}
+
+	public Long getIdPs() {
+		return idPs;
+	}
+
+	public void setIdPs(Long idPs) {
+		this.idPs = idPs;
+	}
+
+	public String getTypeCd() {
+		return typeCd;
+	}
+
+	public void setTypeCd(String typeCd) {
+		this.typeCd = typeCd;
+	}
+
+	public String getBillIDs() {
+		return billIDs;
+	}
+
+	public void setBillIDs(String billIDs) {
+		this.billIDs = billIDs;
+	}
+
+	public String getBillDates() {
+		return billDates;
+	}
+
+	public void setBillDates(String billDates) {
+		this.billDates = billDates;
+	}
+
+	public List<ExOrderBillVO> getBillList() {
+		return billList;
+	}
+
+	public void setBillList(List<ExOrderBillVO> billList) {
+		this.billList = billList;
+	}
+
+	public BigDecimal getTotalCrdAmt() {
+		return totalCrdAmt;
+	}
+	public void setTotalCrdAmt(BigDecimal totalCrdAmt) {
+		this.totalCrdAmt = totalCrdAmt;
+	}
+	public BigDecimal getTotalDbtAmt() {
+		return totalDbtAmt;
+	}
+	public void setTotalDbtAmt(BigDecimal totalDbtAmt) {
+		this.totalDbtAmt = totalDbtAmt;
+	}
+	public List<AcctTransVO> getJournalCartList() {
+		return journalCartList;
+	}
+	public void setJournalCartList(List<AcctTransVO> journalCartList) {
+		this.journalCartList = journalCartList;
+	}
+	public String getReason() {
+		return reason;
+	}
+	public void setReason(String reason) {
+		this.reason = reason;
+	}
+	public Double getTotalAmt() {
+		return totalAmt;
+	}
+	public void setTotalAmt(Double totalAmt) {
+		this.totalAmt = totalAmt;
+	}
+	public Date getJournalDt() {
+		return journalDt;
+	}
+	public void setJournalDt(Date journalDt) {
+		this.journalDt = journalDt;
+	}
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
+	}
+	public String getReference() {
+		return reference;
+	}
+	public void setReference(String reference) {
+		this.reference = reference;
+	}
+	public Long getCompanyId() {
+		return companyId;
+	}
+	public void setCompanyId(Long companyId) {
+		this.companyId = companyId;
+	}
+	public String getSysNo() {
+		return sysNo;
+	}
+	public void setSysNo(String sysNo) {
+		this.sysNo = sysNo;
+	}
+    /**
+	 * @return the code
+	 */
+	public String getCode() {
+		return code;
+	}
+	/**
+	 * @param code the code to set
+	 */
+	public void setCode(String code) {
+		this.code = code;
+	}
+	/**
+	 * @return the subCode
+	 */
+	public String getSubCode() {
+		return subCode;
+	}
+	/**
+	 * @param subCode the subCode to set
+	 */
+	public void setSubCode(String subCode) {
+		this.subCode = subCode;
+	}
+	/**
+	 * @return the desc
+	 */
+	public String getDesc() {
+		return desc;
+	}
+	/**
+	 * @param desc the desc to set
+	 */
+	public void setDesc(String desc) {
+		this.desc = desc;
+	}
+	/**
+	 * @return the subDesc
+	 */
+	public String getSubDesc() {
+		return subDesc;
+	}
+	/**
+	 * @param subDesc the subDesc to set
+	 */
+	public void setSubDesc(String subDesc) {
+		this.subDesc = subDesc;
+	}
+	/**
+	 * @return the debit
+	 */
+	public Double getDebit() {
+		return debit;
+	}
+	/**
+	 * @param debit the debit to set
+	 */
+	public void setDebit(Double debit) {
+		this.debit = debit;
+	}
+	/**
+	 * @return the credit
+	 */
+	public Double getCredit() {
+		return credit;
+	}
+	/**
+	 * @param credit the credit to set
+	 */
+	public void setCredit(Double credit) {
+		this.credit = credit;
+	}
+	
+	public AmountCalcViewVO getAmountCalcViewVO() {
+		return amountCalcViewVO;
+	}
+	public void setAmountCalcViewVO(AmountCalcViewVO amountCalcViewVO) {
+		this.amountCalcViewVO = amountCalcViewVO;
+	}
+	
+	public Double getAmount() {
+		return amount;
+	}
+	public void setAmount(Double amount) {
+		this.amount = amount;
+	}
+	public String getTaxCode() {
+		return taxCode;
+	}
+	public void setTaxCode(String taxCode) {
+		this.taxCode = taxCode;
+	}
+	public Float getTaxRate() {
+		return taxRate;
+	}
+	public void setTaxRate(Float taxRate) {
+		this.taxRate = taxRate;
+	}
+	public Double getTaxAmount() {
+		return taxAmount;
+	}
+	public void setTaxAmount(Double taxAmount) {
+		this.taxAmount = taxAmount;
+	}
+	/**
+     * Returns a default single-line String with key=value pairs.
+     *
+     * @return a String representation of this class.
+     */
+	public String toString() {
+		return ToStringBuilder.reflectionToString(this, ToStringStyle.DEFAULT_STYLE);
+	}
+	public Long getIdTourDep() {
+		return idTourDep;
+	}
+	public void setIdTourDep(Long idTourDep) {
+		this.idTourDep = idTourDep;
+	}
+	public String getIdDpt() {
+		return idDpt;
+	}
+	public void setIdDpt(String idDpt) {
+		this.idDpt = idDpt;
+	}
+	public String getTourCd() {
+		return tourCd;
+	}
+	public void setTourCd(String tourCd) {
+		this.tourCd = tourCd;
+	}
+
+	public String getBillSuppliers() {
+		return billSuppliers;
+	}
+
+	public void setBillSuppliers(String billSuppliers) {
+		this.billSuppliers = billSuppliers;
+	}
+}

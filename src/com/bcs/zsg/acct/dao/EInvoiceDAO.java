@@ -1,0 +1,84 @@
+package com.bcs.zsg.acct.dao;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import com.bcs.zsg.acct.vo.EInvoiceAccessTokenVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotTransVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotVO;
+import com.bcs.zsg.acct.vo.EInvoiceBuyerVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateNumGenVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentItemVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.acct.vo.EInvoiceSubmissionVO;
+import com.bcs.zsg.acct.vo.EInvoiceSupplierVO;
+import com.bcs.zsg.core.dao.BaseDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+
+public interface EInvoiceDAO extends BaseDAO {
+
+	public List<EInvoiceDocumentVO> getEInvoiceList(Long idCompany);
+
+	public EInvoiceDocumentVO getEInvoiceByUuid(String uuid);
+
+	public EInvoiceAccessTokenVO getValidAccessToken(Long idCompany) throws BusinessException;
+
+	public List<EInvoiceConsolidateVO> getEInvoiceConsolidateList(String eInvoiceDocUuid) throws BusinessException;
+
+	public void updateEInvoiceConsolidate(String eInvoiceDocUuid, String longId, String status) throws BusinessException;
+
+	/**
+	 * update e inv status for all tables
+	 * 
+	 * @param eInvoiceDocumentUuid
+	 * @param eInvoiceStatus
+	 * @param table - table name to update
+	 * @throws BusinessException
+	 */
+	public void updateEInvoiceStatus(String eInvoiceDocumentUuid, String eInvoiceStatus, String table)
+			throws BusinessException;
+
+	public EInvoiceConsolidateNumGenVO getEInvoiceConsolidateNumGenVO(Integer year, Integer month, String code,
+			Long idCompany);
+
+	public List<EInvoiceConsolidateVO> getEInvConsolDetailsList(String documentUuid);
+
+	public List<EInvoiceDocumentItemVO> getEInvoiceDocumentItemList(Long idEInvDoc);
+
+	public EInvoiceBuyerVO getEInvoiceBuyer(Long id);
+
+	public EInvoiceSupplierVO getEInvoiceSupplier(Long id);
+
+	/**
+	 * update EInvoiceDocument parties info (customer/supplier/E-Invoice buyer/E-Invoice supplier)
+	 * 
+	 * @param idEInvDoc
+	 * @param idCust
+	 * @param idSupplier
+	 * @param idEInvoiceBuyer
+	 * @param idEInvoiceSupplier
+	 * @throws BusinessException
+	 */
+	public void updateEInvoiceParty(@Nonnull Long idEInvDoc, @Nullable Long idCust, @Nullable Long idSupplier,
+			@Nullable Long idEInvoiceBuyer, @Nullable Long idEInvoiceSupplier) throws BusinessException;
+
+	public void updateEInvoiceDocTypeCd(Long idEInvDoc, String eInvoiceDocTypeCd) throws BusinessException;
+
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Date dtTrans);
+
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Map<String, Object> params);
+
+	public List<EInvoiceApiDailySnapshotTransVO> getApiDailySnapshotTransList(Long idCompany, Date dtTrans);
+
+	public void updateApiDailySnapshotTransStatus(Long idTrans, String existsInLocalStatus, String processStatus,
+			String statusReason);
+
+	public List<EInvoiceSubmissionVO> getEInvoiceSubmissionByStatus(String[] statusList, Long idCompany);
+
+	public EInvoiceSubmissionVO getEInvoiceSubmissionVO(String submissionUid);
+}

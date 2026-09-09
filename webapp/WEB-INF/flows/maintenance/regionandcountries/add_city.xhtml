@@ -1,0 +1,50 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+
+
+<p:growl id="idEntryMsg" showDetail="true"/>
+<p:panelGrid style="width:500px">
+	<p:row>
+		<p:column style="width:166px">
+			<h:outputLabel for="idCountryId">Country Name<span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idCountryId" label="Country Name" value="#{regionAndCountriesBean.cityVO.idCountry}">
+				<f:selectItems value="#{regionAndCountriesBean.countryList}" var="countryVO" itemLabel="#{countryVO.country}" itemValue="#{countryVO.id}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idCityCode">City Code<span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCityCode" label="City Code" value="#{regionAndCountriesBean.cityVO.code}" />
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idCityName">City Name<span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCityName" label="City Name" value="#{regionAndCountriesBean.cityVO.name}" />
+		</p:column>
+	</p:row>	
+</p:panelGrid>		
+	<h:panelGrid id="idButtonGrid" columns="3" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" type="submit"  actionListener="#{regionAndCountriesBean.addCity}" update="@form,:idForm:idCityTable"/>
+	<p:commandButton id="idBtnAddCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{regionAndCountriesBean.cancel}" update="@form" process="@this" oncomplete="varAddCityDialog.hide()" global="false">
+			<pe:resetEditableValues for="idAddCity"/>
+	</p:commandButton>
+	</h:panelGrid>
+		
+</ui:composition>

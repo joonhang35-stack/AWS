@@ -1,0 +1,271 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	template="/WEB-INF/views/layouts/main.xhtml">
+
+	<ui:define name="content">
+		<p:panel header="Feedback List" toggleable="true" toggleSpeed="500">
+			<h:form id="idFeedbackListForm">
+				<p:growl id="msg" />
+
+				<p:dataTable id="idFeedbackListTable"
+					value="#{feedbackBean.feedbackList}" var="vo" paginator="true"
+					rows="20"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="20, 30, 50" filterEvent="enter"
+					rowIndexVar="rowIndex">
+
+					<p:column headerText="No." style="width:50px; text-align:center;">
+						<h:outputText value="#{rowIndex + 1}" />
+					</p:column>
+
+					<!-- 			<p:column headerText="ID" sortBy="#{vo.idFeedback}" filterBy="#{vo.idFeedback}" style="width:80px; text-align:center;">
+				<h:outputText value="#{vo.idFeedback}"/>
+			</p:column> -->
+
+					<p:column headerText="Customer Name" sortBy="#{vo.customerName}" filterBy="#{vo.customerName}" filterMatchMode="contains">
+						<h:outputText value="#{vo.customerName}"/>
+					</p:column>
+
+					<p:column headerText="Tour Departure Code" sortBy="#{vo.tourDepCode}" filterBy="#{vo.tourDepCode}" filterMatchMode="contains" style="text-align:center;">
+						<h:outputText value="#{vo.tourDepCode}"/>
+					</p:column>
+
+					<p:column headerText="Booking ID" sortBy="#{vo.tourBookingId}" filterBy="#{vo.tourBookingId}" style="text-align:center;">
+						<h:outputText value="#{vo.tourBookingId}"/>
+					</p:column>
+
+					<!-- 			<p:column headerText="Invoice ID" sortBy="#{vo.invCode}" filterBy="#{vo.invCode}" filterMatchMode="contains" style="text-align:center;">
+				<h:outputText value="#{vo.invCode}" rendered="#{not empty vo.invCode}"/>
+				<h:outputText value="#{vo.invId}" rendered="#{empty vo.invCode}"/>
+			</p:column> -->
+
+					<p:column headerText="Overall Score" sortBy="#{vo.overallScore}"
+						filterBy="#{vo.overallScore}"
+						style="width:100px; text-align:center;">
+						<h:outputText value="#{vo.overallScore}"
+							rendered="#{vo.overallScore ne null}">
+							<f:convertNumber type="number" minFractionDigits="2"
+								maxFractionDigits="2" />
+						</h:outputText>
+						<h:outputText value="N/A" rendered="#{vo.overallScore eq null}" />
+					</p:column>
+
+					<p:column headerText="Status" sortBy="#{vo.feedbackStatus}"
+						filterBy="#{vo.feedbackStatus}" filterMatchMode="contains"
+						style="width:100px; text-align:center;">
+						<h:outputText value="Completed"
+							rendered="#{vo.feedbackStatus eq 'C'}" />
+						<h:outputText value="Emailed"
+							rendered="#{vo.feedbackStatus eq 'E'}" />
+						<h:outputText value="Pending"
+							rendered="#{vo.feedbackStatus eq 'P'}" />
+					</p:column>
+
+					<p:column headerText="Email" sortBy="#{vo.customerEmail}"
+						filterBy="#{vo.customerEmail}" filterMatchMode="contains">
+						<h:outputText value="#{vo.customerEmail}" />
+					</p:column>
+
+					<p:column style="font-size:10px; text-align:center; width:50px;">
+						<p:commandButton icon="ui-icon-document" title="Show Details"
+							actionListener="#{feedbackBean.loadFeedbackDetails(vo)}"
+							update=":idFeedbackDetailForm:idFeedbackDetailDialog"
+							oncomplete="varFeedbackDetailDialog.show()" />
+					</p:column>
+
+					<p:column style="font-size:10px; text-align:center;">
+						<p:commandButton value="Send Email"
+							rendered="#{vo.feedbackStatus ne 'C'}"
+							actionListener="#{feedbackBean.handleSendFeedbackEmail(vo)}"
+							update="@form" />
+					</p:column>
+
+				</p:dataTable>
+			</h:form>
+
+			<h:form id="idFeedbackDetailForm" enctype="multipart/form-data">
+				<p:dialog id="idFeedbackDetailDialog"
+					header="Feedback Details - #{feedbackBean.selectedFeedback.customerName}"
+					widgetVar="varFeedbackDetailDialog" modal="true" width="750"
+					height="580" responsive="true" appendTo="@(body)">
+					<h:panelGroup id="idDetailContent" layout="block"
+						style="padding: 10px;"
+						rendered="#{feedbackBean.selectedFeedback ne null}">
+						<div
+							style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; margin-bottom: 20px; font-size: 1.15em; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+							<h:panelGrid columns="2" cellpadding="5" style="width: 100%;">
+								<h:outputText value="Tour Departure Code:"
+									style="font-weight: bold; color: #495057;" />
+								<h:outputText
+									value="#{feedbackBean.selectedFeedback.tourDepCode}"
+									style="color: #212529;" />
+
+								<h:outputText value="Customer Email:"
+									style="font-weight: bold; color: #495057;" />
+								<h:outputText
+									value="#{feedbackBean.selectedFeedback.customerEmail}"
+									style="color: #212529;" />
+
+								<h:outputText value="Overall Score:"
+									style="font-weight: bold; color: #495057;" />
+								<h:panelGroup>
+									<h:outputText
+										value="#{feedbackBean.selectedFeedback.overallScore}"
+										rendered="#{feedbackBean.selectedFeedback.overallScore ne null}"
+										style="font-weight: bold; color: #2b8a3e;">
+										<f:convertNumber type="number" minFractionDigits="2"
+											maxFractionDigits="2" />
+									</h:outputText>
+									<h:outputText value="N/A"
+										rendered="#{feedbackBean.selectedFeedback.overallScore eq null}"
+										style="color: #868e96;" />
+								</h:panelGroup>
+							</h:panelGrid>
+						</div>
+
+						<p:scrollPanel mode="native"
+							style="width:100%;height:380px;border:none;">
+							<ui:repeat value="#{feedbackBean.selectedFeedbackSections}"
+								var="secCode">
+								<div
+									style="font-weight: bold; font-size: 1.35em; color: #c92a2a; margin-top: 20px; margin-bottom: 12px; border-bottom: 2px solid #ffe3e3; padding-bottom: 5px; letter-spacing: 0.5px;">
+									<h:outputText
+										value="#{feedbackBean.feedbackLookupMap[secCode] != null ? feedbackBean.feedbackLookupMap[secCode] : secCode}" />
+								</div>
+								<ui:repeat
+									value="#{feedbackBean.selectedFeedbackDetailsMap[secCode]}"
+									var="q">
+									<div
+										style="margin-bottom: 18px; margin-left: 10px; line-height: 1.5; font-size: 1.25em; background: #fff; padding: 12px 15px; border-radius: 6px; border: 1px solid #f1f3f5;">
+										<strong
+											style="color: #212529; display: block; margin-bottom: 6px;">Q#{q.seqNo}.
+											#{q.questionTextEn}</strong>
+										<div
+											style="margin-left: 10px; margin-top: 5px; color: #495057;">
+											<span
+												style="font-weight: 500; color: #868e96; margin-right: 5px;">Answer:</span>
+											<h:outputText value="#{q.answerLabelEn}"
+												rendered="#{not empty q.answerLabelEn}"
+												style="font-weight: bold; color: #1c7ed6;" />
+											<h:outputText value="#{q.answerText}"
+												rendered="#{empty q.answerLabelEn and not empty q.answerText}"
+												style="white-space: pre-wrap; color: #1c7ed6; font-weight: 500;" />
+											<h:outputText value="-"
+												rendered="#{empty q.answerLabelEn and empty q.answerText}"
+												style="color: #adb5bd;" />
+										</div>
+										<h:panelGroup rendered="#{not empty q.remarks}">
+											<div
+												style="margin-left: 10px; margin-top: 5px; font-style: italic; color: #868e96; font-size: 0.85em; border-top: 1px dashed #e9ecef; padding-top: 4px;">
+												Remarks: #{q.remarks}</div>
+										</h:panelGroup>
+									</div>
+								</ui:repeat>
+							</ui:repeat>
+
+							<div
+								style="margin-top: 25px; padding: 15px; border-top: 1px solid #dee2e6; font-size: 1.15em; background: #f8f9fa; border-radius: 6px;">
+								<div style="margin-bottom: 15px;">
+									<strong
+										style="color: #495057; display: block; margin-bottom: 6px;">Customer
+										Attachment:</strong>
+									<ui:repeat value="#{feedbackBean.customerAttachments}"
+										var="att">
+										<div
+											style="margin-left: 10px; margin-top: 4px; display: inline-flex; align-items: center; background: #e8f4fd; padding: 4px 10px; border-radius: 4px; margin-right: 8px;">
+											<h:outputLink target="_blank"
+												value="#{feedbackBean.getAttachmentSecureUrl(att)}"
+												style="color: #1c7ed6; text-decoration: none; font-weight: 500;">
+												<h:outputText value="#{att.filename}" />
+											</h:outputLink>
+										</div>
+									</ui:repeat>
+									<h:outputText value="None"
+										rendered="#{empty feedbackBean.customerAttachments}"
+										style="color: #adb5bd; margin-left: 10px;" />
+								</div>
+
+								<div
+									style="border: 1px solid #dee2e6; padding: 15px; border-radius: 6px; background-color: #ffffff; margin-top: 15px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);">
+									<div style="margin-bottom: 12px;">
+										<strong style="color: #495057;">Customer Comment:</strong>
+										<div style="margin-top: 6px; padding: 10px 12px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; color: #212529;">
+											<h:outputText value="#{feedbackBean.selectedFeedback.comments}"
+												rendered="#{not empty feedbackBean.selectedFeedback.comments}"
+												style="white-space: pre-wrap;" />
+											<h:outputText value="None"
+												rendered="#{empty feedbackBean.selectedFeedback.comments}"
+												style="color: #adb5bd; font-style: italic;" />
+										</div>
+									</div>
+									<div style="margin-bottom: 12px;">
+										<strong style="color: #495057;">Comment from HOS:</strong>
+										<div style="margin-top: 6px;">
+											<p:inputTextarea value="#{feedbackBean.editingCommentsHos}"
+												rows="4" style="width: 100%; box-sizing: border-box; border-radius: 6px; border: 1px solid #dee2e6; padding: 10px; font-size: 1.1em;"
+												placeholder="Enter comments from HOS..." />
+										</div>
+									</div>
+									<div>
+										<strong style="color: #495057;">Attachment from HOS:</strong>
+										<h:panelGroup id="idHosAttachmentsPanel" layout="block"
+											style="margin-top: 8px; margin-bottom: 12px;">
+											<ui:repeat value="#{feedbackBean.editingHosAttachments}"
+												var="att">
+												<div
+													style="margin-left: 10px; margin-top: 4px; display: inline-flex; align-items: center; background: #e8f4fd; padding: 4px 10px; border-radius: 4px; margin-right: 8px;">
+													<p:commandLink styleClass="ui-icon ui-icon-close"
+														style="display: inline-block; margin-right: 6px; cursor: pointer;"
+														actionListener="#{feedbackBean.removeHosAttachment(att)}"
+														update=":idFeedbackDetailForm:idHosAttachmentsPanel, :idFeedbackListForm:msg" />
+													<h:outputLink target="_blank"
+														value="#{feedbackBean.getAttachmentSecureUrl(att)}"
+														style="color: #1c7ed6; text-decoration: none; font-weight: 500;">
+														<h:outputText value="#{att.filename}" />
+													</h:outputLink>
+												</div>
+											</ui:repeat>
+											<h:outputText value="None"
+												rendered="#{empty feedbackBean.editingHosAttachments}"
+												style="color: #adb5bd; margin-left: 10px;" />
+										</h:panelGroup>
+
+										<div style="margin-top: 12px;">
+											<p:fileUpload
+												fileUploadListener="#{feedbackBean.handleHosAttachmentUpload}"
+												mode="advanced" auto="true" sizeLimit="10000000"
+												allowTypes="/(\.|\/)(gif|jpe?g|png|webp|pdf)$/i"
+												label="Add Attachment"
+												update="idHosAttachmentsPanel, :idFeedbackListForm:msg" />
+											<div style="font-size: 0.85em; color: #868e96; margin-top: 5px; font-style: italic;">
+												Supported formats: JPG, JPEG, PNG, GIF, WEBP, PDF (Max 10MB)
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div style="margin-top: 20px; text-align: right;">
+								<p:commandButton value="Save"
+									actionListener="#{feedbackBean.saveFeedbackEdits}"
+									update=":idFeedbackListForm:idFeedbackListTable, :idFeedbackListForm:msg, @form"
+									oncomplete="if (!args.validationFailed) varFeedbackDetailDialog.hide()"
+									style="margin-right: 10px;" />
+								<p:commandButton value="Cancel"
+									onclick="varFeedbackDetailDialog.hide()" type="button" />
+							</div>
+						</p:scrollPanel>
+					</h:panelGroup>
+				</p:dialog>
+			</h:form>
+		</p:panel>
+	</ui:define>
+
+</ui:composition>

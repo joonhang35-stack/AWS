@@ -1,0 +1,597 @@
+package com.bcs.zsg.acct.web.bean;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.lang.reflect.Type;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
+
+import javax.faces.model.SelectItem;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.util.EntityUtils;
+import org.primefaces.json.JSONException;
+import org.primefaces.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import com.bcs.zsg.acct.bo.ChartOfAcctBO;
+import com.bcs.zsg.acct.bo.EInvoiceBO;
+import com.bcs.zsg.acct.helper.EInvoiceProperties;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotTransVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.EInvoiceConstant;
+import com.bcs.zsg.common.helper.EInvoiceUtils;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.einvoice.vo.ApiDocumentQueryResponseVO;
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.maintenance.bo.MalaysiaStateBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.purchase.bo.BillPymtBO;
+import com.bcs.zsg.purchase.bo.PurchaseEOBO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+import com.bcs.zsg.purchase.web.bean.BillPymtBean;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.scheduler.SchedulerApp;
+import com.bcs.zsg.scheduler.SchedulerApp.SchedulerVO;
+import com.bcs.zsg.web.object.EInvoiceDocument;
+import com.bcs.zsg.web.object.EInvoiceStandardError;
+import com.bcs.zsg.web.object.EInvoiceValidationStepResult;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+public class EInvoiceBean extends AppBackingBean implements Serializable {
+	private static final long serialVersionUID = 1L;
+	
+	@Autowired
+	private transient EInvoiceBO eInvoiceBO;
+	@Autowired
+	private transient ChartOfAcctBO chartOfAcctBO;
+	@Autowired
+	private transient InvoiceBO invoiceBO;
+	@Autowired
+	private transient BillPymtBO billPymtBO;
+	@Autowired
+	private transient CorporateProfileBO corporateProfileBO;
+	@Autowired
+	private transient RegionBO regionBO;
+	@Autowired
+	private transient MalaysiaStateBO malaysiaStateBO;
+	@Autowired
+	protected transient PurchaseEOBO purchaseEOBO;
+	
+	private EInvoiceDocumentVO eInvoiceDocumentVO;
+	
+	List<EInvoiceDocument> eInvoiceDocumentList;
+	List<EInvoiceDocumentVO> eInvoiceList;
+	List<EInvoiceConsolidateVO> eInvConsolDetailsList;
+	private List<EInvoiceApiDailySnapshotVO> eInvApiDailySnapshotList;
+	
+	private SelectItem[] statusListItems;
+	private SelectItem[] eInvDocTypeListItems;
+	
+	private boolean isEInvSubmissionRole = false;
+	private boolean eCNIssueRole = false;
+	
+	// Get Recent Documents (E-Invoice API)
+	private Date thirtyDaysAgo;
+	private Date todayDate;
+	private Date getRecentDocumentsDate;
+	private ApiDocumentQueryResponseVO apiDocumentQueryResponseVO;
+	
+	private List<SchedulerVO> schedulerList;
+	
+	List<EInvoiceDocumentVO> filteredList;
+
+	@Override
+	public void resetForm() {
+
+	}
+
+	public void init(String cd) {
+		try {
+			eInvoiceDocumentList = new ArrayList<EInvoiceDocument>();
+			
+			if (cd.equals("L")) {
+				// document listing page, load all e invoice docs from database
+				loadEInvoiceDocumentList();
+				loadEInvApiDailySnapshotList();
+			}
+			
+			loadAuthority();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void searchDocuments() {
+		try {
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO);
+//			String accessToken = EInvoiceUtils.getAccessToken("IG50676466040", false, getSessionInfoBean().getCompanyVO());
+			String accessToken = eInvoiceUtils.getAccessToken(getSessionInfoBean().getCompanyVO(), false);
+			
+			int totalPages = getDocumentsTotalPages(accessToken);
+			
+			synchronized (this) {  // Acquire the lock on lockObject
+	            this.wait(2200);       // Call wait() while holding the lock
+	        }
+			
+			for (int page = 1; page <= totalPages; page++) {
+				JSONObject response = getDocuments(page, accessToken);
+				
+				Gson gson = new Gson();
+		        Type eInvoiceDocumentListType = new TypeToken<List<EInvoiceDocument>>() {}.getType();
+		        List<EInvoiceDocument> eInvoiceDocumentList = gson.fromJson(response.getJSONArray("result").toString(), eInvoiceDocumentListType);
+
+		        for (EInvoiceDocument eInvoiceDocument : eInvoiceDocumentList) {
+//		        	System.out.println(eInvoiceDocument.getUuid());
+		        	
+		        	eInvoiceDocument.setDateTimeIssuedDt(Date.from(OffsetDateTime.parse(eInvoiceDocument.getDateTimeIssued()).toInstant()));
+		        	eInvoiceDocument.setDateTimeReceivedDt(Date.from(OffsetDateTime.parse(eInvoiceDocument.getDateTimeReceived(), DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant()));
+		        	eInvoiceDocument.setDateTimeValidatedDt(Date.from(OffsetDateTime.parse(eInvoiceDocument.getDateTimeValidated(), DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant()));
+		        }
+//		        System.out.println();
+		        this.eInvoiceDocumentList.addAll(eInvoiceDocumentList);
+		        
+//		        System.out.println("Waiting...");
+		        synchronized (this) {  
+		            this.wait(2200);	// wait to avoid E-Invoice API request limit (1 per 2 sec)
+		        }
+//		        System.out.println("Wait done!\n");
+			}
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public JSONObject getDocuments(int pageNo, String accessToken) throws ClientProtocolException, IOException, BusinessException, JSONException {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        
+		Calendar calendar = Calendar.getInstance();
+		Date toDate = new Date();
+		Date fromDate = calendar.getTime();
+		calendar.add(Calendar.MONTH, -1);
+		fromDate = calendar.getTime();
+		
+//		System.out.println("CYY sdf.format(fromDate): " + sdf.format(fromDate));
+//		System.out.println("CYY sdf.format(toDate): " + sdf.format(toDate));
+		
+		String url = UriComponentsBuilder.fromHttpUrl(EInvoiceProperties.getSystemApiUrl() + "api/v1.0/documents/search")
+                .queryParam("submissionDateFrom", sdf.format(fromDate))
+                .queryParam("submissionDateTo", sdf.format(toDate))
+                .queryParam("pageNo", pageNo)
+                .build()
+                .toUriString();
+		
+		HttpClient client = new DefaultHttpClient();
+		HttpGet request = new HttpGet(url);
+		
+		request.addHeader("Accept", "application/json");
+        request.addHeader("Accept-Language", "en");
+        request.addHeader("Content-Type", "application/json");
+        request.addHeader("Authorization", "Bearer " + accessToken);
+        
+        HttpResponse response = client.execute(request);
+        
+//        BufferedReader reader1 = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+//        StringBuilder responseString = new StringBuilder();
+//        String line1;
+//        while ((line1 = reader1.readLine()) != null) {
+//            responseString.append(line1);
+//        }
+//        System.out.println(responseString);
+        
+        int statusCode = response.getStatusLine().getStatusCode();
+        System.out.println("CYY statusCode: " + statusCode);
+        
+        JSONObject jsonResponse = new JSONObject(EntityUtils.toString(response.getEntity()));
+        if (statusCode != 200) {
+        	System.out.println(jsonResponse.toString(4));
+        }
+        return jsonResponse;
+//        System.out.println(jsonResponse.toString(4));
+	}
+	
+	public JSONObject getDocuments(String accessToken) throws ClientProtocolException, BusinessException, IOException, JSONException {
+		return getDocuments(1, accessToken);
+	}
+	
+	public int getDocumentsTotalPages(String accessToken) throws ClientProtocolException, BusinessException, IOException, JSONException {
+		JSONObject jsonObject = getDocuments(accessToken);
+		
+		JSONObject metadata = jsonObject.getJSONObject("metadata");
+		if (metadata == null) {
+			throw new BusinessException(CommonErrConstant.ERR_GET_DOC_FAILED);
+		}
+		
+		int totalPages = metadata.getInt("totalPages");
+		return totalPages;
+	}
+	
+	public void getRecentDocuments() {
+		try {
+			
+			List<ApiDocumentQueryResponseVO> responseList = eInvoiceBO.getRecentDocuments(getRecentDocumentsDate, getSessionInfoBean().getCompanyVO());
+			
+			successResult();
+			
+//			System.out.println(new JSONObject(responseVO).toString(4));
+//			System.out.println(new JSONObject(responseVO.getMetadata()).toString(4));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void updDocumentDetails(EInvoiceDocumentVO eInvoiceDocumentVO) {
+		
+		try {
+			if (StringUtils.isBlank(eInvoiceDocumentVO.getDocumentUuid())) {
+				// if no uuid, means didn't submit before, no need call API
+				return;
+//					throw new BusinessException(CommonErrConstant.ERR_DOC_NO_UUID);
+			}
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, invoiceBO);
+			String accessToken = eInvoiceUtils.getAccessToken(getSessionInfoBean().getCompanyVO(), true);
+			
+			EInvoiceDocumentVO updVO = eInvoiceUtils.updDocumentDetails(eInvoiceDocumentVO.getDocumentUuid(), accessToken);
+			eInvoiceDocumentVO.setStatusCode(updVO.getStatusCode());
+			eInvoiceDocumentVO.setDocStatusReason(updVO.getDocStatusReason());
+			
+			loadEInvoiceDocumentList();
+			
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void getDocumentDetails(EInvoiceDocumentVO eInvoiceDocumentVO) {
+		
+		try {
+			if (StringUtils.isBlank(eInvoiceDocumentVO.getDocumentUuid())) {
+				// if no uuid, means didn't submit before, no need call API
+				return;
+//					throw new BusinessException(CommonErrConstant.ERR_DOC_NO_UUID);
+			}
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, invoiceBO);
+//			String accessToken = EInvoiceUtils.getAccessToken(getSessionInfoBean().getCompanyVO().getTaxIdNo(), true, getSessionInfoBean().getCompanyVO());
+			String accessToken = eInvoiceUtils.getAccessToken(getSessionInfoBean().getCompanyVO(), true);
+			
+//	        if (!EInvoiceUtils.validateTaxpayerTin(getSessionInfoBean().getCompanyVO().getTaxIdNo(), accessToken)) {
+//	        	throw new BusinessException(CommonErrConstant.ERR_TAXPAYER_TIN_VALIDATION_FAILED);
+//	        }
+	        
+			EInvoiceDocument eInvoiceDocument = EInvoiceUtils.getDocumentDetails(eInvoiceDocumentVO.getDocumentUuid(), accessToken);
+			eInvoiceDocumentVO.setStatusCode(eInvoiceDocument.getStatus());
+			eInvoiceDocumentVO.setLongId(eInvoiceDocument.getLongId());
+			eInvoiceDocumentVO.setDocStatusReason(eInvoiceDocument.getDocumentStatusReason());
+			
+			if (eInvoiceDocumentVO.getStatusCode().equals(EInvoiceConstant.E_INV_STATUS_INVALID)) {
+				for (EInvoiceValidationStepResult step : eInvoiceDocument.getValidationResults().getValidationSteps()) {
+					if (step.getStatus().equals(EInvoiceConstant.E_INV_STATUS_INVALID)) {
+						for (EInvoiceStandardError err : step.getError().getInnerError()) {
+							if (StringUtils.isBlank(eInvoiceDocumentVO.getDocStatusReason())) {
+								eInvoiceDocumentVO.setDocStatusReason(err.getError());
+							} else {
+								eInvoiceDocumentVO.setDocStatusReason(eInvoiceDocumentVO.getDocStatusReason() + "\n" + err.getError());
+							}
+						}
+					}
+				}
+			}
+			
+			System.out.println("CYY eInvoiceVO.getSysDocType(): " + eInvoiceDocumentVO.getSysDocType());
+			
+			if (eInvoiceDocumentVO.getSysDocType().equals(CommonConstant.SYS_NUM_CD_INVC) || eInvoiceDocumentVO.getSysDocType().equals(CommonConstant.SYS_NUM_CD_PAX_STMT)) {
+				InvoiceVO invoiceVO = invoiceBO.getInvoiceById(eInvoiceDocumentVO.getRefId());
+				invoiceVO.seteInvoiceStatus(eInvoiceDocument.getStatus());
+				chartOfAcctBO.updateVO(invoiceVO);
+			}
+			
+			if (eInvoiceDocumentVO.getSysDocType().equals(CommonConstant.SYS_NUM_CD_PURC_BILL)) {
+				ExOrderBillVO exOrderBillVO = billPymtBO.getEOBillById(eInvoiceDocumentVO.getRefId());
+				exOrderBillVO.seteInvoiceStatus(eInvoiceDocument.getStatus());
+				chartOfAcctBO.updateVO(exOrderBillVO);
+			}
+			
+//			eInvoiceVO.setDtCancel(eInvoiceDocument.getCancelDateTimeDt());
+			chartOfAcctBO.updateVO(eInvoiceDocumentVO);
+			
+			// refresh invoice e-Invoice data also
+			
+			loadEInvoiceDocumentList();
+			successResult();
+			
+//	        invoiceVO.seteInvoiceDocument(eInvoiceDocument);
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	private void loadEInvoiceDocumentList() {
+		eInvoiceList = eInvoiceBO.getEInvoiceList(getSessionInfoBean().getCompanyVO().getId());
+	}
+
+	public void loadConsolidateDetailsList(EInvoiceDocumentVO docVO) {
+		eInvConsolDetailsList = eInvoiceBO.getEInvConsolDetailsList(docVO.getDocumentUuid());
+	}
+	
+	private void loadEInvApiDailySnapshotList() {
+		
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+		params.put("statusCd", BaseConstant.STATUS_ACTIVE);
+		
+		eInvApiDailySnapshotList = eInvoiceBO.getApiDailySnapshotList(params);
+	}
+	
+	public void loadAuthority() {
+//		List<UserRoleViewVO> userRoleList = this.getUserInfo().getRoleList();
+		
+//		if (CollectionUtils.isNotEmpty(userRoleList)) {
+//			for (UserRoleViewVO userRoleVO : userRoleList) {
+//				if (userRoleVO.getRoleCode().equals(SalesConstant.E_INV_SUBMIT)) {
+//					isEInvSubmissionRole = true;
+//				}
+//			}
+//		}
+		
+		if (getSessionInfoBean().getUserVO().getLoginId().equals("youyuan") || getSessionInfoBean().getUserVO().getLoginId().equals("superman")) {
+			isEInvSubmissionRole = true;
+		}
+		
+		if (getSessionInfoBean().getUserVO().getLoginId().equals("youyuan")
+				|| getSessionInfoBean().getUserVO().getLoginId().equals("gavingoh")
+				|| getSessionInfoBean().getUserVO().getLoginId().equals("sowhwa")) {
+			eCNIssueRole = true;
+		}
+	}
+	
+	public void loadSchedulerList() {
+		try {
+			schedulerList = SchedulerApp.getInstance().getSchedulerList();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void handleEInvoiceSelected(EInvoiceDocumentVO vo) {
+		try {
+			eInvoiceDocumentVO = eInvoiceBO.getEInvoiceByUUID(vo.getDocumentUuid());
+			EInvoiceUtils.generateValidationQrCode(eInvoiceDocumentVO);
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void handleSnapshotSelected(EInvoiceApiDailySnapshotVO vo) {
+		try {
+			
+			apiDocumentQueryResponseVO = new ApiDocumentQueryResponseVO();
+			apiDocumentQueryResponseVO.setResult(new ArrayList<EInvoiceApiDailySnapshotTransVO>());
+			
+			List<EInvoiceApiDailySnapshotVO> list = eInvoiceBO.getApiDailySnapshotList(vo.getDtTrans());
+			
+			for (EInvoiceApiDailySnapshotVO snapshotVO : list) {
+				JSONObject jsonResponse = new JSONObject(snapshotVO.getJsonResponse());
+				
+				Gson gson = FunctionUtils.getGsonDateConverter();
+				ApiDocumentQueryResponseVO responseVO = gson.fromJson(jsonResponse.toString(), ApiDocumentQueryResponseVO.class);
+				
+//				System.out.println("CYY responseVO.getResult().size(): " + responseVO.getResult().size());
+				apiDocumentQueryResponseVO.getResult().addAll(responseVO.getResult());
+			}
+			
+			for (EInvoiceApiDailySnapshotTransVO document : apiDocumentQueryResponseVO.getResult()) {
+//				String iso = document.getDateTimeReceived();
+//				Instant instant = Instant.parse(iso);
+//				Date date = Date.from(instant);
+//				document.setDateTimeReceivedDt(date);
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * use on... when opening a dialog
+	 * maybe handle better? You Yuan 7/11/2025
+	 * on is for pre process
+	 * handle is for actual action
+	 * should be like this right?
+	 */
+	public void onGetRecentDocuments() {
+		thirtyDaysAgo = Date.from(LocalDate.now().minusDays(30).atStartOfDay(ZoneId.systemDefault()).toInstant());
+		todayDate = new Date();
+		getRecentDocumentsDate = null;
+	}
+	
+	public void submitCreditNoteType(EInvoiceDocumentVO vo) {
+		try {
+//			eInvoiceDocumentVO = eInvoiceBO.getEInvoiceDetails(vo);
+			JSONObject submitResponse = eInvoiceBO.submitCreditNoteType(vo);
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void resubmitEInvoiceDocument(EInvoiceDocumentVO vo, BillPymtBean billPymtBean) {
+		try {
+			if (StringUtils.equals(vo.getSysDocType(), CommonConstant.SYS_NUM_CD_PURC_BILL)) {
+				billPymtBean.onBillSelected(vo.getRefId());
+				EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, regionBO, malaysiaStateBO, corporateProfileBO, billPymtBO, purchaseEOBO, chartOfAcctBO);
+				CompanyVO companyVO = corporateProfileBO.getCompanyDetails(billPymtBean.getExOrderBillVO().getCompanyId());
+				JSONObject submitResponse = eInvoiceUtils.submitSelfBilledInvoice(
+						billPymtBean.getExOrderBillVO(), billPymtBean.getSupplierVO(), billPymtBean.getSupplierList(), 
+						billPymtBean.getAcctTransVO(), companyVO);
+				eInvoiceUtils.processSubmitResponse(submitResponse, billPymtBean.getExOrderBillVO());
+			}
+			
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public List<EInvoiceDocument> geteInvoiceDocumentList() {
+		return eInvoiceDocumentList;
+	}
+
+	public void seteInvoiceDocumentList(List<EInvoiceDocument> eInvoiceDocumentList) {
+		this.eInvoiceDocumentList = eInvoiceDocumentList;
+	}
+
+	public List<EInvoiceDocumentVO> geteInvoiceList() {
+		return eInvoiceList;
+	}
+
+	public void seteInvoiceList(List<EInvoiceDocumentVO> eInvoiceList) {
+		this.eInvoiceList = eInvoiceList;
+	}
+
+	public List<EInvoiceConsolidateVO> geteInvConsolDetailsList() {
+		return eInvConsolDetailsList;
+	}
+
+	public void seteInvConsolDetailsList(List<EInvoiceConsolidateVO> eInvConsolDetailsList) {
+		this.eInvConsolDetailsList = eInvConsolDetailsList;
+	}
+
+	public EInvoiceDocumentVO geteInvoiceDocumentVO() {
+		return eInvoiceDocumentVO;
+	}
+
+	public void seteInvoiceDocumentVO(EInvoiceDocumentVO eInvoiceDocumentVO) {
+		this.eInvoiceDocumentVO = eInvoiceDocumentVO;
+	}
+	
+	public SelectItem[] getStatusListItems() {
+		if(statusListItems == null) {
+			statusListItems = LookupItemUtils.createFilterOptions(CommonConstant.LOOKUP_CAT_CD_E_INV_STATUS);
+		}
+		return statusListItems;
+	}
+
+	public SelectItem[] geteInvDocTypeListItems() {
+		if(eInvDocTypeListItems == null) {
+			eInvDocTypeListItems = LookupItemUtils.createFilterOptions(CommonConstant.LOOKUP_CAT_CD_E_INV_DOC_TYPE);
+		}
+		return eInvDocTypeListItems;
+	}
+
+	public boolean getIsEInvSubmissionRole() {
+		return isEInvSubmissionRole;
+	}
+
+	public void setEInvSubmissionRole(boolean isEInvSubmissionRole) {
+		this.isEInvSubmissionRole = isEInvSubmissionRole;
+	}
+
+	public Date getTodayDate() {
+		return todayDate;
+	}
+
+	public void setTodayDate(Date todayDate) {
+		this.todayDate = todayDate;
+	}
+
+	public Date getGetRecentDocumentsDate() {
+		return getRecentDocumentsDate;
+	}
+
+	public void setGetRecentDocumentsDate(Date getRecentDocumentsDate) {
+		this.getRecentDocumentsDate = getRecentDocumentsDate;
+	}
+
+	public Date getThirtyDaysAgo() {
+		return thirtyDaysAgo;
+	}
+
+	public void setThirtyDaysAgo(Date thirtyDaysAgo) {
+		this.thirtyDaysAgo = thirtyDaysAgo;
+	}
+
+	public List<EInvoiceApiDailySnapshotVO> geteInvApiDailySnapshotList() {
+		return eInvApiDailySnapshotList;
+	}
+
+	public void seteInvApiDailySnapshotList(List<EInvoiceApiDailySnapshotVO> eInvApiDailySnapshotList) {
+		this.eInvApiDailySnapshotList = eInvApiDailySnapshotList;
+	}
+
+	public ApiDocumentQueryResponseVO getApiDocumentQueryResponseVO() {
+		return apiDocumentQueryResponseVO;
+	}
+
+	public void setApiDocumentQueryResponseVO(ApiDocumentQueryResponseVO apiDocumentQueryResponseVO) {
+		this.apiDocumentQueryResponseVO = apiDocumentQueryResponseVO;
+	}
+
+	public List<SchedulerVO> getSchedulerList() {
+		return schedulerList;
+	}
+
+	public void setSchedulerList(List<SchedulerVO> schedulerList) {
+		this.schedulerList = schedulerList;
+	}
+
+	public boolean iseCNIssueRole() {
+		return eCNIssueRole;
+	}
+
+	public void seteCNIssueRole(boolean eCNIssueRole) {
+		this.eCNIssueRole = eCNIssueRole;
+	}
+	
+	public List<EInvoiceDocumentVO> getFilteredList() {
+		return filteredList;
+	}
+
+	public void setFilteredList(List<EInvoiceDocumentVO> filteredList) {
+		this.filteredList = filteredList;
+	}
+}

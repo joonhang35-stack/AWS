@@ -1,0 +1,368 @@
+
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml"
+				xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+
+<style>
+	.badge-email-pending {
+  		background-color: #ffa500; 
+	}
+	.badge-email-success {
+		background-color: green;
+	}
+	.badge-email-pending,
+	.badge-email-success {
+		color: white;
+	    padding: 1px 4px; /* Adjusted padding to make the badge smaller */
+	    margin-left: 5px;
+	    border-radius: 50%;
+	    font-size: 0.75em; /* Adjusted font size to make the badge text smaller */
+	    font-weight: bold;
+	}
+</style>
+
+<script type="text/javascript">
+    function fncLoad() {
+        document.getElementById('idCustListForm:idAddBtn').onclick();
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+</script>
+
+<p:panel header="Customer Maintenance" toggleable="true" toggleSpeed="500">
+	<!--h:body onload="#{salesBean.strOnLoad}"-->
+		<h:form id="idCustListForm">
+			<p:panelGrid  style="padding-bottom:5px;">
+				<p:row>
+					<p:column style="width: 60px;">
+						<p:commandButton id="idAddBtn" value="Add" actionListener="#{salesBean.onAddCustomer}" update=":idAddCustDialog" oncomplete="varAddCustDialog.show()" immediate="true"/>
+					</p:column>
+					<p:column rendered="#{salesBean.isSuperUser()}">
+						<p:commandButton id="idUpdAllBtn" value="Update All Cust Name To Related Tables" oncomplete="varUpdAllCustNm2TblCfrmDialog.show()" immediate="true" rendered="#{salesBean.isSuperUser()}"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			
+			<p:dataTable id="idCustListTable" widgetVar="varCustomerListTable" value="#{salesBean.lazyCustDataModel}" var="vo" paginator="true" rows="20" 
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+				rowsPerPageTemplate="20, 30, 50" emptyMessage="#{msg['cust.tbl.empty.message']}" filteredValue="#{salesBean.filteredObjList}" lazy="true" filterEvent="enter">
+			
+				<p:column headerText="Edit" style="width:50px; text-align:center;">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onCustomerSelected(vo, false)}"
+						update=":idAddCustDialog" oncomplete="varAddCustDialog.show()" rendered="#{vo.statusCode eq 'AC'}"/>
+				</p:column>
+				<p:column headerText="Delete" style="width:50px; text-align:center;">
+					<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.onCustomerSelected(vo, false)}" oncomplete="varDelCustDialog.show()" rendered="#{vo.statusCode eq 'AC'}"/>
+				</p:column>
+				<p:column headerText="Tour History" style="width:50px; text-align:center;">
+					<p:commandButton icon="ui-icon-script" actionListener="#{salesBean.onCustTourHistSelected(vo, false)}" update=":idTourHistCustForm" oncomplete="varTourHistCustDialog.show()"/>
+				</p:column>
+				<p:column headerText="AC/IA" style="width:50px; text-align:center;"
+					rendered="#{salesBean.allowUpdateCusStatus}">
+					<p:commandButton icon="ui-icon-check" actionListener="#{salesBean.updateCustomerStatus(vo, 'AC')}" update=":idCustListForm:idCustListTable" rendered="#{vo.statusCode eq 'IA'}" style="background : green"/>
+					<p:commandButton icon="ui-icon-minus" actionListener="#{salesBean.updateCustomerStatus(vo, 'IA')}" update=":idCustListForm:idCustListTable" rendered="#{vo.statusCode eq 'AC'}" style="background : red"/>
+				</p:column>
+				
+				<p:column headerText="Customer No" sortBy="#{vo.code}" filterBy="#{vo.code}">
+					<h:outputText value="#{vo.code}" />
+				</p:column>
+				
+				<p:column headerText="Customer Name" sortBy="#{vo.custName}" filterBy="#{vo.custName}" filterMatchMode="contains">
+					<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.salutationCd)} #{vo.custName}" />
+					<h:outputText id="idEmailUpdPending" value="P" styleClass="badge-email-pending" rendered="#{not empty vo.emailUpdStatus and vo.emailUpdStatus eq 'P'}"/>
+					<h:outputText id="idEmailUpdSuccess" value="S" styleClass="badge-email-success" rendered="#{not empty vo.emailUpdStatus and vo.emailUpdStatus eq 'S'}"/>
+					<pe:tooltip for="idEmailUpdPending" shared="true" showDelay="3000" rendered="#{not empty vo.emailUpdStatus and vo.emailUpdStatus eq 'P'}">
+						<h:outputText value="#{vo.emailUpdRemarks}" escape="true" style="white-space: pre-wrap"/>
+					</pe:tooltip>
+					<pe:tooltip for="idEmailUpdSuccess" shared="true" showDelay="3000" rendered="#{not empty vo.emailUpdStatus and vo.emailUpdStatus eq 'S'}">
+						<h:outputText value="#{vo.emailUpdRemarks}" escape="true" style="white-space: pre-wrap"/>
+					</pe:tooltip>
+				</p:column>
+				
+				<p:column headerText="NickName" sortBy="#{vo.nickName}" filterBy="#{vo.nickName}" filterMatchMode="contains">
+					<h:outputText value="#{vo.nickName}" />
+				</p:column>
+				
+				<p:column headerText="Company Name" sortBy="#{vo.corporateName}" filterBy="#{vo.corporateName}" filterMatchMode="contains">
+					<h:outputText value="#{vo.corporateName}" />
+				</p:column>
+				
+				<!-- <p:column headerText="GST Registration No" sortBy="#{vo.gstRegNo}" filterBy="#{vo.gstRegNo}" filterMatchMode="contains">
+					<h:outputText value="#{vo.gstRegNo}" />
+				</p:column> -->
+				<p:column headerText="Class" sortBy="#{vo.classes}" filterBy="#{vo.classes}">
+			    	<h:outputText value="#{vo.classes}"/>
+				</p:column>
+				
+				
+				<p:column headerText="Contact" sortBy="#{vo.perContacts}" filterBy="#{vo.perContacts}">
+				    <ui:repeat value="#{vo.perContacts.split(',')}" var="cntc" varStatus="status" rendered="#{not empty vo.perContacts}">
+				        <h:outputText value="#{salesBean.getContactStrWithCountryPair(cntc, status.index, vo.countryCode)}"/>
+				        <br/>
+				    </ui:repeat>
+				</p:column>
+				
+				<p:column headerText="Identity" sortBy="#{vo.identities}" filterBy="#{vo.identities}" filterMatchMode="contains">
+			        <ui:repeat value="#{vo.identities.split(',')}" var="identity" rendered="#{not empty vo.identities}">
+			            <h:outputText value="#{salesBean.getIdentityStr(identity)}"/><br/>
+			        </ui:repeat>
+				</p:column>
+				
+				<p:column headerText="Email" sortBy="#{vo.emailList}" filterBy="#{vo.emailList}" filterMatchMode="contains">
+					<!-- <h:outputText value="#{vo.email}" /> -->
+					<ui:repeat value="#{vo.emailList.split(',')}" var="email" varStatus="loop" rendered="#{not empty vo.emailList}">
+						<h:outputText value="Email #{loop.index + 1}: #{email}" /><br/>
+					</ui:repeat>
+				</p:column>
+				
+				<p:column headerText="Refresh" style="width:50px; text-align:center;" rendered="#{salesBean.isSuperUser()}">
+					<p:commandButton icon="ui-icon-refresh" actionListener="#{salesBean.updateAcctTransDestinationCust(vo.id)}"/>
+				</p:column>
+				
+				<p:column headerText="Lock" style="width:50px; text-align:center;"
+					rendered="#{salesBean.invPmntAuthVO.salesManager or salesBean.invPmntAuthVO.operationsRole or salesBean.invPmntAuthVO.asstSalesManager}">
+					<p:commandButton icon="ui-icon-locked" actionListener="#{salesBean.unlockCustomer(vo.id, vo.isLock)}"
+						update=":idCustListForm:idCustListTable" rendered="#{vo.isLock}"/>
+					<p:commandButton icon="ui-icon-unlocked" actionListener="#{salesBean.unlockCustomer(vo.id, vo.isLock)}"
+						update=":idCustListForm:idCustListTable" rendered="#{not vo.isLock}"/>
+				</p:column>
+			</p:dataTable>
+			
+			<h:panelGrid columns="1" style="width:1px; padding-bottom:5px;">
+				<p:commandButton value="Add" update=":idAddCustDialog" oncomplete="varAddCustDialog.show()" immediate="true"/>
+			</h:panelGrid>
+		</h:form>
+	<!--/h:body-->
+</p:panel>
+
+<!-- DIALOG - ADD CUSTOMER -->
+<p:dialog id="idAddCustDialog" widgetVar="varAddCustDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false"
+	height="600" width="900">
+	<f:facet name="header">
+		<h:outputFormat value="Customer"/>
+	</f:facet>
+	<h:form id="idAddCustForm">
+		<ui:include src="../../sales/common/add_customer.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - EDIT CUSTOMER -->
+<p:dialog id="idEditCustDialog" widgetVar="varEditCustDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Customer"/>
+	</f:facet>
+	<h:form id="idEditCustForm">
+		<ui:include src="../../sales/common/add_customer.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - DELETE CUSTOMER -->
+<p:confirmDialog widgetVar="varDelCustDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="Yes" actionListener="#{salesBean.deleteCustomer}" update="@form,:idCustListForm" oncomplete="varDelCustDialog.hide();"/>
+		<p:commandButton value="Cancel" oncomplete="varDelCustDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<p:dialog id="idIDDialog" widgetVar="varIDDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Identity"/>
+	</f:facet>
+	<h:form id="idIDForm">
+		<ui:include src="../../sales/common/add_identity.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idLangDialog" widgetVar="varLangDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Language"/>
+	</f:facet>
+	<h:form id="idLangForm">
+		<ui:include src="../../sales/common/add_language.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idMealDialog" widgetVar="varMealDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Meal"/>
+	</f:facet>
+	<h:form id="idMealForm">
+		<ui:include src="../../sales/common/add_meal.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idContactDialog" widgetVar="varContactDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Contact"/>
+	</f:facet>
+	<h:form id="idContactForm">
+		<ui:include src="../../sales/common/add_contact.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idClassDialog" widgetVar="varClassDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Class"/>
+	</f:facet>
+	<h:form id="idClassForm">
+		<ui:include src="../../sales/common/add_class.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idComplicationDialog" widgetVar="varComplicationDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Complication"/>
+	</f:facet>
+	<h:form id="idComplicationForm">
+		<ui:include src="../../sales/common/add_complication.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idRemarksDialog" widgetVar="varRemarksDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Remark"/>
+	</f:facet>
+	<h:form id="idRemarksForm">
+		<ui:include src="../../sales/common/add_remarks.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ADD ID SCANNED COPY
+-->
+<p:dialog widgetVar="varAddIDScannedCopyDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Scanned Copy" />
+	</f:facet>
+	
+	<h:form if="idAddIDScannedCopyForm" enctype="multipart/form-data">
+		<ui:include src="../../sales/common/add_scanned_copy.xhtml" />
+	</h:form>
+</p:dialog>
+
+<p:confirmDialog widgetVar="varDelScannedCopyDialog" message="Are you sure want to delete this scanned copy?">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="Yes" actionListener="#{salesBean.delScannedCopy}" update="@form,:idIDForm:idVisaScannedCopy,:idIDForm:idPassportScannedCopy" oncomplete="varDelScannedCopyDialog.hide()"/>
+		<p:commandButton value="Cancel" onclick="varDelScannedCopyDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<p:confirmDialog widgetVar="varDelScannedPassportDialog" message="Are you sure want to delete this passport scanned copy?">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="Yes" actionListener="#{salesBean.delScannedPassport}" update="@form,:idAddCustForm:idPassportScannedCopy" oncomplete="varDelScannedPassportDialog.hide()"/>
+		<p:commandButton value="Cancel" onclick="varDelScannedPassportDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!-- DIALOG - Tour History  -->
+ <p:dialog id="idTourHistCustDialog" widgetVar="varTourHistCustDialog" modal="true" resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Tour History"/>
+	</f:facet>
+	<h:form id="idTourHistCustForm">
+		<ui:include src="../../sales/common/tourHist_cust.xhtml"/>
+	</h:form>
+</p:dialog> 
+
+<!--
+	DIALOG - TOUR DEPARTURE MORE INFO
+-->
+<p:dialog widgetVar="varTourDepMoreInfoDialog" header="More Info" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false" style="width:100% !important;">
+	<h:form id="idTourDepMoreInfoForm">
+		<ui:include src="../../sales/booking/reserve/more_info.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ADD ATTACHMENT
+-->
+<p:dialog id="idAttachmentDialog" widgetVar="varAttachmentDialog" header="Attachment" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false" style="width:100% !important;">
+	<h:form id="idAttachmentForm">
+		<ui:include src="../common/add_customer_attachment.xhtml" />
+	</h:form>
+</p:dialog>
+
+<p:confirmDialog widgetVar="varUpdAllCustNm2TblCfrmDialog" header="Confirmation" message="Are you sure want to do update all customer name to related tables?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{salesBean.updateAllCustNmToRelatedTbl()}" oncomplete="varUpdAllCustNm2TblCfrmDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" onclick="varUpdAllCustNm2TblCfrmDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!-- DIALOG - DELETE ATTACHMENT CONFIRMATION -->
+<p:confirmDialog widgetVar="varDelAttachmentDialog" header="Confirmation" message="Are you sure want to delete this attachment permenently?"
+	closable="false">
+	<h:form>
+		<p:growl id="msg" />
+		<p:commandButton value="#{msg['common.button.label.yes']}"
+			actionListener="#{salesBean.deletePersonAttachment}"
+			update=":idAddCustForm:idAttachmentListPanel,:idEditCustForm:idAttachmentListPanel"
+			oncomplete="if (args &amp;&amp; !args.validationFailed) varDelAttachmentDialog.hide()" />
+		<p:commandButton value="#{msg['common.button.label.no']}"
+			onclick="varDelAttachmentDialog.hide()" />
+	</h:form>
+</p:confirmDialog>
+
+<p:confirmDialog widgetVar="varDelAttachmentScannedCopyDialog"
+	message="Are you sure want to delete this scanned copy?">
+	<h:form>
+		<p:growl id="msg" />
+		<p:commandButton value="Yes"
+			actionListener="#{salesBean.delAttachmentScannedCopy}"
+			update=":idAttachmentForm"
+			oncomplete="varDelAttachmentScannedCopyDialog.hide()" />
+		<p:commandButton value="Cancel"
+			onclick="varDelAttachmentScannedCopyDialog.hide()" />
+	</h:form>
+</p:confirmDialog>
+
+<!-- DIALOG - ADD/EDIT EMAIL -->
+<p:dialog id="idCustEmailDialog" widgetVar="varCustEmailDialog"
+	modal="true" resizable="false" dynamic="true" draggable="true"
+	closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Email" />
+	</f:facet>
+	<h:form id="idCustEmailForm">
+		<ui:include src="../common/add_customer_email.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - SENT EMAIL UPDATE PROFILE -->
+<p:confirmDialog widgetVar="varConfirmSentCustomerProfileUpdateDialog" header="Confirmation"
+	message="Are you sure you want to send email for this customer?" closable="false">
+	<h:form>
+		<p:growl id="msg" />
+		<p:commandButton value="#{msg['common.button.label.yes']}"
+			actionListener="#{salesBean.processEmailCustomerProfileUpdate}"
+			update="@form" process="@this"
+			oncomplete="varConfirmSentCustomerProfileUpdateDialog.hide()" />
+		<p:commandButton value="#{msg['common.button.label.no']}"
+			update="@form" process="@this"
+			oncomplete="varConfirmSentCustomerProfileUpdateDialog.hide()" />
+	</h:form>
+</p:confirmDialog>
+</ui:define>
+</ui:composition>

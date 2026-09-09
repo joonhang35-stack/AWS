@@ -1,0 +1,139 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="MICE Tour" toggleable="true" toggleSpeed="500">
+	<h:form id="idTourPkgForm">
+		<h:panelGrid columns="2" style="width:210px;">
+			<h:outputLabel for="idTourCat">Category:</h:outputLabel>
+			<h:selectOneMenu id="idTourCat" value="#{tourPkgBean.searchParamVO.obj2}" effect="fade">
+				<f:selectItem itemLabel="Select One"/>
+				<f:selectItems value="#{tourPkgBean.tourCatViewList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+				<p:ajax event="change" listener="#{tourPkgBean.handleTourMICECatSelect}" oncomplete="varTourPkgList.clearFilters()" update="@form,idTourPkgList"/>
+			</h:selectOneMenu>
+			<p:commandButton value="Add" oncomplete="varAddTourMICEDialog.show()" update=":idAddTourMICEDialog"
+				rendered="#{not sessionInfoBean.employeeVO.department.contains('sale') and not empty tourPkgBean.searchParamVO.obj2}"/>
+		</h:panelGrid>
+		<p:dataTable id="idTourPkgList" widgetVar="varTourPkgList" value="#{tourPkgBean.tourDepViewList}" var="vo" filteredValue="#{tourPkgBean.filteredObjList}" filterEvent="enter">
+			<p:column headerText="Edit" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{tourPkgBean.handleTourDepSelect(vo)}" update=":idEditTourMICEDialog" oncomplete="varEditTourMICEDialog.show()"/>
+			</p:column>
+			<p:column headerText="Delete" style="width:50px; text-align:center;" rendered="#{not sessionInfoBean.employeeVO.department.contains('sale')}">
+				<p:commandButton icon="ui-icon-close" actionListener="#{tourPkgBean.handleTourDepSelect(vo)}" oncomplete="varDelTourMICEDialog.show()"/>
+			</p:column>
+			<p:column headerText="Departure Date" style="width:120px; text-align:center;"><h:outputText value="#{vo.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+			<p:column headerText="Tour Code" style="width:150px; text-align:center;" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains"><h:outputText value="#{vo.code}"/></p:column>
+			<p:column headerText="Tour Description">
+				<h:outputText value="#{vo.tourPkgVO.numDays}"/><h:outputText value=" Days" rendered="#{vo.tourPkgVO.numDays gt 1}"/><h:outputText value=" Day" rendered="#{vo.tourPkgVO.numDays eq 1}"/>
+				<h:outputText value=" #{vo.tourPkgVO.numNights}"/><h:outputText value=" Nights" rendered="#{vo.tourPkgVO.numNights gt 1}"/><h:outputText value=" Night" rendered="#{vo.tourPkgVO.numNights eq 1}"/>
+				<h:outputText value=" #{vo.tourPkgVO.nameEn}" rendered="#{not empty vo.tourPkgVO.nameEn}"/>
+				<h:outputText value=" #{vo.tourPkgVO.nameZh}" rendered="#{not empty vo.tourPkgVO.nameZh}"/>
+			</p:column>
+		</p:dataTable>
+		<h:panelGrid columns="1" style="width:1px;">
+			<p:commandButton value="Add" oncomplete="varAddTourMICEDialog.show()" update=":idAddTourMICEDialog"
+				rendered="#{not sessionInfoBean.employeeVO.department.contains('sale') and not empty tourPkgBean.searchParamVO.obj2}"/>
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - ADD TOUR PACKAGE
+-->
+<p:dialog id="idAddTourMICEDialog" widgetVar="varAddTourMICEDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add MICE Tour" />
+	</f:facet>
+	
+	<h:form id="idAddTourMICEForm">
+		<ui:include src="add_tour_mice.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - EDIT TOUR PACKAGE
+-->
+<p:dialog id="idEditTourMICEDialog" widgetVar="varEditTourMICEDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit MICE Tour" />
+	</f:facet>
+	
+	<h:form id="idEditTourMICEForm">
+		<ui:include src="add_tour_mice.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - DELETE TOUR PACKAGE
+-->
+<p:confirmDialog header="Delete MICE Tour" widgetVar="varDelTourMICEDialog" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{tourPkgBean.delTourMICE}" update="@form,:idTourPkgForm" oncomplete="varDelTourMICEDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{tourPkgBean.resetForm}" oncomplete="varDelTourMICEDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - REGION
+-->
+<p:dialog id="idRegionDialog" widgetVar="varRegionDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Region" />
+	</f:facet>
+	
+	<h:form id="idRegionForm">
+		<ui:include src="add_region.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - DELETE REGION
+-->
+<p:confirmDialog header="Delete Region" widgetVar="varDelRegionDialog" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{tourPkgBean.delRegion}" update="@form,:idAddTourMICEForm:idRegionList,:idEditTourMICEForm:idRegionList" oncomplete="varDelRegionDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{tourPkgBean.resetRegionForm}" oncomplete="varDelRegionDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - COUNTRY
+-->
+<p:dialog id="idCountryDialog" widgetVar="varCountryDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Country" />
+	</f:facet>
+	
+	<h:form id="idCountryForm">
+		<ui:include src="add_country.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - DELETE REGION
+-->
+<p:confirmDialog header="Delete Country" widgetVar="varDelCountryDialog" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{tourPkgBean.delCountry}" update="@form,:idAddTourMICEForm:idCountryList,:idEditTourMICEForm:idCountryList" oncomplete="varDelCountryDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{tourPkgBean.resetCountryForm}" oncomplete="varDelCountryDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+</ui:define>
+</ui:composition>
+
+

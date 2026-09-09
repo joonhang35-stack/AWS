@@ -1,0 +1,144 @@
+package com.bcs.zsg.product.dao;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.hibernate.Query;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.dao.SystemNumberGenerationDAO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+public class ProductReportDAOImpl extends BaseHibernateDAO implements ProductReportDAO {
+	
+	@Autowired
+	private SystemNumberGenerationDAO systemNumberGenerationDAO;
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public TourDepartureVO getTourDepVOWithRoomingInfoForReport(Long idTourDep) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT td.id, td.code, td.dt_dep, tt.description AS tour_theme, tc.description AS tour_category, ");
+		sb.append("rl_tm.tour_manager, rl_tl.tour_lead, land_op.fk_id AS id_supplier ");
+		sb.append("FROM tour_dep td ");
+		sb.append("INNER JOIN tour_pkg tp ON tp.id = td.id_tour_pkg ");
+		sb.append("LEFT JOIN tour_theme tt ON tt.id = tp.id_tour_theme ");
+		sb.append("LEFT JOIN tour_cat tc ON tc.id = tt.id_tour_cat ");
+		sb.append("LEFT JOIN (SELECT id_tour_dep, GROUP_CONCAT(description, ',') AS tour_manager FROM rooming_list WHERE category = 'TOUR_MANAGER' GROUP BY id_tour_dep) rl_tm ON rl_tm.id_tour_dep = td.id ");
+		sb.append("LEFT JOIN (SELECT id_tour_dep, GROUP_CONCAT(description, ',') AS tour_lead FROM rooming_list WHERE category = 'TOUR_LEAD' GROUP BY id_tour_dep) rl_tl ON rl_tl.id_tour_dep = td.id ");
+		sb.append("LEFT JOIN rooming_list land_op ON land_op.id_tour_dep = td.id AND land_op.category = 'SUPPLIER' ");
+		sb.append("WHERE td.id = :idTourDep AND td.status_cd <> :statusCode");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idTourDep", idTourDep);
+		query.setParameter("statusCode", CommonConstant.STATUS_CD_CANCELLED);
+		
+		List<Object> results = query.list();
+		List<TourDepartureVO> tourDepList = new ArrayList<TourDepartureVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			TourDepartureVO vo = new TourDepartureVO();
+			if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue()); 
+			if (row[1] != null) vo.setCode((String) row[1]);
+			if (row[2] != null) vo.setDtDep((Date) row[2]);
+			if (row[3] != null) vo.setTourTheme((String) row[3]);
+			if (row[4] != null) vo.setTourCategory((String) row[4]);
+			if (row[5] != null) vo.setTourManager((String) row[5]);
+			if (row[6] != null) vo.setTourLead((String) row[6]);
+			if (row[7] != null) vo.setIdSupplier(((BigInteger) row[7]).longValue());
+			tourDepList.add(vo);
+		}
+		
+		return CollectionUtils.isNotEmpty(tourDepList) ? tourDepList.get(0) : null;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getTourProfitLossReport(Map<String, Object> params) throws BusinessException {
+		
+		String psPrefix = LookupItemUtils.getPsPrefix((Long) params.get("idCompany"));
+		String invPrefix = LookupItemUtils.getInvPrefix((Long) params.get("idCompany"));
+		String cnPrefix = LookupItemUtils.getCnPrefix((Long) params.get("idCompany"));
+		String bpPrefix = LookupItemUtils.getPbPrefix((Long) params.get("idCompany"));
+		String eoPrefix = LookupItemUtils.getEoPrefix((Long) params.get("idCompany"));
+		String baPrefix = LookupItemUtils.getBaPrefix((Long) params.get("idCompany"));
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT 'SALES' AS type, iv.id, CONCAT(IF(iv.doc_type_cd = 'C', '" + cnPrefix + "', IF(iv.doc_type_cd = 'P', '" + psPrefix + "', '" + invPrefix + "')), ' ', iv.code) AS code, iv.dt_inv, IF(iv.doc_type_cd = 'C', 'Credit Note', 'Invoice'), ");
+		sb.append("iv.amount * IF(iv.doc_type_cd = 'C', -1, 1) AS amount, ");
+		sb.append("IF(iv.cn_inv_no IS NOT NULL AND iv.cn_inv_no != '' AND iv.cn_ps_no IS NOT NULL AND iv.cn_ps_no != '', ");
+		sb.append("		CONCAT('" + psPrefix + "', iv.cn_ps_no, ' / ', '" + invPrefix + "', iv.cn_inv_no), ");
+		sb.append("		IF(iv.cn_inv_no IS NOT NULL AND iv.cn_inv_no != '', CONCAT('" + invPrefix + "', iv.cn_inv_no), CONCAT('" + psPrefix + "', iv.cn_ps_no))) AS ref_code, ");
+		sb.append("p.salutation_cd AS salutation_cd, concat(p.last_name, ' ', p.first_name) AS customer_name,  '' AS ex_reason, '' AS comments ");
+		sb.append("FROM invoice iv ");
+		sb.append("LEFT JOIN customer c ON c.id = iv.id_customer ");
+		sb.append("LEFT JOIN person p ON p.id = c.id_pc ");
+		sb.append("LEFT JOIN invoice cn_iv ON cn_iv.code = iv.cn_inv_no and cn_iv.doc_type_cd = 'I' ");
+		sb.append("LEFT JOIN invoice cn_ps ON iv.cn_ps_no = cn_ps.ps_no and cn_ps.doc_type_cd = 'P' ");
+		sb.append("WHERE ifnull(cn_iv.id_tour_dep, ifnull(cn_ps.id_tour_dep, iv.id_tour_dep)) = :idTourDep AND iv.status_cd NOT IN :statusCode ");
+		sb.append("AND (iv.doc_type_cd != 'P' OR iv.doc_type_status NOT IN ('CV', 'SP', 'CL')) ");
+		sb.append("UNION ");
+		sb.append("SELECT 'COSTS' AS type, ex_bill.id, CONCAT('" + bpPrefix + " ', ex_bill.code) AS code, ex_bill.dt_bill, 'Bill Payment' AS doc_type_cd, ");
+		sb.append("ex_bill.bill_amt AS amount, CONCAT('" + eoPrefix + " ', eo.code) AS ref_code, '' AS salutation_cd, c.name AS customer_name, ex_bill.ex_reason, ex_bill.comments ");
+		sb.append("FROM ex_order_bill ex_bill ");
+		sb.append("LEFT JOIN ex_order eo ON eo.id = ex_bill.id_eo ");
+		sb.append("LEFT JOIN supplier s ON s.id = ex_bill.id_supplier ");
+		sb.append("LEFT JOIN corporate c ON c.id_person = s.id_person ");
+		sb.append("WHERE ex_bill.id_tour_dep = :idTourDep AND ex_bill.status_cd NOT IN :statusCode ");
+		sb.append("UNION ");
+		sb.append("SELECT 'COSTS' AS type, jn.id, CONCAT('JE', jn.sys_no) AS code, jn.dt_journal, 'Journal' AS doc_type_cd, ");
+		sb.append("jn.total_amt AS amount,'' AS ref_code, '' AS salutation_cd, '' AS customer_name, jn.reason, jn.reference ");
+		sb.append("FROM journal jn ");
+		sb.append("WHERE jn.type_cd = :jrnlTypeCd and jn.id_tour_dep = :idTourDep ");
+		sb.append("UNION ");
+		sb.append("SELECT 'Bank Adjustment' AS type, cb.id, CONCAT('" + baPrefix + " ', cb.sys_no) AS code, cb.dt_trans, '' AS doc_type_cd, ");
+		sb.append("(cb.debit - cb.credit) AS amount, '' AS ref_code, '' AS salutation_cd, cb.payee AS customer_name, cb.remarks AS ex_reason, '' AS comments ");
+		sb.append("FROM cash_book cb ");
+		sb.append("WHERE cb.id_tour_dep = :idTourDep AND cb.status_cd NOT IN :statusCode ");
+		sb.append("AND cb.sys_cd != 'rfnd' ");
+		
+		System.out.println(sb.toString());
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idTourDep", params.get("idTourDep"));
+		query.setParameter("jrnlTypeCd", CommonConstant.JOURNAL_TYPE_GNRL);
+		List<String> statusList = new ArrayList<>();
+		statusList.add(CommonConstant.STATUS_CD_VOID);
+		statusList.add(CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameterList("statusCode", statusList);
+		
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			if (row[0] != null) vo.setTypeCd((String) row[0]);
+			if (row[1] != null) vo.setId(((BigInteger) row[1]).longValue()); 
+			if (row[2] != null) vo.setCode((String) row[2]);
+			if (row[3] != null) vo.setInvoiceDt((Date) row[3]);
+			if (row[4] != null) vo.setDocTypeCd((String) row[4]);
+			if (row[5] != null) vo.setAmount((Double) row[5]);
+			if (row[6] != null) vo.setCnInvNo((String) row[6]);
+			if (row[7] != null) vo.setCustSalutation((String) row[7]);
+			if (row[8] != null) vo.setCustName((String) row[8]);
+			if (row[9] != null) vo.setReason((String) row[9]);
+			if (row[10] != null) vo.setComments((String) row[10]);
+			invoiceList.add(vo);
+		}
+		
+		return invoiceList;
+	}
+}
+	

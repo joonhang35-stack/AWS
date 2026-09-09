@@ -1,0 +1,72 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<script type="text/javascript">
+function onAttachPaymentValidation(xhr, status, args) {
+	if (!args.validationFailed) {
+		varAttachPmntDialog.hide();
+	}
+}
+</script>
+<p:growl id="msg"/>
+<p:panelGrid>		
+	<p:row>
+		<p:column><h:outputLabel for="idPaymentNumber">Payment Number <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idPaymentNumber" label="Payment Number" value="#{billPymtBean.bankPmntVO.sysNo}" required="true"/>
+		</p:column>
+		<p:column><p:commandButton value="Search" actionListener="#{billPymtBean.searchBankPayment}" update="@form" process="@this,idPaymentNumber"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Bank Account</h:outputLabel></p:column>
+		<p:column><h:outputText id="idBankAcct" label="idBankAcct" value="#{billPymtBean.bankPmntVO.temp}"/></p:column>
+		<p:column>Company</p:column>
+		<p:column><h:outputText id="idCompanyCode" value="#{billPymtBean.sessionInfoBean.companyVO.name}"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Date</h:outputLabel></p:column>
+		<p:column>
+			<p:calendar pattern="#{config['date.display.pattern']}" id="idPaymentDate" label="Date" value="#{billPymtBean.bankPmntVO.dtTrans}" required="true" readonlyInput="true"
+				mindate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart, 'dd-MMM-yyyy')}" 
+				maxdate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd, 'dd-MMM-yyyy')}" navigator="true" showButtonPanel="true"/>
+		</p:column>
+		<p:column>Payee</p:column>
+		<p:column><h:outputText id="idPayee" label="Payee" value="#{billPymtBean.bankPmntVO.payee}"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column>Cheque No</p:column>
+		<p:column colspan="3"><p:inputText id="idChequeNo" label="Cheque No" value="#{billPymtBean.bankPmntVO.refNo}" required="true" size="70" maxlength="20"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Memo</h:outputLabel></p:column>
+		<p:column colspan="3">
+			<p:inputTextarea id="idMemo" label="Memo" value="#{billPymtBean.bankPmntVO.remarks}" required="true" rows="7" cols="70" maxlength="255"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Payment Amount</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idPaymentAmount" label="Payment Amount" value="#{billPymtBean.bankPmntVO.credit}" required="true">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</p:inputText>
+		</p:column>
+		<p:column><h:outputLabel>Bills Amount</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idBillsAmount" label="Bills Amount" value="#{billPymtBean.cashBookVO.credit}" required="true" readonly="true">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid columns="3" style="width: 1px;">
+	<p:commandButton value="Save" actionListener="#{billPymtBean.saveAttachPayment}" update="@form,:idBillListForm:idPurBillPmntTable" process="@form" oncomplete="onAttachPaymentValidation(xhr, status, args)"/>
+	<p:commandButton value="Cancel" onclick="varAttachPmntDialog.hide()"/> 
+</p:panelGrid>
+</ui:composition>

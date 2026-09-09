@@ -1,0 +1,55 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:dataTable id="idDataTable" widgetVar="cOATable" value="#{chartOfAcctBean.acctViewList}" var="acctViewVO" paginator="true" rows="10" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="5, 10, 15" filterEvent="enter">
+	
+	<p:column headerText="Edit" style="width:50px; text-align:center;">
+		<p:commandButton icon="ui-icon-pencil" actionListener="#{chartOfAcctBean.handleAcctClicked(acctViewVO)}" update=":idEditBeginBalForm" oncomplete="varEditBeginBalDialog.show()"/>
+	</p:column>
+	
+	<p:column headerText="Group" sortBy="#{acctViewVO.group}" styleClass="txt_center" filterBy="#{acctViewVO.group}" style="width:80px;">  
+		<h:outputText value="#{acctViewVO.group}" />  
+	</p:column>
+	
+	<p:column headerText="Account" sortBy="#{acctViewVO.code}" styleClass="txt_center" filterBy="#{acctViewVO.code}" style="width:100px;">
+		<h:outputText value="#{acctViewVO.code}" rendered="#{empty acctViewVO.subCode}"/>
+		<h:outputText value="#{acctViewVO.code}-#{acctViewVO.subCode}" rendered="#{not empty acctViewVO.subCode}"/>
+	</p:column>
+	
+	<p:column headerText="Account Description" sortBy="#{acctViewVO.desc}, #{acctViewVO.subDesc}" filterBy="#{acctViewVO.desc}, #{acctViewVO.subDesc}" filterMatchMode="contains">
+		<h:outputText value="#{acctViewVO.desc}" rendered="#{empty acctViewVO.subDesc}"/>
+		<h:outputText value="#{acctViewVO.desc}, #{acctViewVO.subDesc}" rendered="#{not empty acctViewVO.subDesc}"/>
+	</p:column>
+	
+	<p:column headerText="Debit" sortBy="#{acctViewVO.debitBeginBal}" styleClass="txt_center" style="width:150px;">  
+		<h:outputText value="#{acctViewVO.debitBeginBal}">
+			<f:convertNumber pattern="#,##0.00"/>
+		</h:outputText>
+	</p:column>
+	  
+	<p:column headerText="Credit" sortBy="#{acctViewVO.creditBeginBal}" styleClass="txt_center" style="width:150px;">  
+		<h:outputText value="#{acctViewVO.creditBeginBal}">
+			<f:convertNumber pattern="#,##0.00"/>
+		</h:outputText>
+	</p:column>
+	
+	<p:columnGroup type="footer">
+		<p:row>
+			<p:column colspan="4" footerText="Totals:" style="text-align:right"/>
+			<p:column footerText="#{chartOfAcctBean.getDoubleDecimalFormat('#,##0.00', chartOfAcctBean.acctBalViewVO.totalBeginDebit)}"/>
+			<p:column footerText="#{chartOfAcctBean.getDoubleDecimalFormat('#,##0.00', chartOfAcctBean.acctBalViewVO.totalBeginCredit)}"/>
+		</p:row>
+	</p:columnGroup>
+</p:dataTable>
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varBeginBalDialog.hide()"/>
+</h:panelGrid>
+</ui:composition>

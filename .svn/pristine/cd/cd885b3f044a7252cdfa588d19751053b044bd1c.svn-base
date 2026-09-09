@@ -1,0 +1,59 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+	<p:growl id="msg"/>
+	<p:panelGrid>
+	<!-- 
+		<p:row>
+		<p:column><h:outputLabel for="idAddNo">No </h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddNo" colspan="3" label="No" value="#{purchaseEOBean.airLineVO.airLineNo}" /></p:column>
+		</p:row> -->
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddPoint">Sector <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddPoint" colspan="3" label="Sector" value="#{purchaseEOBean.airLineVO.point}" required="true" size="50" maxlength="255"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddFlightNo">Flight No <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddFlightNo" label="Flight No" value="#{purchaseEOBean.airLineVO.flightNo}" required="true" size="50" maxlength="20"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddDate">Date <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:calendar pattern="dd-MMM-yyyy" id="idAddDate" label="Date" value="#{purchaseEOBean.airLineVO.airLineDt}" navigator="true" showButtonPanel="true" required="true"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddTime">Time <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddTime" label="Time" value="#{purchaseEOBean.airLineVO.time}" required="true" maxlength="50"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddClass">Class <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddClass" label="Class" value="#{purchaseEOBean.airLineVO.airClass}" required="true" maxlength="20"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddStatus">Status <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddStatus" label="Status" value="#{purchaseEOBean.airLineVO.status}" required="true" maxlength="20"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddPNR">PNR </h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddPNR" label="PNR" value="#{purchaseEOBean.airLineVO.airLinePnr}" maxlength="50"/></p:column>
+		</p:row>
+		
+	</p:panelGrid>
+
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseEOBean.addAirLine}" update="@form,:idAddExOrderForm:idTabExOrder:idShowAirLine" rendered="#{purchaseEOBean.add}"/>
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseEOBean.editAirLine}" update="@form,:idAddExOrderForm:idTabExOrder:idShowAirLine" oncomplete="varAddAirlineDialog.hide()" rendered="#{not purchaseEOBean.add}"/>
+		<p:commandButton value="Cancel" actionListener="#{purchaseEOBean.resetAirLineForm}" oncomplete="varAddAirlineDialog.hide()" update="@form,:idAddEOAirlineForm" process="@this" />
+	</p:panelGrid>
+</ui:composition>

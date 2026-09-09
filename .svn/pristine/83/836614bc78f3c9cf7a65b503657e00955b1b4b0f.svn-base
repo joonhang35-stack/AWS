@@ -1,0 +1,45 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varPassLangDialog.show();
+		} else {
+			varPassLangDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idLangType">Spoken Language <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idLangType" label="Spoken Language" value="#{salesBean.personLangVO.langCd}" required="true">
+	            <f:selectItem itemLabel="Select One" itemValue=""/>
+	            <f:selectItems value="#{bterp:lookupItemList('lang_dilc')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu>
+        </p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{salesBean.addLanguage}" update="@form,:idAddInvoicePaxForm:idLangListTable" rendered="#{salesBean.languageAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{salesBean.updateLanguage}" update="@form,:idAddInvoicePaxForm:idLangListTable" oncomplete="varPassLangDialog.hide()" rendered="#{not salesBean.languageAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetLanguageForm}" update="@form" process="@this" oncomplete="varPassLangDialog.hide()" global="false">
+		<pe:resetEditableValues for="idPassLangForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

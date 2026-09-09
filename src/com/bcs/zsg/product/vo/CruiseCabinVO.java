@@ -1,0 +1,76 @@
+package com.bcs.zsg.product.vo;
+
+import com.bcs.zsg.core.vo.BaseVO;
+
+public class CruiseCabinVO extends BaseVO {
+	private static final long serialVersionUID = 1L;
+
+	private Long idCruise;
+	private String code;
+	private String description;
+	private Double fareSgl;
+	private Double fareInf;
+	private Integer seq;
+	private String cruiseDesc;
+
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+
+	public Long getIdCruise() {
+		return idCruise;
+	}
+
+	public void setIdCruise(Long idCruise) {
+		this.idCruise = idCruise;
+	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public void setCode(String code) {
+		this.code = code;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public Double getFareSgl() {
+		return fareSgl;
+	}
+
+	public void setFareSgl(Double fareSgl) {
+		this.fareSgl = fareSgl;
+	}
+
+	public Double getFareInf() {
+		return fareInf;
+	}
+
+	public void setFareInf(Double fareInf) {
+		this.fareInf = fareInf;
+	}
+
+	public Integer getSeq() {
+		return seq;
+	}
+
+	public void setSeq(Integer seq) {
+		this.seq = seq;
+	}
+
+	public String getCruiseDesc() {
+		return cruiseDesc;
+	}
+
+	public void setCruiseDesc(String cruiseDesc) {
+		this.cruiseDesc = cruiseDesc;
+	}
+	
+}

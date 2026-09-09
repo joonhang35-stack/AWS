@@ -1,0 +1,111 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	template="/WEB-INF/views/layouts/main.xhtml"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+<p:panel header="Cruise Cabin">
+	<h:form id="idCabinForm">
+		<p:panelGrid columns="2" style="width:1px;">
+			<p:commandButton value="Add" actionListener="#{cabinBean.resetForm}" oncomplete="varAddCabinDialog.show()" update=":idAddCabinDialog,:idAddCabinForm"/>
+		</p:panelGrid>
+		<p:dataTable id="idCabinList" value="#{cabinBean.cabinList}" var="cabinVO" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="20, 30, 50" filterEvent="enter">
+			<p:column styleClass="txt_center" style="width:45px;">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{cabinBean.setCabinVO(cabinVO)}" update=":idAddCabinDialog" oncomplete="varAddCabinDialog.show()"/>
+			</p:column>
+			<p:column styleClass="txt_center" style="width:45px;">
+				<p:commandButton icon="ui-icon-close" actionListener="#{cabinBean.setCabinVO(cabinVO)}" oncomplete="varDelCabinDialog.show()"
+					styleClass="ui-state-error"/>
+			</p:column>
+			<p:column headerText="Seq." styleClass="txt_center">
+				<h:outputText value="#{cabinVO.seq}"/>
+			</p:column>
+			<p:column headerText="Cruise" styleClass="txt_center">
+				<h:selectOneMenu id="idCruise" editable="false" effect="fade" value="#{cabinVO.idCruise}" disabled="true">
+				 	<f:selectItems value="#{cabinBean.cruiseList}"  var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+				</h:selectOneMenu>
+			</p:column>
+			<p:column headerText="Code" styleClass="txt_center">
+				<h:outputText value="#{cabinVO.code}"/>
+			</p:column>
+			<p:column headerText="Description">
+				<h:outputText value="#{cabinVO.description}"/>
+			</p:column>
+			<p:column headerText="Single Fare" styleClass="txt_right">
+				<h:outputText value="#{cabinVO.fareSgl}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Infant Fare" styleClass="txt_right">
+				<h:outputText value="#{cabinVO.fareInf}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:panel>
+
+<p:dialog id="idAddCabinDialog" widgetVar="varAddCabinDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	closable="true">
+	<f:facet name="header">
+		<h:outputFormat value="Cruise Cabin" />
+	</f:facet>
+	
+	<h:form id="idAddCabinForm">
+		<p:growl id="msg"/>
+		<p:panelGrid>
+			<p:row>
+				<p:column><h:outputLabel for="idSeq">Seq. No. <span class="required">*</span></h:outputLabel></p:column>
+				<p:column><p:inputText id="idSeq" label="Seq. No." value="#{cabinBean.cabinVO.seq}" required="true" style="width:300px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText></p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idCruise">Cruise <span class="required">*</span></h:outputLabel></p:column>
+				<p:column>
+					<h:selectOneMenu id="idCruise" editable="true" effect="fade" value="#{cabinBean.cabinVO.idCruise}">
+					 	<f:selectItems value="#{cabinBean.cruiseList}"  var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idCode">Code <span class="required">*</span></h:outputLabel></p:column>
+				<p:column><p:inputText id="idCode" label="Code" value="#{cabinBean.cabinVO.code}" required="true" style="width:300px;" readonly="#{not empty cabinBean.cabinVO.id}"/></p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idDesc">Description <span class="required">*</span></h:outputLabel></p:column>
+				<p:column><p:inputText id="idDesc" label="Description" value="#{cabinBean.cabinVO.description}" required="true" style="width:300px;"/></p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idFareSgl">Single Fare (multiply of Twin Fare) <span class="required">*</span></h:outputLabel></p:column>
+				<p:column colspan="3"><p:inputText id="idFareSgl" label="Single Fare" value="#{cabinBean.cabinVO.fareSgl}" required="true" style="width:300px;"><f:convertNumber pattern="#,##0.00"/></p:inputText></p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idFareInf">Infant Fare (multiply of Twin Fare) <span class="required">*</span></h:outputLabel></p:column>
+				<p:column colspan="3"><p:inputText id="idFareInf" label="Infant Fare" value="#{cabinBean.cabinVO.fareInf}" required="true" style="width:300px;"><f:convertNumber pattern="#,##0.00"/></p:inputText></p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:panelGrid columns="2" style="width:1px;">
+			<p:commandButton value="#{cabinBean.cabinVO.id == null ? msg['common.button.label.save'] : msg['common.button.label.update']}" actionListener="#{cabinBean.save}"
+				update="@form,:idCabinForm:idCabinList" oncomplete="#{cabinBean.cabinVO.id == null ? '' : 'varAddCabinDialog.hide()'}"/>
+			<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varAddCabinDialog.hide()" process="@this" global="false" />
+		</p:panelGrid>
+	</h:form>
+</p:dialog>
+		
+<p:confirmDialog header="Delete Cabin" widgetVar="varDelCabinDialog" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{cabinBean.delete}" update="@form,:idCabinForm:idCabinList" oncomplete="varDelCabinDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" oncomplete="varDelCabinDialog.hide()" global="false"/>
+	</h:form>
+</p:confirmDialog>
+</ui:define>
+</ui:composition>

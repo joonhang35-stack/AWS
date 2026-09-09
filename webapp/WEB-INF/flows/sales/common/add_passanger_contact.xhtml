@@ -1,0 +1,68 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varPassContactDialog.show()
+		} else {
+			varPassContactDialog.hide()
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column>
+			<h:outputLabel>Contact Type <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idContactType" label="Contact Type" value="#{salesBean.personContactVO.typeCd}" required="true">  
+	            <f:selectItem itemLabel="Select One" itemValue=""/>
+				<f:selectItems value="#{bterp:lookupItemList('cntc_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu>
+        </p:column>
+        <p:column>
+			<h:outputLabel for="idNumber">Number <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAreaCode" label="Area Code" value="#{salesBean.personContactVO.areaCode}" required="true" maxlength="5" size="5" onkeypress="return rtnPhoneNo(event);">
+				<p:watermark for="idAreaCode" value="Ext"/>
+				<f:validateLength maximum="5"/>
+			</p:inputText>
+			<h:outputLabel> - </h:outputLabel>
+			<p:inputText id="idNumber" label="Number" value="#{salesBean.personContactVO.pNumber}" required="true" maxlength="14" size="20" onkeypress="return rtnPhoneNo(event);">
+				<p:watermark for="idNumber" value="Number"/>
+				<f:validateLength maximum="14"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+        <p:column>
+			<h:outputLabel for="idAtt">Attention</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAtt" label="Attention" value="#{salesBean.personContactVO.attention}" maxlength="100"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{salesBean.addContact}" update="@form,:idAddInvoicePaxForm:idContactListPanel" rendered="#{salesBean.contactAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{salesBean.updateContact}" update="@form,:idAddInvoicePaxForm:idContactListTable" oncomplete="onValidation(xhr, status, args)"  rendered="#{not salesBean.contactAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetContactForm}" update="@form" process="@this" oncomplete="varPassContactDialog.hide()" global="false">
+		<pe:resetEditableValues for="idPassContactForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

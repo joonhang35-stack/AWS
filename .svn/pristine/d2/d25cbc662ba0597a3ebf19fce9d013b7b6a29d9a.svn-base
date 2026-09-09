@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration scan="true" scanPeriod="30 seconds">
+
+    <contextName>bterp</contextName>
+
+    <property name="global.logger.dir" value="${catalina.base}/logs"/>
+    <property name="global.logger.level" value="error"/>
+
+	<conversionRule conversionWord="be" converterClass="com.bcs.zsg.core.logging.BaseExceptionConverter" />
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n%be</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="${CONTEXT_NAME}" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${global.logger.dir}/${CONTEXT_NAME}/${CONTEXT_NAME}.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${global.logger.dir}/${CONTEXT_NAME}/${CONTEXT_NAME}.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%c{0}] [%X{loginId},%X{sessionId},%X{requestId},%t] - %m%n%be%throwable</pattern>
+        </encoder>
+    </appender>
+    
+    <appender name="TimeTrackingLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${global.logger.dir}/${CONTEXT_NAME}/timeTracking.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${global.logger.dir}/${CONTEXT_NAME}/timeTracking.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%c{0}] [%X{loginId}] - %m%n%be%throwable</pattern>
+        </encoder>
+    </appender>
+    
+    <appender name="SecurityLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${global.logger.dir}/${CONTEXT_NAME}/security.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${global.logger.dir}/${CONTEXT_NAME}/security.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%c{0}] [%X{loginId},%X{sessionId},%X{requestId},%t] - %m%n%be%throwable</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="BOPerfLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${global.logger.dir}/${CONTEXT_NAME}/bo_perflog.csv</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${global.logger.dir}/${CONTEXT_NAME}/bo_perflog.csv.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%X{loginId},%X{sessionId},%X{requestId},%t,%m%n</pattern>
+        </encoder>
+    </appender>
+    
+    <appender name="DAOPerfLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${global.logger.dir}/${CONTEXT_NAME}/dao_perflog.csv</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${global.logger.dir}/${CONTEXT_NAME}/dao_perflog.csv.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%X{loginId},%X{sessionId},%X{requestId},%t,%m%n</pattern>
+        </encoder>
+    </appender>
+    
+    <appender name="HostMessageLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${global.logger.dir}/${CONTEXT_NAME}/host_message.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${global.logger.dir}/${CONTEXT_NAME}/host_message.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%c{0}] [%X{loginId},%X{sessionId},%X{requestId},%t] - %m%n%n</pattern>
+        </encoder>
+    </appender>
+    
+    <appender name="IntegrationPerfLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${global.logger.dir}/${CONTEXT_NAME}/integration_perflog.csv</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${global.logger.dir}/${CONTEXT_NAME}/integration_perflog.csv.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%X{loginId},%X{sessionId},%X{requestId},%t,%m%n</pattern>
+        </encoder>
+    </appender>
+    
+    <appender name="AuditPerfLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${global.logger.dir}/${CONTEXT_NAME}/audit_perflog.csv</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${global.logger.dir}/${CONTEXT_NAME}/audit_perflog.csv.%d{yyyy-MM-dd}.gz</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%X{loginId},%X{sessionId},%X{requestId},%t,%m%n</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- Time Tracking Logs -->
+    <logger name="com.bcs.zsg.sales.web.bean.InvoiceBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.sales.web.bean.CustomerBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.bank.web.bean.DepositBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.bank.web.bean.PaymentBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.sales.web.bean.BookingBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.purchase.web.bean.PurchaseBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.purchase.web.bean.BillPymtBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.bank.web.bean.ReconciliationBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.product.web.bean.TourPackageBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.acct.web.bean.GeneralLedgerBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.acct.web.bean.AccountReportBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    <logger name="com.bcs.zsg.gst.web.bean.GSTReportBean" additivity="false" level="error">
+        <appender-ref ref="TimeTrackingLog"/>
+    </logger>
+    
+    <logger name="com.bcs.zsg" additivity="false" level="${global.logger.level}">
+        <appender-ref ref="${CONTEXT_NAME}"/>
+    </logger>
+    
+    <logger name="com.bcs.zsg.component.security" additivity="false" level="${global.logger.level}">
+        <appender-ref ref="SecurityLog"/>
+    </logger>
+    
+    <logger name="BOPerfLog" additivity="false" level="info">
+        <appender-ref ref="BOPerfLog"/>
+    </logger>
+
+    <logger name="DAOPerfLog" additivity="false" level="info">
+        <appender-ref ref="DAOPerfLog"/>
+    </logger>
+    
+    <logger name="IntegrationPerfLog" additivity="false" level="info">
+        <appender-ref ref="IntegrationPerfLog"/>
+    </logger>
+    
+    <logger name="AuditPerfLog" additivity="false" level="info">
+        <appender-ref ref="AuditPerfLog"/>
+    </logger>
+    
+    <logger name="HostMessageLog" additivity="false" level="info">
+        <appender-ref ref="HostMessageLog"/>
+    </logger>
+    
+    <logger name="org.springframework.security" additivity="false" level="info">
+        <appender-ref ref="SecurityLog"/>
+    </logger>
+    
+    <logger name="org.springframework.web.servlet.PageNotFound" additivity="false" level="warn">
+        <appender-ref ref="${CONTEXT_NAME}"/>
+    </logger>
+    
+    <logger name="org.springframework.web" additivity="false" level="warn">
+        <appender-ref ref="${CONTEXT_NAME}"/>
+    </logger>
+    
+    <logger name="org.springframework" additivity="false" level="warn">
+        <appender-ref ref="${CONTEXT_NAME}"/>
+    </logger>
+
+	<logger name="org.jmesa" additivity="false" level="error">
+        <appender-ref ref="${CONTEXT_NAME}"/>
+    </logger>
+    
+     <logger name="org.quartz" additivity="false" level="error">
+	     <level value="ERROR"/>
+	 </logger>
+
+	<logger name="org" additivity="false" level="error">
+        <appender-ref ref="${CONTEXT_NAME}"/>
+    </logger>
+    
+    <root level="info">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+</configuration>

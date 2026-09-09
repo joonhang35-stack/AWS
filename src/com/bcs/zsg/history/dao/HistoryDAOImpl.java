@@ -1,0 +1,558 @@
+package com.bcs.zsg.history.dao;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.history.vo.InvoiceHistoryViewVO;
+import com.bcs.zsg.history.vo.InvoiceItemHistoryViewVO;
+import com.bcs.zsg.history.vo.InvoicePaxHistoryViewVO;
+import com.bcs.zsg.history.vo.InvoicePaymentHistoryViewVO;
+import com.bcs.zsg.history.vo.TourDepHistoryVO;
+import com.bcs.zsg.history.vo.TourDepHistoryViewAllVO;
+import com.bcs.zsg.history.vo.TourDepHistoryViewVO;
+import com.bcs.zsg.history.vo.TourPackageHistoryVO;
+import com.bcs.zsg.history.vo.TourPkgAllHistoryViewVO;
+import com.bcs.zsg.history.vo.TourPkgCurHistoryViewVO;
+
+public class HistoryDAOImpl extends BaseHibernateDAO implements HistoryDAO {
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.history.dao.HistoryDAO#getTourPkgHistoryViewList(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TourPkgCurHistoryViewVO> getTourPkgHistoryViewList(SearchParamVO searchParamVO) throws BusinessException {
+		Criteria criteria = createCriteria(TourPkgCurHistoryViewVO.class);
+		criteria.add(Restrictions.between("createdDate", searchParamVO.getFromDate(), searchParamVO.getToDate()));
+		return criteria.list();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.history.dao.HistoryDAO#getTourPkgHistoryViewListByIdHist(java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TourPkgAllHistoryViewVO> getTourPkgHistoryViewListByIdHist(Long idHist) throws BusinessException {
+		Criteria criteria = createCriteria(TourPkgAllHistoryViewVO.class);
+		criteria.add(Restrictions.eq("idHist", idHist));
+		return criteria.list();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.history.dao.HistoryDAO#getTourDepHistoryViewList(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	//
+	//
+	//DEPRECIEATED
+	//
+	//
+	@SuppressWarnings("unchecked")
+	public List<TourDepHistoryViewVO> getTourDepHistoryViewList(SearchParamVO searchParamVO) throws BusinessException {
+		/*Criteria criteria = createCriteria(TourDepHistoryViewVO.class);
+		criteria.add(Restrictions.between("updatedDate", searchParamVO.getFromDate(), searchParamVO.getToDate()));
+		return criteria.list();*/
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("select `h`.`id` AS `id`,`h`.`id_hist` AS `id_hist`,`h`.`id_tour_pkg` AS `id_tour_pkg`,`h`.`id_airline` AS `id_airline`,");
+		sb.append("`h`.`id_airline_schedule` AS `id_airline_schedule`,`h`.`id_tour_operator` AS `id_tour_operator`,");
+		sb.append("`h`.`dt_dep` AS `dt_dep`,`h`.`code` AS `code`,`h`.`description` AS `description`,");
+		sb.append("`h`.`full_twn` AS `full_twn`,`h`.`full_sgl` AS `full_sgl`,`h`.`full_ctw` AS `full_ctw`,");
+		sb.append("`h`.`full_ceb` AS `full_ceb`,`h`.`full_cnb` AS `full_cnb`,`h`.`grnd_twn` AS `grnd_twn`,");
+		sb.append("`h`.`grnd_sgl` AS `grnd_sgl`,`h`.`grnd_ctw` AS `grnd_ctw`,`h`.`grnd_ceb` AS `grnd_ceb`,");
+		sb.append("`h`.`grnd_cnb` AS `grnd_cnb`,`h`.`tour_mgr_cost` AS `tour_mgr_cost`,`h`.`tfair_discount` AS `tfair_discount`,");
+		sb.append("`h`.`cna_adt` AS `cna_adt`,`h`.`cpa_adt` AS `cpa_adt`,`h`.`csi_adt` AS `csi_adt`,`h`.`misc_adt` AS `misc_adt`,");
+		sb.append("`h`.`misc_chd` AS `misc_chd`,`h`.`full_remarks` AS `full_remarks`,`h`.`grnd_remarks` AS `grnd_remarks`,");
+		sb.append("`h`.`prn` AS `prn`,`h`.`seat_allotment` AS `seat_allotment`,`h`.`reserved_seat` AS `reserved_seat`,");
+		sb.append("`h`.`tour_mgr_pax` AS `tour_mgr_pax`,`h`.`travel_ins_policy_s` AS `travel_ins_policy_s`,");
+		sb.append("`h`.`travel_ins_policy_f` AS `travel_ins_policy_f`,`h`.`is_show_airline` AS `is_show_airline`,");
+		sb.append("`h`.`is_issued_s` AS `is_issued_s`,`h`.`is_issued_f` AS `is_issued_f`,`h`.`is_deposit_paid` AS `is_deposit_paid`,");
+		sb.append("`h`.`is_push` AS `is_push`,`h`.`is_hot_deal` AS `is_hot_deal`,`h`.`inv_remarks` AS `inv_remarks`,");
+		sb.append("`h`.`tour_status_cd` AS `tour_status_cd`,`h`.`reason` AS `reason`,`h`.`action_cd` AS `action_cd`,");
+		sb.append("`h`.`status_cd` AS `status_cd`,`h`.`dt_created` AS `dt_created`,`h`.`created_by` AS `created_by`,");
+		sb.append("`h`.`dt_upd` AS `dt_upd`,`h`.`upd_by` AS `upd_by`,`a`.`code` AS `airline_cd`,`h`.`seq_no` AS `seq_no`");
+		sb.append(" FROM `tour_dep_history` `h` LEFT JOIN `airline` `a` on `h`.`id_airline` = `a`.`id`");
+		sb.append(" JOIN (select max(`id`) as `id` from `tour_dep_history` group by `id_hist`) h2 on h.id = h2.id");
+		sb.append(" WHERE `h`.`dt_upd` between :fromDate and :toDate");
+		sb.append(" GROUP BY `h`.`id_hist` ORDER BY `h`.`id` desc");
+
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("fromDate", searchParamVO.getFromDate());
+		query.setParameter("toDate", searchParamVO.getToDate());
+
+		List<Object> results = query.list();
+		List<TourDepHistoryViewVO> tourDepHisList = new ArrayList<TourDepHistoryViewVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			TourDepHistoryViewVO vo = new TourDepHistoryViewVO();
+			if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue());
+			if (row[1] != null) vo.setIdHist(((BigInteger) row[1]).longValue());
+			if (row[2] != null) vo.setIdTourPkg(((BigInteger) row[2]).longValue());
+			if (row[3] != null) vo.setIdAirline(((BigInteger) row[3]).longValue());
+	        if (row[4] != null) vo.setIdAirlineSchedule(((BigInteger) row[4]).longValue());
+	        if (row[5] != null) vo.setIdTourOperator(((BigInteger) row[5]).longValue());
+	        if (row[6] != null) vo.setDtDep((Date) row[6]);
+	        if (row[7] != null) vo.setCode((String) row[7]);
+	        if (row[8] != null) vo.setDesc((String) row[8]);
+	        if (row[9] != null) vo.setFullTwn(Double.parseDouble(row[9].toString()));
+	        if (row[10] != null) vo.setFullSgl(Double.parseDouble(row[10].toString()));
+	        if (row[11] != null) vo.setFullCtw(Double.parseDouble(row[11].toString()));
+	        if (row[12] != null) vo.setFullCeb(Double.parseDouble(row[12].toString()));
+	        if (row[13] != null) vo.setFullCnb(Double.parseDouble(row[13].toString()));
+	        if (row[14] != null) vo.setGrndTwn(Double.parseDouble(row[14].toString()));
+	        if (row[15] != null) vo.setGrndSgl(Double.parseDouble(row[15].toString()));
+	        if (row[16] != null) vo.setGrndCtw(Double.parseDouble(row[16].toString()));
+	        if (row[17] != null) vo.setGrndCeb(Double.parseDouble(row[17].toString()));
+	        if (row[18] != null) vo.setGrndCnb(Double.parseDouble(row[18].toString()));
+	        if (row[19] != null) vo.setTourMgrCost(Double.parseDouble(row[19].toString()));
+	        if (row[20] != null) vo.setTfairDiscount(Double.parseDouble(row[20].toString()));
+	        if (row[21] != null) vo.setCnaAdt(Double.parseDouble(row[21].toString()));
+	        if (row[22] != null) vo.setCpaAdt(Double.parseDouble(row[22].toString()));
+	        if (row[23] != null) vo.setCsiAdt(Double.parseDouble(row[23].toString()));
+	        if (row[24] != null) vo.setMiscAdt(Double.parseDouble(row[24].toString()));
+	        if (row[25] != null) vo.setMiscChd(Double.parseDouble(row[25].toString()));
+	        if (row[26] != null) vo.setFullRemarks((String) row[26]);
+	        if (row[27] != null) vo.setGrndRemarks((String) row[27]);
+	        if (row[28] != null) vo.setPrn((String) row[28]);
+	        if (row[29] != null) vo.setSeatAllot(((Short) row[29]).intValue());
+	        if (row[30] != null) vo.setReservedSeat(((Short) row[30]).intValue());
+	        if (row[31] != null) vo.setTourManagerPax(((Short) row[31]).intValue());
+	        if (row[32] != null) vo.setTravelInsPolicyS((String) row[32]);
+	        if (row[33] != null) vo.setTravelInsPolicyF((String) row[33]);
+	        if (row[34] != null) vo.setIsShowAirline((Boolean) row[34]);
+	        if (row[35] != null) vo.setIsIssuedS((Boolean) row[35]);
+	        if (row[36] != null) vo.setIsIssuedF((Boolean) row[36]);
+	        if (row[37] != null) vo.setIsDepositPaid((Boolean) row[37]);
+	        if (row[38] != null) vo.setIsPush((Boolean) row[38]);
+	        if (row[39] != null) vo.setIsHotDeal((Boolean) row[39]);
+	        if (row[40] != null) vo.setInvRemarks((String) row[40]);
+	        if (row[41] != null) vo.setTourStatusCd((String) row[41]);
+	        if (row[42] != null) vo.setReason((String) row[42]);
+	        if (row[43] != null) vo.setActionCd((String) row[43]);
+	        if (row[44] != null) vo.setStatusCode((String) row[44]);
+			if (row[45] != null) vo.setCreatedDate((Date) row[45]);
+			if (row[46] != null) vo.setCreatedBy((String) row[46]);
+			if (row[47] != null) vo.setUpdatedDate((Date) row[47]);
+			if (row[48] != null) vo.setUpdatedBy((String) row[48]);
+			if (row[49] != null) vo.setAirlineCd((String) row[49]);
+	        if (row[50] != null) vo.setSeqNo(Integer.parseInt(row[50].toString()));
+
+
+			tourDepHisList.add(vo);
+		}
+		return tourDepHisList;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.history.dao.HistoryDAO#getTourDepHistoryViewListById(java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TourDepHistoryViewAllVO> getTourDepHistoryViewListById(Long idHist) throws BusinessException {
+		/*Criteria criteria = createCriteria(TourDepHistoryViewAllVO.class);
+		criteria.add(Restrictions.eq("idHist", idHist));
+		return criteria.list();*/
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("select `h`.`id` AS `id`,`h`.`id_hist` AS `id_hist`,`h`.`id_tour_pkg` AS `id_tour_pkg`,`h`.`id_airline` AS `id_airline`,");
+		sb.append("`h`.`id_airline_schedule` AS `id_airline_schedule`,`h`.`id_tour_operator` AS `id_tour_operator`,`h`.`dt_dep` AS `dt_dep`,");
+		sb.append("`h`.`code` AS `code`,`h`.`description` AS `description`,`h`.`full_twn` AS `full_twn`,`h`.`full_sgl` AS `full_sgl`,");
+		sb.append("`h`.`full_ctw` AS `full_ctw`,`h`.`full_ceb` AS `full_ceb`,`h`.`full_cnb` AS `full_cnb`,`h`.`grnd_twn` AS `grnd_twn`,");
+		sb.append("`h`.`grnd_sgl` AS `grnd_sgl`,`h`.`grnd_ctw` AS `grnd_ctw`,`h`.`grnd_ceb` AS `grnd_ceb`,`h`.`grnd_cnb` AS `grnd_cnb`,");
+		sb.append("`h`.`tour_mgr_cost` AS `tour_mgr_cost`,`h`.`tfair_discount` AS `tfair_discount`,`h`.`cna_adt` AS `cna_adt`,");
+		sb.append("`h`.`cpa_adt` AS `cpa_adt`,`h`.`csi_adt` AS `csi_adt`,`h`.`misc_adt` AS `misc_adt`,`h`.`misc_chd` AS `misc_chd`,");
+		sb.append("`h`.`full_remarks` AS `full_remarks`,`h`.`grnd_remarks` AS `grnd_remarks`,`h`.`prn` AS `prn`,`h`.`seat_allotment` AS `seat_allotment`,");
+		sb.append("`h`.`reserved_seat` AS `reserved_seat`,`h`.`tour_mgr_pax` AS `tour_mgr_pax`,`h`.`travel_ins_policy_s` AS `travel_ins_policy_s`,");
+		sb.append("`h`.`travel_ins_policy_f` AS `travel_ins_policy_f`,`h`.`is_show_airline` AS `is_show_airline`,`h`.`is_issued_s` AS `is_issued_s`,");
+		sb.append("`h`.`is_issued_f` AS `is_issued_f`,`h`.`is_deposit_paid` AS `is_deposit_paid`,`h`.`is_push` AS `is_push`,");
+		sb.append("`h`.`is_hot_deal` AS `is_hot_deal`,`h`.`inv_remarks` AS `inv_remarks`,`h`.`tour_status_cd` AS `tour_status_cd`,");
+		sb.append("`h`.`reason` AS `reason`,`h`.`action_cd` AS `action_cd`,`h`.`status_cd` AS `status_cd`,`h`.`dt_created` AS `dt_created`,");
+		sb.append("`h`.`created_by` AS `created_by`,`h`.`dt_upd` AS `dt_upd`,`h`.`upd_by` AS `upd_by`,`a`.`code` AS `airline_cd`,`h`.`seq_no` AS `seq_no`,");
+		sb.append("`p`.`num_days` AS `num_days`,`p`.`num_nights` AS `num_nights`");
+		sb.append("from");
+		sb.append("`tour_dep_history` `h`");
+		sb.append("left join `airline` `a` on `h`.`id_airline` = `a`.`id` ");
+		sb.append("left join `tour_pkg` `p` on `h`.`id_tour_pkg` = `p`.`id` ");
+		sb.append("where h.id_hist = :idHist order by `h`.`id` desc");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("idHist", idHist);
+		List<Object> results = query.list();
+		List<TourDepHistoryViewAllVO> tourDepHisAllList = new ArrayList<TourDepHistoryViewAllVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			TourDepHistoryViewAllVO vo = new TourDepHistoryViewAllVO();
+			if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue());
+			if (row[1] != null) vo.setIdHist(((BigInteger) row[1]).longValue());
+			if (row[2] != null) vo.setIdTourPkg(((BigInteger) row[2]).longValue());
+	        if (row[3] != null) vo.setIdAirline(((BigInteger) row[3]).longValue());
+	        if (row[4] != null) vo.setIdAirlineSchedule(((BigInteger) row[4]).longValue());
+	        if (row[5] != null) vo.setIdTourOperator(((BigInteger) row[5]).longValue());
+	        if (row[6] != null) vo.setDtDep((Date) row[6]);
+	        if (row[7] != null) vo.setCode((String) row[7]);
+	        if (row[8] != null) vo.setDesc((String) row[8]);
+	        if (row[9] != null) vo.setFullTwn(Double.parseDouble(row[9].toString()));
+	        if (row[10] != null) vo.setFullSgl(Double.parseDouble(row[10].toString()));
+	        if (row[11] != null) vo.setFullCtw(Double.parseDouble(row[11].toString()));
+	        if (row[12] != null) vo.setFullCeb(Double.parseDouble(row[12].toString()));
+	        if (row[13] != null) vo.setFullCnb(Double.parseDouble(row[13].toString()));
+	        if (row[14] != null) vo.setGrndTwn(Double.parseDouble(row[14].toString()));
+	        if (row[15] != null) vo.setGrndSgl(Double.parseDouble(row[15].toString()));
+	        if (row[16] != null) vo.setGrndCtw(Double.parseDouble(row[16].toString()));
+	        if (row[17] != null) vo.setGrndCeb(Double.parseDouble(row[17].toString()));
+	        if (row[18] != null) vo.setGrndCnb(Double.parseDouble(row[18].toString()));
+	        if (row[19] != null) vo.setTourMgrCost(Double.parseDouble(row[19].toString()));
+	        if (row[20] != null) vo.setTfairDiscount(Double.parseDouble(row[20].toString()));
+	        if (row[21] != null) vo.setCnaAdt(Double.parseDouble(row[21].toString()));
+	        if (row[22] != null) vo.setCpaAdt(Double.parseDouble(row[22].toString()));
+	        if (row[23] != null) vo.setCsiAdt(Double.parseDouble(row[23].toString()));
+	        if (row[24] != null) vo.setMiscAdt(Double.parseDouble(row[24].toString()));
+	        if (row[25] != null) vo.setMiscChd(Double.parseDouble(row[25].toString()));
+	        if (row[26] != null) vo.setFullRemarks((String) row[26]);
+	        if (row[27] != null) vo.setGrndRemarks((String) row[27]);
+	        if (row[28] != null) vo.setPrn((String) row[28]);
+	        if (row[29] != null) vo.setSeatAllot(((Short) row[29]).intValue());
+	        if (row[30] != null) vo.setReservedSeat(((Short) row[30]).intValue());
+	        if (row[31] != null) vo.setTourManagerPax(((Short) row[31]).intValue());
+	        if (row[32] != null) vo.setTravelInsPolicyS((String) row[32]);
+	        if (row[33] != null) vo.setTravelInsPolicyF((String) row[33]);
+	        if (row[34] != null) vo.setIsShowAirline((Boolean) row[34]);
+	        if (row[35] != null) vo.setIsIssuedS((Boolean) row[35]);
+	        if (row[36] != null) vo.setIsIssuedF((Boolean) row[36]);
+	        if (row[37] != null) vo.setIsDepositPaid((Boolean) row[37]);
+	        if (row[38] != null) vo.setIsPush((Boolean) row[38]);
+	        if (row[39] != null) vo.setIsHotDeal((Boolean) row[39]);
+	        if (row[40] != null) vo.setInvRemarks((String) row[40]);
+	        if (row[41] != null) vo.setTourStatusCd((String) row[41]);
+	        if (row[42] != null) vo.setReason((String) row[42]);
+	        if (row[43] != null) vo.setActionCd((String) row[43]);
+	        if (row[44] != null) vo.setStatusCode((String) row[44]);
+	        if (row[45] != null) vo.setCreatedDate((Date) row[45]);
+			if (row[46] != null) vo.setCreatedBy((String) row[46]);
+			if (row[47] != null) vo.setUpdatedDate((Date) row[47]);
+			if (row[48] != null) vo.setUpdatedBy((String) row[48]);
+	        if (row[49] != null) vo.setAirlineCd((String) row[49]);
+	        if (row[50] != null) vo.setSeqNo(Integer.parseInt(row[50].toString()));
+	        if (row[51] != null) vo.setNumDays(((Short) row[51]).intValue());
+	        if (row[52] != null) vo.setNumNights(((Short) row[52]).intValue());
+	        
+			tourDepHisAllList.add(vo);
+		}
+		return tourDepHisAllList;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.history.dao.HistoryDAO#getCountTourPkgHistory(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@Override
+	public int getCountTourPkgHistory(SearchParamVO searchParamVO) throws BusinessException {
+		Criteria criteria = createCriteria(TourPackageHistoryVO.class);
+		criteria.add(Restrictions.between("createdDate", searchParamVO.getFromDate(), searchParamVO.getToDate()));
+		criteria.setProjection(Projections.projectionList().add(Projections.count("id")));
+		return ((Long) criteria.uniqueResult()).intValue();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.history.dao.HistoryDAO#getCountTourDepHistory(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@Override
+	public int getCountTourDepHistory(SearchParamVO searchParamVO) throws BusinessException {
+		Criteria criteria = createCriteria(TourDepHistoryVO.class);
+		criteria.add(Restrictions.between("createdDate", searchParamVO.getFromDate(), searchParamVO.getToDate()));
+		criteria.setProjection(Projections.projectionList().add(Projections.count("id")));
+		return ((Long) criteria.uniqueResult()).intValue();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.history.dao.HistoryDAO#getTourDepLatestHistory(java.lang.Long)
+	 */
+	@Override
+	public TourDepHistoryVO getTourDepLatestHistory(Long idHist) throws BusinessException {
+		Criteria criteria = createCriteria(TourDepHistoryVO.class);
+		criteria.add(Restrictions.eq("idHist", idHist));
+		criteria.addOrder(Order.desc("id"));
+		criteria.setMaxResults(1);
+		return (TourDepHistoryVO) criteria.uniqueResult();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.history.dao.HistoryDAO#getInvoiceHistoryViewList(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	//
+	//
+	//DEPRECIEATED
+	//
+	//
+	@SuppressWarnings("unchecked")
+	public List<InvoiceHistoryViewVO> getInvoiceHistoryViewList(SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select h1.id, h1.id_hist, h1.dt_upd, h1.dt_inv, h1.code, h1.reason, h1.action_cd, h1.upd_by, h1.status_cd  from invoice_history h1 join ( ");
+		sb.append("    select * ");
+		sb.append("    from invoice_history ");
+		sb.append("    where dt_upd between :fromDate and :toDate");
+		sb.append("    order by id desc) h2 on h1.id = h2.id ");
+		sb.append("group by h1.id_hist ");
+		sb.append("order by h1.id desc ");
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("fromDate", searchParamVO.getFromDate());
+		query.setParameter("toDate", searchParamVO.getToDate());
+
+		List<Object> results = query.list();
+		List<InvoiceHistoryViewVO> invoiceHisList = new ArrayList<InvoiceHistoryViewVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceHistoryViewVO vo = new InvoiceHistoryViewVO();
+			vo.setId(((BigInteger) row[0]).longValue()); 
+			vo.setIdHist(((BigInteger) row[1]).longValue()); 
+			vo.setUpdatedDate((Date) row[2]);
+			vo.setInvoiceDt((Date) row[3]);
+			vo.setCode((String) row[4]);
+			vo.setReason((String) row[5]);
+			vo.setActionCd((String) row[6]);
+			vo.setUpdatedBy((String) row[7]);
+			vo.setStatusCd((String) row[8]);
+
+			invoiceHisList.add(vo);
+		}
+		return invoiceHisList;
+	}
+	
+	/*
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceHistoryViewVO> getInvoiceHistoryViewListById(Long idHist) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select h.id, h.id_hist, h.id_company , h.id_customer ,id_acct ,id_tour_booking, "); //0-5
+		sb.append("h.dt_inv, h.code, h.ps_no, h.doc_type_cd, h.doc_type_status, h.type_cd, "); //6-11 add ps_no, status
+		sb.append("h.attn_to, h.cn_inv_no, h.pmnt_type_cd, "); //12-14
+		sb.append("h.id_saler, h.id_tour_dep, h.dt_departure, "); //15-17
+		sb.append("h.id_issuer, h.id_eo_ref, h.cat_cd, h.order_cd, "); //18-21
+		sb.append("h.delivery_cd, h.inv_due, h.gds_booking_ref, h.amount, "); //22-25
+		sb.append("h.balance, h.e_invoice_submission_uid, h.e_invoice_document_uuid, h.e_invoice_status, "); //26-29 add 3 e_invoice
+		sb.append("h.sub_ps_running_number, h.reason, h.action_cd, h.status_cd, ");//30-33 add sub_ps
+		sb.append("h.is_inv_paid, h.subj_line, h.remarks, h.dt_created, "); //34-37
+		sb.append("h.created_by, h.dt_upd, h.upd_by, h.travel_warrant_chk, "); //38-41 
+		sb.append("pc.pc_type_cd, pc.corporate_name, pc.salutation_cd, pc.first_name, pc.last_name, "); //42-46
+		sb.append("co.code as companyCd, co.name as companyName, "); //47-48
+		sb.append("a.code as acctCd, a.sub_code as subAcctCd, a.description as acctDesc, a.sub_description as subAcctDesc, "); //49-52
+		sb.append("ss.user_name as salerName, si.user_name as issuedBy, tdp.code as tour_code, h.version "); //53-56
+		sb.append("from invoice_history h left join ");
+		sb.append("(select c.id, c.pc_type_cd, c.corporate_name, p.salutation_cd, p.first_name, p.last_name from customer c left join person p on c.id_pc = p.id) pc on h.id_customer = pc.id ");
+		sb.append("left join company co on h.id_company = co.id ");
+		sb.append("left join account a on h.id_acct = a.id ");
+		sb.append("left join (SELECT e.id, s.user_name FROM employee e left join sec_user s on e.u_sec_user = s.uuid) ss on h.id_saler = ss.id ");
+		sb.append("left join (SELECT e.id, s.user_name FROM employee e left join sec_user s on e.u_sec_user = s.uuid) si on h.id_issuer = si.id ");
+		sb.append("left join tour_dep tdp on h.id_tour_dep=tdp.id ");
+		sb.append("where h.id_hist = :idHist ");
+		sb.append("order by h.id desc ");
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("idHist", idHist);
+
+		List<Object> results = query.list();
+		List<InvoiceHistoryViewVO> invoiceHisList = new ArrayList<InvoiceHistoryViewVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceHistoryViewVO vo = new InvoiceHistoryViewVO();
+			if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue()); 
+			if (row[1] != null) vo.setIdHist(((BigInteger) row[1]).longValue()); 
+			if (row[2] != null) vo.setCompanyId(((BigInteger) row[2]).longValue());
+			if (row[3] != null) vo.setCustomerId(((BigInteger) row[3]).longValue());
+			if (row[4] != null) vo.setAcctId(((BigInteger) row[4]).longValue());
+			if (row[5] != null) vo.setBookingId(((BigInteger) row[5]).longValue());
+			if (row[6] != null) vo.setInvoiceDt((Date) row[6]);
+			if (row[7] != null) vo.setCode((String) row[7]);
+			if (row[8] != null) vo.setPsNo((String) row[8]); // +1
+			if (row[9] != null) vo.setDocTypeCd((String) row[9]);
+			if (row[10] != null) vo.setDocTypeStatus((String) row[10]); //+1
+			if (row[11] != null) vo.setTypeCd((String) row[11]);
+			if (row[12] != null) vo.setAttnTo((String) row[12]);
+			if (row[13] != null) vo.setCnInvNo((String) row[13]);
+			if (row[14] != null) vo.setPmntTypeCd((String) row[14]);
+			if (row[15] != null) vo.setSalerId(((BigInteger) row[15]).longValue());
+			if (row[16] != null) vo.setTourDepId(((BigInteger) row[16]).longValue());
+			if (row[17] != null) vo.setDepartureDt((Date) row[17]);
+			if (row[18] != null) vo.setIssuerId(((BigInteger) row[18]).longValue());
+			if (row[19] != null) vo.setEoRefId(((BigInteger) row[19]).longValue());
+			if (row[20] != null) vo.setCatCd((String) row[20]);
+			if (row[21] != null) vo.setOrderCd((String) row[21]);
+			if (row[22] != null) vo.setDeliveryCd((String) row[22]);
+			if (row[23] != null) vo.setInvoiceDue((Date) row[23]);
+			if (row[24] != null) vo.setGdsBookingRef((String) row[24]);
+			if (row[25] != null) vo.setAmount(Double.parseDouble(row[25].toString()));
+			if (row[26] != null) vo.setBalance(Double.parseDouble(row[26].toString()));
+			if (row[27] != null) vo.seteInvoiceSubmissionUid((String) row[27]); //+1
+			if (row[28] != null) vo.seteInvoiceDocumentUuid((String) row[28]); //+1
+			if (row[29] != null) vo.seteInvoiceStatus((String) row[29]);
+			if (row[30] != null) vo.setSubPsRunningNumber(((Number) row[30]).intValue());//+1
+			if (row[31] != null) vo.setReason((String) row[31]);
+			if (row[32] != null) vo.setActionCd((String) row[32]);
+			if (row[33] != null) vo.setStatusCd((String) row[33]);
+			if (row[34] != null) vo.setIsInvPaid((Boolean) row[34]);
+			if (row[35] != null) vo.setSubjLine((String) row[35]);
+			if (row[36] != null) vo.setRemarks((String) row[36]);
+			if (row[37] != null) vo.setCreatedDate((Date) row[37]);
+			if (row[38] != null) vo.setCreatedBy((String) row[38]);
+			if (row[39] != null) vo.setUpdatedDate((Date) row[39]);
+			if (row[40] != null) vo.setUpdatedBy((String) row[40]);
+			if (row[41] != null) vo.setTrvWarrantChecked((Boolean) row[41]);
+			
+			if (row[42] != null) vo.setCustType((String) row[42]);
+			if (row[43] != null) vo.setCoName((String) row[43]);
+			if (row[44] != null) vo.setCustSalutatnCd((String) row[44]);
+			if (row[45] != null) vo.setCustFName((String) row[45]);
+			if (row[46] != null) vo.setCustLName((String) row[46]);
+			
+			if (row[47] != null) vo.setCompanyCd((String) row[47]);
+			if (row[48] != null) vo.setCompanyName((String) row[48]);
+			
+			if (row[49] != null) vo.setAcctCd((String) row[49]);
+			if (row[50] != null) vo.setSubAcctCd((String) row[50]);
+			if (row[51] != null) vo.setAcctDesc((String) row[51]);
+			if (row[52] != null) vo.setSubAcctDesc((String) row[52]);
+			
+			if (row[53] != null) vo.setSalerName((String) row[53]);
+			if (row[54] != null) vo.setIssuedBy((String) row[54]);
+			if (row[55] != null) vo.setTourCd((String) row[55]);   
+
+			if (row[56] != null) vo.setVersion(((Number) row[56]).longValue());
+			invoiceHisList.add(vo);
+		}
+		return invoiceHisList;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.history.dao.HistoryDAO#getInvoiceHistoryViewDetailById(java.lang.Long)
+	 */
+	@Override
+	public InvoiceHistoryViewVO getInvoiceHistoryViewDetailById(Long id) throws BusinessException {
+		InvoiceHistoryViewVO invHistVO = new InvoiceHistoryViewVO();
+		invHistVO.setInvoiceItemHisViewList(new ArrayList<InvoiceItemHistoryViewVO>());
+		invHistVO.setInvoicePaxHisViewList(new ArrayList<InvoicePaxHistoryViewVO>());
+		invHistVO.setInvoicePaymentHisViewList(new ArrayList<InvoicePaymentHistoryViewVO>());
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("select h.id, h.id_ref, h.id_hist, h.description as itemDesc, "); //0-3
+		sb.append("a.code as acctCd, a.sub_code as subAcctCd, a.description as acctDesc, a.sub_description as subAcctDesc, "); //4-7
+		sb.append("ai.description as airlineDesc, "); //8
+		sb.append("h.quantity, h.unit_price, h.net_price, h.amount "); //9-12
+		sb.append("from invoice_item_history h left join account a on h.id_acct = a.id ");
+		sb.append("left join airline ai on h.id_airline = ai.id ");
+		sb.append("where h.id_ref = :id and h.status_cd = 'A' ");
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("id", id);
+		
+		List<Object> results = query.list();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceItemHistoryViewVO vo = new InvoiceItemHistoryViewVO();
+			if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue());
+			if (row[1] != null) vo.setIdRef(((BigInteger) row[1]).longValue());
+			if (row[2] != null) vo.setIdHist(((BigInteger) row[2]).longValue());
+			if (row[3] != null) vo.setDesc((String) row[3]);
+			if (row[4] != null) vo.setAcctCd((String) row[4]);
+			if (row[5] != null) vo.setSubAcctCd((String) row[5]);
+			if (row[6] != null) vo.setAcctDesc((String) row[6]);
+			if (row[7] != null) vo.setSubAcctDesc((String) row[7]);
+			
+			if (row[8] != null) vo.setAirlineDesc((String) row[8]);
+			
+			if (row[9] != null) vo.setQty(Integer.parseInt(row[9].toString()));
+			if (row[10] != null) vo.setUnitPrice(Double.parseDouble(row[10].toString()));
+			if (row[11] != null) vo.setNetPrice(Double.parseDouble(row[11].toString()));
+			if (row[12] != null) vo.setAmount(Double.parseDouble(row[12].toString()));
+
+			invHistVO.getInvoiceItemHisViewList().add(vo);
+		}
+		
+		sb = new StringBuilder();
+		sb.append("select h.id, h.id_ref, h.id_hist, "); //0-2
+		sb.append("pc.pc_type_cd, pc.corporate_name, pc.salutation_cd, pc.first_name, pc.last_name, "); //3-7
+		sb.append("h.room_type_cd, h.room_pairing_no, h.travel_ins_type, h.travel_ins_policy, h. special_request "); //8-12
+		sb.append("from invoice_pax_history h left join ");
+		sb.append("(select c.id, c.pc_type_cd, c.corporate_name, p.salutation_cd, p.first_name, p.last_name from customer c left join person p on c.id_pc = p.id) pc on h.id_cust = pc.id ");
+		sb.append("where h.id_ref = :id and h.status_cd = 'A' ");
+		query = createSQLQuery(sb.toString());
+		query.setLong("id", id);
+
+		results = query.list();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoicePaxHistoryViewVO vo = new InvoicePaxHistoryViewVO();
+			if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue());
+			if (row[1] != null) vo.setIdRef(((BigInteger) row[1]).longValue());
+			if (row[2] != null) vo.setIdHist(((BigInteger) row[2]).longValue());
+			
+			if (row[3] != null) vo.setCustType((String) row[3]);
+			if (row[4] != null) vo.setCoName((String) row[4]);
+			if (row[5] != null) vo.setCustSalutatnCd((String) row[5]);
+			if (row[6] != null) vo.setCustFName((String) row[6]);
+			if (row[7] != null) vo.setCustLName((String) row[7]);
+			
+			if (row[8] != null) vo.setRoomTypeCd((String) row[8]);
+			if (row[9] != null) vo.setRoomPairingNo(Integer.parseInt(row[9].toString()));
+			if (row[10] != null) vo.setTravelInsType((String) row[10]);
+			if (row[11] != null) vo.setTravelInsPolicy((String) row[11]);
+			if (row[12] != null) vo.setSpclReq((String) row[12]);
+
+			invHistVO.getInvoicePaxHisViewList().add(vo);
+		}
+		
+		sb = new StringBuilder();
+		sb.append("select h.id, h.id_ref, h.id_hist, "); //0-2
+		sb.append("h.dt_pmnt, h.code, h.pmnt_type_cd, h.ref_no, h.pmnt_for, h.received_from, h.amount, si.user_name "); //3-10
+		sb.append("from invoice_pmnt_history h left join ");
+		sb.append("(SELECT e.id, s.user_name FROM employee e left join sec_user s on e.u_sec_user = s.uuid) si on h.id_issuer = si.id ");
+		sb.append("where h.id_ref = :id and h.status_cd = 'A' ");
+		query = createSQLQuery(sb.toString());
+		query.setLong("id", id);
+
+		results = query.list();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoicePaymentHistoryViewVO vo = new InvoicePaymentHistoryViewVO();
+			if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue());
+			if (row[1] != null) vo.setIdRef(((BigInteger) row[1]).longValue());
+			if (row[2] != null) vo.setIdHist(((BigInteger) row[2]).longValue());
+			
+			if (row[3] != null) vo.setPmntDt((Date) row[3]);
+			if (row[4] != null) vo.setCode((String) row[4]);
+			if (row[5] != null) vo.setPmntTypeCd((String) row[5]);
+			if (row[6] != null) vo.setRefNo((String) row[6]);
+			if (row[7] != null) vo.setPmntFor((String) row[7]);
+			if (row[8] != null) vo.setRecievedFr((String) row[8]);
+			if (row[9] != null) vo.setAmount(Double.parseDouble(row[9].toString()));
+			if (row[10] != null) vo.setPmntIssuedBy((String) row[10]);
+
+			invHistVO.getInvoicePaymentHisViewList().add(vo);
+		}
+		
+		return invHistVO;
+	}
+}

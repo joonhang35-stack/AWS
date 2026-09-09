@@ -1,0 +1,20 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:dataTable id="idTourDepList" value="#{tourPkgBean.hotelList}" var="vo" paginator="true" rows="20" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="10, 15, 20" rowKey="#{vo.id}" selectionMode="single">
+	<p:ajax event="rowSelect" listener="#{tourPkgBean.handleHotelSelect}" update=":idAddTourHotelForm:idHotel" oncomplete="varHotelListDialog.hide()"/>
+	
+	<p:column headerText="Hotel Name"><h:outputText value="#{vo.name}"/></p:column>
+</p:dataTable>
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varHotelListDialog.hide()"/>
+</h:panelGrid>
+</ui:composition>

@@ -1,0 +1,58 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+	<p:growl id="msg" />
+
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varClaimedVoucherDialog.hide();" />
+	</h:panelGrid>
+
+	<p:dataTable id="idVoucherListTable" widgetVar="varVoucherListTable"
+		value="#{custBean.customerVO.claimedVoucherList}" var="voucherVO" paginator="true" rows="10"
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+		filterEvent="enter">
+
+		<p:column headerText="Code">
+			<p:commandLink id="idVoucher" actionListener="#{custBean.onVoucherSelected(voucherVO)}" update=":idVoucherDetailsForm" oncomplete="varVoucherDetailsDialog.show()" process="@this">
+				<i class="fa fa-info-circle" aria-hidden="true" />
+			</p:commandLink>
+			<h:outputText value="#{voucherVO.redemptionCode}" />
+			<pe:tooltip for="idVoucher" shared="true" showDelay="300" targetPosition="top left" position="bottom right">
+		        <h:panelGrid columns="2">
+		            <h:outputText value="Name:" /><h:outputText value="#{voucherVO.redemptionType.name}" />
+		            <h:outputText value="Description:" /><h:outputText value="#{voucherVO.redemptionType.description}" />
+					<h:outputText value="Expiry Days:" /><h:outputText value="#{voucherVO.redemptionType.expiryDays}" />
+		        </h:panelGrid>				
+		    </pe:tooltip>
+		</p:column>
+		<p:column headerText="Category">
+			<h:outputText value="#{voucherVO.categoryName}" />
+		</p:column>
+		<p:column headerText="Points Required">
+			<h:outputText value="#{voucherVO.pointsRequired}" />
+		</p:column>
+		<p:column headerText="Action">
+			<p:commandButton value="Apply"
+				actionListener="#{salesBean.addPendingVoucher(voucherVO)}"
+				disabled="#{voucherVO.inCart}" oncomplete="varClaimedVoucherDialog.hide()"
+				process="@this" update=":idClaimedVoucherForm:msg :idClaimedVoucherForm:idVoucherListTable :idAddInvoiceForm:idInvDetailsTab:idInvVoucherListTable :idAddInvoiceForm:idInvDetailsTab:idInvItemListTable"
+			/>
+				 
+				 <!-- 
+				oncomplete="if (args &amp;&amp; !args.validationFailed) varConfirmClaimVoucherDialog.show()"
+				-->
+		</p:column>
+	</p:dataTable>
+
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varClaimedVoucherDialog.hide();" />
+	</h:panelGrid>
+</ui:composition>

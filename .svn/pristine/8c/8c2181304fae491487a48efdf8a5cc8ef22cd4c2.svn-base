@@ -1,0 +1,96 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	  			
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idAccountNo">Account No <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:autoComplete id="idAccountNo" value="#{billPymtBean.acctTransViewVO.code}"   
+                    completeMethod="#{billPymtBean.complete}"   >  
+					<p:ajax event="itemSelect" listener="#{billPymtBean.handleAccountCodeKeyUp}"
+						update="idAccountNo,idDesc,idGSTSearchButton,idGSTClearButton,idGSTCode,idGSTRate,idGSTAmt,idAmt"/>
+				</p:autoComplete>
+				&nbsp;<p:commandButton icon="ui-icon-search" oncomplete="varAcctSubCatList.show()" update=":idAcctSubCatList" process="@this"/>
+	        </p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idDesc">Description <span class="required">*</span></h:outputLabel></p:column>
+			<p:column><p:inputText id="idDesc" label="Description" value="#{billPymtBean.acctTransViewVO.desc}" onclick="varAcctSubCatList.show()" required="true" readonly="true" style="background:#ccc;"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel>Remarks </h:outputLabel></p:column>
+			<p:column style="display: flex; align-items: center;"><p:inputTextarea label="Remarks" value="#{billPymtBean.acctTransViewVO.remarks}" converter="trimConverter" maxlength="100"/>&nbsp;&nbsp;<i>(max 100 characters.)</i></p:column>
+		</p:row>
+		<p:row rendered="#{billPymtBean.GSTPeriod}">
+			<p:column><h:outputLabel for="idGSTCode">GST Code <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idGSTCode" value="#{billPymtBean.acctTransViewVO.taxCode}" readonly="true" style="background:#ccc;"/>
+				&nbsp;
+				<p:commandButton id="idGSTSearchButton" icon="ui-icon-search" oncomplete="varGSTListDialog.show()" update=":idGSTListDialog" process="@this" 
+					disabled="#{empty billPymtBean.acctTransViewVO.code}"/>
+				<p:commandButton id="idGSTClearButton" icon="ui-icon-close" actionListener="#{billPymtBean.handleTaxCodeClear}" update=":idAddAcctSubCatForm" 
+							process="@this" disabled="#{empty billPymtBean.acctTransViewVO.code}"/>
+	        </p:column>
+		</p:row>
+		<p:row rendered="#{billPymtBean.GSTPeriod}">
+			<p:column><h:outputLabel for="idGSTRate">GST Rate (%) <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idGSTRate" value="#{billPymtBean.acctTransViewVO.taxRate}" readonly="true" style="background:#ccc;"/>
+	        </p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idClassCode">E-Invoice Classification Code</h:outputLabel></p:column>
+			<p:column>
+				<p:selectOneMenu id="idClassCode" value="#{billPymtBean.acctTransViewVO.eInvoiceClassCode}">
+					<f:selectItem itemValue="034" itemLabel="034 (Self billed - Importation of goods)"></f:selectItem>
+					<f:selectItem itemValue="035" itemLabel="035 (Self-billed - Importation of services)"></f:selectItem>
+					<f:selectItem itemValue="036" itemLabel="036 (Self-billed - Others)"></f:selectItem>
+				</p:selectOneMenu>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddAmt">Amount </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddAmt" label="Amount" value="#{billPymtBean.acctTransViewVO.amount}" >
+					<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+					<p:ajax event="change" listener="#{billPymtBean.handleAmountChange}" update="idGSTAmt,idAmt"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{billPymtBean.GSTPeriod}">
+			<p:column>
+				<h:outputLabel for="idGSTAmt">GST Amount</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idGSTAmt" label="GST Amount" value="#{billPymtBean.acctTransViewVO.taxAmount}" readonly="#{not billPymtBean.invPmntAuthVO.gstFreeText}" style="#{billPymtBean.invPmntAuthVO.gstFreeText ? '' : 'background:#ccc;'}">
+					<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+					<p:ajax event="change" listener="#{billPymtBean.handleGSTAmtChange}" update="idAmt"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{billPymtBean.GSTPeriod}">
+			<p:column>
+				<h:outputLabel for="idAmt">Amount Inc. GST</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAmt" label="Amount Inc. GST" value="#{billPymtBean.acctTransViewVO.amountIncludeTax}" readonly="#{not billPymtBean.invPmntAuthVO.gstFreeText}" style="#{billPymtBean.invPmntAuthVO.gstFreeText ? '' : 'background:#ccc;'}">
+					<f:convertNumber pattern="#{config['amount.format.pattern']}" />
+					<p:ajax event="change" listener="#{billPymtBean.handleAmountInclTaxChange}" update="idGSTAmt,idAddAmt"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{billPymtBean.addGLAcct}" process="@form" 
+			update="@form,:idAddFuncForm:msg,:idAddFuncForm:tabView:idBillPmntGLAcct,:idAddFuncForm:idEOAmt"/>
+		<p:commandButton value="Cancel" actionListener="#{billPymtBean.resetGLAcctForm}" oncomplete="varAcctSubCatDialog.hide()" process="@this" update="@form">
+			<pe:resetEditableValues for="idAddAcctSubCatForm"/>
+		</p:commandButton>
+	</p:panelGrid>
+</ui:composition>

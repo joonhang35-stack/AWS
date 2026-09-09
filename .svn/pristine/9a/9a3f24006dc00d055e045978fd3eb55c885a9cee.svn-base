@@ -1,0 +1,125 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<p:growl id="msg" />
+
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varMultipleEInvSubmitRespDialog.show();
+			} else {
+				varMultipleEInvSubmitRespDialog.hide();
+			}
+		}
+	</script>
+
+	<div style="height: 400px; overflow-y: auto;">
+		<p:dataTable id="idResultListTable" value="#{salesBean.mulpInvSubmRespList}" var="vo" rowKey="#{vo.id}" rows="0"
+		    style="width:100%; display: block; overflow-x: auto; white-space: nowrap;">
+		    <p:column>
+		        <f:facet name="header">
+		            <h:outputText value="Document No."/>
+		        </f:facet>
+		        <h:outputText value="#{salesBean.prefixValue} #{vo.code}"></h:outputText>
+		    </p:column>
+			<p:column>
+				<f:facet name="header">
+					<h:outputText value="Tour Code" />
+				</f:facet>
+				<h:outputText value="#{vo.tourCd}"></h:outputText>
+			</p:column>
+			<p:column>
+				<f:facet name="header">
+					<h:outputText value="Departure Date" />
+				</f:facet>
+				<h:outputText value="#{vo.departureDt}">
+					<f:convertDateTime pattern="dd-MMM-yyyy" />
+				</h:outputText>
+			</p:column>
+<!-- 
+			<p:column headerText="Status">
+				<f:facet name="header">
+					<h:outputText value="Status" />
+				</f:facet>
+				<h:outputText value="#{vo.eInvoiceDocument.status}"></h:outputText>
+			</p:column>
+			<p:column headerText="Reason">
+				<f:facet name="header">
+					<h:outputText value="Reason" />
+				</f:facet>
+				<h:outputText value="#{vo.eInvoiceDocument.documentStatusReason}"></h:outputText>
+			</p:column>
+-->
+			<p:column headerText="Sales Person">
+				<f:facet name="header">
+					<h:outputText value="Sales Person" />
+				</f:facet>
+				<h:outputText value="#{vo.salerName}"></h:outputText>
+			</p:column>
+		    <p:column headerText="Department">
+		        <f:facet name="header">
+		            <h:outputText value="Department"/>
+		        </f:facet>
+		        <h:outputText value="#{bterp:lookupItemDesc('dept_type', vo.salerDept)}" />
+		    </p:column>
+		    
+		    <p:column headerText="Pax Statement Date">
+		        <f:facet name="header">
+		            <h:outputText value="Pax Statement Date"/>
+		        </f:facet>
+		        <h:outputText value="#{vo.invoiceDt}">
+		            <f:convertDateTime pattern="d-MMM-yyyy" />
+		        </h:outputText>
+		    </p:column>    
+		    
+		    <p:column headerText="Amount">
+		        <f:facet name="header">
+		            <h:outputText value="Amount"/>
+		        </f:facet>
+		        <h:outputText value="#{vo.amount}">
+		            <f:convertNumber pattern="#,##0.00" />
+		        </h:outputText>
+		    </p:column>
+<!--
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Action By" />
+			</f:facet>
+			<h:outputText value="#{vo.createdBy}"/>
+		</p:column>
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Action Date" />
+			</f:facet>
+			<h:outputText value="#{vo.createdDate}">
+				<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+			</h:outputText>
+		</p:column>
+-->
+		</p:dataTable>
+	</div>
+
+	<br/><br/>
+	<h:commandLink>
+		<p:graphicImage value="/img/excel.png" />
+		<p:dataExporter type="csv" target="idResultListTable" exportHeader="true"
+			fileName="#{salesBean.generateReportFileName(salesBean.mulpInvSubmRespListExportTitle)}"/>
+	</h:commandLink>
+
+	<!-- <h:panelGrid columns="2" style="width: 1px;">
+		<p:commandButton value="OK"
+			actionListener="#{salesBean.cancelEInvoiceAPI(salesBean.cancellationReason)}"
+			update="@form, :idEInvoiceForm"
+			oncomplete="if (args &amp;&amp; !args.validationFailed) {varCancelEInvoiceDialog.hide();}" />
+		<p:commandButton value="Close" process="@this"
+			oncomplete="varCancelEInvoiceDialog.hide();" />
+	</h:panelGrid> -->
+</ui:composition>

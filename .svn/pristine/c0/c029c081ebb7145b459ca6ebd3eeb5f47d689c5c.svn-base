@@ -1,0 +1,139 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<script type="text/javascript">
+	function onAddValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddBankDialog.hide();
+		}
+	}
+	
+	function onEditValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varEditBankDialog.hide();
+		}
+	}
+</script>
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:120px"><h:outputLabel for="idAcctNo">Account No. <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idAcctNo" label="Account No." value="#{bankAcctBean.bankAcctVO.acctNo}" required="true"/>
+		</p:column>
+		<p:column style="width:120px"><h:outputLabel for="idBankName">Bank Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idBankName" label="Bank Name" value="#{bankAcctBean.bankAcctVO.name}" required="true"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idTypeCd">Type <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idTypeCd" label="Type" value="#{bankAcctBean.bankAcctVO.typeCd}" effect="fade" required="true" style="width:130px">
+				<f:selectItems value="#{bterp:lookupItemList('bank_acct_type')}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAddr1">Address 1 <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idAddr1" label="Address 1" value="#{bankAcctBean.bankAddrVO.addr1}" required="true" style="width:200px;"/>
+		</p:column>
+		<p:column><h:outputLabel for="idAddr2">Address 2</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idAddr2" value="#{bankAcctBean.bankAddrVO.addr2}" style="width:200px;"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAddr3">Address 3</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idAddr3" value="#{bankAcctBean.bankAddrVO.addr2}" style="width:200px;"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idCity">City: </h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idCity" value="#{bankAcctBean.bankAddrVO.city}" style="width:200px;"/>
+		</p:column>
+		<p:column><h:outputLabel for="idState">State: </h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idState" value="#{bankAcctBean.bankAddrVO.state}" style="width:200px;"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idPostCd">Post Code</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idPostCd" value="#{bankAcctBean.bankAddrVO.postCd}"/>
+		</p:column>
+		<p:column><h:outputLabel for="idCountry">Country <span class="required">*</span>: </h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idCountry" label="Country" value="#{bankAcctBean.bankAddrVO.idCountry}" effect="fade" required="true" style="width:130px">
+				<f:selectItems value="#{bankAcctBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idContactName">Contact Name</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idContactName" value="#{bankAcctBean.bankAcctVO.contactName}"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><p:commandButton icon="ui-icon-plus" value="Contact" oncomplete="varAddContactDialog.show()" update=":idAddContactDialog" immediate="true"/></p:column>
+		<p:column colspan="3">
+			<p:dataTable id="idContactList" value="#{bankAcctBean.bankContactList}" var="vo">
+				<p:column style="width:50px">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{bankAcctBean.setBankContactVO(vo)}" update=":idEditContactDialog" oncomplete="varEditContactDialog.show()"/>
+				</p:column>
+				<p:column style="width:50px">
+					<p:commandButton icon="ui-icon-close" actionListener="#{bankAcctBean.setBankContactVO(vo)}" oncomplete="varDelContactDialog.show()"/>
+				</p:column>
+				<p:column headerText="Contact Type"><h:outputText value="#{bterp:lookupItemDesc('cntc_type', vo.typeCd)}"/></p:column>
+				<p:column headerText="Contact Number"><h:outputText value="#{vo.number}"/></p:column>
+			</p:dataTable>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid id="idGLPart">
+	<p:row>
+		<p:column style="width:120px"><h:outputLabel for="idGLAcct">GL Account <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idGLAcct" label="GL Account" value="#{bankAcctBean.bankAcctVO.acctCode}" required="true" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;"/>
+			&nbsp;<p:commandButton icon="ui-icon-search" oncomplete="varAcctListDialog.show()" update=":idAcctListDialog" actionListener="#{bankAcctBean.loadAcctList}" process="@this"/>
+		</p:column>
+		<p:column style="width:120px"><h:outputLabel>Current Balance</h:outputLabel></p:column>
+		<p:column>
+			<!--p:inputText value="#{bankAcctBean.balDebit}" readonly="true" rendered="#{bankAcctBean.balDebit gt 0}"-->
+			<p:inputText value="#{bankAcctBean.bankAcctVO.currentBal}" readonly="true" rendered="#{bankAcctBean.bankAcctVO.currentBal ge 0}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+			<!--p:inputText value="#{bankAcctBean.balCredit}" readonly="true" rendered="#{bankAcctBean.balCredit gt 0}"-->
+			<p:inputText value="#{-bankAcctBean.bankAcctVO.currentBal}" readonly="true" rendered="#{bankAcctBean.bankAcctVO.currentBal lt 0}">
+				<f:convertNumber pattern="(#,##0.00)"/>
+			</p:inputText>
+			<!--p:inputText value="0.00" readonly="true" rendered="#{bankAcctBean.balDebit eq 0 and bankAcctBean.balCredit eq 0}"/-->
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column style="width:120px"><h:outputLabel for="idLastReconDate">Last Recon. Date</h:outputLabel></p:column>
+		<p:column><p:calendar id="idLastReconDate" value="#{bankAcctBean.bankAcctVO.dtLastRecon}" navigator="true" showButtonPanel="true"/></p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{bankAcctBean.addBank}" update="@form,:idBankForm:idBankList" oncomplete="onAddValidation(xhr, status, args)" rendered="#{empty bankAcctBean.bankAcctVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{bankAcctBean.updBank}" update="@form,:idBankForm:idBankList" oncomplete="onEditValidation(xhr, status, args)" rendered="#{not empty bankAcctBean.bankAcctVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{bankAcctBean.resetForm}" oncomplete="varAddBankDialog.hide(),varEditBankDialog.hide()" process="@this" update="@form" global="false">
+		<pe:resetEditableValues for="idAddBankForm,idEditBankForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

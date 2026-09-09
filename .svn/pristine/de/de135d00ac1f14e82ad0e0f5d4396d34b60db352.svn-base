@@ -1,0 +1,72 @@
+package com.bcs.zsg.scheduler;
+
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.context.support.SpringBeanAutowiringSupport;
+
+import com.bcs.zsg.common.helper.CRMCommonConstant;
+import com.bcs.zsg.common.helper.CRMUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.core.helper.CollectionUtils;
+import com.bcs.zsg.crm.bo.CustomerPosInfoBO;
+import com.bcs.zsg.crm.vo.CustomerPosInfoVO;
+import com.bcs.zsg.sales.bo.CustomerBO;
+
+public class PostingCRMCustomerScheduler implements Job {
+
+	private static final long serialVersionUID = 1L;
+	@Autowired 
+	private transient CustomerPosInfoBO customerPosInfoBO; 
+	@Autowired 
+	private transient CustomerBO customerBO; 
+
+	@Override
+	public void execute(JobExecutionContext context) throws JobExecutionException {
+		SpringBeanAutowiringSupport.processInjectionBasedOnCurrentContext(this);
+
+		if (StringUtils.isBlank(BaseContext.getUserFullName())) {
+			BaseContext.setUserFullName("Post Customer Scheduler");
+		}
+		TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+		trackingLogUtils.startLogs();
+		
+		try {
+			List<CustomerPosInfoVO> customerPosInfoList = customerPosInfoBO.getCustomerPosInfoList();
+			List<CustomerPosInfoVO> updList = CRMUtils.postingCustomerData(customerPosInfoList);
+			if (CollectionUtils.isNotEmpty(updList)) {
+				for (CustomerPosInfoVO vo : updList) {
+					if (CRMCommonConstant.CRM_INV_POSTING_FAILED.equals(vo.getPostingStatus()) && StringUtils.isBlank(vo.getCrmId())) {
+						CustomerPosInfoVO existingCustomer = CRMUtils.getCustomerData(vo);
+							
+						if (existingCustomer != null && StringUtils.isNotBlank(existingCustomer.getCrmId())) {
+							vo.setCrmId(existingCustomer.getCrmId());
+							vo.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_SUCCESS);
+							vo.setRemarks("CRM ID recovered from GET API (Duplicate customer)");			
+						}
+					}
+				}
+				
+				// Update database with results
+				if (CollectionUtils.isNotEmpty(updList)) {
+					customerPosInfoBO.updateCustomerPosInfoStatus(updList);
+
+					for (CustomerPosInfoVO vo : updList) {
+						if (vo != null && StringUtils.isNotBlank(vo.getCrmId())) {
+							customerBO.updateCrmId(vo.getIdCustomer(), vo.getCrmId());
+						}
+					}
+				}
+			}	
+		} catch (Throwable t) {
+			t.printStackTrace();
+		} finally {
+			trackingLogUtils.endLogs("PostingCRMCustomerScheduler.execute()");
+		}
+	}
+}

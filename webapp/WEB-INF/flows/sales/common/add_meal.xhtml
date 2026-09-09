@@ -1,0 +1,45 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varMealDialog.show();
+		} else {
+			varMealDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idMealType">Meal Preference <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idMealType" label="Meal Preference" value="#{salesBean.personMealVO.mealCd}" required="true">  
+	            <f:selectItem itemLabel="Select One" itemValue=""/>
+	            <f:selectItems value="#{bterp:lookupItemList('meal_pref')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu>
+        </p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{salesBean.addMeal}" update="@form,:idAddCustForm:idMealListPanel" rendered="#{salesBean.mealAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{salesBean.updateMeal}" update="@form,:idAddCustForm:idMealListTable" oncomplete="onValidation(xhr, status, args)" rendered="#{not salesBean.mealAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetMealForm}" update="@form" process="@this" oncomplete="varMealDialog.hide()" global="false">
+		<pe:resetEditableValues for="idMealForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

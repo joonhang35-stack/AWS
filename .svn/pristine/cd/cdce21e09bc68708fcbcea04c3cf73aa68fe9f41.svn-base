@@ -1,0 +1,148 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+</script>
+<p:panel header="Ticketing" toggleable="true" toggleSpeed="500">
+	<h:form id="idTicketingForm">
+		<h:panelGrid columns="2" style="width:235px;">
+			<p:commandButton value="Add Tour Code" oncomplete="varAddTourCodeDialog.show()"
+				rendered="#{sessionInfoBean.employeeVO.department.contains('wholesale') or not sessionInfoBean.employeeVO.department.contains('sale') or ticketingBean.rolesAuthVO.salesManager}"
+				update=":idAddTourCodeDialog" process="@this"/>
+			<p:commandButton value="Add Ticketing" oncomplete="varAddTicketingDialog.show()" rendered="#{not sessionInfoBean.employeeVO.department.contains('sale') and not sessionInfoBean.employeeVO.department.contains('muslim')}" update=":idAddTicketingDialog" process="@this"/>
+		</h:panelGrid>
+		<p:panel header="Tour Code">
+			<p:dataTable id="idTourCodeList" widgetVar="varTourCodeList" value="#{ticketingBean.tourDepViewList}" var="vo" paginator="true" rows="10" 
+				paginatorTemplate="#{bterp:pageTemplate()}" filterEvent="enter">
+				<p:column headerText="Edit" style="width:50px;" rendered="#{sessionInfoBean.employeeVO.department.contains('wholesale') or not sessionInfoBean.employeeVO.department.contains('sale')}"><p:commandButton icon="ui-icon-pencil" actionListener="#{ticketingBean.handleTourDepSelect(vo)}" oncomplete="varEditTourCodeDialog.show()" update="@form,:idEditTourCodeDialog" process="@this"/></p:column>
+				<p:column headerText="Delete" style="width:50px;" rendered="#{sessionInfoBean.employeeVO.department.contains('wholesale') or not sessionInfoBean.employeeVO.department.contains('sale')}"><p:commandButton icon="ui-icon-close" actionListener="#{ticketingBean.handleTourDepSelect(vo)}" oncomplete="varDelTourCodeDialog.show()" process="@this"/></p:column>
+				<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:300px;"><h:outputText value="#{vo.code}"/></p:column>
+				<p:column headerText="Tour Description"><h:outputText value="#{vo.tourPkgVO.nameEn}"/></p:column>
+				<p:column headerText="Tour Remarks"><h:outputText value="#{vo.invRemarks}"/></p:column>
+			</p:dataTable>
+		</p:panel>
+		
+		<p:panel header="Ticketing" style="margin-top:10px;" rendered="#{empty ticketingBean.ticketingList and sessionInfoBean.employeeVO.department.contains('tick')}">
+			<h:outputText value="No records found."/>
+		</p:panel>
+		
+		<p:panel header="Ticketing" style="margin-top:10px;">
+			<p:accordionPanel id="idTourPkgList" value="#{ticketingBean.ticketingList}" var="airlineVO" dynamic="true" cache="false" activeIndex="null">
+				<p:ajax event="tabChange" listener="#{ticketingBean.onTabChanged}" oncomplete="varTicketingList.clearFilters()"/>
+				
+				<p:tab title="#{airlineVO.desc}">
+					<p:dataTable id="idTicketingList" widgetVar="varTicketingList" value="#{airlineVO.ticketingList}" var="ticketingVO" filteredValue="#{ticketingBean.filteredObjList}" filterEvent="enter">
+						<p:column headerText="Edit" style="width:50px;" rendered="#{sessionInfoBean.employeeVO.department.contains('wholesale') or not sessionInfoBean.employeeVO.department.contains('sale')}"><p:commandButton icon="ui-icon-pencil" actionListener="#{ticketingBean.setTicketingVO(ticketingVO)}" oncomplete="varEditTicketingDialog.show()" update=":idEditTicketingDialog" process="@this"/></p:column>
+						<p:column headerText="Delete" style="width:50px;" rendered="#{sessionInfoBean.employeeVO.department.contains('wholesale') or not sessionInfoBean.employeeVO.department.contains('sale')}"><p:commandButton icon="ui-icon-close" actionListener="#{ticketingBean.setTicketingVO(ticketingVO)}" oncomplete="varDelTicketingDialog.show()" process="@this"/></p:column>
+						<p:column headerText="Destination" sortBy="#{ticketingVO.destination}" filterBy="#{ticketingVO.destination}" filterMatchMode="contains" style="width:100px;"><h:outputText value="#{ticketingVO.destination}"/></p:column>
+						<p:column headerText="Description" sortBy="#{ticketingVO.desc}" filterBy="#{ticketingVO.desc}" filterMatchMode="contains" style="width:200px;"><h:outputText value="#{ticketingVO.desc}"/></p:column>
+						<p:column headerText="Fare From" style="width:100px;">
+							<h:outputText value="#{ticketingVO.priceFrom}"><f:convertNumber pattern="RM#,##0"/></h:outputText><br/>
+							<h:outputText value="PROMO" style="background:#ffffff; color:#FF0000; padding:2px; border:1px solid #FF0000; font-size:8px;" rendered="#{ticketingVO.isPromo}"/>
+						</p:column>
+						<p:column headerText="Sales Period" style="width:200px; text-align:center;"><h:outputText value="#{ticketingVO.dtBookStart}"><f:convertDateTime pattern="#{config['date.display.pattern']}"/></h:outputText> to <h:outputText value="#{ticketingVO.dtBookEnd}"><f:convertDateTime pattern="#{config['date.display.pattern']}"/></h:outputText></p:column>
+						<p:column headerText="Travel Period" style="width:200px; text-align:center;"><h:outputText value="#{ticketingVO.dtTrvlStart}"><f:convertDateTime pattern="#{config['date.display.pattern']}"/></h:outputText> to <h:outputText value="#{ticketingVO.dtTrvlEnd}"><f:convertDateTime pattern="#{config['date.display.pattern']}"/></h:outputText></p:column>
+						<p:column headerText="Black Out Period"><h:outputText value="#{ticketingVO.remarks}"/></p:column>
+					</p:dataTable>
+				</p:tab>
+			</p:accordionPanel>
+		</p:panel>
+		<h:panelGrid columns="2" style="width:235px;">
+			<p:commandButton value="Add Tour Code" oncomplete="varAddTourCodeDialog.show()"
+				rendered="#{sessionInfoBean.employeeVO.department.contains('wholesale') or not sessionInfoBean.employeeVO.department.contains('sale') or ticketingBean.rolesAuthVO.salesManager}"
+				update=":idAddTourCodeDialog" process="@this"/>
+			<p:commandButton value="Add Ticketing" oncomplete="varAddTicketingDialog.show()" rendered="#{not sessionInfoBean.employeeVO.department.contains('sale') and not sessionInfoBean.employeeVO.department.contains('muslim')}" update=":idAddTicketingDialog" process="@this"/>
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - ADD TOUR CODE
+-->
+<p:dialog id="idAddTourCodeDialog" widgetVar="varAddTourCodeDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Tour Code" />
+	</f:facet>
+	<h:form id="idAddTourCodeForm">
+		<ui:include src="add_tour_code.xhtml"/>
+	</h:form>	
+</p:dialog>
+
+<!--
+	DIALOG - EDIT TOUR CODE
+-->
+<p:dialog id="idEditTourCodeDialog" widgetVar="varEditTourCodeDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Tour Code" />
+	</f:facet>
+	<h:form id="idEditTourCodeForm">
+		<ui:include src="add_tour_code.xhtml"/>
+	</h:form>	
+</p:dialog>
+
+<!--
+	DIALOG - DELETE TOUR CODE
+-->
+<p:confirmDialog widgetVar="varDelTourCodeDialog" header="Delete Tour Code" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{ticketingBean.delTourCode}" update="@form,:idTicketingForm:idTourCodeList" oncomplete="varDelTourCodeDialog.hide(),varTourCodeList.clearFilters()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{ticketingBean.resetForm}" oncomplete="varDelTourCodeDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - ADD TICKETING
+-->
+<p:dialog id="idAddTicketingDialog" widgetVar="varAddTicketingDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Ticketing" />
+	</f:facet>
+	<h:form id="idAddTicketForm">
+		<ui:include src="add_ticketing.xhtml"/>
+	</h:form>	
+</p:dialog>
+
+<!--
+	DIALOG - EDIT TICKETING
+-->
+<p:dialog id="idEditTicketingDialog" widgetVar="varEditTicketingDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Ticketing" />
+	</f:facet>
+	<h:form id="idEditTicketForm">
+		<ui:include src="add_ticketing.xhtml"/>
+	</h:form>	
+</p:dialog>
+
+<!--
+	DIALOG - DELETE TICKETING
+-->
+<p:confirmDialog widgetVar="varDelTicketingDialog" header="Delete Ticketing" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{ticketingBean.delTicket}" update="@form,:idTicketingForm:idTourPkgList" oncomplete="varDelTicketingDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{ticketingBean.resetTicketingForm}" oncomplete="varDelTicketingDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+</ui:define>
+</ui:composition>

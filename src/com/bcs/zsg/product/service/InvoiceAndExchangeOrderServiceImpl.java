@@ -1,0 +1,114 @@
+package com.bcs.zsg.product.service;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.product.dao.InvoiceAndExchangeOrderDAO;
+import com.bcs.zsg.product.helper.ProductConstant;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderVO;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderViewVO;
+
+public class InvoiceAndExchangeOrderServiceImpl implements InvoiceAndExchangeOrderService {
+	@Autowired
+	private InvoiceAndExchangeOrderDAO invoiceAndExchangeOrderDAO;
+
+	@Override
+	public void addInvoiceAndExchangeOrder(
+			InvoiceAndExchangeOrderVO invoiceAndExchangeOrderVO)
+			throws BusinessException {
+		// TODO Auto-generated method stub
+		invoiceAndExchangeOrderDAO.insert(invoiceAndExchangeOrderVO);
+	}
+
+	@Override
+	public List<InvoiceAndExchangeOrderViewVO> getInvoiceAndExchangeOrderList()
+			throws BusinessException {
+		// TODO Auto-generated method stub
+		return invoiceAndExchangeOrderDAO.getInvoiceAndExchangeOrderList();
+	}
+
+	@Override
+	public void deleteSystemNumberGeneration(
+			InvoiceAndExchangeOrderVO invoiceAndExchangeOrderVO)
+			throws BusinessException {
+		// TODO Auto-generated method stub
+		invoiceAndExchangeOrderDAO.delete(invoiceAndExchangeOrderVO);
+	}
+
+	@Override
+	public void updateInvoiceAndExchangeOrder(
+			InvoiceAndExchangeOrderVO invoiceAndExchangeOrderVO)
+			throws BusinessException {
+		// TODO Auto-generated method stub
+		invoiceAndExchangeOrderDAO.update(invoiceAndExchangeOrderVO);
+	}
+
+	@Override
+	public List<InvoiceAndExchangeOrderViewVO> getInvoiceAndExchangeOrderSearchList(
+			Long companyId) throws BusinessException {
+		// TODO Auto-generated method stub
+		return invoiceAndExchangeOrderDAO.getInvoiceAndExchangeOrderSearchList(companyId);
+	}
+
+	@Override
+	public List<InvoiceAndExchangeOrderVO> getInvoiceAndExchangeOrderList(Long id) throws BusinessException {
+		return getInvoiceAndExchangeOrderList(id, null);
+	}
+
+	@Override
+	public List<InvoiceAndExchangeOrderVO> getInvoiceAndExchangeOrderList(Long id, InvoiceAndExchangeOrderVO searchFilter) throws BusinessException {
+		return invoiceAndExchangeOrderDAO.getInvoiceAndExchangeOrderList(id, searchFilter);
+	}
+	
+	@Override
+	public List<InvoiceAndExchangeOrderVO> getInvoiceAndExchangeOrderList(Long id, InvoiceAndExchangeOrderVO searchFilter, boolean sortByCode, boolean excludeDefault) throws BusinessException {
+		List <InvoiceAndExchangeOrderVO> invEoItemList = invoiceAndExchangeOrderDAO.getInvoiceAndExchangeOrderList(id, searchFilter);
+		
+		if (excludeDefault) {
+			List<String> codesToRemove = Arrays.asList(new String[] { ProductConstant.AIRLINE_ITM_CD_APT_ADT,
+					ProductConstant.AIRLINE_ITM_CD_APT_CHD, ProductConstant.AIRLINE_ITM_CD_FUEL_ADT,
+					ProductConstant.AIRLINE_ITM_CD_FUEL_CHD, ProductConstant.AIRLINE_ITM_CD_TRVL_INS,
+					ProductConstant.AIRLINE_ITM_CD_VISA, ProductConstant.AIRLINE_ITM_CD_AC,
+					ProductConstant.AIRLINE_ITM_CD_TIPPING, ProductConstant.AIRLINE_ITM_CD_DEVIATION });
+
+			Iterator<InvoiceAndExchangeOrderVO> iterator = invEoItemList.iterator();
+			while (iterator.hasNext()) {
+			    InvoiceAndExchangeOrderVO vo = iterator.next();
+			    if (codesToRemove.contains(vo.getCode())) {
+			        iterator.remove(); // safe way to remove while iterating
+			    }
+			}
+		}
+		
+		if (sortByCode) {
+			Collections.sort(invEoItemList, new Comparator<InvoiceAndExchangeOrderVO>() {
+			    @Override
+			    public int compare(InvoiceAndExchangeOrderVO o1, InvoiceAndExchangeOrderVO o2) {
+			        if (o1.getCode() == null && o2.getCode() == null) return 0;
+			        if (o1.getCode() == null) return -1;
+			        if (o2.getCode() == null) return 1;
+			        return o1.getCode().compareTo(o2.getCode());
+			    }
+			});
+
+		}
+		
+		return invEoItemList;
+	}
+	
+	@Override
+	public InvoiceAndExchangeOrderVO getInvoiceAndExchangeOrderVO(Long id) {
+		return invoiceAndExchangeOrderDAO.getInvoiceAndExchangeOrderVO(id);
+	}
+	
+	@Override
+	public InvoiceAndExchangeOrderVO getInvoiceAndExchangeOrderVO(String code) {
+		return invoiceAndExchangeOrderDAO.getInvoiceAndExchangeOrderVO(code);
+	}
+}

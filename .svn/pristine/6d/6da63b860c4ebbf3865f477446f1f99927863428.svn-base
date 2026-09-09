@@ -1,0 +1,1163 @@
+package com.bcs.zsg.cfg.sec.web.bean;
+
+import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.faces.component.UIComponent;
+import javax.faces.context.FacesContext;
+import javax.faces.convert.Converter;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.primefaces.component.picklist.PickList;
+import org.primefaces.event.SelectEvent;
+import org.primefaces.model.DualListModel;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.cfg.sec.bo.UserBO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.EInvoiceConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.component.common.service.LookupService;
+import com.bcs.zsg.component.security.bo.SecurityBO;
+import com.bcs.zsg.component.security.service.SecurityService;
+import com.bcs.zsg.component.security.vo.ChangePasswordVO;
+import com.bcs.zsg.component.security.vo.RoleVO;
+import com.bcs.zsg.component.security.vo.UserRoleViewVO;
+import com.bcs.zsg.component.security.vo.UserVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.db.bterp.vo.report.UserExportVO;
+import com.bcs.zsg.maintenance.bo.MalaysiaStateBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.MalaysiaStateVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.sales.bo.CustomerBO;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+
+import net.sf.jasperreports.engine.JasperPrint;
+import static com.bcs.zsg.component.common.helper.SysParamConstant.SYS_PARAM_CAT_SECURITY;
+import static com.bcs.zsg.component.common.helper.SysParamConstant.SYS_PARAM_CD_MAX_LOGIN_INVALID_COUNT;
+
+public class UserBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient SecurityBO securityBO;
+	
+	@Autowired
+	private transient SecurityService securityService;
+	
+	@Autowired
+	private transient UserBO userBO;
+	
+	@Autowired 
+	private transient LookupService lookupService;
+	
+	@Autowired 
+	private transient CustomerBO customerBO;
+	
+	@Autowired 
+	private transient InvoiceBO invoiceBO;
+	
+	@Autowired
+	protected transient RegionBO regionBO;
+	@Autowired
+	private transient MalaysiaStateBO malaysiaStateBO;
+	
+	private UserVO userVO;
+	private String oldLoginId;
+	private ChangePasswordVO changePasswordVO;
+	private List<UserVO> userList;
+	private List<UserVO> filteredUserList;
+	private Integer maxLoginInvalidCount;
+	
+	private boolean companyAdd;
+	private String department;
+	private Long idCustomer;
+	private String customerName;
+	private List<CompanyVO> companyList;
+	private List<CountryVO> countryList;
+	private List<MalaysiaStateVO> malaysiaStateList;
+	
+	private EmployeeVO employeeVO;
+	private EmployeeVO employeeInfoVO;
+	private List<EmployeeVO> employeeList;
+	private List<EmployeeVO> addEmployeeList;
+	private List<EmployeeVO> updEmployeeList;
+	private List<EmployeeVO> delEmployeeList;
+	
+	private DualListModel<RoleVO> roleListModel;
+	
+	private LazyDataModel<CustomerVO> lazyCustDataModel;
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.core.web.swf.bean.BaseBackingBean#resetForm()
+	 */
+	@Override
+	public void resetForm() {
+		userVO = new UserVO();
+		changePasswordVO = new ChangePasswordVO();
+		newUserRoleSelected();
+		oldLoginId = "";
+		
+		setDepartment("");
+		setEmployeeVO(new EmployeeVO());
+		setEmployeeInfoVO(new EmployeeVO());
+		employeeInfoVO.setCountryId(CommonConstant.DEF_COUNTRY_ID);
+		
+		setEmployeeList(new ArrayList<EmployeeVO>());
+		setAddEmployeeList(new ArrayList<EmployeeVO>());
+		setUpdEmployeeList(new ArrayList<EmployeeVO>());
+		setDelEmployeeList(new ArrayList<EmployeeVO>());
+		clearCustomer();
+	}
+	
+	/**
+	 * Reset Company form
+	 * @throws BusinessException
+	 */
+	public void resetCompanyForm() throws BusinessException {
+		setCompanyAdd(true);
+		setEmployeeVO(new EmployeeVO());
+	}
+
+	/**
+	 * Initialization
+	 */
+	public void init() {
+		try {
+			resetForm();
+			refreshUserList();
+			initMaxLoginInvalidCount();
+			setCompanyList(userBO.getCompanyList());
+			
+			countryList = regionBO.getActualCountryList();
+			malaysiaStateList = malaysiaStateBO.getStateList();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void profileInit() {
+		try {
+			countryList = regionBO.getActualCountryList();
+			malaysiaStateList = malaysiaStateBO.getStateList();
+			
+			this.userVO = userBO.getUserVOByLoginId(getSessionInfoBean().getUserVO().getLoginId());
+			oldLoginId = userVO.getLoginId();
+			
+			setEmployeeList(userBO.getEmployeeList(userVO));
+			
+			if (CollectionUtils.isNotEmpty(employeeList) && employeeList.size() > 0) {
+				setEmployeeVO(employeeList.get(0));
+				if (employeeVO.getCountryId() == null) employeeVO.setCountryId(CommonConstant.DEF_COUNTRY_ID);
+				if (StringUtils.isEmpty(employeeVO.getMsicCode())) employeeVO.setMsicCode(EInvoiceConstant.MSIC_CODE_NA);
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void loadCustomer() {
+		lazyCustDataModel = new LazyCustomerDataModel();
+	}
+	
+	public void handleCustSelect(SelectEvent event) {
+		try {
+			CustDetailsVO custDetailsVO = invoiceBO.getCustDetails(((CustomerVO) event.getObject()).getId());
+			
+			if (custDetailsVO != null) {
+				idCustomer = custDetailsVO.getCustId();
+				if (StringUtils.equals(custDetailsVO.getCustType(), "C"))
+					customerName = custDetailsVO.getCompanyName();
+				else {
+					customerName = custDetailsVO.getContPersonName();
+					if (StringUtils.isNotBlank(custDetailsVO.getNickName())) {
+						customerName = customerName.concat(" (").concat(custDetailsVO.getNickName()).concat(")");
+					}
+				}
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void clearCustomer() {
+		idCustomer = null;
+		customerName = null;
+	}
+	
+	/**
+	 * Add user
+	 */
+	public void addNewUser() {
+		try {
+			if (CollectionUtils.isEmpty(employeeList)) throw new BusinessException(CommonErrConstant.ERR_SEC_EMPTY_COMPANY);
+			else {
+				boolean isDefaultExisted = false;
+				for (EmployeeVO vo : employeeList) {
+					if (vo.getIsDefaultComp()) {
+						isDefaultExisted = true;
+						break;
+					}
+				}
+				if (!isDefaultExisted) throw new BusinessException(CommonErrConstant.ERR_SEC_NO_DEFAULT_COMPANY);
+			}
+			
+			userVO.setLoginPassword(changePasswordVO.getNewPassword());
+			UserVO vo = securityBO.addNewUser(userVO);
+			updateUserRole(false);
+			
+			if (CollectionUtils.isNotEmpty(employeeList)) {
+				for (EmployeeVO addVO : employeeList) {
+					addVO.setSecUser(vo.getUuid());
+				}
+				
+				employeeInfoVO.setDepartment(department);
+				employeeInfoVO.setCustomerId(idCustomer);
+				employeeInfoVO.setCustomerName(customerName);
+//				userBO.addEmployee(employeeList, new ArrayList<EmployeeVO>(), new ArrayList<EmployeeVO>(), vo.getUuid(), department, idCustomer, customerName);
+				userBO.updEmployee(employeeList,  new ArrayList<EmployeeVO>(), new ArrayList<EmployeeVO>(), vo.getUuid(), employeeInfoVO);
+			}
+			setSessionCompany();
+			init();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Update user
+	 */
+	public void updateUser() {
+		try {
+			if (CollectionUtils.isEmpty(employeeList)) throw new BusinessException(CommonErrConstant.ERR_SEC_EMPTY_COMPANY);
+			else {
+				boolean isDefaultExisted = false;
+				int count = 0;
+				int countDefaultCompany = 0;
+				for (EmployeeVO vo : employeeList) {
+					if (vo.getStatusCode().equals(BaseConstant.STATUS_ACTIVE)) {
+						count++;
+						if (vo.getIsDefaultComp()) {
+							isDefaultExisted = true;
+							countDefaultCompany++;
+						}
+					}
+				}
+				if (!isDefaultExisted) throw new BusinessException(CommonErrConstant.ERR_SEC_NO_DEFAULT_COMPANY);
+				if (count < 1) throw new BusinessException(CommonErrConstant.ERR_SEC_EMPTY_COMPANY);
+				if (countDefaultCompany > 1) throw new BusinessException(CommonErrConstant.ERR_SEC_DEFAULT_COMPANY_EXISTED);
+			}
+			
+			userVO.setLoginPassword(changePasswordVO.getNewPassword());
+			userBO.updateUser(userVO, oldLoginId);
+			updateUserRole(false);
+			
+			for (EmployeeVO addVO : addEmployeeList) {
+				addVO.setSecUser(userVO.getUuid());
+			}
+			
+			employeeInfoVO.setDepartment(department);
+			employeeInfoVO.setCustomerId(idCustomer);
+			employeeInfoVO.setCustomerName(customerName);
+//			userBO.addEmployee(addEmployeeList, updEmployeeList, delEmployeeList, userVO.getUuid(), department, idCustomer, customerName);
+			userBO.updEmployee(addEmployeeList, updEmployeeList, delEmployeeList, userVO.getUuid(), employeeInfoVO);
+			
+			employeeList.addAll(addEmployeeList);
+			employeeList.addAll(updEmployeeList);
+			setSessionCompany();
+			init();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Delete user
+	 */
+	public void deleteUser() {
+		try {
+			userBO.deleteUser(userVO);
+			securityBO.deleteUser(userVO.getUuid());
+			init();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	// User login self update profile
+	public void updateProfileUser() {
+		try {
+			HashMap<String, Object> params = new HashMap<String, Object>();
+			
+			if (Boolean.TRUE.equals(employeeVO.getIsEditable())) {
+				params.put("idNo", Boolean.TRUE);
+				params.put("taxIdNo", Boolean.TRUE);
+				
+				employeeVO.setIsEditable(Boolean.FALSE); // Reset to uneditable after save (NIRC, TIN)
+			}
+			
+			employeeVO.setFullName((employeeVO.getFullName().trim().replaceAll("\\s+", " ")));
+			userVO.setEmailAddress(userVO.getEmailAddress().trim());
+			employeeVO.setNickName((employeeVO.getNickName().trim().replaceAll("\\s+", " ")));
+			userVO.setMobileNumber((userVO.getMobileNumber().trim().replaceAll("\\s+", " ")));
+			employeeVO.setAddr1((employeeVO.getAddr1().trim().replaceAll("\\s+", " ")));
+			employeeVO.setAddr2((employeeVO.getAddr2().trim().replaceAll("\\s+", " ")));
+			employeeVO.setAddr3((employeeVO.getAddr3().trim().replaceAll("\\s+", " ")));
+			employeeVO.setCity((employeeVO.getCity().trim().replaceAll("\\s+", " ")));
+			employeeVO.setPostcode((employeeVO.getPostcode().trim().replaceAll("\\s+", " ")));
+			employeeVO.setAcctNo((employeeVO.getAcctNo().trim().replaceAll("\\s+", " ")));
+			
+			userBO.updateUserProfile(userVO, employeeVO, params);
+			
+			successResult();
+
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add company
+	 */
+	public void addCompany() {
+		try {
+			if (CollectionUtils.isNotEmpty(employeeList)) {
+				boolean isDefaultExisted = false;
+				for (EmployeeVO vo : employeeList) {
+					if (vo.getCompanyId().equals(employeeVO.getCompanyId())) throw new BusinessException(CommonErrConstant.ERR_SEC_DUPLICATED_COMPANY);
+					if (vo.getStatusCode().equals(BaseConstant.STATUS_ACTIVE) && vo.getIsDefaultComp()) isDefaultExisted = true;
+					if (isDefaultExisted && employeeVO.getIsDefaultComp()) throw new BusinessException(CommonErrConstant.ERR_SEC_DEFAULT_COMPANY_EXISTED);
+				}
+			}
+			
+			employeeVO.setDepartment(department);
+			employeeVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			
+			if (userVO.getUuid() != null) {
+				addEmployeeList.add(employeeVO);
+			}
+			employeeList.add(employeeVO);
+			resetCompanyForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Update company
+	 */
+	public void updateCompany() {
+		try {
+			if (!employeeVO.getCompanyId().equals(employeeVO.getBakCompanyId())) {
+				if (CollectionUtils.isNotEmpty(employeeList)) {
+					boolean isDefaultExisted = false;
+					for (EmployeeVO vo : employeeList) {
+						if (vo.getCompanyId().equals(employeeVO.getCompanyId())) throw new BusinessException(CommonErrConstant.ERR_SEC_DUPLICATED_COMPANY);
+						if (vo.getStatusCode().equals(BaseConstant.STATUS_ACTIVE) && vo.getIsDefaultComp()) isDefaultExisted = true;
+						if (isDefaultExisted && employeeVO.getIsDefaultComp()) throw new BusinessException(CommonErrConstant.ERR_SEC_DEFAULT_COMPANY_EXISTED);
+					}
+				}
+			}
+			
+			employeeVO.setDepartment(department);
+			
+			//if (userVO.getUuid() != null) {
+				if (employeeVO.getId() != null) updEmployeeList.add(employeeVO);
+			//}
+			resetCompanyForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Delete company
+	 */
+	public void deleteCompany(EmployeeVO vo) {
+		try {
+			if (userVO.getUuid() != null) {
+				if (vo.getId() != null) {
+					vo.setStatusCode(BaseConstant.STATUS_DELETED);
+					delEmployeeList.add(vo);
+					
+				} else {
+					addEmployeeList.remove(vo);
+					employeeList.remove(vo);
+				}
+				
+			} else employeeList.remove(vo);
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Enable company
+	 * @param vo
+	 */
+	public void enableCompany(EmployeeVO vo) {
+		try {
+			vo.setDepartment(department);
+			vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			updEmployeeList.add(vo);
+			resetCompanyForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Update company
+	 */
+	public String getCompanyName(Long id) {
+		for (CompanyVO vo : companyList) {
+			if (vo.getId().longValue() == id.longValue()) {
+				return vo.getName();
+			}
+		}
+		return "";
+	}
+
+	/**
+	 * Update user role
+	 */
+	public void updateUserRole() {
+		updateUserRole(true);
+	}
+	
+	/**
+	 * Update user role
+	 */
+	public void updateUserRole(boolean sucessMsg) {
+		try {
+			String[] selectedRoles = new String[roleListModel.getTarget().size()];
+			
+			for (int i = 0 ; i < roleListModel.getTarget().size() ; i++) {
+				RoleVO vo = roleListModel.getTarget().get(i);
+				selectedRoles[i] = vo.getUuid();
+			}
+			securityBO.updateUserRoles(userVO.getUuid(), selectedRoles);
+			refreshUserList();
+			if(sucessMsg) successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param vo
+	 */
+	public void newUserRoleSelected() {
+		try {
+			roleListModel = new DualListModel<RoleVO>(new ArrayList<RoleVO>(), new ArrayList<RoleVO>());
+			
+			List<RoleVO> usedRoleList = new ArrayList<RoleVO>();
+			
+			// get user assigned role list
+			usedRoleList.add(securityService.getDefaultUserRole());
+		
+			// get available role list
+			List<RoleVO> availableRoleList = null;
+			if (isSuperUser()) availableRoleList = securityBO.getAvailableRoleList(usedRoleList, BaseConstant.STATUS_ACTIVE, false);
+			else availableRoleList = securityBO.getAvailableRoleList(usedRoleList, BaseConstant.STATUS_ACTIVE, true);
+		    
+			//sort the availableRoleList and usedRoleList
+			Collections.sort(availableRoleList, new Comparator<RoleVO>() {
+		        public int compare(RoleVO r1, RoleVO r2) {
+		        	String availableRoleList1 = (StringUtils.isBlank(r1.getRoleName())) ? "" : r1.getRoleName().trim();
+		            String availableRoleList2 = (StringUtils.isBlank(r2.getRoleName())) ? "" : r2.getRoleName().trim();
+
+		            return availableRoleList1.compareToIgnoreCase(availableRoleList2);
+		        }
+		    });
+
+		    Collections.sort(usedRoleList, new Comparator<RoleVO>() {
+		    	 public int compare(RoleVO r1, RoleVO r2) {
+		        	String usedRoleList1 = (StringUtils.isBlank(r1.getRoleName())) ? "" : r1.getRoleName().trim();
+		            String usedRoleList2 = (StringUtils.isBlank(r2.getRoleName())) ? "" : r2.getRoleName().trim();
+
+		            return usedRoleList1.compareToIgnoreCase(usedRoleList2);
+		        }
+		    });
+			
+			roleListModel = new DualListModel<RoleVO>(availableRoleList, usedRoleList);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param vo
+	 */
+	public void onUserRoleSelected(UserVO vo) {
+		try {
+			userVO = vo;
+			roleListModel = new DualListModel<RoleVO>(new ArrayList<RoleVO>(), new ArrayList<RoleVO>());
+			
+			// get user assigned role list
+			List<UserRoleViewVO> userRoleList = securityBO.getUserRoleListByUser(vo.getUuid());
+			
+			List<RoleVO> usedRoleList = new ArrayList<RoleVO>();
+			if (CollectionUtils.isNotEmpty(userRoleList)) {
+				for (UserRoleViewVO userRoleVO : userRoleList) {
+					RoleVO roleVO = new RoleVO();
+					roleVO.setUuid(userRoleVO.getRoleUUID());
+					roleVO.setRoleCode(userRoleVO.getRoleCode());
+					roleVO.setRoleName(userRoleVO.getRoleName());
+					usedRoleList.add(roleVO);
+				}
+			}
+		
+			// get available role list
+			List<RoleVO> availableRoleList = null;
+			if (isSuperUser()) availableRoleList = securityBO.getAvailableRoleList(usedRoleList, BaseConstant.STATUS_ACTIVE, false);
+			else availableRoleList = securityBO.getAvailableRoleList(usedRoleList, BaseConstant.STATUS_ACTIVE, true);
+			
+			//sort the availableRoleList and usedRoleList
+			Collections.sort(availableRoleList, new Comparator<RoleVO>() {
+		        public int compare(RoleVO r1, RoleVO r2) {
+		        	String availableRoleList1 = (StringUtils.isBlank(r1.getRoleName())) ? "" : r1.getRoleName().trim();
+		            String availableRoleList2 = (StringUtils.isBlank(r2.getRoleName())) ? "" : r2.getRoleName().trim();
+
+		            return availableRoleList1.compareToIgnoreCase(availableRoleList2);
+		        }
+		    });
+
+		    Collections.sort(usedRoleList, new Comparator<RoleVO>() {
+		    	 public int compare(RoleVO r1, RoleVO r2) {
+		        	String usedRoleList1 = (StringUtils.isBlank(r1.getRoleName())) ? "" : r1.getRoleName().trim();
+		            String usedRoleList2 = (StringUtils.isBlank(r2.getRoleName())) ? "" : r2.getRoleName().trim();
+
+		            return usedRoleList1.compareToIgnoreCase(usedRoleList2);
+		        }
+		    });
+		
+			roleListModel = new DualListModel<RoleVO>(availableRoleList, usedRoleList);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On company selected
+	 * @param event
+	 */
+	public void onCompanySelected(EmployeeVO vo) {
+		try {
+			setCompanyAdd(false);
+			vo.setBakCompanyId(vo.getCompanyId());
+			setEmployeeVO(vo);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Role converter
+	 * @return
+	 */
+	public Converter getRoleConverter() {
+		return new Converter() {
+
+			/*
+			 * (non-Javadoc)
+			 * @see javax.faces.convert.Converter#getAsObject(javax.faces.context.FacesContext, javax.faces.component.UIComponent, java.lang.String)
+			 */
+			@SuppressWarnings("unchecked")
+			@Override
+			public Object getAsObject(FacesContext context, UIComponent component, String str) {
+				DualListModel<RoleVO> listModel = (DualListModel<RoleVO>) ((PickList) component).getValue();
+				if (CollectionUtils.isNotEmpty(listModel.getSource())) {
+					for (RoleVO vo : listModel.getSource()) {
+						if (StringUtils.equals(vo.getUuid(), str)) return vo;
+					}
+				}
+				
+				if (CollectionUtils.isNotEmpty(listModel.getTarget())) {
+					for (RoleVO vo : listModel.getTarget()) {
+						if (StringUtils.equals(vo.getUuid(), str)) return vo;
+					}
+				}
+				return null;
+			}
+
+			/*
+			 * (non-Javadoc)
+			 * @see javax.faces.convert.Converter#getAsString(javax.faces.context.FacesContext, javax.faces.component.UIComponent, java.lang.Object)
+			 */
+			@Override
+			public String getAsString(FacesContext context, UIComponent component, Object obj) {
+				return ((RoleVO) obj).getUuid();
+			}
+			
+		};
+	}
+	
+	/**
+	 * 
+	 * @param vo
+	 */
+	public void resetInvalidLogin() {
+		try {
+			userBO.resetInvalidLogin(userVO);
+			init();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleAddressState() {
+		employeeVO.setState("");
+	}
+	
+	/**********
+	 * HELPER *
+	 **********/
+	
+	/*
+	 * Refresh user list
+	 * @throws Throwable
+	 */
+	private void refreshUserList() throws Throwable {
+		if (isSuperUser()) {
+			userList = securityBO.getUserList(null, false, true, false);
+		} else {
+			userList = securityBO.getUserList(null, false, true, true);
+		}
+		
+		//sorting when initialize
+		for (UserVO user : userList) {
+		    if (user.getRoleList() != null) {
+		        user.getRoleList().sort(new Comparator<UserRoleViewVO>() {
+		        	public int compare(UserRoleViewVO r1, UserRoleViewVO r2) {
+		                String role1 = (StringUtils.isBlank(r1.getRoleName())) ? "" : r1.getRoleName().trim() ;
+		                String role2 = (StringUtils.isBlank(r2.getRoleName())) ? "" : r2.getRoleName().trim() ;
+		                return role1.compareToIgnoreCase(role2);
+		            }
+		        });
+		    }
+		}
+	}
+	
+	/*
+	 * Retrieve maximum login invalid count
+	 * @return
+	 */
+	private void initMaxLoginInvalidCount() {
+		maxLoginInvalidCount = lookupService.getSysParamValueInt(SYS_PARAM_CAT_SECURITY, SYS_PARAM_CD_MAX_LOGIN_INVALID_COUNT);
+		if (maxLoginInvalidCount == null)
+			maxLoginInvalidCount = 3;		// default to 3
+		
+		maxLoginInvalidCount = (maxLoginInvalidCount == null) ? 3 : maxLoginInvalidCount;
+	}
+	
+	/*
+	 * Set session company
+	 */
+	private void setSessionCompany() {
+		if (CollectionUtils.isNotEmpty(employeeList)) {
+			for (EmployeeVO vo : employeeList) {
+				if (vo.getIsDefaultComp()) {
+					for (CompanyVO companyVO : companyList) {
+						if (companyVO.getId().equals(vo.getCompanyId())) {
+							getSessionInfoBean().setCompanyVO(companyVO);
+							break;
+						}
+					}
+					break;
+				}
+			}
+		}
+	}
+	
+	public EmployeeVO getEmployeeVOForUser(UserVO userVO) {
+	    try {
+//	        if (userVO != null && StringUtils.isNotBlank(userVO.getUuid())) {
+//	            List<EmployeeVO> empList = userBO.getEmployeeList(userVO);
+//	            if (CollectionUtils.isNotEmpty(empList)) {
+//	            	empList.get(0).setDepartment(empList.get(0).getDepartment() != null ? LookupItemUtils.getLookupItemDesc("dept_type", empList.get(0).getDepartment()) : "");
+//	            	            	
+//	                return empList.get(0);
+//	            }
+//	        } else { //testing debugging: can remove?
+//	        	System.out.println("this uservo is empty");
+//	        }
+            List<EmployeeVO> empList = userBO.getEmployeeList(userVO);
+            if (CollectionUtils.isNotEmpty(empList)) {
+            	empList.get(0).setDepartment(empList.get(0).getDepartment() != null ? LookupItemUtils.getLookupItemDesc("dept_type", empList.get(0).getDepartment()) : "");
+                return empList.get(0);
+            }
+	    } catch (BusinessException e) {
+			e.printStackTrace();
+	    }
+	    return new EmployeeVO();
+	}
+	
+
+	public void printUserList() {
+	    try {
+	        List<UserVO> exportList;
+	        
+	        if (filteredUserList != null && !filteredUserList.isEmpty()) {
+	            exportList = new ArrayList<>(filteredUserList);
+	        } else {
+	            exportList = new ArrayList<>(userList);
+	        }
+	        
+	        if (CollectionUtils.isEmpty(exportList)) {
+	            throw new BusinessException("No data to export");
+	        }
+	        
+	        List<UserExportVO> exportDataList = new ArrayList<>();
+	        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	        SimpleDateFormat fileName = new SimpleDateFormat("yyyyMMdd_HHmmss");
+	        
+	        for (UserVO vo : exportList) {
+	            UserExportVO exportVO = new UserExportVO();
+	            
+	            exportVO.setLoginId(vo.getLoginId());
+	            exportVO.setStatusCode(vo.getStatusCode());
+	            exportVO.setName(vo.getName() != null ? vo.getName() : "");
+	            
+	            EmployeeVO empVO = getEmployeeVOForUser(vo);
+	            if (empVO != null) {
+	                exportVO.setEmployeeFullName(empVO.getFullName() != null ? empVO.getFullName() : "");
+	                exportVO.setEmployeeIdNo(empVO.getIdNo() != null ? empVO.getIdNo() : "");
+	                exportVO.setEmployeeDepartment(empVO.getDepartment() != null ? empVO.getDepartment() : "");
+	            } else {
+	                exportVO.setEmployeeFullName("");
+	                exportVO.setEmployeeIdNo("");
+	                exportVO.setEmployeeDepartment("");
+	            }
+	            
+	            exportVO.setMobileNumber(vo.getMobileNumber() != null ? vo.getMobileNumber() : "");
+	            
+	            // Format role list as string with null check
+	            if (vo.getRoleList() != null && !vo.getRoleList().isEmpty()) {
+	                StringBuilder roles = new StringBuilder();
+	                for (UserRoleViewVO role : vo.getRoleList()) {
+	                    if (roles.length() > 0) roles.append(",\n");
+	                    roles.append(role.getRoleName() != null ? role.getRoleName() : "");
+	                }
+	                exportVO.setRoleList(roles.toString());
+	            } else {
+	                exportVO.setRoleList("");
+	            }
+	            
+	            exportVO.setEmailAddress(vo.getEmailAddress() != null ? vo.getEmailAddress() : "");
+	            exportVO.setFirstLoginDate(vo.getFirstLoginDate() != null ? dateFormat.format(vo.getFirstLoginDate()) : "");
+	            exportVO.setLastLoginDate(vo.getLastLoginDate() != null ? dateFormat.format(vo.getLastLoginDate()) : "");
+	            exportVO.setLastPasswordChangeDate(vo.getLastPasswordChangeDate() != null ? dateFormat.format(vo.getLastPasswordChangeDate()) : "");
+	            
+	            exportVO.setLoginSuccessCount(vo.getLoginSuccessCount() != null ? vo.getLoginSuccessCount() : 0);
+	            exportVO.setLoginInvalidCount(vo.getLoginInvalidCount() != null ? vo.getLoginInvalidCount() : 0);
+	            
+	            exportDataList.add(exportVO);
+	        }
+	        
+	        HashMap<String, Object> params = new HashMap<>();
+	        params.put("companyName", getSessionInfoBean().getCompanyVO().getName());
+	        params.put("exportDate", dateFormat.format(new Date()));
+	        params.put("userList", exportDataList);
+	        params.put("IS_IGNORE_PAGINATION", true);
+	        params.put("REPORT_TITLE", "User List Report");
+
+	        StringBuilder filterInfo = new StringBuilder();
+	        if (filteredUserList != null && !filteredUserList.isEmpty()) {
+	            filterInfo.append("Filtered Results");
+	        } else {
+	            filterInfo.append("All Users");
+	        }
+	        params.put("filterInfo", filterInfo.toString());
+
+	        JasperPrint jasperPrint = ReportUtils.getJasperPrint(exportDataList, params, 
+	        		CommonConstant.JAS_RPT_USER_LIST);
+			
+			String exportFileName = "UserList_" + fileName.format(new Date());
+            ReportUtils.printReportExcel(jasperPrint, exportFileName);
+	        
+	    } catch (Throwable t) {
+	        t.printStackTrace();
+	        errorResult(t);
+	    }    
+	}
+	
+	/******************
+	 * LAZY DATA MODEL *
+	 ******************/
+	
+	class LazyCustomerDataModel extends LazyDataModel<CustomerVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#load(int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+		 */
+		@Override
+		public List<CustomerVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			List<CustomerVO> data = new ArrayList<CustomerVO>();
+			try {
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+				params.put("classes", true);
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", sortField);
+				params.put("sortOrder", sortOrder);
+				params.put("filters", filters);
+				int size = customerBO.getCustomerListSize(params);
+				if (CommonConstant.LAZY_ROW_COUNT < size) {
+					size = CommonConstant.LAZY_ROW_COUNT;
+				}
+				setRowCount(size);
+				if (size > 0) data = customerBO.getCustomerList(params);
+				
+			} catch (Throwable t) {
+				errorResult(t);
+			}
+			
+			return data;
+		}
+		
+		@Override
+		public void setRowIndex(int rowIndex) {
+			/*
+			 * The following is in ancestor (LazyDataModel):
+			 * this.rowIndex = rowIndex == -1 ? rowIndex : (rowIndex % pageSize);
+			 */
+			if (rowIndex == -1 || getPageSize() == 0) {
+				super.setRowIndex(-1);
+			} else super.setRowIndex(rowIndex % getPageSize());
+		}
+	}
+
+	/*******************
+	 * GETTER & SETTER *
+	 *******************/
+	
+	/**
+	 * @return the userVO
+	 */
+	public UserVO getUserVO() {
+		return userVO;
+	}
+
+	/**
+	 * @param userVO the userVO to set
+	 */
+	public void setUserVO(UserVO userVO) {
+		this.userVO = userVO;
+		
+		department = null;
+		idCustomer = null;
+		customerName = null;
+		
+		oldLoginId = userVO.getLoginId();
+		onUserRoleSelected(userVO);
+		
+		try {
+			setEmployeeList(userBO.getEmployeeList(userVO));
+			
+			for(EmployeeVO vo : employeeList) {
+				if (StringUtils.isNotBlank(vo.getDepartment())) {
+					department = vo.getDepartment();
+					break;
+				}
+			}
+			
+			for(EmployeeVO vo : employeeList) {
+				if (vo.getCustomerId() != null) {
+					idCustomer = vo.getCustomerId();
+					customerName = vo.getCustomerName();
+					break;
+				}
+			}
+			
+			if (CollectionUtils.isNotEmpty(employeeList) && employeeList.size() > 0) {
+				setEmployeeInfoVO(employeeList.get(0));
+				if (employeeInfoVO.getCountryId() == null) employeeInfoVO.setCountryId(CommonConstant.DEF_COUNTRY_ID);
+				if (StringUtils.isEmpty(employeeInfoVO.getMsicCode())) employeeInfoVO.setMsicCode(EInvoiceConstant.MSIC_CODE_NA);
+			} else {
+				setEmployeeInfoVO(new EmployeeVO());
+				employeeInfoVO.setCountryId(CommonConstant.DEF_COUNTRY_ID);
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	/**
+	 * @return the filteredUserList
+	 */
+	public List<UserVO> getFilteredUserList() {
+		return filteredUserList;
+	}
+
+	/**
+	 * @param filteredUserList the filteredUserList to set
+	 */
+	public void setFilteredUserList(List<UserVO> filteredUserList) {
+		this.filteredUserList = filteredUserList;
+	}
+
+	/**
+	 * @return the userList
+	 */
+	public List<UserVO> getUserList() {
+		return userList;
+	}
+
+	/**
+	 * @param userList the userList to set
+	 */
+	public void setUserList(List<UserVO> userList) {
+		this.userList = userList;
+	}
+
+	/**
+	 * @return the roleListModel
+	 */
+	public DualListModel<RoleVO> getRoleListModel() {
+		return roleListModel;
+	}
+
+	/**
+	 * @param roleListModel the roleListModel to set
+	 */
+	public void setRoleListModel(DualListModel<RoleVO> roleListModel) {
+		this.roleListModel = roleListModel;
+	}
+
+	/**
+	 * @return the changePasswordVO
+	 */
+	public ChangePasswordVO getChangePasswordVO() {
+		return changePasswordVO;
+	}
+
+	/**
+	 * @param changePasswordVO the changePasswordVO to set
+	 */
+	public void setChangePasswordVO(ChangePasswordVO changePasswordVO) {
+		this.changePasswordVO = changePasswordVO;
+	}
+
+	/**
+	 * @return the maxLoginInvalidCount
+	 */
+	public Integer getMaxLoginInvalidCount() {
+		return maxLoginInvalidCount;
+	}
+
+	/**
+	 * @param maxLoginInvalidCount the maxLoginInvalidCount to set
+	 */
+	public void setMaxLoginInvalidCount(Integer maxLoginInvalidCount) {
+		this.maxLoginInvalidCount = maxLoginInvalidCount;
+	}
+
+	/**
+	 * @return the companyList
+	 */
+	public List<CompanyVO> getCompanyList() {
+		return companyList;
+	}
+
+	/**
+	 * @param companyList the companyList to set
+	 */
+	public void setCompanyList(List<CompanyVO> companyList) {
+		this.companyList = companyList;
+	}
+
+	/**
+	 * @return the department
+	 */
+	public String getDepartment() {
+		return department;
+	}
+
+	/**
+	 * @param department the department to set
+	 */
+	public void setDepartment(String department) {
+		this.department = department;
+	}
+
+	/**
+	 * @return the companyAdd
+	 */
+	public boolean isCompanyAdd() {
+		return companyAdd;
+	}
+
+	/**
+	 * @param companyAdd the companyAdd to set
+	 */
+	public void setCompanyAdd(boolean companyAdd) {
+		this.companyAdd = companyAdd;
+	}
+
+	/**
+	 * @return the employeeVO
+	 */
+	public EmployeeVO getEmployeeVO() {
+		return employeeVO;
+	}
+
+	/**
+	 * @param employeeVO the employeeVO to set
+	 */
+	public void setEmployeeVO(EmployeeVO employeeVO) {
+		this.employeeVO = employeeVO;
+	}
+
+	/**
+	 * @return the employeeList
+	 */
+	public List<EmployeeVO> getEmployeeList() {
+		return employeeList;
+	}
+
+	/**
+	 * @param employeeList the employeeList to set
+	 */
+	public void setEmployeeList(List<EmployeeVO> employeeList) {
+		this.employeeList = employeeList;
+	}
+
+	/**
+	 * @return the addEmployeeList
+	 */
+	public List<EmployeeVO> getAddEmployeeList() {
+		return addEmployeeList;
+	}
+
+	/**
+	 * @param addEmployeeList the addEmployeeList to set
+	 */
+	public void setAddEmployeeList(List<EmployeeVO> addEmployeeList) {
+		this.addEmployeeList = addEmployeeList;
+	}
+
+	/**
+	 * @return the updEmployeeList
+	 */
+	public List<EmployeeVO> getUpdEmployeeList() {
+		return updEmployeeList;
+	}
+
+	/**
+	 * @param updEmployeeList the updEmployeeList to set
+	 */
+	public void setUpdEmployeeList(List<EmployeeVO> updEmployeeList) {
+		this.updEmployeeList = updEmployeeList;
+	}
+
+	/**
+	 * @return the delEmployeeList
+	 */
+	public List<EmployeeVO> getDelEmployeeList() {
+		return delEmployeeList;
+	}
+
+	/**
+	 * @param delEmployeeList the delEmployeeList to set
+	 */
+	public void setDelEmployeeList(List<EmployeeVO> delEmployeeList) {
+		this.delEmployeeList = delEmployeeList;
+	}
+
+	public LazyDataModel<CustomerVO> getLazyCustDataModel() {
+		return lazyCustDataModel;
+	}
+
+	public void setLazyCustDataModel(LazyDataModel<CustomerVO> lazyCustDataModel) {
+		this.lazyCustDataModel = lazyCustDataModel;
+	}
+
+	public Long getIdCustomer() {
+		return idCustomer;
+	}
+
+	public void setIdCustomer(Long idCustomer) {
+		this.idCustomer = idCustomer;
+	}
+
+	public String getCustomerName() {
+		return customerName;
+	}
+
+	public void setCustomerName(String customerName) {
+		this.customerName = customerName;
+	}
+
+	public List<CountryVO> getCountryList() {
+		return countryList;
+	}
+
+	public void setCountryList(List<CountryVO> countryList) {
+		this.countryList = countryList;
+	}
+
+	public List<MalaysiaStateVO> getMalaysiaStateList() {
+		return malaysiaStateList;
+	}
+
+	public void setMalaysiaStateList(List<MalaysiaStateVO> malaysiaStateList) {
+		this.malaysiaStateList = malaysiaStateList;
+	}
+
+	public EmployeeVO getEmployeeInfoVO() {
+		return employeeInfoVO;
+	}
+
+	public void setEmployeeInfoVO(EmployeeVO employeeInfoVO) {
+		this.employeeInfoVO = employeeInfoVO;
+	}
+}

@@ -1,0 +1,89 @@
+package com.bcs.zsg.feedback.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.product.vo.FeedbackVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+
+public interface FeedbackService {
+
+    /**
+     * Retrieves invoices eligible for feedback email (departures returning the next day).
+     *
+     * @return list of FeedbackVO populated with invoice, booking, customer, and tour departure info
+     * @throws BusinessException
+     */
+    public List<FeedbackVO> getInvoiceForFeedback() throws BusinessException;
+
+    public List<FeedbackVO> getInvoiceForFeedback(Long idTourBooking) throws BusinessException;
+
+    /**
+     * Inserts a new feedback record.
+     *
+     * @param feedbackVO
+     * @throws BusinessException
+     */
+    public void insertFeedback(FeedbackVO feedbackVO) throws BusinessException;
+
+    /**
+     * Retrieves all feedback records (with questions and answers) for a given tour departure.
+     *
+     * @param idTourDep
+     * @return list of FeedbackVO
+     * @throws BusinessException
+     */
+    public List<FeedbackVO> getFeedbackListbyTourDepId(Long idTourDep) throws BusinessException;
+
+    /**
+     * Updates the status of a feedback record identified by invoice ID.
+     *
+     * @param idInvoice
+     * @param status
+     * @throws BusinessException
+     */
+    public void updateFeedbackStatus(Long idInvoice, String status) throws BusinessException;
+
+    /**
+     * Updates the status of a feedback record identified by booking ID.
+     *
+     * @param idBooking
+     * @param status
+     * @throws BusinessException
+     */
+    public void updateFeedbackStatusByBookingId(Long idBooking, String status) throws BusinessException;
+
+    /**
+     * Retrieves the latest feedback status for a given booking ID.
+     *
+     * @param idBooking
+     * @return status string, or null if no feedback record exists
+     * @throws BusinessException
+     */
+    public String getFeedbackStatus(Long idBooking) throws BusinessException;
+
+    public List<FeedbackVO> getPendingFeedbackList() throws BusinessException;
+
+    public void updateFeedbackForEmailSent(Long idTourBooking, Long customerId, String tokenUuid, String status, String updBy) throws BusinessException;
+
+    public TourDepartureVO getFeedbackReportHeader(Long idTourDep) throws BusinessException;
+
+    public void insertFeedbackCustAnswer(Long idFeedback, Long idQuestion, Long idAnswer, String answerText, String remarks) throws BusinessException;
+
+    public void updateFeedbackComments(Long idFeedback, String comments, String attachment) throws BusinessException;
+
+    public List<Object[]> getActiveQuestionsAndAnswers() throws BusinessException;
+
+    public Map<String, String> getFeedbackLookupMap() throws BusinessException;
+
+    public Long getFeedbackIdByBookingId(Long idBooking) throws BusinessException;
+
+    public List<FeedbackVO> getFeedbackDetails(Long idFeedback) throws BusinessException;
+
+    public List<FeedbackVO> getAttachmentsByFeedbackId(Long idFeedback) throws BusinessException;
+
+    public void saveFeedbackEdits(Long idFeedback, String commentsHos, List<FeedbackVO> hosAttachments, List<Long> deletedAttachmentIds) throws BusinessException;
+
+    public List<FeedbackVO> getBookingsWithoutFeedback(Long idTourDep) throws BusinessException;
+}

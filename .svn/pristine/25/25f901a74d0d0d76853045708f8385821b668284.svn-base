@@ -1,0 +1,121 @@
+package com.bcs.zsg.crm.vo;
+
+import java.io.Serializable;
+import java.util.List;
+public class CustomerPointTierVO implements Serializable{
+	private static final long serialVersionUID = 1L;
+	private String idCustomer;
+    private String crmId;
+
+    private int totalPointsBalance;
+
+    private String tier;
+    private String tierEffectiveFrom;
+    private String tierEffectiveTo;
+
+    private int currentSales;
+    private int targetSales;
+    private int remainingSales;
+    private String currency;
+
+    private boolean isTierLock;
+
+    private List<PointExpiryVO> pointsByExpiry;
+
+	public String getIdCustomer() {
+		return idCustomer;
+	}
+
+	public void setIdCustomer(String idCustomer) {
+		this.idCustomer = idCustomer;
+	}
+
+	public String getCrmId() {
+		return crmId;
+	}
+
+	public void setCrmId(String crmId) {
+		this.crmId = crmId;
+	}
+
+	public int getTotalPointsBalance() {
+		return totalPointsBalance;
+	}
+
+	public void setTotalPointsBalance(int totalPointsBalance) {
+		this.totalPointsBalance = totalPointsBalance;
+	}
+
+	public String getTier() {
+		return tier;
+	}
+
+	public void setTier(String tier) {
+		this.tier = tier;
+	}
+
+	public String getTierEffectiveFrom() {
+		return tierEffectiveFrom;
+	}
+
+	public void setTierEffectiveFrom(String tierEffectiveFrom) {
+		this.tierEffectiveFrom = tierEffectiveFrom;
+	}
+
+	public String getTierEffectiveTo() {
+		return tierEffectiveTo;
+	}
+
+	public void setTierEffectiveTo(String tierEffectiveTo) {
+		this.tierEffectiveTo = tierEffectiveTo;
+	}
+
+	public int getCurrentSales() {
+		return currentSales;
+	}
+
+	public void setCurrentSales(int currentSales) {
+		this.currentSales = currentSales;
+	}
+
+	public int getTargetSales() {
+		return targetSales;
+	}
+
+	public void setTargetSales(int targetSales) {
+		this.targetSales = targetSales;
+	}
+
+	public int getRemainingSales() {
+		return remainingSales;
+	}
+
+	public void setRemainingSales(int remainingSales) {
+		this.remainingSales = remainingSales;
+	}
+
+	public String getCurrency() {
+		return currency;
+	}
+
+	public void setCurrency(String currency) {
+		this.currency = currency;
+	}
+
+	public boolean isTierLock() {
+		return isTierLock;
+	}
+
+	public void setTierLock(boolean isTierLock) {
+		this.isTierLock = isTierLock;
+	}
+
+	public List<PointExpiryVO> getPointsByExpiry() {
+		return pointsByExpiry;
+	}
+
+	public void setPointsByExpiry(List<PointExpiryVO> pointsByExpiry) {
+		this.pointsByExpiry = pointsByExpiry;
+	}
+
+}

@@ -1,0 +1,1548 @@
+package com.bcs.zsg.acct.web.bean;
+
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+
+import javax.faces.context.FacesContext;
+
+import net.sf.jasperreports.engine.JasperPrint;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.primefaces.event.SelectEvent;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.bo.ChartOfAcctBO;
+import com.bcs.zsg.acct.bo.FinancialPeriodBO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.acct.vo.FinancialPeriodVO;
+import com.bcs.zsg.acct.vo.JournalVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.bo.SystemNumberGenerationBO;
+import com.bcs.zsg.maintenance.vo.CompanyContactVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.product.bo.TourPackageBO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.purchase.bo.PurchaseBO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+
+public class AccountReportBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient ChartOfAcctBO chartOfAcctBO;
+	@Autowired
+	private transient CorporateProfileBO corporateProfileBO;
+	@Autowired
+	private transient RegionBO regionBO;
+	@Autowired
+	private transient FinancialPeriodBO finPeriodBO;
+	@Autowired
+	protected transient InvoiceBO invoiceBO;
+	@Autowired
+	protected transient PurchaseBO purchaseBO;
+	@Autowired
+	private transient SystemNumberGenerationBO systemNumberGenerationBO;
+	@Autowired
+	private transient TourPackageBO tourPkgBO;
+	
+	private String reportType;
+	private String groupType;
+	private boolean salesOnly;
+	private boolean gtDtDep;
+	private Long[] selectedAcct;
+	private List<String> yearList;
+	private CustDetailsVO custDetailsVO;
+	protected SupplierVO supplierVO;
+	private TourDepartureVO tourDepVO;
+	private List<SupplierVO> supplierList;
+	private List<JournalVO> journalList;
+	private List<TourDepartureVO> tourList;
+	private List<AcctVO> acctList;
+	//private List<BankAcctViewVO> bankAcctViewList;
+	
+	private static final SimpleDateFormat YEAR_FORMAT = new SimpleDateFormat("yyyy");
+	private static final int YEAR_PERIOD = 11;
+	private TrackingLogUtils trackingLogUtils;
+	
+	@Override
+	public void resetForm() {
+		custDetailsVO = new CustDetailsVO();
+		supplierVO = new SupplierVO();
+		supplierList = new ArrayList<SupplierVO>();
+		journalList = new ArrayList<JournalVO>();
+		journalList = new ArrayList<JournalVO>();
+		acctList = new ArrayList<AcctVO>();
+		//bankAcctViewList = new ArrayList<BankAcctViewVO>();
+	}
+
+	public void init() throws BusinessException {
+		try {
+			trackingLogUtils = new TrackingLogUtils(this.getClass());
+			
+			// Initialize search param
+			initSearchParam();
+			
+			resetForm();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Report Type select event
+	 */
+	public void handleSelectReportType() {
+		try {
+			// Initialize year list
+			String year = YEAR_FORMAT.format(new Date());
+			yearList = getCurrentYearList(year);
+			String periodYear = chartOfAcctBO.getFinPeriodYear(getSessionInfoBean().getCompanyVO().getId());
+			if (StringUtils.isNotEmpty(periodYear)) {
+				searchParamVO.setObj1(periodYear);
+			} else {
+				searchParamVO.setObj1(year);
+			}
+			
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(new Date());
+			// set from date
+			cal.set(Calendar.DAY_OF_MONTH, 1);
+			cal.set(Calendar.HOUR_OF_DAY, 0);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			searchParamVO.setObj2(cal.getTime());
+			// set to date
+			cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
+			cal.set(Calendar.HOUR_OF_DAY, 23);
+			cal.set(Calendar.MINUTE, 59);
+			cal.set(Calendar.SECOND, 59);
+			searchParamVO.setObj3(cal.getTime());
+			
+			List<FinancialPeriodVO> finPeriodList = finPeriodBO.getFinPeriodList(getSessionInfoBean().getCompanyVO().getId(), (String) searchParamVO.getObj1());
+			if (!reportType.equals("Q")) { // Not Sales in Adv.
+				if (CollectionUtils.isNotEmpty(finPeriodList)) {
+					searchParamVO.setObj2(finPeriodList.get(0).getDtStart());
+					searchParamVO.setObj3(finPeriodList.get(finPeriodList.size()-1).getDtEnd());
+				} else {
+					searchParamVO.setObj2(null);
+					searchParamVO.setObj3(null);
+				}
+			}
+			
+			if (reportType.equals("I") || reportType.equals("J") || reportType.equals("P")) {
+				supplierList = purchaseBO.getSupplierList(getSessionInfoBean().getCompanyVO().getId(), true); 
+			}
+			
+			/*if (reportType.equals("L")) {
+				bankAcctViewList = cashBookBO.getBankAcctList(getSessionInfoBean().getCompanyVO().getId());
+			}*/
+			
+			if (reportType.equals("M")) {
+				journalList = chartOfAcctBO.getJournalList(getSessionInfoBean().getCompanyVO().getId()); 
+			}
+			
+			if (reportType.equals("Q")) {
+				acctList = chartOfAcctBO.getAcctListByAcctCat(getSessionInfoBean().getCompanyVO().getId(), 4L);
+				for (AcctVO vo : acctList) {
+					if (StringUtils.isNotEmpty(vo.getSubCode())) {
+						vo.setCode(vo.getCode() + "-" + vo.getSubCode());
+						vo.setDesc(vo.getDesc() + ", " + vo.getSubDesc());
+					}
+				}
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Report Type select event
+	 */
+	public void handleSelectYear() {
+		try {
+			List<FinancialPeriodVO> finPeriodList = finPeriodBO.getFinPeriodList(getSessionInfoBean().getCompanyVO().getId(), (String) searchParamVO.getObj1());
+			if (CollectionUtils.isNotEmpty(finPeriodList)) {
+				searchParamVO.setObj2(finPeriodList.get(0).getDtStart());
+				searchParamVO.setObj3(finPeriodList.get(finPeriodList.size()-1).getDtEnd());
+			} else {
+				searchParamVO.setObj2(null);
+				searchParamVO.setObj3(null);
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * Load tour list
+	 */
+	public void loadTour() throws BusinessException{
+		tourList = tourPkgBO.getTourDepListV2();
+	}
+	
+	/**
+	 * tour code selected
+	 * @param event
+	 */
+	public void handleTourCodeSelect(SelectEvent event){
+		try{
+			tourDepVO = (TourDepartureVO) event.getObject();  
+			
+		}catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	/**
+	 * Clear tour code details
+	 */
+	public void clearTourCode() {
+		try {
+			tourDepVO = new TourDepartureVO();
+
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Printing Trading and Profit and Loss - Others
+	 */
+	public void printProfitnLossRpt(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			getFinancialPeriod();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> trdgPftLssList = chartOfAcctBO.getTrdgPftLssList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal expanses = new BigDecimal("0.00");
+			BigDecimal grossMargin = new BigDecimal("0.00");
+			BigDecimal netProfitLoss = new BigDecimal("0.00");
+			for (AcctViewVO vo : trdgPftLssList) {
+				if (vo.getAcctCatCode().equals("I") || vo.getAcctCatCode().equals("OI")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					grossMargin = grossMargin.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				} else if (vo.getAcctCatCode().equals("P")) {
+					grossMargin = grossMargin.subtract(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+				if (vo.getAcctCatCode().equals("X")) {
+					expanses = expanses.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+			}
+			netProfitLoss = grossMargin.subtract(expanses);
+			map.put("grossMargin", grossMargin);
+			map.put("netProfitLoss", netProfitLoss);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_TRDG_PFT_LSS;
+			String reportName = CommonConstant.PDF_RPT_TRDG_PFT_LSS;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(trdgPftLssList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printProfitnLossRpt");
+		}
+	}
+	
+	/**
+	 * Printing Trading and Profit and Loss - Audit
+	 */
+	public void printProfitnLossAuditRpt(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			getFinancialPeriod();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> trdgPftLssList = chartOfAcctBO.getTrdgPftLssAdtList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal expanses = new BigDecimal("0.00");
+			BigDecimal grossMargin = new BigDecimal("0.00");
+			BigDecimal netProfitLoss = new BigDecimal("0.00");
+			for (AcctViewVO vo : trdgPftLssList) {
+				if (vo.getAcctCatCode().equals("I") || vo.getAcctCatCode().equals("OI")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					grossMargin = grossMargin.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				} else if (vo.getAcctCatCode().equals("P")) {
+					grossMargin = grossMargin.subtract(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+				if (vo.getAcctCatCode().equals("X")) {
+					expanses = expanses.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+			}
+			netProfitLoss = grossMargin.subtract(expanses);
+			map.put("grossMargin", grossMargin);
+			map.put("netProfitLoss", netProfitLoss);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_TRDG_PFT_LSS_ADT;
+			String reportName = CommonConstant.PDF_RPT_TRDG_PFT_LSS_ADT;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(trdgPftLssList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printProfitnLossAuditRpt");
+		}
+	}
+	
+	/**
+	 * Printing Trial Balance
+	 */
+	public void printTrialBalance(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			getFinancialPeriod();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> trialBalanceList = chartOfAcctBO.getTrialBalanceList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal amt = new BigDecimal("0.00");
+			for (AcctViewVO vo : trialBalanceList) {
+				amt = new BigDecimal(vo.getDebitCurrBal().toString()).subtract(new BigDecimal(vo.getCreditCurrBal().toString()));
+				if (amt.compareTo(BigDecimal.ZERO) < 0) {
+					vo.setDebitCurrBal(0.0);
+					vo.setCreditCurrBal(-1 * amt.doubleValue());
+				} else {
+					vo.setDebitCurrBal(amt.doubleValue());
+					vo.setCreditCurrBal(0.0);
+				}
+			}
+			
+			String jasperFileName = CommonConstant.JAS_RPT_TRL_BAL;
+			String reportName = CommonConstant.PDF_RPT_TRL_BAL;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(trialBalanceList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printTrialBalance");
+		}
+	}
+	
+	/**
+	 * Printing Trial Balance - Year To Date
+	 */
+	public void printTrialBalanceYearDate(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			getFinancialPeriod();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> trialBalanceList = chartOfAcctBO.getTrialBalanceListYear(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal amtSlted = new BigDecimal("0.00");
+			BigDecimal amtYear = new BigDecimal("0.00");
+			for (AcctViewVO vo : trialBalanceList) {
+				amtSlted = new BigDecimal(vo.getDebitCurrBal().toString()).subtract(new BigDecimal(vo.getCreditCurrBal().toString()));
+				if (amtSlted.compareTo(BigDecimal.ZERO) < 0) {
+					vo.setDebitCurrBal(0.0);
+					vo.setCreditCurrBal(-1 * amtSlted.doubleValue());
+				} else {
+					vo.setDebitCurrBal(amtSlted.doubleValue());
+					vo.setCreditCurrBal(0.0);
+				}
+				amtYear = new BigDecimal(vo.getDebitBeginBal().toString()).subtract(new BigDecimal(vo.getCreditBeginBal().toString()));
+				if (amtYear.compareTo(BigDecimal.ZERO) < 0) {
+					vo.setDebitBeginBal(0.0);
+					vo.setCreditBeginBal(-1 * amtYear.doubleValue());
+				} else {
+					vo.setDebitBeginBal(amtYear.doubleValue());
+					vo.setCreditBeginBal(0.0);
+				}
+			}
+			
+			String jasperFileName = CommonConstant.JAS_RPT_TRL_BAL_YR_TO_DT;
+			String reportName = CommonConstant.PDF_RPT_TRL_BAL_YR_TO_DT;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(trialBalanceList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printTrialBalanceYearDate");
+		}
+	}
+	
+	/**
+	 * Printing Balance Sheet - Audit
+	 */
+	public void printBalanceSheetAudit(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			getFinancialPeriod();
+			
+			HashMap<String, Object> mapBS = reportTitle();
+			mapBS.put("fromDate", (Date) searchParamVO.getObj2());
+			mapBS.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> balanceSheetList = chartOfAcctBO.getBalanceSheetList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal assets = new BigDecimal("0.00");
+			BigDecimal currAssets = new BigDecimal("0.00");
+			BigDecimal liabilities = new BigDecimal("0.00");
+			BigDecimal equity = new BigDecimal("0.00");
+			BigDecimal netCrrAssetsLiabilities = new BigDecimal("0.00");
+			BigDecimal assetsLessLiabilities = new BigDecimal("0.00");
+			for (AcctViewVO vo : balanceSheetList) {
+				if (vo.getAcctCatCode().equals("L") || vo.getAcctCatCode().equals("E")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					if (vo.getAcctCatCode().equals("L")) {
+						liabilities = liabilities.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					} else {
+						equity = equity.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					}
+				}
+				if (vo.getAcctCatCode().equals("A")) {
+					if (new BigDecimal(vo.getCreditCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setCreditCurrBal(-1 * vo.getCreditCurrBal());
+					}
+					assets = assets.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					assets = assets.subtract(new BigDecimal(new DecimalFormat("#0.00").format(vo.getCreditCurrBal())));
+					if (vo.getAcctSubCatCode().equals("CA")) {
+						currAssets = currAssets.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					}
+				}
+			}
+			netCrrAssetsLiabilities = currAssets.subtract(liabilities);
+			assetsLessLiabilities = assets.subtract(liabilities);
+			mapBS.put("netCrrAssetsLiabilities", netCrrAssetsLiabilities);
+			mapBS.put("assetsLessLiabilities", assetsLessLiabilities);
+			
+			HashMap<String, Object> mapDTLs = reportTitle();
+			mapDTLs.put("fromDate", (Date) searchParamVO.getObj2());
+			mapDTLs.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> trialBalanceDetailsList = chartOfAcctBO.getBalanceSheetDetailsList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			assets = new BigDecimal("0.00");
+			liabilities = new BigDecimal("0.00");
+			equity = new BigDecimal("0.00");
+			assetsLessLiabilities = new BigDecimal("0.00");
+			AcctViewVO equityVO = new AcctViewVO();
+			int count = 0;
+			for (AcctViewVO vo : trialBalanceDetailsList) {
+				if (vo.getAcctCatCode().equals("L") || vo.getAcctCatCode().equals("E")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					if (vo.getAcctCatCode().equals("L")) {
+						liabilities = liabilities.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					} else {
+						equity = equity.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					}
+				}
+				if (vo.getAcctCatCode().equals("A")) {
+					assets = assets.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+				if (vo.getAcctCatCode().equals("E")) {
+					if (count == 0) {
+						equityVO.setIdCompany(vo.getIdCompany());
+						equityVO.setIdAcctCat(vo.getIdAcctCat());
+						equityVO.setAcctCatDesc(vo.getAcctCatDesc());
+						equityVO.setAcctCatCode(vo.getAcctCatCode());
+						equityVO.setIdAcctSubCat(vo.getIdAcctSubCat());
+						equityVO.setAcctSubCatDesc(vo.getAcctSubCatDesc());
+						equityVO.setCode(vo.getCode());
+						equityVO.setSubCode("");
+						equityVO.setDesc(vo.getDesc());
+						equityVO.setSubDesc("");
+						equityVO.setDebitCurrBal(0.00);
+						equityVO.setGroup(vo.getGroup());
+						equityVO.setStatusCode(vo.getStatusCode());
+						count++;
+					}
+				}
+			}
+			
+			assetsLessLiabilities = assets.subtract(liabilities);
+			mapDTLs.put("assetsLessLiabilities", assetsLessLiabilities);
+			
+			List<AcctViewVO> trdgPftLssList = chartOfAcctBO.getTrdgPftLssList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal expanses = new BigDecimal("0.00");
+			BigDecimal grossMargin = new BigDecimal("0.00");
+			BigDecimal netProfitLoss = new BigDecimal("0.00");
+			for (AcctViewVO vo : trdgPftLssList) {
+				if (vo.getAcctCatCode().equals("I") || vo.getAcctCatCode().equals("OI")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					grossMargin = grossMargin.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				} else if (vo.getAcctCatCode().equals("P")) {
+					grossMargin = grossMargin.subtract(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+				if (vo.getAcctCatCode().equals("X")) {
+					expanses = expanses.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+			}
+			netProfitLoss = grossMargin.subtract(expanses);
+			equityVO.setDebitCurrBal(netProfitLoss.doubleValue());
+			
+			// Net Profit for Details
+			equityVO.setIdAcctSubCat(new Long(9999));
+			equityVO.setAcctSubCatDesc("UNDISTRIBUTED INCOME");
+			equityVO.setCode("XXXX");
+			equityVO.setSubCode("XXXX");
+			equityVO.setDesc("NET PROFIT / (LOSS) FOR THE PERIOD");
+			equityVO.setSubDesc("");
+			balanceSheetList.add(equityVO);
+			
+			String jasperFileNameBS = CommonConstant.JAS_RPT_BAL_SHEET_AUDIT;
+			String reportNameBS = CommonConstant.PDF_RPT_BAL_SHEET_AUDIT;
+			
+			JasperPrint jasperPrintBS = ReportUtils.getJasperPrint(balanceSheetList, mapBS, jasperFileNameBS);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrintBS, reportNameBS);
+			} else {
+				ReportUtils.printReportExcel(jasperPrintBS, reportNameBS);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printBalanceSheetAudit");
+		}
+	}
+	
+	/**
+	 * Printing Balance Sheet - Others
+	 */
+	public void printBalanceSheetOthers(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			getFinancialPeriod();
+			
+			HashMap<String, Object> mapDTLs = reportTitle();
+			mapDTLs.put("fromDate", (Date) searchParamVO.getObj2());
+			mapDTLs.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> trialBalanceDetailsList = chartOfAcctBO.getBalanceSheetDetailsList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal assets = new BigDecimal("0.00");
+			BigDecimal liabilities = new BigDecimal("0.00");
+			BigDecimal equity = new BigDecimal("0.00");
+			BigDecimal assetsLessLiabilities = new BigDecimal("0.00");
+			AcctViewVO equityVO = new AcctViewVO();
+			int count = 0;
+			for (AcctViewVO vo : trialBalanceDetailsList) {
+				if (vo.getAcctCatCode().equals("L") || vo.getAcctCatCode().equals("E")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					if (vo.getAcctCatCode().equals("L")) {
+						liabilities = liabilities.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					} else {
+						equity = equity.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					}
+				}
+				if (vo.getAcctCatCode().equals("A")) {
+					assets = assets.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+				if (vo.getAcctCatCode().equals("E")) {
+					if (count == 0) {
+						equityVO.setIdCompany(vo.getIdCompany());
+						equityVO.setIdAcctCat(vo.getIdAcctCat());
+						equityVO.setAcctCatDesc(vo.getAcctCatDesc());
+						equityVO.setAcctCatCode(vo.getAcctCatCode());
+						equityVO.setIdAcctSubCat(vo.getIdAcctSubCat());
+						equityVO.setAcctSubCatDesc(vo.getAcctSubCatDesc());
+						equityVO.setCode(vo.getCode());
+						equityVO.setSubCode("");
+						equityVO.setDesc(vo.getDesc());
+						equityVO.setSubDesc("");
+						equityVO.setDebitCurrBal(0.00);
+						equityVO.setGroup(vo.getGroup());
+						equityVO.setStatusCode(vo.getStatusCode());
+						count++;
+					}
+				}
+			}
+			assetsLessLiabilities = assets.subtract(liabilities);
+			mapDTLs.put("assetsLessLiabilities", assetsLessLiabilities);
+			
+			List<AcctViewVO> trdgPftLssList = chartOfAcctBO.getTrdgPftLssList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal expanses = new BigDecimal("0.00");
+			BigDecimal grossMargin = new BigDecimal("0.00");
+			BigDecimal netProfitLoss = new BigDecimal("0.00");
+			for (AcctViewVO vo : trdgPftLssList) {
+				if (vo.getAcctCatCode().equals("I") || vo.getAcctCatCode().equals("OI")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					grossMargin = grossMargin.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				} else if (vo.getAcctCatCode().equals("P")) {
+					grossMargin = grossMargin.subtract(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+				if (vo.getAcctCatCode().equals("X")) {
+					expanses = expanses.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+			}
+			netProfitLoss = grossMargin.subtract(expanses);
+			equityVO.setDebitCurrBal(netProfitLoss.doubleValue());
+			
+			// Net Profit for Details
+			equityVO.setIdAcctSubCat(new Long(9999));
+			equityVO.setAcctSubCatDesc("UNDISTRIBUTED INCOME");
+			equityVO.setCode("9999");
+			equityVO.setSubCode("");
+			equityVO.setDesc("NET PROFIT / (LOSS) FOR THE PERIOD");
+			equityVO.setSubDesc("");
+			trialBalanceDetailsList.add(equityVO);
+			
+			String jasperFileNameDTLs = CommonConstant.JAS_RPT_BAL_SHEET_OTHRS;
+			String reportNameDTLs = CommonConstant.PDF_RPT_BAL_SHEET_OTHRS;
+
+			JasperPrint jasperPrintDTLs = ReportUtils.getJasperPrint(trialBalanceDetailsList, mapDTLs, jasperFileNameDTLs);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrintDTLs, reportNameDTLs);
+			} else {
+				ReportUtils.printReportExcel(jasperPrintDTLs, reportNameDTLs);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printBalanceSheetOthers");
+		}
+	}
+	
+	/**
+	 * Printing Beginning Balance
+	 */
+	public void printBeginningBalance(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			getFinancialPeriod();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> beginningBalanceList = chartOfAcctBO.getBeginningBalanceList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_BGN_BAL;
+			String reportName = CommonConstant.PDF_RPT_BGN_BAL;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(beginningBalanceList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printBeginningBalance");
+		}
+	}
+	
+	/**
+	 * Printing Balance Sheet
+	 */
+	public void printBalanceSheet() {
+		try {
+			trackingLogUtils.startLogs();
+			
+			getFinancialPeriod();
+			
+			HashMap<String, Object> mapBS = reportTitle();
+			mapBS.put("fromDate", (Date) searchParamVO.getObj2());
+			mapBS.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> trialBalanceList = chartOfAcctBO.getBalanceSheetList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal assets = new BigDecimal("0.00");
+			BigDecimal currAssets = new BigDecimal("0.00");
+			BigDecimal liabilities = new BigDecimal("0.00");
+			BigDecimal equity = new BigDecimal("0.00");
+			BigDecimal netCrrAssetsLiabilities = new BigDecimal("0.00");
+			BigDecimal assetsLessLiabilities = new BigDecimal("0.00");
+			for (AcctViewVO vo : trialBalanceList) {
+				if (vo.getAcctCatCode().equals("L") || vo.getAcctCatCode().equals("E")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					if (vo.getAcctCatCode().equals("L")) {
+						liabilities = liabilities.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					} else {
+						equity = equity.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					}
+				}
+				if (vo.getAcctCatCode().equals("A")) {
+					if (new BigDecimal(vo.getCreditCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setCreditCurrBal(-1 * vo.getCreditCurrBal());
+					}
+					assets = assets.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					assets = assets.subtract(new BigDecimal(new DecimalFormat("#0.00").format(vo.getCreditCurrBal())));
+					if (vo.getAcctSubCatCode().equals("CA")) {
+						currAssets = currAssets.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					}
+				}
+			}
+			netCrrAssetsLiabilities = currAssets.subtract(liabilities);
+			assetsLessLiabilities = assets.subtract(liabilities);
+			mapBS.put("netCrrAssetsLiabilities", netCrrAssetsLiabilities);
+			mapBS.put("assetsLessLiabilities", assetsLessLiabilities);
+			
+			String jasperFileNameBS = CommonConstant.JAS_RPT_BAL_SHEET_AUDIT;
+			String reportNameBS = CommonConstant.PDF_RPT_BAL_SHEET_AUDIT;
+			
+			HashMap<String, Object> mapDTLs = reportTitle();
+			mapDTLs.put("fromDate", (Date) searchParamVO.getObj2());
+			mapDTLs.put("toDate", (Date) searchParamVO.getObj3());
+			
+			List<AcctViewVO> trialBalanceDetailsList = chartOfAcctBO.getBalanceSheetDetailsList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			assets = new BigDecimal("0.00");
+			liabilities = new BigDecimal("0.00");
+			equity = new BigDecimal("0.00");
+			assetsLessLiabilities = new BigDecimal("0.00");
+			AcctViewVO equityVO = new AcctViewVO();
+			int count = 0;
+			for (AcctViewVO vo : trialBalanceDetailsList) {
+				if (vo.getAcctCatCode().equals("L") || vo.getAcctCatCode().equals("E")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					if (vo.getAcctCatCode().equals("L")) {
+						liabilities = liabilities.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					} else {
+						equity = equity.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+					}
+				}
+				if (vo.getAcctCatCode().equals("A")) {
+					assets = assets.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+				if (vo.getAcctCatCode().equals("E")) {
+					if (count == 0) {
+						equityVO.setIdCompany(vo.getIdCompany());
+						equityVO.setIdAcctCat(vo.getIdAcctCat());
+						equityVO.setAcctCatDesc(vo.getAcctCatDesc());
+						equityVO.setAcctCatCode(vo.getAcctCatCode());
+						equityVO.setIdAcctSubCat(vo.getIdAcctSubCat());
+						equityVO.setAcctSubCatDesc(vo.getAcctSubCatDesc());
+						equityVO.setCode(vo.getCode());
+						equityVO.setSubCode("");
+						equityVO.setDesc(vo.getDesc());
+						equityVO.setSubDesc("");
+						equityVO.setDebitCurrBal(0.00);
+						equityVO.setGroup(vo.getGroup());
+						equityVO.setStatusCode(vo.getStatusCode());
+						count++;
+					}
+				}
+			}
+			assetsLessLiabilities = assets.subtract(liabilities);
+			mapDTLs.put("assetsLessLiabilities", assetsLessLiabilities);
+			
+			List<AcctViewVO> trdgPftLssList = chartOfAcctBO.getTrdgPftLssList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			BigDecimal expanses = new BigDecimal("0.00");
+			BigDecimal grossMargin = new BigDecimal("0.00");
+			BigDecimal netProfitLoss = new BigDecimal("0.00");
+			for (AcctViewVO vo : trdgPftLssList) {
+				if (vo.getAcctCatCode().equals("I") || vo.getAcctCatCode().equals("OI")) {
+					if (new BigDecimal(vo.getDebitCurrBal()).compareTo(BigDecimal.ZERO) != 0) {
+						vo.setDebitCurrBal(-1 * vo.getDebitCurrBal());
+					}
+					grossMargin = grossMargin.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				} else if (vo.getAcctCatCode().equals("P")) {
+					grossMargin = grossMargin.subtract(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+				if (vo.getAcctCatCode().equals("X")) {
+					expanses = expanses.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebitCurrBal())));
+				}
+			}
+			netProfitLoss = grossMargin.subtract(expanses);
+			equityVO.setDebitCurrBal(netProfitLoss.doubleValue());
+			
+			// Net Profit
+			equityVO.setDesc("NET PROFIT / (LOSS) FOR THE PERIOD");
+			trialBalanceList.add((AcctViewVO) equityVO.clone());
+			
+			// Net Profit for Details
+			equityVO.setIdAcctSubCat(new Long(9999));
+			equityVO.setAcctSubCatDesc("UNDISTRIBUTED INCOME");
+			equityVO.setCode("9999");
+			equityVO.setSubCode("");
+			equityVO.setDesc("Net Income");
+			equityVO.setSubDesc("");
+			trialBalanceDetailsList.add(equityVO);
+			
+			String jasperFileNameDTLs = CommonConstant.JAS_RPT_BAL_SHEET_OTHRS;
+			//String reportNameDTLs = CommonConstant.PDF_RPT_BAL_SHEET_OTHRS;
+
+			JasperPrint jasperPrintBS = ReportUtils.getJasperPrint(trialBalanceList, mapBS, jasperFileNameBS);
+			JasperPrint jasperPrintDTLs = ReportUtils.getJasperPrint(trialBalanceDetailsList, mapDTLs, jasperFileNameDTLs);
+			
+			JasperPrint jasperPrint = ReportUtils.mergeReport(jasperPrintBS, jasperPrintDTLs);
+			ReportUtils.printReport(jasperPrint, reportNameBS);
+			//ReportUtils.printReport(jasperPrint, reportName);
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printBalanceSheet");
+		}
+	}
+	
+	/**
+	 * Printing Debtor Ledger - Audit/Others
+	 */
+	public void printDebtorLedger(String xlsOrPDf, String auditOthers) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			//getFinancialPeriod();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			if (custDetailsVO.getCustId()!= null) {
+				searchParamVO.setObj4(custDetailsVO.getCustId());
+			} else {
+				searchParamVO.setObj4(null);
+			}
+			
+			// Account id
+			searchParamVO.setObj6(this.getSessionInfoBean().getCompanyVO().getIdAcctSales());
+			// Audit/Others
+			searchParamVO.setObj7(auditOthers);
+			
+			List<AcctViewVO> debtorLedgerList = chartOfAcctBO.getDebtorLedgerList2(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			if (CollectionUtils.isEmpty(debtorLedgerList)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			
+			String custCd = "";
+			BigDecimal balanceDue = new BigDecimal("0.00");
+			BigDecimal ttlbalanceDue = new BigDecimal("0.00");
+			for (AcctViewVO vo : debtorLedgerList) {
+				if (!custCd.equals(vo.getCustCd())) {
+					balanceDue = new BigDecimal("0.00");
+					balanceDue = balanceDue.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalance()))).
+						add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalanceDue())));
+					ttlbalanceDue = ttlbalanceDue.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalance()))).
+							add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalanceDue())));
+				} else {
+					balanceDue = balanceDue.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalanceDue())));
+					ttlbalanceDue = ttlbalanceDue.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalanceDue())));
+				}
+				vo.setBalanceDue(balanceDue.doubleValue());
+				custCd = vo.getCustCd();
+			}
+			map.put("ttlbalanceDue", ttlbalanceDue.doubleValue());
+			
+			String jasperFileName = CommonConstant.JAS_RPT_DBTR_LDGR;
+			String reportName = CommonConstant.PDF_RPT_DBTR_LDGR;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(debtorLedgerList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printDebtorLedger");
+		}
+	}
+	
+	/**
+	 * Printing Debtor Summary
+	 */
+	public void printDebtorSummary(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			if (custDetailsVO.getCustId()!= null) {
+				searchParamVO.setObj4(custDetailsVO.getCustId());
+			} else {
+				searchParamVO.setObj4(null);
+			}
+			
+			// Account id
+			searchParamVO.setObj6(this.getSessionInfoBean().getCompanyVO().getIdAcctSales());
+			
+			List<AcctViewVO> debtorSummaryList = chartOfAcctBO.getDebtorSummaryList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			if (CollectionUtils.isEmpty(debtorSummaryList)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_DBTR_SMRY;
+			String reportName = CommonConstant.PDF_RPT_DBTR_SMRY;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(debtorSummaryList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+			t.printStackTrace();
+
+
+		} finally {
+			trackingLogUtils.endLogs("printDebtorSummary");
+		}
+	}
+	
+	/**
+	 * Printing Creditor Ledger - Audit/Others
+	 */
+	public void printCreditorLedger(String xlsOrPDf, String auditOthers) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			if (supplierVO.getSupplierType() != null && supplierVO.getSupplierType() != "") {
+				searchParamVO.setObj4(supplierVO.getSupplierType());
+				map.put("supplierType", (String) searchParamVO.getObj4());
+			} else {
+				searchParamVO.setObj4(null);
+				map.put("supplierType", "");
+			}
+			if (supplierVO.getId() != null && supplierVO.getId() != 0) {
+				searchParamVO.setObj5(supplierVO.getId());
+			} else {
+				searchParamVO.setObj5(null);
+			}
+			
+			// Audit/Others
+			searchParamVO.setObj7(auditOthers);
+			
+			List<AcctViewVO> creditorLedgerList = chartOfAcctBO.getCreditorLedgerList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			if (CollectionUtils.isEmpty(creditorLedgerList)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			
+			String spplCd = "";
+			BigDecimal balanceDue = new BigDecimal("0.00");
+			BigDecimal ttlbalanceDue = new BigDecimal("0.00");
+			for (AcctViewVO vo : creditorLedgerList) {
+				if (!spplCd.equals(vo.getSpplCd())) {
+					balanceDue = new BigDecimal("0.00");
+					balanceDue = balanceDue.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalance()))).
+						add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalanceDue())));
+					ttlbalanceDue = ttlbalanceDue.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalance()))).
+							add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalanceDue())));
+				} else {
+					balanceDue = balanceDue.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalanceDue())));
+					ttlbalanceDue = ttlbalanceDue.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getBalanceDue())));
+				}
+				vo.setBalanceDue(balanceDue.doubleValue());
+				spplCd = vo.getSpplCd();
+			}
+			map.put("ttlbalanceDue", ttlbalanceDue.doubleValue());
+			
+			String jasperFileName = CommonConstant.JAS_RPT_CDTR_LDGR;
+			String reportName = CommonConstant.PDF_RPT_CDTR_LDGR;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(creditorLedgerList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printCreditorLedger - " + auditOthers);
+		}
+	}
+	
+	/**
+	 * Printing Creditor Summary
+	 */
+	public void printCreditorSummary(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			if (supplierVO.getSupplierType() != null && supplierVO.getSupplierType() != "") {
+				searchParamVO.setObj4(supplierVO.getSupplierType());
+				map.put("supplierType", (String) searchParamVO.getObj4());
+			} else {
+				searchParamVO.setObj4(null);
+				map.put("supplierType", "");
+			}
+			if (supplierVO.getId() != null && supplierVO.getId() != 0) {
+				searchParamVO.setObj5(supplierVO.getId());
+			} else {
+				searchParamVO.setObj5(null);
+			}
+			
+			List<AcctViewVO> creditorSummaryList = chartOfAcctBO.getCreditorSummaryList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			if (CollectionUtils.isEmpty(creditorSummaryList)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_CDTR_SMRY;
+			String reportName = CommonConstant.PDF_RPT_CDTR_SMRY;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(creditorSummaryList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printCreditorSummary");
+		}
+	}
+	
+	/**
+	 * Printing Journal
+	 */
+	public void printJournal(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			// Get Journal System prefix
+			SystemNumberGenerationVO invSNGVO = systemNumberGenerationBO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_JRNL, this.getSessionInfoBean().getCompanyVO().getId());
+			map.put("sysPrefix", invSNGVO.getPrefixid());
+			
+			List<JournalVO> journalRptList = chartOfAcctBO.getJournalEntryList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			if (CollectionUtils.isEmpty(journalRptList)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_JRNL_ETRY;
+			String reportName = CommonConstant.PDF_RPT_JRNL_ETRY;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(journalRptList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printJournal");
+		}
+	}
+	
+	/**
+	 * Printing Sales In Advance Report
+	 */
+	public void printSalesInAdvanceRpt(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			//getFinancialPeriod();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			if (tourDepVO != null) {
+				searchParamVO.setObj4(tourDepVO.getId());
+				map.put("tourCd", tourDepVO.getCode());
+			} else {
+				searchParamVO.setObj4(null);
+				map.put("tourCd", null);
+			}
+			searchParamVO.setObj5(groupType); // Invoice Date or Departure Date
+			map.put("groupType", groupType);
+			
+			
+			if (selectedAcct.length > 0) {
+				searchParamVO.setObj6(StringUtils.join(selectedAcct, ","));
+			} else {
+				searchParamVO.setObj6(null);
+			}
+			searchParamVO.setObj7(salesOnly);
+			searchParamVO.setObj8(gtDtDep);
+			
+			List<AcctViewVO> salesInAdvanceList = chartOfAcctBO.getSalesInAdvanceList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			if (CollectionUtils.isEmpty(salesInAdvanceList)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_SALES_ADV;
+			String reportName = CommonConstant.PDF_RPT_SALES_ADV;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(salesInAdvanceList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printSalesInAdvanceRpt");
+		}
+	}
+	
+	/**
+	 * Printing Chart Of Account
+	 */
+	public void printChartOfAccount(String xlsOrPDf) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			getFinancialPeriod();
+			
+			HashMap<String, Object> map = reportTitle();
+			
+			List<AcctViewVO> chartOfAcctList = chartOfAcctBO.getChartOfAccountList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_CHART_OF_ACCT;
+			String reportName = CommonConstant.PDF_RPT_CHART_OF_ACCT;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(chartOfAcctList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printChartOfAccount");
+		}
+	}
+	
+	/**
+	 * On selected customer details
+	 */
+	public void handleCustSelect(SelectEvent event) {
+		try {
+			custDetailsVO = invoiceBO.getCustDetails(((CustomerVO) event.getObject()).getId());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Clear customer details
+	 */
+	public void custClear() {
+		try {
+			custDetailsVO = new CustDetailsVO();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Prepare Report Title
+	 */
+	public HashMap<String, Object> reportTitle() {
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		try {
+			CompanyVO companyVO = new CompanyVO();
+			companyVO = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			
+			StringBuilder address = new StringBuilder();
+			map.put("companyName", companyVO.getName());
+			map.put("slogan", companyVO.getSlogan());
+			
+			if (!companyVO.getCompanyAddressVO().getAddress1().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress1()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress2().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress2()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress3().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress3()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getCity().equals("")) address.append(companyVO.getCompanyAddressVO().getCity()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getState().equals("")) address.append(companyVO.getCompanyAddressVO().getState()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getPostcode().equals("")) address.append(companyVO.getCompanyAddressVO().getPostcode()).append(" ");
+			String companyName = regionBO.getCountryById(companyVO.getCompanyAddressVO().getCountryid()).getCountry();
+			if (!companyName.equals("")) address.append(companyName);
+			map.put("address", address);
+	
+			String contact = "";
+			for (CompanyContactVO vo : companyVO.getCompanyContactList()) {
+				contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getTypecodecontact()) + ": " + vo.getNumber() + "  ";
+			}
+			if (!contact.equals("")) contact = "Tel: " + contact;
+			map.put("contact", contact);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return map;
+	}
+	
+	/**
+	 * Get and Validation Financial Period
+	 */
+	public void getFinancialPeriod() throws BusinessException {
+		List<FinancialPeriodVO> finPeriodList = finPeriodBO.getFinPeriodList(getSessionInfoBean().getCompanyVO().getId(), (String) searchParamVO.getObj1());
+		
+		if (CollectionUtils.isEmpty(finPeriodList)) throw new BusinessException(CommonErrConstant.ERR_ACCT_CHART_NOT_FIN_PERIOD);
+		
+		Date startDate = finPeriodList.get(0).getDtStart();
+		Date endDate = finPeriodList.get(finPeriodList.size()-1).getDtEnd();
+		
+		Date fromDateSlted = (Date) searchParamVO.getObj2();
+		Date toDateSlted = (Date) searchParamVO.getObj3();
+		
+		searchParamVO.setFromDate(startDate);
+		searchParamVO.setToDate(endDate);
+		
+		// Except Trading & Profit & Loss Other/Audit
+		if (!reportType.equals("A") && !reportType.equals("N") && !reportType.equals("R")) {
+			if (!chartOfAcctBO.isAcctBeginBalExisted(getSessionInfoBean().getCompanyVO().getId(), searchParamVO)) {
+				throw new BusinessException(CommonErrConstant.ERR_ACCT_CHART_NOT_BEGIN_BAL);
+			}
+		}
+		
+		if(fromDateSlted.after(toDateSlted)) {
+			throw new BusinessException(CommonErrConstant.ERR_ACCT_CHART_DT_GREATER);
+		} else if(fromDateSlted.before(startDate)) {
+			throw new BusinessException(CommonErrConstant.ERR_ACCT_CHART_DT_FR_NOT_IN_RANGE);
+		} else if(fromDateSlted.after(endDate)) {
+			throw new BusinessException(CommonErrConstant.ERR_ACCT_CHART_DT_FR_NOT_IN_RANGE);
+		} else if(toDateSlted.before(startDate)) {
+			throw new BusinessException(CommonErrConstant.ERR_ACCT_CHART_DT_TO_NOT_IN_RANGE);
+		} else if(toDateSlted.after(endDate)) {
+			throw new BusinessException(CommonErrConstant.ERR_ACCT_CHART_DT_TO_NOT_IN_RANGE);
+		}
+		
+		//return startDate;
+	}
+	
+	/**********
+	 * HELPER *
+	 **********/
+	
+	/**
+	 * 
+	 * @param year 
+	 * @param date
+	 * @return
+	 */
+	private List<String> getCurrentYearList(String year) {
+		yearList = new ArrayList<String>();
+		
+		int y = Integer.parseInt(year);
+		for (int i = YEAR_PERIOD ; i > 0 ; i--) {
+			yearList.add(String.valueOf(y - i));
+		}
+		for (int i = 0 ; i <= YEAR_PERIOD ; i++) {
+			yearList.add(String.valueOf(y + i));
+		}
+		return yearList;
+	}
+	
+	/*******************
+	 * Getter & Setter *
+	 *******************/
+	
+	/**
+	 * @return the reportType
+	 */
+	public String getReportType() {
+		return reportType;
+	}
+
+	/**
+	 * @param reportType the reportType to set
+	 */
+	public void setReportType(String reportType) {
+		this.reportType = reportType;
+	}
+
+	/**
+	 * @return the yearList
+	 */
+	public List<String> getYearList() {
+		return yearList;
+	}
+
+	/**
+	 * @param yearList the yearList to set
+	 */
+	public void setYearList(List<String> yearList) {
+		this.yearList = yearList;
+	}
+
+	/**
+	 * @return the custDetailsVO
+	 */
+	public CustDetailsVO getCustDetailsVO() {
+		return custDetailsVO;
+	}
+
+	/**
+	 * @param custDetailsVO the custDetailsVO to set
+	 */
+	public void setCustDetailsVO(CustDetailsVO custDetailsVO) {
+		this.custDetailsVO = custDetailsVO;
+	}
+
+	/**
+	 * @return the supplierVO
+	 */
+	public SupplierVO getSupplierVO() {
+		return supplierVO;
+	}
+
+	/**
+	 * @param supplierVO the supplierVO to set
+	 */
+	public void setSupplierVO(SupplierVO supplierVO) {
+		this.supplierVO = supplierVO;
+	}
+
+	/**
+	 * @return the supplierList
+	 */
+	public List<SupplierVO> getSupplierList() {
+		return supplierList;
+	}
+
+	/**
+	 * @param supplierList the supplierList to set
+	 */
+	public void setSupplierList(List<SupplierVO> supplierList) {
+		this.supplierList = supplierList;
+	}
+
+	/**
+	 * @return the journalList
+	 */
+	public List<JournalVO> getJournalList() {
+		return journalList;
+	}
+
+	/**
+	 * @param journalList the journalList to set
+	 */
+	public void setJournalList(List<JournalVO> journalList) {
+		this.journalList = journalList;
+	}
+	
+	/**
+	 * @return the tourList
+	 */
+	public List<TourDepartureVO> getTourList() {
+		return tourList;
+	}
+
+	/**
+	 * @param tourList the tourList to set
+	 */
+	public void setTourList(List<TourDepartureVO> tourList) {
+		this.tourList = tourList;
+	}
+	
+	/**
+	 * @return the tourDepVO
+	 */
+	public TourDepartureVO getTourDepVO() {
+		return tourDepVO;
+	}
+
+	/**
+	 * @param tourDepVO the tourDepVO to set
+	 */
+	public void setTourDepVO(TourDepartureVO tourDepVO) {
+		this.tourDepVO = tourDepVO;
+	}
+
+	/**
+	 * @return the groupType
+	 */
+	public String getGroupType() {
+		return groupType;
+	}
+
+	/**
+	 * @param groupType the groupType to set
+	 */
+	public void setGroupType(String groupType) {
+		this.groupType = groupType;
+	}
+
+	/**
+	 * @return the acctList
+	 */
+	public List<AcctVO> getAcctList() {
+		return acctList;
+	}
+
+	/**
+	 * @param acctList the acctList to set
+	 */
+	public void setAcctList(List<AcctVO> acctList) {
+		this.acctList = acctList;
+	}
+
+	/**
+	 * @return the selectedAcct
+	 */
+	public Long[] getSelectedAcct() {
+		return selectedAcct;
+	}
+
+	/**
+	 * @param selectedAcct the selectedAcct to set
+	 */
+	public void setSelectedAcct(Long[] selectedAcct) {
+		this.selectedAcct = selectedAcct;
+	}
+
+	/**
+	 * @return the salesOnly
+	 */
+	public boolean isSalesOnly() {
+		return salesOnly;
+	}
+
+	/**
+	 * @param salesOnly the salesOnly to set
+	 */
+	public void setSalesOnly(boolean salesOnly) {
+		this.salesOnly = salesOnly;
+	}
+
+	public boolean isGtDtDep() {
+		return gtDtDep;
+	}
+
+	public void setGtDtDep(boolean gtDtDep) {
+		this.gtDtDep = gtDtDep;
+	}
+}

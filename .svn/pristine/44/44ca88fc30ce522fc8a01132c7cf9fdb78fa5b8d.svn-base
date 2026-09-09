@@ -1,0 +1,210 @@
+package com.bcs.zsg.purchase.vo;
+
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.core.vo.BaseVO;
+
+public class CorContactVO  extends BaseVO {
+	private static final long serialVersionUID = 1L;
+	
+	private String contactType;
+	private String areaCode;
+	private String contactNo;
+	private String pNumber;
+	private Long corporateId;
+	private String attention;
+	private String corMobileNo;
+	private String corOfficeNo;
+	private String corHomeNo;
+	private String corFaxNo;
+	private String corMobileAttn;
+	private String corOfficeAttn;
+	private String corHomeAttn;
+	private String corFaxAttn;
+	private String corMobileCountryCd;
+	private String corOfficeCountryCd;
+	private String corHomeCountryCd;
+	private String corFaxCountryCd;
+	private Long corMobileCountryId;
+	private Long corOfficeCountryId;
+	private Long corHomeCountryId;
+	private Long corFaxCountryId;
+	private String countryCd;
+	private String fullPhoneNo;
+	private Long idCountryCd;
+	public CorContactVO() {}
+	
+	public CorContactVO(String contactType, String contactNo, String countryCd, Long idCountryCd, String attention) {
+		super();
+		this.contactType = contactType;
+		this.contactNo = contactNo;
+		this.attention = attention;
+		this.countryCd = countryCd;
+		this.idCountryCd = idCountryCd;
+	}
+	
+	public String getContactType() {
+		return contactType;
+	}
+	public void setContactType(String contactType) {
+		this.contactType = contactType;
+	}
+	public String getContactNo() {
+		return contactNo;
+	}
+	public void setContactNo(String contactNo) {
+		this.contactNo = contactNo;
+	}
+	public Long getCorporateId() {
+		return corporateId;
+	}
+	public void setCorporateId(Long corporateId) {
+		this.corporateId = corporateId;
+	}
+	public String getAttention() {
+		return attention;
+	}
+	public void setAttention(String attention) {
+		this.attention = attention;
+	}
+	public String getAreaCode() {
+		return areaCode;
+	}
+	public void setAreaCode(String areaCode) {
+		this.areaCode = areaCode;
+	}
+	public String getpNumber() {
+		return pNumber;
+	}
+	public void setpNumber(String pNumber) {
+		this.pNumber = pNumber;
+	}
+	public String getCorMobileNo() {
+		return corMobileNo;
+	}
+	public void setCorMobileNo(String corMobileNo) {
+		this.corMobileNo = corMobileNo;
+	}
+	public String getCorOfficeNo() {
+		return corOfficeNo;
+	}
+	public void setCorOfficeNo(String corOfficeNo) {
+		this.corOfficeNo = corOfficeNo;
+	}
+	public String getCorHomeNo() {
+		return corHomeNo;
+	}
+	public void setCorHomeNo(String corHomeNo) {
+		this.corHomeNo = corHomeNo;
+	}
+	public String getCorFaxNo() {
+		return corFaxNo;
+	}
+	public void setCorFaxNo(String corFaxNo) {
+		this.corFaxNo = corFaxNo;
+	}
+	public String getCorMobileAttn() {
+		return corMobileAttn;
+	}
+	public void setCorMobileAttn(String corMobileAttn) {
+		this.corMobileAttn = corMobileAttn;
+	}
+	public String getCorOfficeAttn() {
+		return corOfficeAttn;
+	}
+	public void setCorOfficeAttn(String corOfficeAttn) {
+		this.corOfficeAttn = corOfficeAttn;
+	}
+	public String getCorHomeAttn() {
+		return corHomeAttn;
+	}
+	public void setCorHomeAttn(String corHomeAttn) {
+		this.corHomeAttn = corHomeAttn;
+	}
+	public String getCorFaxAttn() {
+		return corFaxAttn;
+	}
+	public void setCorFaxAttn(String corFaxAttn) {
+		this.corFaxAttn = corFaxAttn;
+	}
+	public String getCountryCd() {
+		return countryCd;
+	}
+	public void setCountryCd(String countryCd) {
+		this.countryCd = countryCd;
+	}
+	public String getCorMobileCountryCd() {
+		return corMobileCountryCd;
+	}
+	public void setCorMobileCountryCd(String corMobileCountryCd) {
+		this.corMobileCountryCd = corMobileCountryCd;
+	}
+	public String getCorOfficeCountryCd() {
+		return corOfficeCountryCd;
+	}
+	public void setCorOfficeCountryCd(String corOfficeCountryCd) {
+		this.corOfficeCountryCd = corOfficeCountryCd;
+	}
+	public String getCorHomeCountryCd() {
+		return corHomeCountryCd;
+	}
+	public void setCorHomeCountryCd(String corHomeCountryCd) {
+		this.corHomeCountryCd = corHomeCountryCd;
+	}
+	public String getCorFaxCountryCd() {
+		return corFaxCountryCd;
+	}
+	public void setCorFaxCountryCd(String corFaxCountryCd) {
+		this.corFaxCountryCd = corFaxCountryCd;
+	}
+	
+	public String getFullPhoneNo() {
+		return fullPhoneNo;
+	}
+	public void setFullPhoneNo(String fullPhoneNo) {
+		this.fullPhoneNo = fullPhoneNo;
+	}
+	
+	public String getFullNumber() {
+		return FunctionUtils.phoneNumber(countryCd, contactNo);
+	}
+
+	public Long getIdCountryCd() {
+		return idCountryCd;
+	}
+
+	public void setIdCountryCd(Long idCountryCd) {
+		this.idCountryCd = idCountryCd;
+	}
+
+	public Long getCorMobileCountryId() {
+		return corMobileCountryId;
+	}
+
+	public void setCorMobileCountryId(Long corMobileCountryId) {
+		this.corMobileCountryId = corMobileCountryId;
+	}
+
+	public Long getCorOfficeCountryId() {
+		return corOfficeCountryId;
+	}
+
+	public void setCorOfficeCountryId(Long corOfficeCountryId) {
+		this.corOfficeCountryId = corOfficeCountryId;
+	}
+
+	public Long getCorHomeCountryId() {
+		return corHomeCountryId;
+	}
+
+	public void setCorHomeCountryId(Long corHomeCountryId) {
+		this.corHomeCountryId = corHomeCountryId;
+	}
+
+	public Long getCorFaxCountryId() {
+		return corFaxCountryId;
+	}
+
+	public void setCorFaxCountryId(Long corFaxCountryId) {
+		this.corFaxCountryId = corFaxCountryId;
+	}
+}

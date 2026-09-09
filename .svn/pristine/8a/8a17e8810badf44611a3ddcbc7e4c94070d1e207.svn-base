@@ -1,0 +1,325 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+
+<script type="text/javascript">
+function monitorExporting(start, complete) {
+	if (start) {
+		start();
+		varAcctCatListDialog.hide();
+	}
+
+	window.pdfExportingMonitor = setInterval(function() {
+		var exportingComplete = $.cookie('cookie.pdf.exporting');
+
+		if (exportingComplete === 'true') {
+			if (complete) {
+				complete();
+			}
+			$.cookie('cookie.pdf.exporting', null);
+			clearInterval(window.pdfExportingMonitor);
+		}
+	}, 500);
+}
+
+function start() {
+	statusDialog.show();
+}
+
+function stop() {
+	statusDialog.hide();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var filters = document.querySelectorAll('input.ui-column-filter');
+    filters.forEach(function(filter) {
+        filter.setAttribute('enterkeyhint', 'enter');
+    });
+});
+
+function setEnterKeyHint() {
+    var filters = document.querySelectorAll('input.ui-column-filter');
+    filters.forEach(function(filter) {
+        filter.setAttribute('enterkeyhint', 'enter');
+    });
+}
+</script>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Report Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the report is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+<p:panel header="General Ledger" toggleable="true" toggleSpeed="500">
+	<h:form id="idGeneralLedgerForm">
+		<p:growl id="msg"/>
+		<p:panelGrid id="idShowAcct">
+			<p:row>
+				<p:column style="width:70px;"><h:outputLabel for="idAcct">Account <span class="required">*</span></h:outputLabel></p:column>
+				<p:column style="width:210px;">
+					<p:autoComplete id="idAcct" label="Account" value="#{glBean.searchParamVO.obj1}" completeMethod="#{glBean.complete}" queryDelay="1000">
+						<p:ajax event="itemSelect" listener="#{glBean.changeDesc}" update="idShowAcct"/>
+                    </p:autoComplete> &nbsp;<p:commandButton icon="ui-icon-search" process="@this" actionListener="#{glBean.loadAcctList}" oncomplete="varAcctListDialog.show()" update=":idAcctListDialog"/>
+				</p:column>
+				<p:column style="width:300px;">
+					<h:outputText value="#{glBean.acctViewVO.desc}" rendered="#{empty glBean.acctViewVO.subDesc}"/>
+					<h:outputText value="#{glBean.acctViewVO.desc} - #{glBean.acctViewVO.subDesc}" rendered="#{not empty glBean.acctViewVO.subDesc}"/>
+				</p:column>
+				<p:column style="width:10px;"><p:separator style="width:2px;height:20px"/></p:column>
+				<p:column>
+					<p:commandButton icon="ui-icon-print" value="GL [PDF]" actionListener="#{glBean.printGL('PDF', '')}" ajax="false" onclick="monitorExporting(start,stop)"/>&nbsp;
+					<p:commandButton icon="ui-icon-print" value="GL [PDF] - All" actionListener="#{glBean.printType('PDF')}"  onclick="varAcctCatListDialog.show()" />&nbsp;
+					<p:commandButton icon="ui-icon-document" value="GL [Excel]" actionListener="#{glBean.printGL('XLS', '')}" ajax="false" onclick="monitorExporting(start,stop)"/>&nbsp;
+					<p:commandButton icon="ui-icon-document" value="GL [Excel] - All" actionListener="#{glBean.printType('XLS')}" onclick="varAcctCatListDialog.show()" />
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:panelGrid id="idShowDate">
+			<p:row>
+				<!-- <p:column style="width:90px;"><p:commandButton value="All Months" actionListener="#{glBean.searchGL(0)}" update="@form,idGeneralLedgerTable"/></p:column>
+				<p:column style="width:10px;"><p:separator style="width:2px;height:20px"/></p:column> -->
+				<p:column style="width:120px;">
+					<h:outputLabel>Select Fiscal Year <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:60px;">
+				 	<h:selectOneMenu id="idFiscalYear" value="#{glBean.searchParamVO.obj2}" effect="fade" required="true">
+			            <p:ajax event="change" listener="#{glBean.handleSelectYear}" update="idShowDate" />
+			            <f:selectItems value="#{glBean.yearList}" var="#{year}" itemLabel="#{year}" itemValue="#{year}"/>
+			        </h:selectOneMenu>
+				</p:column>
+				<p:column style="width:1px;"><h:outputLabel>From</h:outputLabel></p:column>
+				
+				<p:column style="width:80px;">
+					<p:calendar id="idGLFrom" label="From Date" pattern="#{config['date.display.pattern']}" navigator="true" showButtonPanel="true" value="#{glBean.dtFrom}" required="true"/>
+					<p:watermark for="idGLFrom" value="From Date" />
+				</p:column>
+				<p:column style="width:1px;"><h:outputLabel>To</h:outputLabel></p:column>
+				
+				<p:column style="width:80px;">
+					<p:calendar id="idGLTo" label="To Date" pattern="#{config['date.display.pattern']}" navigator="true" showButtonPanel="true" value="#{glBean.dtTo}" required="true"/>
+					<p:watermark for="idGLTo" value="To Date" />
+				</p:column>
+				<p:column>
+					<p:commandButton value="Search Period" actionListener="#{glBean.searchGL(1)}" update="@form,idGeneralLedgerTable" oncomplete="setEnterKeyHint();" />&nbsp;
+					<p:commandButton icon="ui-icon-print" value="Summary [PDF]" actionListener="#{glBean.print('PDF', true)}" ajax="false" onclick="monitorExporting(start,stop)"/>&nbsp;
+					<p:commandButton icon="ui-icon-print" value="Summary [Excel]" actionListener="#{glBean.print('XLS', true)}" ajax="false" onclick="monitorExporting(start,stop)"/>&nbsp;
+					<p:commandButton icon="ui-icon-print" value="Extended [PDF]" actionListener="#{glBean.print('PDF', false)}" ajax="false" onclick="monitorExporting(start,stop)"/>&nbsp;
+					<p:commandButton icon="ui-icon-print" value="Extended [Excel]" actionListener="#{glBean.print('XLS', false)}" ajax="false" onclick="monitorExporting(start,stop)"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:panelGrid id="idShowDisplay" style="width:700px;">
+			<p:row>
+				<p:column style="width:70px;">
+					<h:outputLabel>Display</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:selectBooleanButton id="idShowRevenueDtl" value="#{glBean.showRevenueDtl}" onLabel="Revenues" offLabel="Revenues" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+    				<p:tooltip for="idShowRevenueDtl" value="Show all revenue in detail without group total." trackMouse="true" />
+				</p:column>
+				<p:column style="width:10px;"><p:separator style="width:2px;height:20px"/></p:column>
+				<p:column style="width:10px;">
+					<p:selectBooleanButton id="idShowSource" value="#{glBean.showSource}" onLabel="Source" offLabel="Source" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+					<p:tooltip for="idShowSource" value="Show all operation and source with line break." trackMouse="true" />
+				</p:column>
+				<p:column style="width:10px;">
+					<p:selectBooleanButton id="idShowQty" value="#{glBean.showQty}" onLabel="Quantity" offLabel="Quantity" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+    				<p:tooltip for="idShowQty" value="Show transaction invoice items quantity." trackMouse="true" />
+				</p:column>
+				<p:column style="width:300px;">
+					<!-- <p:selectBooleanButton id="idShowDesc" value="#{glBean.showDesc}" onLabel="Description" offLabel="Description" onIcon="ui-icon-check" offIcon="ui-icon-close"/> -->
+					<p:selectOneButton id="idShowColumnType" value="#{glBean.showColumnType}" unselectable="true">
+						<f:selectItem itemLabel="x" itemValue=""/>
+			            <f:selectItem itemLabel="Description" itemValue="DESC"/>
+			            <f:selectItem itemLabel="Tour Code" itemValue="TC"/>
+			        </p:selectOneButton>
+    				<p:tooltip for="idShowColumnType" value="Show transaction description/tour code (Excel Only)." trackMouse="true" />
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<br/>
+		
+  		<p:dataTable id="idGeneralLedgerTable" value="#{glBean.lazyLedgerDataModel}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500"
+			filterEvent="enter" lazy="true" rowKey="#{vo.id}" selectionMode="single" widgetVar="varLedgerList" >
+			<p:ajax event="rowSelect" listener="#{glBean.handleRecordSelect}" update=":idJournalListDialog" oncomplete="varJournalListDialog.show()"/>
+		
+			<f:facet name="header">
+	            <p:panelGrid>
+				<p:row>
+					<p:column style="width:150px;"><h:outputText value="Beginning Balance: " style="font-size:15px;"/></p:column>
+					<p:column style="width:300px; text-align:left;">
+						<h:outputText value="#{glBean.acctViewVO.acctBalVO.debitBeginBal}" style="font-size:15px;" rendered="#{not empty glBean.acctViewVO.acctBalVO and glBean.acctViewVO.acctBalVO.debitBeginBal ne 0}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']} DR"/>
+						</h:outputText>
+						<h:outputText value="#{glBean.acctViewVO.acctBalVO.creditBeginBal}" style="font-size:15px;" rendered="#{not empty glBean.acctViewVO.acctBalVO and glBean.acctViewVO.acctBalVO.creditBeginBal ne 0}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']} CR"/>
+						</h:outputText>
+						<h:outputText value="0.00" style="font-size:15px;" rendered="#{not empty glBean.acctViewVO.acctBalVO and glBean.acctViewVO.acctBalVO.debitBeginBal eq 0 and glBean.acctViewVO.acctBalVO.creditBeginBal eq 0}"/>
+						<h:outputText value="0.00" style="font-size:15px;" rendered="#{empty glBean.acctViewVO.acctBalVO}"/>
+					</p:column>
+					<p:column></p:column>
+					<p:column></p:column>
+					<p:column style="width:100px;"><h:outputText value="B/F Balance: " style="font-size:15px;"/></p:column>
+					<p:column style="width:300px; text-align:left;">
+						<h:outputText value="#{glBean.acctViewVO.acctBalVO.debitCloseBal}" style="font-size:15px;" rendered="#{not empty glBean.acctViewVO.acctBalVO and glBean.acctViewVO.acctBalVO.debitCloseBal ne 0}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']} DR"/>
+						</h:outputText>
+						<h:outputText value="#{glBean.acctViewVO.acctBalVO.creditCloseBal}" style="font-size:15px;" rendered="#{not empty glBean.acctViewVO.acctBalVO and glBean.acctViewVO.acctBalVO.creditCloseBal ne 0}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']} CR"/>
+						</h:outputText>
+						<h:outputText value="0.00" style="font-size:15px;" rendered="#{not empty glBean.acctViewVO.acctBalVO and glBean.acctViewVO.acctBalVO.debitCloseBal eq 0 and glBean.acctViewVO.acctBalVO.creditCloseBal eq 0}"/>
+						<h:outputText value="0.00" style="font-size:15px;" rendered="#{empty glBean.acctViewVO.acctBalVO}"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+	        </f:facet>
+		
+	        <p:column headerText="Date" sortBy="#{vo.transDt}" styleClass="txt_center" style="width: 80px;" filterBy="#{vo.transDt}">  
+	            <h:outputText value="#{vo.transDt}"> <f:convertDateTime pattern="#{config['date.display.pattern']}"/></h:outputText>  
+	        </p:column>
+	        
+	        <p:column headerText="Debit Amount" sortBy="#{vo.debit}" style="width: 120px;" styleClass="txt_right" filterBy="#{vo.debit}">  
+	            <h:outputText value="#{vo.debit}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText>
+	        </p:column>
+	        
+	        <p:column headerText="Credit Amount" sortBy="#{vo.credit}" style="width: 120px;" styleClass="txt_right" filterBy="#{vo.credit}">  
+	            <h:outputText value="#{vo.credit}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText>
+	        </p:column>
+	        
+	        <p:column headerText="Tax Code" sortBy="#{vo.taxCode}" style="width: 80px;" filterBy="#{vo.taxCode}">
+	            <h:outputText value="#{vo.taxCode}"/>
+	        </p:column>
+	        
+	        <p:column headerText="Operation" sortBy="#{vo.destination}" filterBy="#{vo.destination}">  
+	            <h:outputText value="#{vo.destination}" />  
+	        </p:column>
+	        
+	        <p:column headerText="Source" sortBy="#{vo.source}" filterBy="#{vo.source}">  
+	            <h:outputText value="#{vo.source}" />  
+	        </p:column>
+	        
+			<p:columnGroup type="footer">  
+				<p:row>  
+					<p:column footerText="Totals:" colspan="1" style="text-align:right"  />
+					<p:column footerText="#{glBean.getDoubleDecimalFormat(config['amount.format.pattern'], empty glBean.generalLedgerList ? 0.00 : glBean.generalLedgerList.get(0).totDebit)}"
+					 			style="text-align:right" />
+					<p:column footerText="#{glBean.getDoubleDecimalFormat(config['amount.format.pattern'], empty glBean.generalLedgerList ? 0.00 : glBean.generalLedgerList.get(0).totCredit)}" 
+								style="text-align:right" />
+					
+					<p:column style="text-align:right" footerText="Current Balance: #{glBean.getDoubleDecimalFormat(config['amount.format.pattern'], 
+											(glBean.acctViewVO.acctBalVO.debitCurrentBal ne 0 ? glBean.acctViewVO.acctBalVO.debitCurrentBal : glBean.acctViewVO.acctBalVO.creditCurrentBal))} #{(glBean.acctViewVO.acctBalVO.debitCurrentBal ne 0 ? 'DR' : 'CR')}" 
+								colspan="3" rendered="#{not empty glBean.acctViewVO.acctBalVO and (glBean.acctViewVO.acctBalVO.debitCurrentBal ne 0 or glBean.acctViewVO.acctBalVO.creditCurrentBal ne 0)}"/>
+					<p:column style="text-align:right" footerText="Current Balance: 0.00" colspan="3" rendered="#{not empty glBean.acctViewVO.acctBalVO and glBean.acctViewVO.acctBalVO.debitCurrentBal eq 0 and glBean.acctViewVO.acctBalVO.creditCurrentBal eq 0}"/>
+					<p:column style="text-align:right" footerText="Current Balance: 0.00" colspan="3" rendered="#{empty glBean.acctViewVO.acctBalVO}"/>
+				</p:row>  
+			</p:columnGroup>
+		</p:dataTable>
+		
+		<br/><br/>
+		<h:commandLink>  
+            <p:graphicImage value="/img/excel.png" />  
+            <p:dataExporter type="xls" target="idGeneralLedgerTable" fileName="General_Ledger" />  
+        </h:commandLink>  
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - JOURNAL LIST
+-->
+<p:dialog id="idJournalListDialog" widgetVar="varJournalListDialog" header="General Ledger Transactions" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false" style="width:90% !important; height:80% !important; overflow:auto;">
+	<h:form id="idJournalListForm">
+		<ui:include src="view_journal.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ACCOUNT LIST
+-->
+<!-- When running a dialog, need to load keybaord enter setting by running initializeFilters() javascript within the dialog -->
+<p:dialog id="idAcctListDialog" widgetVar="varAcctListDialog" header="Account List" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false" onShow="initializeFilters()">
+	<h:form id="idLedgerAcctViewList">
+		<p:dataTable value="#{glBean.lazyAcctDataModel}" var="vo" paginator="true" rows="10" 
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			filterEvent="enter" lazy="true" rowKey="#{vo.id}" selectionMode="single">
+			<p:ajax event="rowSelect" listener="#{glBean.handleAcctSelect}" update=":idGeneralLedgerForm:idShowAcct" oncomplete="varAcctListDialog.hide()"/>
+			
+			<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}">
+				<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+				<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+			</p:column>
+			<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+				<h:outputText value="#{vo.desc}-#{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+			</p:column>
+		</p:dataTable>
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varAcctListDialog.hide()"/>
+		</h:panelGrid>
+	</h:form>
+	<script type="text/javascript">
+        function initializeFilters() {
+            var filters = document.querySelectorAll('#idAcctListDialog input.ui-column-filter');
+            filters.forEach(function(filter) {
+                filter.setAttribute('enterkeyhint', 'enter');
+            });
+        }
+    </script>
+</p:dialog>
+
+<p:dialog id="idAcctCatListDialog" widgetVar="varAcctCatListDialog" header="Account Categories List" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form>
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:120px;">
+					<h:outputLabel>Account Categories </h:outputLabel>
+				</p:column>
+				<p:column style="width:300px;">
+					<h:selectOneMenu Label="Account Categories" value="#{glBean.searchParamVO.obj7}">
+						<f:selectItem itemLabel="All" itemValue="" />
+						<f:selectItems value="#{glBean.acctCatList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}" />
+						<p:ajax event="change" global="false" />
+					</h:selectOneMenu>&nbsp;&nbsp;
+				 	<p:commandButton value="Print" actionListener="#{glBean.printGLAll()}" ajax="false" onclick="monitorExporting(start,stop)">
+						<p:resetInput target=":idAcctCatListDialog" />
+					</p:commandButton>&nbsp;
+					<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varAcctCatListDialog.hide()" process="@this" update="@form" global="false" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column colspan="2">
+					<p:selectOneButton id="idShowAssetType" value="#{glBean.showAssetType}" unselectable="true">
+						<f:selectItem itemLabel="All" itemValue=""/>
+			            <f:selectItem itemLabel="Trade Debtor Only" itemValue="TDO"/>
+			            <f:selectItem itemLabel="W/O Trade Debtor" itemValue="WTD"/>
+			        </p:selectOneButton>
+			        <p:tooltip for="idShowAssetType" value="For asset use only." trackMouse="true"/>
+			    </p:column>
+			</p:row>
+			<p:row>
+				<p:column colspan="2">
+					<p:selectBooleanButton id="idShowPagination" value="#{glBean.showPagination}" onLabel="Ignore Pagination" offLabel="Show Pagination" onIcon="ui-icon-close" offIcon="ui-icon-check"/>
+    				<p:tooltip for="idShowPagination" value="Print out report will remove the footer page number." trackMouse="true" />
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	</h:form>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

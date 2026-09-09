@@ -1,0 +1,251 @@
+package com.bcs.zsg.sales.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.CustTourHistVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.IdentityDetailVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+
+public interface CustomerService {
+
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public List<CustomerVO> getCustomerList(Long companyId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param companyId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CustDetailsVO> getCustomerListSearch(Long companyId) throws BusinessException ;
+	
+	/**
+	 * 
+	 * @param idCust
+	 * @return
+	 * @throws BusinessException
+	 */
+	public CustomerVO getCustomer(Long idCust) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public CustomerVO getCustomerDetail(Long idCust) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public CustomerVO getCustomerSimpleDetail(Long idCust) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void insertCustomer(CustomerVO customerVO) throws BusinessException, QueueException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void updateCustomer(CustomerVO customerVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void deleteCustomer(CustomerVO customerVO) throws BusinessException;
+	
+	public void updateCustomerStatus(CustomerVO customerVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void insertObject(Object objectVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void updateObject(Object objectVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void deleteObject(Object objectVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CountryVO> getCountryList() throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void updObjList(CustomerVO customerVO, AddUpdDelVO objectVO) throws BusinessException;
+
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public boolean isIdentityExisted(IdentityVO identityVO, Long companyId) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idCust
+	 * @return
+	 * @throws BusinessException
+	 */
+	public CustomerVO getCustomerInfo(Long idCust) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idCompany
+	 * @param filters
+	 * @return
+	 * @throws BusinessException
+	 */
+	public int getCustomerListSize(Map<String, Object> params) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idCompany
+	 * @param first
+	 * @param pageSize
+	 * @param sortField
+	 * @param sortOrder
+	 * @param filters
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CustomerVO> getCustomerList(Map<String, Object> params) throws BusinessException;
+
+	/**
+	 * 
+	 * @param vo
+	 * @param companyId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CustTourHistVO> getTourHistList(CustomerVO vo, Long companyId, Map<String, Object> params) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param table
+	 * @param personId
+	 * @throws BusinessException
+	 */
+	public void deletePersonSubInfo(String table, Long personId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param table
+	 * @param companyId
+	 * @throws BusinessException
+	 */
+	public void deleteCorporateSubInfo(String table, Long corpId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param table
+	 * @param personId
+	 * @throws BusinessException
+	 */
+	public void terminatePersonSubInfo(String table, Long personId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param table
+	 * @param corId
+	 * @throws BusinessException
+	 */
+	public void terminateCorporateSubInfo(String table, Long corId) throws BusinessException;
+	
+	public void terminateInvoicePaxSubInfo(String table, Long invPaxId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idIdentity
+	 * @return
+	 * @throws BusinessException
+	 */
+	public IdentityDetailVO getIdentityDetail(Long idIdentity) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param custDetailsVO
+	 * @param idCompany 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public int isCustomerExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param custDetailsVO
+	 * @param idCompany 
+	 * @param filterAsIndividual
+	 * @return
+	 * @throws BusinessException
+	 */
+	public int isCustomerExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean filterAsIndividual) throws BusinessException;
+
+	/**
+	 * 
+	 * @param custDetailsVO
+	 * @param idCompany 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public boolean isEmailExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param custDetailsVO
+	 * @param idCompany 
+	 * @param filterAsIndividual
+	 * @return
+	 * @throws BusinessException
+	 */
+	public boolean isEmailExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean filterAsIndividual) throws BusinessException;
+
+	
+	/**
+	 * 
+	 * @param companyId
+	 * @param customerId 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public void updateAcctTransDestinationCust(Long companyId, Long customerId) throws BusinessException;
+	public void updateAllCustNmToRelatedTbl(Long companyId) throws BusinessException;
+	
+	public List<CustomerVO> getCustomerList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException;
+	
+	public void unlockCustomer(Long isCust, boolean isLock) throws BusinessException;
+	
+	public CountryVO getCountryById(Long countryId) throws BusinessException;
+
+	public void insertCustomerHistory(Long idCust, String actionCd, String reason) throws BusinessException;
+
+	public void updateCrmId(Long customerId, String crmId) throws BusinessException;
+
+	public void updateCrmIdCSV(Long customerId, String crmId) throws BusinessException;
+}

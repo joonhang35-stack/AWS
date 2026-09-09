@@ -1,0 +1,291 @@
+package com.bcs.zsg.sales.bo;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.sales.service.CustomerService;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.CustTourHistVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.IdentityDetailVO;
+import com.bcs.zsg.sales.vo.OnlineCustomerProfileUpdateVO;
+import com.bcs.zsg.sales.vo.OnlineCustomerUpdComplicationVO;
+import com.bcs.zsg.sales.vo.OnlineCustomerUpdLangVO;
+import com.bcs.zsg.sales.vo.OnlineCustomerUpdMealVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+import com.bcs.zsg.common.service.LookupItemService;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+
+public class CustomerBOImpl implements CustomerBO {
+
+	@Autowired
+	private CustomerService customerService;
+	@Autowired
+	private LookupItemService lookupItemService;
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#getCustomerList(java.lang.Long)
+	 */
+	@Override
+	public List<CustomerVO> getCustomerList(Long companyId) throws BusinessException {
+		return customerService.getCustomerList(companyId);
+	}
+
+	@Override
+	public List<CustDetailsVO> getCustomerListSearch(Long companyId) throws BusinessException {
+		return customerService.getCustomerListSearch(companyId);
+	}
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#getCustomerDetail(java.lang.Long)
+	 */
+	@Override
+	public CustomerVO getCustomer(Long idCust) throws BusinessException {
+		return customerService.getCustomer(idCust);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#getCustomerDetail()
+	 */
+	@Override
+	public CustomerVO getCustomerDetail(Long idCust) throws BusinessException {
+		return customerService.getCustomerDetail(idCust);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#insertCustomer(com.bcs.zsg.sales.vo.CustomerVO)
+	 */
+	@Override
+	public void insertCustomer(CustomerVO customerVO) throws BusinessException, QueueException {
+		customerService.insertCustomer(customerVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#updateCustomer(com.bcs.zsg.sales.vo.CustomerVO)
+	 */
+	@Override
+	public void updateCustomer(CustomerVO customerVO) throws BusinessException {
+		customerService.updateCustomer(customerVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#deleteCustomer(com.bcs.zsg.sales.vo.CustomerVO)
+	 */
+	@Override
+	public void deleteCustomer(CustomerVO customerVO) throws BusinessException {
+		customerService.deleteCustomer(customerVO);
+	}
+	
+	@Override
+	public void updateCustomerStatus(CustomerVO customerVO) throws BusinessException {
+		customerService.updateCustomerStatus(customerVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#insertObject(java.lang.Object)
+	 */
+	@Override
+	public void insertObject(Object objectVO) throws BusinessException {
+		customerService.insertObject(objectVO);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#updateObject(java.lang.Object)
+	 */
+	@Override
+	public void updateObject(Object objectVO) throws BusinessException {
+		customerService.updateObject(objectVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#deleteObject(java.lang.Object)
+	 */
+	@Override
+	public void deleteObject(Object objectVO) throws BusinessException {
+		customerService.deleteObject(objectVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#getCountryList()
+	 */
+	@Override
+	public List<CountryVO> getCountryList() throws BusinessException {
+		return customerService.getCountryList();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#updObjList(com.bcs.zsg.sales.vo.CustomerVO, com.bcs.zsg.common.vo.AddUpdDelVO)
+	 */
+	@Override
+	public void updObjList(CustomerVO customerVO, AddUpdDelVO objectVO) throws BusinessException {
+		customerService.updObjList(customerVO, objectVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#isIdentityExisted(com.bcs.zsg.purchase.vo.IdentityVO, java.lang.Long)
+	 */
+	@Override
+	public boolean isIdentityExisted(IdentityVO identityVO, Long companyId) throws BusinessException {
+		return customerService.isIdentityExisted(identityVO, companyId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#getCustomerListSize(java.lang.Long, java.util.Map)
+	 */
+	@Override
+	public int getCustomerListSize(Map<String, Object> params) throws BusinessException {
+		return customerService.getCustomerListSize(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#getCustomerList(java.lang.Long, int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+	 */
+	@Override
+	public List<CustomerVO> getCustomerList(Map<String, Object> params) throws BusinessException {
+		return customerService.getCustomerList(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#getTourHistList(com.bcs.zsg.sales.vo.CustomerVO, java.lang.Long)
+	 */
+	@Override
+	public List<CustTourHistVO> getTourHistList(CustomerVO vo, Long companyId, Map<String, Object> params) throws BusinessException {
+		return customerService.getTourHistList(vo, companyId, params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#getIdentityDetail(java.lang.Long)
+	 */
+	@Override
+	public IdentityDetailVO getIdentityDetail(Long idIdentity) throws BusinessException {
+		return customerService.getIdentityDetail(idIdentity);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#isCustomerExisted(com.bcs.zsg.sales.vo.CustDetailsVO)
+	 */
+	@Override
+	public int isCustomerExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException {
+		return isCustomerExisted(custDetailsVO, idCompany, null);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#isCustomerExisted(com.bcs.zsg.sales.vo.CustDetailsVO, java.lang.Long, java.lang.Boolean)
+	 */
+	@Override
+	public int isCustomerExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean filterAsIndividual) throws BusinessException {
+		return customerService.isCustomerExisted(custDetailsVO, idCompany, filterAsIndividual);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#isCustomerExisted(com.bcs.zsg.sales.vo.CustDetailsVO)
+	 */
+	@Override
+	public boolean isEmailExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException {
+		return isEmailExisted(custDetailsVO, idCompany, null);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#isCustomerExisted(com.bcs.zsg.sales.vo.CustDetailsVO, java.lang.Long, java.lang.Boolean)
+	 */
+	@Override
+	public boolean isEmailExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean filterAsIndividual) throws BusinessException {
+		return customerService.isEmailExisted(custDetailsVO, idCompany, filterAsIndividual);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#isPhoneExisted(com.bcs.zsg.sales.vo.CustDetailsVO, java.lang.Long)
+	 */
+	@Override
+	public boolean isPhoneExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException {
+		return isPhoneExisted(custDetailsVO, idCompany, true);
+	}
+	
+	@Override
+	public boolean isPhoneExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean isPhoneMan) throws BusinessException {
+		return customerService.isPhoneExisted(custDetailsVO, idCompany, isPhoneMan);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.CustomerBO#updateAcctTransDestinationCust(java.lang.Long, java.lang.Long)
+	 */
+	@Override
+	public void updateAcctTransDestinationCust(Long companyId, Long customerId) throws BusinessException {
+		customerService.updateAcctTransDestinationCust(companyId, customerId);
+	}
+	
+	@Override
+	public void updateAllCustNmToRelatedTbl(Long companyId) throws BusinessException {
+		customerService.updateAllCustNmToRelatedTbl(companyId);
+	}
+	
+	@Override
+	public List<LookupItemVO> getLookUpItemList(String category) throws BusinessException {
+		return lookupItemService.getLookupItemList(category);
+	}
+	
+	public List<CustomerVO> getCustomerList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		return customerService.getCustomerList(idCompany, searchParamVO);
+	}
+	
+	@Override
+	public void unlockCustomer(Long isCust, boolean isLock) throws BusinessException {
+		customerService.unlockCustomer(isCust, isLock);
+	}
+
+	@Override
+	public CountryVO getCountryById(Long countryId) throws BusinessException {
+		return customerService.getCountryById(countryId);
+	}
+	
+	@Override
+	public void insertCustomerHistory(Long idCust, String actionCd, String reason) throws BusinessException {
+		customerService.insertCustomerHistory(idCust, actionCd, reason);
+	}
+
+	@Override
+	public void updateCrmId(Long customerId, String crmId) throws BusinessException {
+		customerService.updateCrmId(customerId, crmId);
+	}
+
+	@Override
+	public void updateCrmIdCSV(Long customerId, String crmId) throws BusinessException {
+		customerService.updateCrmIdCSV(customerId, crmId);
+	}
+	
+	@Override
+	public OnlineCustomerProfileUpdateVO getOnlineCustomerProfileUpdateDetails(Long idOnlineCustProfileUpd) {	
+		return customerService.getOnlineCustomerProfileUpdateDetails(idOnlineCustProfileUpd);
+	}
+	
+	@Override
+	@SuppressWarnings("unchecked")
+	public OnlineCustomerProfileUpdateVO getOnlineCustomerProfileUpdateVO(Long idOnlineCustProfileUpd) {
+	    return customerService.getOnlineCustomerProfileUpdateVO(idOnlineCustProfileUpd);
+	}
+	
+	@Override
+	public void rejectOnlineCustProfUpdReq(OnlineCustomerProfileUpdateVO reqVO, Long idCust) throws BusinessException {
+		customerService.rejectOnlineCustProfUpdReq(reqVO, idCust);
+	}
+	
+	@Override
+	public void applyOnlineCustProfUpdReq(OnlineCustomerProfileUpdateVO reqVO, Long idCust) throws BusinessException {
+		customerService.applyOnlineCustProfUpdReq(reqVO, idCust);
+	}
+}

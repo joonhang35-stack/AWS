@@ -1,0 +1,384 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+	<ui:define name="content">
+	<script type="text/javascript">
+		document.addEventListener('DOMContentLoaded', function() {
+			var filters = document.querySelectorAll('input.ui-column-filter');
+			filters.forEach(function(filter) {
+				filter.setAttribute('enterkeyhint', 'enter');
+			});
+		});
+	</script>
+	<h:form id="idMainJournalForm">
+		<p:growl id="msg"/>
+			<p:panel header="Journal Entries" toggleable="true" toggleSpeed="500">
+			
+			<p:tabView dynamic="true">
+			
+				<p:ajax event="tabChange" />
+				
+				<p:tab title="All">
+					<!-- <p:panel id ="idShowJournalDetails" style="border:none"> -->
+						<h:panelGrid columns="2" style="margin-top:5px; width:1px">
+							<p:commandButton value="#{msg['common.label.action.add']}" actionListener="#{journalBean.handleJournalDetailAddNew}" 
+																oncomplete="varJournalDetailsDialog.show()"  update=":idJournalDetailsDialog" immediate="true" />
+						</h:panelGrid>
+						
+						<p:dataTable id="idMainJournalTable" widgetVar="varMainJournalTable" value="#{journalBean.lazyDMJournal}" var="vo" paginator="true" rows="20" 
+							paginatorTemplate="#{bterp:pageTemplate()}" lazy="true" filteredValue="#{journalBean.filteredObjList}" 
+							rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" emptyMessage="#{msg['tbl.empty.message']}" filterEvent="enter" >
+							
+							<p:column headerText="#{msg['common.label.action.edit']}" style="width:40px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil" actionListener="#{journalBean.handleJournalDetailSelect(vo)}" 
+									oncomplete="varJournalDetailsDialog.show()" update=":idJournalDetailsDialog" process="@this" 
+									immediate="true" />
+							</p:column>
+							<p:column headerText="#{msg['common.label.action.delete']}" style="width:30px; text-align:center;">
+								<p:commandButton icon="ui-icon-close" actionListener="#{journalBean.onJourDeleteSelected(vo)}" 
+									oncomplete="varDelJourDialog.show()" process="@this" immediate="true"
+									rendered="#{vo.typeCd ne 'sales'}" />
+							</p:column>
+							
+							<p:column headerText="Clone" style="width:30px; text-align:center;">
+								<p:commandButton icon="ui-icon-copy" actionListener="#{journalBean.cloneJournalDetail(vo)}" 
+									oncomplete="varJournalDetailsDialog.show()" update=":idJournalDetailsDialog" process="@this" 
+									immediate="true" rendered="#{vo.typeCd ne 'sales'}" />
+							</p:column>
+							
+							<p:column headerText="Journal No." style="width: 40px;" styleClass="txt_left" filterBy="#{vo.sysNo}" sortBy="#{vo.sysNo}">
+									<h:outputText value="#{vo.sysNo}" />
+							</p:column>
+							<p:column headerText="Journal Date" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.journalDt}" sortBy="#{vo.journalDt}">
+								<h:outputText value="#{vo.journalDt}" >
+									<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+								</h:outputText>
+							</p:column>
+							<p:column headerText="Total Amount" style="width: 80px;" styleClass="txt_right" filterBy="#{vo.totalAmt}">
+									<h:outputText value="#{vo.totalAmt}" >
+									<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+							</p:column>
+							<p:column headerText="Tour Code" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.tourCd}">
+									<h:outputText value="#{vo.tourCd}" />
+							</p:column>
+							<p:column headerText="Bill ID" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.exOrderBillVO.code}">
+									<h:outputText value="#{vo.exOrderBillVO.code}" />
+							</p:column>
+							<p:column headerText="Bill Date" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.exOrderBillVO.billDt}">
+									<h:outputText value="#{vo.exOrderBillVO.billDt}">
+										<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+									</h:outputText>
+							</p:column>
+							<p:column headerText="Supplier" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.exOrderBillVO.supplierName}">
+									<h:outputText value="#{vo.exOrderBillVO.supplierName}" />
+							</p:column>
+							<p:column headerText="Reason" styleClass="txt_left" filterBy="#{vo.reason}">
+									<h:outputText value="#{vo.reason}" />
+							</p:column>
+						</p:dataTable>
+						<h:panelGrid columns="2" style="margin-top:5px; width:1px">
+							<p:commandButton value="#{msg['common.label.action.add']}" oncomplete="varJournalDetailsDialog.show()" 
+																actionListener="#{journalBean.handleJournalDetailAddNew}" update=":idJournalDetailsDialog" immediate="true" />
+						</h:panelGrid>
+					<!-- </p:panel> -->
+				</p:tab>
+			
+				<p:tab title="Adjusting Entry">
+					<!-- <p:panel id ="idShowJournalDetails" style="border:none"> -->
+						<h:panelGrid columns="2" style="margin-top:5px; width:1px">
+							<p:commandButton value="#{msg['common.label.action.add']}" actionListener="#{journalBean.handleJournalDetailAddNew}" 
+																oncomplete="varJournalDetailsDialog.show()"  update=":idJournalDetailsDialog" immediate="true" />
+						</h:panelGrid>
+						
+						<p:dataTable id="idGnrlJournalTable" widgetVar="varGnrlJournalTable" value="#{journalBean.lazyDMJournalGnrl}" var="vo" paginator="true" rows="20" 
+							paginatorTemplate="#{bterp:pageTemplate()}" lazy="true" filteredValue="#{journalBean.filteredObjList}" 
+							rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" emptyMessage="#{msg['tbl.empty.message']}" filterEvent="enter" >
+							
+							<p:column headerText="#{msg['common.label.action.edit']}" style="width:40px; text-align:center;">
+									<p:commandButton icon="ui-icon-pencil" actionListener="#{journalBean.handleJournalDetailSelect(vo)}" oncomplete="varJournalDetailsDialog.show()" 
+																		update=":idJournalDetailsDialog" process="@this" immediate="true" />
+							</p:column>
+							<p:column headerText="#{msg['common.label.action.delete']}" style="width:30px; text-align:center;">
+								<p:commandButton icon="ui-icon-close" actionListener="#{journalBean.onJourDeleteSelected(vo)}" 
+																	oncomplete="varDelJourDialog.show()" process="@this" immediate="true"/>
+							</p:column>
+							
+							<p:column headerText="Clone" style="width:30px; text-align:center;">
+								<p:commandButton icon="ui-icon-copy" actionListener="#{journalBean.cloneJournalDetail(vo)}" oncomplete="varJournalDetailsDialog.show()" 
+									update=":idJournalDetailsDialog" process="@this" immediate="true"/>
+							</p:column>
+							
+							<p:column headerText="Journal No." style="width: 40px;" styleClass="txt_left" filterBy="#{vo.sysNo}" sortBy="#{vo.sysNo}">
+									<h:outputText value="#{vo.sysNo}" />
+							</p:column>
+							<p:column headerText="Journal Date" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.journalDt}" sortBy="#{vo.journalDt}">
+									<h:outputText value="#{vo.journalDt}" >
+									<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+									</h:outputText>
+							</p:column>
+							<p:column headerText="Total Amount" style="width: 80px;" styleClass="txt_right" filterBy="#{vo.totalAmt}">
+									<h:outputText value="#{vo.totalAmt}" >
+									<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+							</p:column>
+							<p:column headerText="Tour Code" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.tourCd}">
+									<h:outputText value="#{vo.tourCd}" />
+							</p:column>
+							<p:column headerText="Bill ID" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.billIDs}">
+									<h:outputText value="#{vo.billIDs}" />
+							</p:column>
+							<p:column headerText="Bill Date" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.billDates}">
+									<h:outputText value="#{vo.billDates}" />
+							</p:column>
+							<p:column headerText="Supplier" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.billSuppliers}">
+									<h:outputText value="#{vo.billSuppliers}" />
+							</p:column>
+							<p:column headerText="Reason" styleClass="txt_left" filterBy="#{vo.reason}">
+									<h:outputText value="#{vo.reason}" />
+							</p:column>
+						</p:dataTable>
+						<h:panelGrid columns="2" style="margin-top:5px; width:1px">
+							<p:commandButton value="#{msg['common.label.action.add']}" oncomplete="varJournalDetailsDialog.show()" 
+																actionListener="#{journalBean.handleJournalDetailAddNew}" update=":idJournalDetailsDialog" immediate="true" />
+						</h:panelGrid>
+					<!-- </p:panel> -->
+				</p:tab>
+				<p:tab title="Reverse Sales">
+				
+						<h:panelGrid rendered="#{false}" columns="2" style="margin-top:5px; width:1px">
+							<p:commandButton value="Reverse Past Invoice" actionListener="#{journalBean.onProcessReversePastInvoice}" oncomplete="varPastInvDialog.show()" update=":idPastInvDialog" styleClass="nowrap" style="margin-bottom: 10px;"/>
+						</h:panelGrid>
+						
+						<p:dataTable id="idSalesJournalTable" widgetVar="varSalesJournalTable" value="#{journalBean.lazyDMJournalSales}" var="vo" paginator="true" rows="20" 
+							paginatorTemplate="#{bterp:pageTemplate()}" lazy="true" filteredValue="#{journalBean.filteredObjList}" 
+							rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" emptyMessage="#{msg['tbl.empty.message']}" filterEvent="enter" >
+							
+							<p:column headerText="View" style="width:40px; text-align:center;">
+									<p:commandButton icon="ui-icon-search" actionListener="#{journalBean.handleJournalDetailSelect(vo)}" oncomplete="varJournalDetailsDialog.show()" 
+																		update=":idJournalDetailsDialog" process="@this" immediate="true" />
+							</p:column>
+							<!-- <p:column headerText="#{msg['common.label.action.delete']}" style="width:30px; text-align:center;">
+								<p:commandButton icon="ui-icon-close" actionListener="#{journalBean.onJourDeleteSelected(vo)}" rendered="false"
+									oncomplete="varDelJourDialog.show()" process="@this" immediate="true"/>
+							</p:column> -->
+							
+							<!-- <p:column headerText="Clone" style="width:30px; text-align:center;">
+								<p:commandButton icon="ui-icon-copy" actionListener="#{journalBean.cloneJournalDetail(vo)}" oncomplete="varJournalDetailsDialog.show()" 
+									update=":idJournalDetailsDialog" process="@this" immediate="true" rendered="false" />
+							</p:column> -->
+							
+							<p:column headerText="Journal No." style="width: 40px;" styleClass="txt_left" filterBy="#{vo.sysNo}" sortBy="#{vo.sysNo}">
+									<h:outputText value="#{vo.sysNo}" />
+							</p:column>
+							<p:column headerText="Journal Date" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.journalDt}" sortBy="#{vo.journalDt}">
+									<h:outputText value="#{vo.journalDt}" >
+									<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+									</h:outputText>
+							</p:column>
+							<p:column headerText="Total Amount" style="width: 80px;" styleClass="txt_right" filterBy="#{vo.totalAmt}">
+									<h:outputText value="#{vo.totalAmt}" >
+									<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+							</p:column>
+							<p:column headerText="Tour Code" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.tourCd}">
+									<h:outputText value="#{vo.tourCd}" />
+							</p:column>
+							<!-- <p:column headerText="Bill ID" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.billIDs}">
+									<h:outputText value="#{vo.billIDs}" />
+							</p:column> -->
+							<!-- <p:column headerText="Bill Date" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.billDates}">
+									<h:outputText value="#{vo.billDates}" />
+							</p:column> -->
+							<!-- <p:column headerText="Supplier" style="width: 50px;" styleClass="txt_center" filterBy="#{vo.billSuppliers}">
+									<h:outputText value="#{vo.billSuppliers}" />
+							</p:column> -->
+							<p:column headerText="Reason" styleClass="txt_left" filterBy="#{vo.reason}">
+									<h:outputText value="#{vo.reason}" />
+							</p:column>
+						</p:dataTable>
+						<!-- <h:panelGrid columns="2" style="margin-top:5px; width:1px">
+							<p:commandButton value="#{msg['common.label.action.add']}" oncomplete="varJournalDetailsDialog.show()" 
+																actionListener="#{journalBean.handleJournalDetailAddNew}" update=":idJournalDetailsDialog" immediate="true" />
+						</h:panelGrid>
+					</p:panel> -->
+				</p:tab>
+			</p:tabView>
+		</p:panel>
+	</h:form>
+	
+	<p:dialog id="idJournalDetailsDialog" widgetVar="varJournalDetailsDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+			hideEffect="fade" showEffect="fade" style="top:10% !important">
+			<p:ajax event="close" update="idMainJournalForm" />
+		<f:facet name="header">
+			<h:outputFormat value="Journal Entries" />
+		</f:facet>
+		<h:form id="idJournalCartForm">
+			<ui:include src="journal_details.xhtml"/>
+		</h:form>
+	</p:dialog>
+	
+	<p:dialog id="idJourItemDialog" widgetVar="varJourItemDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+			hideEffect="fade" showEffect="fade" style="top:10% !important">
+		<f:facet name="header">
+			<h:outputFormat value="Journal Entries Item" />
+		</f:facet>
+		<h:form id="idFormJournalItem">
+		<ui:include src="journal_items.xhtml"/>
+		</h:form>
+	</p:dialog>
+
+	<!--
+		DIALOG - ACCOUNT SUB CAT LIST
+	-->
+	<p:dialog id="idAcctSubCatList" widgetVar="varAcctSubCatList" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="true" header="Account List">
+		<h:form id="idAccountList">
+			<p:dataTable id="idAcctListTable" widgetVar="varAcctListTable" value="#{acctBean.lazyAcctDataModel}" var="vo" paginator="true" rows="20" 
+				paginatorTemplate="#{bterp:pageTemplate()}" lazy="true"
+				rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" 
+				filterEvent="enter" filteredValue="#{journalBean.filteredObjList}">
+				<p:ajax event="rowSelect" listener="#{journalBean.handleSubAcctSelect}" 
+								update=":idAccountList:idAcctListTable,:idFormJournalItem:panelItemData" 
+								oncomplete="varAcctListTable.clearFilters();varAcctListTable.unselectAllRows();varAcctSubCatList.hide()"/>
+				
+				<p:column headerText="Account No" sortBy="#{vo.code}" filterBy="#{vo.code}">
+					<h:outputText value="#{vo.code.concat(empty vo.subCode ? '' : '-'.concat(vo.subCode))}" />
+				</p:column>
+				<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}">
+					<h:outputText value="#{vo.desc.concat(vo.subDesc eq '' ? '' : '-'.concat(vo.subDesc))}" />
+				</p:column>
+			</p:dataTable>
+			<div style="margin-top:5px">
+	 			<p:commandButton value="Cancel" oncomplete="varBankAcctListDialog.hide();"/>
+			</div>
+		</h:form>
+		<p:ajax event="close" ajax="false" immediate="true" oncomplete="varAcctListTable.clearFilters();"/>  
+ 			
+	</p:dialog>
+
+	<p:confirmDialog widgetVar="varDelJourDialog"
+		message="Are you sure want to delete this record?">
+		<h:form>
+			<p:commandButton value="#{msg['common.button.label.yes']}"
+				actionListener="#{journalBean.delJournal}"
+				oncomplete="varDelJourDialog.hide()"
+				update="@form,:idMainJournalForm"/>
+			<p:commandButton value="#{msg['common.button.label.cancel']}" type="button" onclick="varDelJourDialog.hide()"/>
+		</h:form>
+	</p:confirmDialog>
+
+	<p:dialog id="idGSTListDialog" widgetVar="varGSTListDialog" header="GST Input Tax" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+		<p:tabView >
+   			<p:tab title="Input Tax" style="width:150px;">
+				<p:dataTable id="idInputTaxCodeList" value="#{journalBean.inputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+					<p:ajax event="rowSelect" listener="#{journalBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" 
+							update=":idFormJournalItem:idGSTAmt,:idFormJournalItem:idAmt,:idFormJournalItem:idAmount,:idFormJournalItem:idGSTCode,:idFormJournalItem:idGSTRate,:idFormJournalItem:idClrBtn"/>
+					<p:column headerText="No." width="25" style="text-align:right;">
+						<h:outputText value="#{vo.seqNo}"/>
+					</p:column>
+					<p:column headerText="Code" width="50">
+						<h:outputText value="#{vo.code}" />
+					</p:column>
+					<p:column headerText="Description" >
+						<h:outputText value="#{vo.description}" />
+					</p:column>
+					<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+						<h:outputText value="#{vo.rate}"/>
+					</p:column>
+				</p:dataTable>
+			</p:tab>
+	   		<p:tab title="Output Tax" style="width:150px;">
+				<p:dataTable id="idOutputTaxCodeList" value="#{journalBean.outputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+					<p:ajax event="rowSelect" listener="#{journalBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" 
+							update=":idFormJournalItem:idGSTAmt,:idFormJournalItem:idAmt,:idFormJournalItem:idAmount,:idFormJournalItem:idGSTCode,:idFormJournalItem:idGSTRate,:idFormJournalItem:idClrBtn"/>
+					<p:column headerText="No." width="25" style="text-align:right;">
+						<h:outputText value="#{vo.seqNo}"/>
+					</p:column>
+					<p:column headerText="Code" width="50">
+						<h:outputText value="#{vo.code}" />
+					</p:column>
+					<p:column headerText="Description" >
+						<h:outputText value="#{vo.description}" />
+					</p:column>
+					<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+						<h:outputText value="#{vo.rate}"/>
+					</p:column>
+				</p:dataTable>
+			</p:tab>
+		</p:tabView>
+	</p:dialog>
+	
+	<p:dialog id="idTourListDialog" header="Tour List"
+			widgetVar="varTourListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idTourListForm">
+				<p:dataTable widgetVar="varTourListTable"
+					value="#{journalBean.tourDepViewList}" var="vo" paginator="true"
+					rows="10"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{journalBean.handleTourDepSelect}"
+						update=":idJournalCartForm:idTour"
+						oncomplete="varTourListTable.clearFilters();varTourListDialog.hide();"
+						process="@this" />
+
+					<p:column headerText="Tour Code" sortBy="#{vo.code}"
+						filterBy="#{vo.code}">
+						<h:outputText value="#{vo.code}" />
+					</p:column>
+					<p:column headerText="Departure Date" sortBy="#{vo.dtDep}">
+						<h:outputText value="#{vo.dtDep}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Description"
+						style="font-size:10px; width:650px;">
+						<h:outputText value="#{vo.numDays}Days "
+							rendered="#{vo.numDays != 0}" />
+						<h:outputText value="#{vo.numNights}Nights "
+							rendered="#{vo.numNights != 0}" />
+						<h:outputText
+							value="#{vo.tourPkgVO.nameEn} #{vo.tourPkgVO.nameOther} #{vo.tourPkgVO.nameZh}" />
+						<h:outputText value=" [#{vo.desc}]" style="color:#FF0000;"
+							rendered="#{not empty vo.desc}" />
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varTourListDialog.hide();varTourListTable.clearFilters();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+		<!--
+			DIALOG - ACCOUNT SUB CAT LIST
+		-->
+		<p:dialog id="idJournalAcctSubCatList" 
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			hideEffect="fade" showEffect="fade" closable="true">
+			
+
+		</p:dialog>
+		
+		<p:dialog id="idPastInvDialog" widgetVar="varPastInvDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+			hideEffect="fade" showEffect="fade">
+			<f:facet name="header">
+				<h:outputFormat value="Process Past Invoice" />
+			</f:facet>
+			<h:form id="idPastInvForm">
+				<ui:include src="process_past_inv.xhtml"/>
+			</h:form>
+		</p:dialog>
+			
+	</ui:define>
+</ui:composition>

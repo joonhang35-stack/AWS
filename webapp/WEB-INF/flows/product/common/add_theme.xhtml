@@ -1,0 +1,105 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<script type="text/javascript">
+	function onEditThemeValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varEditTourThemeDialog.hide();
+		}
+	}
+</script>
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row rendered="#{empty tourPkgBean.searchParamVO.obj2}">
+		<p:column><h:outputLabel for="idAddTourCat">Category <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idAddTourCat" label="Category" value="#{tourPkgBean.tourThemeVO.idTourCat}" effect="fade" required="true">
+				<f:selectItem itemLabel="Select One"/>
+				<f:selectItems value="#{tourPkgBean.tourCatViewList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+				<p:ajax event="change" listener="#{tourPkgBean.handleTourCatSelect(false)}" update="idCountry,idParentTheme"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idDesc">Theme Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idDesc" label="Theme Name" value="#{tourPkgBean.tourThemeVO.desc}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idCountry">Country</h:outputLabel></p:column>
+		<p:column>
+			<p:selectCheckboxMenu id="idCountry" label="Country" value="#{tourPkgBean.tourThemeVO.selectedCountries}" 
+				filter="true" filterMatchMode="contains">
+				<f:selectItems value="#{tourPkgBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}"/>
+			</p:selectCheckboxMenu>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{tourPkgBean.searchParamVO.obj1 eq 'TOUR' or tourPkgBean.searchParamVO.obj1 eq 'CRUISE'}">
+		<p:column><h:outputLabel for="idParentTheme">Parent Theme</h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idParentTheme" label="Parent Theme" value="#{tourPkgBean.tourThemeVO.idParent}" effect="fade">  
+				<f:selectItem itemLabel="Select One"/>
+				<f:selectItems value="#{tourPkgBean.tourThemeList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idSeq">Sequence</h:outputLabel></p:column>
+		<p:column><p:inputText id="idSeq" label="Sequence" value="#{tourPkgBean.tourThemeVO.seq}"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idRemarks">Remarks</h:outputLabel></p:column>
+		<p:column><p:inputTextarea id="idRemarks" label="Remarks" value="#{tourPkgBean.tourThemeVO.remarks}"/></p:column>
+	</p:row>
+	<!-- <p:row>
+		<p:column><h:outputLabel for="idChildList">Child Theme</h:outputLabel></p:column>
+		<p:column>
+			<p:dataTable id="idChildList" value="#{tourPkgBean.specTourThemeList}" var="child" paginator="true" rows="5" lazy="true" 
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+					rowsPerPageTemplate="5, 10, 15" 
+					filterEvent="enter">
+					<p:column headerText="Delete" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-close" actionListener="#{tourPkgBean.handleTourThemeSelect(child)}" oncomplete="varDelTourThemeDialog.show()"/>
+					</p:column>
+					<p:column headerText="Child Name" sortBy="#{child.desc}" filterBy="#{child.desc}">
+						<h:outputText value="#{child.desc}" />
+					</p:column>
+			</p:dataTable>
+		</p:column>
+	</p:row>  -->
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{tourPkgBean.addTourTheme}" update="@form,:idTourPkgForm" rendered="#{empty tourPkgBean.tourThemeVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{tourPkgBean.updTourTheme}" update="@form,:idTourPkgForm" oncomplete="onEditThemeValidation(xhr, status, args)" rendered="#{not empty tourPkgBean.tourThemeVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{tourPkgBean.resetForm}" oncomplete="varAddTourThemeDialog.hide(),varEditTourThemeDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddTourThemeForm,idEditTourThemeForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+<p:panel header="Child Theme" toggleable="true" toggleSpeed="500" style="margin-top:10px" rendered="#{not empty tourPkgBean.specTourThemeList}">
+	<p:panelGrid>
+		<p:row>
+			<p:column>
+			<p:dataTable id="idChildList" value="#{tourPkgBean.specTourThemeList}" var="child" paginator="true" rows="5" lazy="true" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="5, 10, 15" 
+						filterEvent="enter">
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{tourPkgBean.handleTourThemeSelect(child)}" oncomplete="varDelTourThemeDialog.show()"/>
+						</p:column>
+						<p:column headerText="Child Name">
+							<h:outputText value="#{child.desc}" />
+						</p:column>
+			</p:dataTable>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+</p:panel>
+</ui:composition>

@@ -1,0 +1,270 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+				xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml"
+				xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+				
+<script type="text/javascript"></script>
+
+<ui:define name="content">
+	<p:panel header="E-Invoice Scheduler Config" toggleable="true" toggleSpeed="500">
+		<h:form id="idForm">
+			<p:growl id="msg"/>
+			<p:panel header="Configuration" toggleable="true">
+				<p:panelGrid id="idPanelConfig">
+					<p:row>
+						<p:column style="width: 350px;">
+							<p:outputLabel id="idSubmitScheduler" value="Auto Submit Scheduler">
+								<i class="fa fa-info-circle" aria-hidden="true" />
+							</p:outputLabel> 
+							<pe:tooltip for="idSubmitScheduler" shared="true" position="top left" showDelay="300">
+								<h:outputText value="This scheduler will automatically submit invoices to the e-Invoice system on a daily basis." escape="false" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<p:selectOneRadio value="#{configBean.submitSchedulerEnabled}" style="width: 180px">
+								<f:selectItem itemLabel="On" itemValue="Y"/>
+                				<f:selectItem itemLabel="Off" itemValue="N"/>
+							</p:selectOneRadio>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Auto Submit Schedule Time (Daily)"/>
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<pe:timePicker mode="popup" value="#{configBean.submitSchedulerTime}" intervalMinutes="1"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Auto Submit Categories (Invoice)"/>
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<div style="display: flex; align-items: center;">
+						        <p:selectCheckboxMenu id="idSelInvCategory" value="#{configBean.invCatList}" label="Invoice Category" effect="fade" onHide="executeCategorySelectChangesOnHide();">
+						            <f:selectItems value="#{configBean.availableInvCatList}"
+						                var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+						        </p:selectCheckboxMenu>
+						        &nbsp;&nbsp;&nbsp;
+						        <h:outputText id="idInvCatOutput" value="#{configBean.joinedInvCatDesc}" />
+						        <p:remoteCommand name="executeCategorySelectChangesOnHide" 
+									update="idInvCatOutput" global="true" process="@this idSelInvCategory"/>
+						    </div>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="3">
+							<p:separator />
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width: 350px;">
+							<p:outputLabel id="idRefreshScheduler" value="Refresh Submission Scheduler">
+								<i class="fa fa-info-circle" aria-hidden="true" />
+							</p:outputLabel>
+							<pe:tooltip for="idRefreshScheduler" shared="true" position="top left" showDelay="300">
+								<h:outputText value="This scheduler will automatically update the status of e-Invoice documents at set intervals." />
+								<br></br><br></br>
+								<h:outputText value="Note 1: Due to API call limits, some pending documents may not be refreshed immediately." escape="false" style="white-space: pre-wrap"/>
+								<br></br><br></br>
+								<h:outputText value="Note 2: When first activated, newly submitted documents may take time to update while older records are processed first." escape="false" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<p:selectOneRadio value="#{configBean.refreshSubmSchedulerEnabled}" style="width: 180px">
+								<f:selectItem itemLabel="On" itemValue="Y"/>
+                				<f:selectItem itemLabel="Off" itemValue="N"/>
+							</p:selectOneRadio>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Refresh Submission Scheduler Interval (seconds)"/> 
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<p:inputText value="#{configBean.refreshSubmInterval}" style="width:60px" validatorMessage="Refresh Submission Scheduler Interval must contain digits only.">
+								<f:validateRegex pattern="\d+" />
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="3">
+							<p:separator />
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width: 350px;">
+							<p:outputLabel id="idDailyRefreshScheduler" value="Daily Refresh Scheduler">
+								<i class="fa fa-info-circle"/>
+							</p:outputLabel>
+							<pe:tooltip for="idDailyRefreshScheduler" shared="true" position="top left" showDelay="300">
+								<h:outputText value="This scheduler will perform a daily batch update of e-Invoice documents submitted the previous day." />
+								<br></br><br></br>
+								<h:outputText value="It existed to make sure the system matches the latest data from MyInvois, for instance when e-Invoices are cancelled, because the refresh scheduler only handles pending documents and cannot monitor status changes once Valid." escape="false" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<p:selectOneRadio value="#{configBean.dailyRefreshSchedulerEnabled}" style="width: 180px">
+								<f:selectItem itemLabel="On" itemValue="Y"/>
+                				<f:selectItem itemLabel="Off" itemValue="N"/>
+							</p:selectOneRadio>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Daily Refresh Schedule Time"/>
+						</p:column>
+						<p:column style="width: 10px;">
+							<p:separator style="width:2px;height:20px"/>
+						</p:column>
+						<p:column>
+							<pe:timePicker id="idRefreshScheduleTime" mode="popup" value="#{configBean.dailyRefreshSchedulerTime}" intervalMinutes="1"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="3">
+							<p:separator />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Save" actionListener="#{configBean.saveAppSettingData}" update=":idForm"/>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<!-- <p:separator />
+				
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Process Reverse Sales Journal Entry Now" actionListener="#{configBean.processReverseJournal}" update=":idForm"/>
+							<p:commandButton id="idInfoBtn" icon="ui-icon-info" style="margin-left: 5px"></p:commandButton>	
+							<pe:tooltip for="idInfoBtn" value="Process all pending reverse sales journal entries now."></pe:tooltip>
+						</p:column>
+					</p:row>
+				</p:panelGrid> -->
+			</p:panel>
+			
+			<p:dataTable id="idPendingEInvoiceTable" widgetVar="varPendingEInvoiceTable" value="#{configBean.lazyDataModel}" 
+				var="vo" paginator="true" rows="20" paginatorTemplate="#{bterp:pageTemplate()}" lazy="true" 
+				rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" emptyMessage="#{msg['tbl.empty.message']}" 
+				filterEvent="enter" style="margin-top: 10px;" headerText="">
+				
+				<f:facet name="header">
+        			Pending E-Invoice List
+    			</f:facet>
+    
+				<!-- <p:column headerText="#{msg['common.label.action.edit']}" style="width:40px; text-align:center;">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{journalBean.handleJournalDetailSelect(vo)}" 
+						oncomplete="varJournalDetailsDialog.show()" update=":idJournalDetailsDialog" process="@this" 
+						immediate="true" />
+				</p:column>
+				<p:column headerText="#{msg['common.label.action.delete']}" style="width:30px; text-align:center;">
+					<p:commandButton icon="ui-icon-close" actionListener="#{journalBean.onJourDeleteSelected(vo)}" 
+						oncomplete="varDelJourDialog.show()" process="@this" immediate="true"
+						rendered="#{vo.typeCd ne 'sales'}" />
+				</p:column>
+				
+				<p:column headerText="Clone" style="width:30px; text-align:center;">
+					<p:commandButton icon="ui-icon-copy" actionListener="#{journalBean.cloneJournalDetail(vo)}" 
+						oncomplete="varJournalDetailsDialog.show()" update=":idJournalDetailsDialog" process="@this" 
+						immediate="true" rendered="#{vo.typeCd ne 'sales'}" />
+				</p:column> -->
+				
+				<p:column headerText="Process Date" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.dtProcess}" sortBy="#{vo.dtProcess}">
+					<h:outputText value="#{vo.dtProcess}">
+						<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Ref No." style="width: 40px;" styleClass="txt_center" filterBy="#{vo.refNo}" sortBy="#{vo.refNo}">
+					<h:outputText value="#{vo.sysPrefix} #{vo.refNo}" />
+				</p:column>
+				<p:column headerText="Invoice Date" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.invoiceVO.invoiceDt}" sortBy="#{vo.invoiceVO.invoiceDt}">
+					<h:outputText value="#{vo.invoiceVO.invoiceDt}">
+						<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Departure Date" style="width: 120px;" styleClass="txt_center" filterBy="#{vo.invoiceVO.departureDt}" sortBy="#{vo.invoiceVO.departureDt}">
+					<h:outputText value="#{vo.invoiceVO.departureDt}">
+						<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Invoice Category" style="width: 120px;" styleClass="txt_center">
+					<h:outputText value="#{bterp:lookupItemDesc('inv_cat', vo.invoiceVO.catCd)}" />
+				</p:column>
+				<p:column headerText="Process Status" style="width:100px;" styleClass="txt_center" filterBy="#{vo.processStatus}" sortBy="#{vo.processStatus}" filterOptions="#{configBean.statusListItems}">
+					<h:outputText rendered="#{vo.processStatus eq 'P'}" value="Pending"/>
+					<h:outputText rendered="#{vo.processStatus eq 'S'}" value="Success"/>
+					<h:outputText rendered="#{vo.processStatus eq 'F'}" value="Failed"/>
+				</p:column>
+				<p:column headerText="Submit Status" style="width:100px;" styleClass="txt_center" filterBy="#{vo.submitStatus}" sortBy="#{vo.submitStatus}" filterOptions="#{configBean.statusListItems}">
+					<h:outputText rendered="#{vo.submitStatus eq 'P'}" value="Pending"/>
+					<h:outputText rendered="#{vo.submitStatus eq 'S'}" value="Success"/>
+					<h:outputText rendered="#{vo.submitStatus eq 'F'}" value="Failed"/>
+				</p:column>
+				<p:column headerText="Reason" style="width: 40px;" styleClass="txt_left" filterBy="#{vo.reason}" sortBy="#{vo.reason}">
+					<h:outputText value="#{vo.reason}" />
+				</p:column>
+				<p:column headerText="Created Date" style="width:150px;" styleClass="txt_center">
+					<h:outputText value="#{vo.createdDate}">
+						<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+					</h:outputText>
+				</p:column>
+			</p:dataTable>
+		</h:form>
+	</p:panel>
+	
+	<!-- <p:dialog id="idAccountListDialog" header="Account List" widgetVar="varAccountListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+		<h:form id="idAccountListForm">
+			<p:dataTable id="idAccountListTable" widgetVar="varAccountListTable" value="#{acctBean.lazyAcctDataModel}" var="vo" paginator="true" rows="20" 
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+				filterEvent="enter" lazy="true" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{posUploadConfigBean.handleAccountSelect}" update=":idForm:idTableAccountExcludeList" oncomplete="varAccountListDialog.hide();"/>
+				
+				<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}">
+					<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+					<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+				</p:column>
+				<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}">
+					<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+					<h:outputText value="#{vo.desc}-#{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+				</p:column>
+			</p:dataTable>
+			<h:panelGrid columns="1">
+				<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varAccountListDialog.hide();"/>
+			</h:panelGrid>
+		</h:form>
+	</p:dialog> -->
+
+</ui:define>
+</ui:composition>

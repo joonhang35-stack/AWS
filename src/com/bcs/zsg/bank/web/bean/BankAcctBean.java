@@ -1,0 +1,526 @@
+package com.bcs.zsg.bank.web.bean;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
+import org.primefaces.event.SelectEvent;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.bo.ChartOfAcctBO;
+import com.bcs.zsg.acct.vo.AcctBalVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.bank.bo.BankAcctBO;
+import com.bcs.zsg.bank.bo.PaymentBO;
+import com.bcs.zsg.bank.vo.BankAcctVO;
+import com.bcs.zsg.bank.vo.BankAcctViewVO;
+import com.bcs.zsg.bank.vo.BankAddrVO;
+import com.bcs.zsg.bank.vo.BankContactVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+
+public class BankAcctBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient BankAcctBO bankAcctBO;
+	@Autowired
+	private transient ChartOfAcctBO chartOfAcctBO;
+	@Autowired
+	private transient RegionBO regionBO;
+	@Autowired
+	private transient PaymentBO paymentBO;
+	
+	private BankAcctVO bankAcctVO;
+	private BankAddrVO bankAddrVO;
+	private BankContactVO bankContactVO;
+	private AcctViewVO acctViewVO;
+
+	private List<AcctViewVO> acctViewList;
+	private List<AcctVO> acctAutoCompleteList;
+	private List<BankAcctViewVO> bankAcctViewList;
+	private List<BankContactVO> bankContactList;
+	private List<CountryVO> countryList;
+	
+	private AddUpdDelVO bankContactAUDVO;
+	
+	// for view porpuse
+	private double balDebit;
+	private double balCredit;
+	
+	private boolean add;
+	private boolean upd;
+	private boolean del;
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.core.web.swf.bean.BaseBackingBean#resetForm()
+	 */
+	@Override
+	public void resetForm() {
+		bankAcctVO = new BankAcctVO();
+		bankAcctVO.setIdCompany(getSessionInfoBean().getCompanyVO().getId());
+		bankAcctVO.setSeqNo(0);
+		bankAddrVO = new BankAddrVO();
+		bankAddrVO.setIdCountry(CommonConstant.DEF_COUNTRY_ID);
+		bankContactList = new ArrayList<BankContactVO>();
+		
+		bankContactAUDVO = new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>());
+		resetContactForm();
+		
+		acctViewVO = new AcctViewVO();
+		balDebit = 0;
+		balCredit = 0;
+		add = false;
+		upd = false;
+		del = false;
+	}
+	
+	/**
+	 * Reset contact form
+	 */
+	public void resetContactForm() {
+		bankContactVO = new BankContactVO();
+	}
+	
+	/**
+	 * 
+	 */
+	public void init() {
+		try {
+			resetForm();
+			loadBankAcctList();
+			countryList = regionBO.getActualCountryList();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add contact list
+	 */
+	public void addContact() {
+		try {
+			if (bankAcctVO.getId() != null) bankContactAUDVO.getAddList().add(bankContactVO);
+			
+			bankContactList.add(bankContactVO);
+			resetContactForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Update contact
+	 */
+	public void updContact() {
+		try {
+			if (bankAcctVO.getId() != null && bankContactVO.getId() != null) bankContactAUDVO.getUpdList().add(bankContactVO);
+			resetContactForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Delete contact
+	 */
+	public void delContact() {
+		try {
+			if (bankAcctVO.getId() != null) {
+				if (bankContactVO.getId() != null) bankContactAUDVO.getDelList().add(bankContactVO);
+				else bankContactAUDVO.getAddList().remove(bankContactVO);
+			}
+			bankContactList.remove(bankContactVO);
+			resetContactForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add bank
+	 */
+	public void addBank() {
+		try {
+			onBankAcctValidation(0);
+			bankAcctBO.addBank(bankAcctVO, bankAddrVO, bankContactList);
+			loadBankAcctList();
+			resetForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	/**
+	 * Update bank
+	 */
+	public void updBank() {
+		try {
+			onBankAcctValidation(1);
+			bankAcctBO.updBank(bankAcctVO, bankAddrVO, bankContactAUDVO);
+			loadBankAcctList();
+			resetForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Delete bank
+	 */
+	public void delBank() {
+		try {
+			bankAcctBO.delBank(bankAcctVO, bankAddrVO, bankContactList);
+			loadBankAcctList();
+			resetForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Handle bank on clicked
+	 * @param vo
+	 */
+	public void handleBankOnClicked(BankAcctViewVO vo) {
+		try {
+			bankAcctVO = new BankAcctVO();
+			bankAcctVO.setId(vo.getId());
+			bankAcctVO.setIdCompany(vo.getIdCompany());
+			bankAcctVO.setIdAcct(vo.getAcctViewVO().getId());
+			bankAcctVO.setTypeCd(vo.getTypeCd());
+			bankAcctVO.setSeqNo(vo.getSeqNo());
+			bankAcctVO.setAcctNo(vo.getAcctNo());
+			bankAcctVO.setName(vo.getName());
+			bankAcctVO.setContactName(vo.getContactName());
+			bankAcctVO.setDtLastRecon(vo.getDtLastRecon());
+			bankAcctVO.setCreatedDate(vo.getCreatedDate());
+			bankAcctVO.setCreatedBy(vo.getCreatedBy());
+			bankAcctVO.setCurrentBal(vo.getCurrentBal());
+			
+			bankAddrVO = vo.getBankAddrList().iterator().next();
+			bankContactList.addAll(vo.getBankContactList());
+			
+			acctViewVO = vo.getAcctViewVO();
+			if (StringUtils.isEmpty(acctViewVO.getSubCode())) bankAcctVO.setAcctCode(acctViewVO.getCode());
+			else bankAcctVO.setAcctCode(acctViewVO.getCode() + "-" + acctViewVO.getSubCode());
+			
+			//balDebit = acctViewVO.getAcctBalSet().iterator().next().getDebitCurrentBal();
+			//balCredit = acctViewVO.getAcctBalSet().iterator().next().getCreditCurrentBal();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param event
+	 */
+	public void handleRowSelect(SelectEvent event) {
+		try {
+			acctViewVO = (AcctViewVO) event.getObject();
+			bankAcctVO.setIdAcct(acctViewVO.getId());
+			if (StringUtils.isEmpty(acctViewVO.getSubCode())) bankAcctVO.setAcctCode(acctViewVO.getCode());
+			else bankAcctVO.setAcctCode(acctViewVO.getCode() + "-" + acctViewVO.getSubCode());
+			
+			List<AcctBalVO> acctBalList = new ArrayList<AcctBalVO>(acctViewVO.getAcctBalSet());
+			balDebit = acctBalList.get(acctBalList.size() - 1).getDebitCurrentBal();
+			balCredit = acctBalList.get(acctBalList.size() - 1).getCreditCurrentBal();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Load Account List
+	 */
+	public void loadAcctList() {
+		try {
+			acctViewList = chartOfAcctBO.getAcctViewList(getSessionInfoBean().getCompanyVO().getId(), null);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param set
+	 * @return
+	 */
+	public double getCurrentBalance(Set<AcctBalVO> set, String flag) {
+		List<AcctBalVO> acctBalList = new ArrayList<AcctBalVO>(set);
+		if (flag.equalsIgnoreCase("debit")) return acctBalList.get(acctBalList.size() - 1).getDebitCurrentBal();
+		else return acctBalList.get(acctBalList.size() - 1).getCreditCurrentBal();
+	}
+	
+	/**
+	 * 
+	 * @param query
+	 * @return
+	 */
+	public List<String> complete(String query) {  
+		List<String> results = new ArrayList<String>();   
+		try { 
+        	acctAutoCompleteList = paymentBO.getAcctList(getSessionInfoBean().getCompanyVO().getId(),query);
+			for (int i = 0; i <acctAutoCompleteList.size(); i++) {
+				if(acctAutoCompleteList.get(i).getSubCode().isEmpty()) results.add(acctAutoCompleteList.get(i).getCode());
+				else results.add(acctAutoCompleteList.get(i).getCode() + "-" + acctAutoCompleteList.get(i).getSubCode() );  
+			}
+        } catch(Exception e) {
+        	e.printStackTrace() ;
+        }
+        return results;  
+    }
+	
+	/**********
+	 * HELPER *
+	 **********/
+	
+	/*
+	 * 
+	 * @throws Exception
+	 */
+	private void loadBankAcctList() throws BusinessException {
+		bankAcctViewList = bankAcctBO.getBankAcctList(getSessionInfoBean().getCompanyVO().getId());
+	}
+	
+	/*
+	 * 
+	 * @param flag - 0 = insert / 1 = update
+	 */
+	private void onBankAcctValidation(int flag) throws BusinessException {
+		for (BankAcctViewVO vo : bankAcctViewList) {
+			if (bankAcctVO.getIdAcct().equals(vo.getAcctViewVO().getId())) {
+				if (flag == 0) throw new BusinessException(CommonErrConstant.ERR_BANK_GLACCT_EXISTED);
+				else {
+					if (!vo.getId().equals(bankAcctVO.getId())) throw new BusinessException(CommonErrConstant.ERR_BANK_GLACCT_EXISTED);
+				}
+			}
+		}
+	}
+	
+	/*******************
+	 * GETTER & SETTER *
+	 *******************/
+
+	/**
+	 * @return the bankAcctVO
+	 */
+	public BankAcctVO getBankAcctVO() {
+		return bankAcctVO;
+	}
+
+	/**
+	 * @param bankAcctVO the bankAcctVO to set
+	 */
+	public void setBankAcctVO(BankAcctVO bankAcctVO) {
+		this.bankAcctVO = bankAcctVO;
+	}
+
+	/**
+	 * @return the bankAddrVO
+	 */
+	public BankAddrVO getBankAddrVO() {
+		return bankAddrVO;
+	}
+
+	/**
+	 * @param bankAddrVO the bankAddrVO to set
+	 */
+	public void setBankAddrVO(BankAddrVO bankAddrVO) {
+		this.bankAddrVO = bankAddrVO;
+	}
+
+	/**
+	 * @return the bankContactVO
+	 */
+	public BankContactVO getBankContactVO() {
+		return bankContactVO;
+	}
+
+	/**
+	 * @param bankContactVO the bankContactVO to set
+	 */
+	public void setBankContactVO(BankContactVO bankContactVO) {
+		this.bankContactVO = bankContactVO;
+		upd = true;
+	}
+
+	/**
+	 * @return the acctViewVO
+	 */
+	public AcctViewVO getAcctViewVO() {
+		return acctViewVO;
+	}
+
+	/**
+	 * @param acctViewVO the acctViewVO to set
+	 */
+	public void setAcctViewVO(AcctViewVO acctViewVO) {
+		this.acctViewVO = acctViewVO;
+	}
+
+	/**
+	 * @return the acctViewList
+	 */
+	public List<AcctViewVO> getAcctViewList() {
+		return acctViewList;
+	}
+
+	/**
+	 * @param acctViewList the acctViewList to set
+	 */
+	public void setAcctViewList(List<AcctViewVO> acctViewList) {
+		this.acctViewList = acctViewList;
+	}
+
+	/**
+	 * @return the acctAutoCompleteList
+	 */
+	public List<AcctVO> getAcctAutoCompleteList() {
+		return acctAutoCompleteList;
+	}
+
+	/**
+	 * @param acctAutoCompleteList the acctAutoCompleteList to set
+	 */
+	public void setAcctAutoCompleteList(List<AcctVO> acctAutoCompleteList) {
+		this.acctAutoCompleteList = acctAutoCompleteList;
+	}
+
+	/**
+	 * @return the bankAcctViewList
+	 */
+	public List<BankAcctViewVO> getBankAcctViewList() {
+		return bankAcctViewList;
+	}
+
+	/**
+	 * @param bankAcctViewList the bankAcctViewList to set
+	 */
+	public void setBankAcctViewList(List<BankAcctViewVO> bankAcctViewList) {
+		this.bankAcctViewList = bankAcctViewList;
+	}
+
+	/**
+	 * @return the bankContactList
+	 */
+	public List<BankContactVO> getBankContactList() {
+		return bankContactList;
+	}
+
+	/**
+	 * @param bankContactList the bankContactList to set
+	 */
+	public void setBankContactList(List<BankContactVO> bankContactList) {
+		this.bankContactList = bankContactList;
+	}
+
+	/**
+	 * @return the countryList
+	 */
+	public List<CountryVO> getCountryList() {
+		return countryList;
+	}
+
+	/**
+	 * @param countryList the countryList to set
+	 */
+	public void setCountryList(List<CountryVO> countryList) {
+		this.countryList = countryList;
+	}
+
+	/**
+	 * @return the balDebit
+	 */
+	public double getBalDebit() {
+		return balDebit;
+	}
+
+	/**
+	 * @param balDebit the balDebit to set
+	 */
+	public void setBalDebit(double balDebit) {
+		this.balDebit = balDebit;
+	}
+
+	/**
+	 * @return the balCredit
+	 */
+	public double getBalCredit() {
+		return balCredit;
+	}
+
+	/**
+	 * @param balCredit the balCredit to set
+	 */
+	public void setBalCredit(double balCredit) {
+		this.balCredit = balCredit;
+	}
+
+	/**
+	 * @return the add
+	 */
+	public boolean isAdd() {
+		return add;
+	}
+
+	/**
+	 * @param add the add to set
+	 */
+	public void setAdd(boolean add) {
+		this.add = add;
+	}
+
+	/**
+	 * @return the upd
+	 */
+	public boolean isUpd() {
+		return upd;
+	}
+
+	/**
+	 * @param upd the upd to set
+	 */
+	public void setUpd(boolean upd) {
+		this.upd = upd;
+	}
+
+	/**
+	 * @return the del
+	 */
+	public boolean isDel() {
+		return del;
+	}
+
+	/**
+	 * @param del the del to set
+	 */
+	public void setDel(boolean del) {
+		this.del = del;
+	}
+	
+}

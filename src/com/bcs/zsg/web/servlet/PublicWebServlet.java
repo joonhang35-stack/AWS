@@ -1,0 +1,83 @@
+package com.bcs.zsg.web.servlet; 
+
+
+import java.io.*; 
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.bcs.zsg.web.object.tempObjClass;
+
+
+import java.util.*;
+
+/**
+ * Servlet implementation class ReceiverCombineFiles
+ */
+@WebServlet("/PublicWebServlet")
+public class PublicWebServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+       
+   /**
+     * @see HttpServlet#HttpServlet()
+     */
+    public PublicWebServlet() {
+        super();
+    }
+
+
+
+	/**
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		try{ 	 
+			
+
+			List<tempObjClass> tempObjClassList =  new ArrayList<tempObjClass>();
+			tempObjClass tempObjClass1 = new tempObjClass();
+			tempObjClass1.setTempStr1("243");
+			tempObjClass1.setTempStr2("Alaska");
+			tempObjClassList.add(tempObjClass1);
+			WebServicePretender webServicePretender = new WebServicePretender();
+
+			response.setContentType("text/xml");
+			PrintWriter out = response.getWriter();
+			out.println(webServicePretender.convertToXML(tempObjClassList));
+			
+	//	out.println(temp);
+			//resultDataFinder.splitFileByGame();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+	try{ 	 
+			
+			String temp = "<getCountryV2Response xmlns=\"http://\">\n<return>\n<tempStr1>243</tempStr1>\n<tempStr2>Alaska</tempStr2>\n</return>\n <return>\n<tempStr1>208</tempStr1>\n<tempStr2>Switzerland</tempStr2>\n</return>\n<return>\n<tempStr1>210</tempStr1>\n<tempStr2>Taiwan</tempStr2>\n</return>\n<return>\n<tempStr1>220</tempStr1>\n<tempStr2>Turkey</tempStr2>\n</return>\n<return>\n<tempStr1>249</tempStr1>\n<tempStr2>USA</tempStr2>\n</return>\n<return>\n<tempStr1>257</tempStr1>\n<tempStr2>Western Europe</tempStr2>\n</return>\n</getCountryV2Response>";
+			PrintWriter out = response.getWriter();
+			out.println(temp);
+			//resultDataFinder.splitFileByGame();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	 
+	}
+
+
+ 
+	  
+}
+

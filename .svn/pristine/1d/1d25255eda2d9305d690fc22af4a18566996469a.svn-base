@@ -1,0 +1,131 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+</script>
+<p:panel header="Tour Categories" toggleable="true" toggleSpeed="500">
+	<h:form id="idTourCatForm">
+		<h:panelGrid columns="2" style="width:1px;">
+			<h:selectOneMenu id="idTypeCd" value="#{tourCatBean.searchParamVO.obj1}" effect="fade">
+				<f:selectItem itemLabel="All" itemValue="ALL"/>
+				<f:selectItems value="#{zsg:referenceDataList('TOUR_TYPE')}" var="n" itemLabel="#{n.value}" itemValue="#{n.code}"/>
+				<p:ajax event="change" listener="#{tourCatBean.handleTypeCdSelect}" update="idTourCatList,:idAddTourCatForm"/>
+			</h:selectOneMenu>
+		</h:panelGrid>
+		<h:panelGrid columns="2" style="width:1px;">
+			<p:commandButton value="Add" oncomplete="varAddTourCatDialog.show()" update=":idAddTourCatDialog" immediate="true"/>
+		</h:panelGrid>
+		
+		<p:dataTable id="idTourCatList" value="#{tourCatBean.tourCatViewList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="20, 30, 50" filterEvent="enter">
+			
+			<p:column headerText="Edit" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{tourCatBean.handleTourCatClicked(vo)}" update=":idEditTourCatDialog" oncomplete="varEditTourCatDialog.show()"/>
+			</p:column>
+			<p:column headerText="Delete" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-close" actionListener="#{tourCatBean.handleTourCatClicked(vo)}" oncomplete="varDelTourCatDialog.show()"/>
+			</p:column>
+			
+			<p:column headerText="Category Name" sortBy="#{vo.desc}" filterBy="#{vo.desc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.desc}"/>
+			</p:column>
+			
+			<p:column headerText="Type" styleClass="txt_center" sortBy="#{vo.typeCd}" filterBy="#{vo.typeCd}" filterMatchMode="contains">
+				<h:outputText value="#{vo.typeCd}"/>
+			</p:column>
+			
+			<!--p:column headerText="Account" sortBy="#{vo.acctVO.code}" filterBy="#{vo.acctVO.code}">
+				<h:outputText value="#{vo.acctVO.code}" rendered="#{empty vo.acctVO.subCode}"/>
+				<h:outputText value="#{vo.acctVO.code}-#{vo.acctVO.subCode}" rendered="#{not empty vo.acctVO.subCode}"/>
+			</p:column-->
+			
+			<p:column headerText="Remarks" sortBy="#{vo.remarks}" filterBy="#{vo.remarks}" filterMatchMode="contains">
+				<h:outputText value="#{vo.remarks}"/>
+			</p:column>
+		</p:dataTable>
+		
+		<h:panelGrid columns="2" style="width:1px;">
+			<p:commandButton value="Add" oncomplete="varAddTourCatDialog.show()" update=":idAddTourCatDialog" immediate="true"/>
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - ADD CATEGORY
+-->
+<p:dialog id="idAddTourCatDialog" widgetVar="varAddTourCatDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Tour Category" />
+	</f:facet>
+	
+	<h:form id="idAddTourCatForm">
+		<ui:include src="add_cat.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - EDIT CATEGORY
+-->
+<p:dialog id="idEditTourCatDialog" widgetVar="varEditTourCatDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Tour Category" />
+	</f:facet>
+	
+	<h:form id="idEditTourCatForm">
+		<ui:include src="add_cat.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ACCOUNT LIST
+-->
+<p:dialog widgetVar="varAcctListDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<p:dataTable value="#{tourCatBean.acctViewList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single">
+		<p:ajax event="rowSelect" listener="#{tourCatBean.handleAcctSelect}" update=":idAddTourCatForm:idAcct" oncomplete="varAcctListDialog.hide()"/>
+		
+		<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}">
+			<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+			<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+		</p:column>
+		<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}">
+			<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+			<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+		</p:column>
+	</p:dataTable>
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varAcctListDialog.hide()"/>
+	</h:panelGrid>
+</p:dialog>
+	
+<!--
+	DIALOG - DELETE CATEGORY
+-->
+<p:confirmDialog widgetVar="varDelTourCatDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{tourCatBean.delTourCat}" update="@form,:idTourCatForm" oncomplete="varDelTourCatDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{tourCatBean.resetForm}" oncomplete="varDelTourCatDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+</ui:define>
+</ui:composition>

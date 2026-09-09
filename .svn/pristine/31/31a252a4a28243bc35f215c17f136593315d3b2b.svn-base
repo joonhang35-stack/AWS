@@ -1,0 +1,1274 @@
+package com.bcs.zsg.acct.service;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.net.ssl.HttpsURLConnection;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.primefaces.json.JSONArray;
+import org.primefaces.json.JSONException;
+import org.primefaces.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import com.bcs.zsg.acct.dao.EInvoiceDAO;
+import com.bcs.zsg.acct.helper.EInvoiceProperties;
+import com.bcs.zsg.acct.vo.EInvoiceAccessTokenVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotTransVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotVO;
+import com.bcs.zsg.acct.vo.EInvoiceBuyerVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateNumGenVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentItemVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.acct.vo.EInvoiceSubmissionVO;
+import com.bcs.zsg.acct.vo.EInvoiceSupplierVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.EInvoiceConstant;
+import com.bcs.zsg.common.helper.EInvoiceUtils;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.HttpUtils;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.core.vo.BaseVO;
+import com.bcs.zsg.einvoice.vo.ApiDocumentQueryResponseVO;
+import com.bcs.zsg.einvoice.vo.ApiDocumentSummaryVO;
+import com.bcs.zsg.einvoice.vo.ApiGetSubmissionResponseVO;
+import com.bcs.zsg.maintenance.dao.CorporateProfileDAO;
+import com.bcs.zsg.maintenance.dao.MalaysiaStateDAO;
+import com.bcs.zsg.maintenance.dao.RegionDAO;
+import com.bcs.zsg.maintenance.dao.SystemNumberGenerationDAO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.purchase.dao.BillPymtDAO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.dao.InvoiceDAO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.web.object.EInvoiceDocument;
+import com.bcs.zsg.web.object.EInvoiceStandardError;
+import com.bcs.zsg.web.object.EInvoiceValidationStepResult;
+import com.google.gson.Gson;
+
+import oasis.names.specification.ubl.schema.xsd.commonaggregatecomponents_21.AddressType;
+import oasis.names.specification.ubl.schema.xsd.commonaggregatecomponents_21.InvoiceLineType;
+import oasis.names.specification.ubl.schema.xsd.commonaggregatecomponents_21.PartyIdentificationType;
+import oasis.names.specification.ubl.schema.xsd.commonaggregatecomponents_21.PartyType;
+import oasis.names.specification.ubl.schema.xsd.invoice_21.InvoiceType;
+
+public class EInvoiceServiceImpl implements EInvoiceService {
+	
+	@Autowired
+	private EInvoiceDAO eInvoiceDAO;
+	@Autowired
+	private SystemNumberGenerationDAO systemNumberGenerationDAO;
+	@Autowired
+	private InvoiceDAO invoiceDAO;
+	@Autowired
+	private BillPymtDAO billPymtDAO;
+	@Autowired
+	private MalaysiaStateDAO malaysiaStateDAO;
+	@Autowired
+	private RegionDAO regionDAO;
+	@Autowired
+	private CorporateProfileDAO corporateProfileDAO;
+	@Autowired
+	private EInvoiceSchedulerService eInvoiceSchedulerService;
+	
+	/**
+	 * to be removed
+	 */
+	@Override
+	public void insertInvoice(EInvoiceDocumentVO eInvoiceVO, InvoiceVO invoiceVO, String eInvoiceDocType) throws BusinessException {
+		eInvoiceVO.setRefId(invoiceVO.getId());
+		eInvoiceVO.setRefNo(invoiceVO.getCode());
+		eInvoiceVO.seteInvoiceDocType(eInvoiceDocType);
+		
+		String sysCd = CommonConstant.SYS_NUM_CD_INVC;
+		if (invoiceVO.getDocTypeCd().equals("C")) {
+			sysCd = CommonConstant.SYS_NUM_CD_CRDT_NOTE;
+		} else if (invoiceVO.getDocTypeCd().equals("P")) {
+			sysCd = CommonConstant.SYS_NUM_CD_PAX_STMT;
+		}
+		
+		eInvoiceVO.setSysDocType(sysCd);
+
+		SystemNumberGenerationVO systemNumberGenerationVO = systemNumberGenerationDAO.getSystemNumberGeneration(sysCd, invoiceVO.getCompanyId());
+		eInvoiceVO.setSysPrefix(systemNumberGenerationVO.getPrefixid());
+		
+		eInvoiceDAO.insert(eInvoiceVO);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertInvoice(String docUuid, String submissionUid, String docStatus, InvoiceVO invoiceVO, String eInvoiceDocType) throws BusinessException {
+		
+		// to be removed if insertDocument stable
+//		EInvoiceDocumentVO eInvoiceDocumentVO = new EInvoiceDocumentVO();
+//    	eInvoiceDocumentVO.setSubmissionUid(submissionUid);
+//    	eInvoiceDocumentVO.setDocumentUuid(docUuid);
+//    	eInvoiceDocumentVO.setStatusCode(docStatus);
+//    	eInvoiceDocumentVO.setIdCompany(invoiceVO.getCompanyId());
+//    	eInvoiceDocumentVO.setRefId(invoiceVO.getId());
+//    	eInvoiceDocumentVO.setRefNo(invoiceVO.getCode());
+//    	eInvoiceDocumentVO.seteInvoiceDocType(eInvoiceDocType);
+//    	eInvoiceDocumentVO.setIsConsolEInv(false);
+		
+		String sysCd = CommonConstant.SYS_NUM_CD_INVC;
+		if (invoiceVO.getDocTypeCd().equals("C")) {
+			sysCd = CommonConstant.SYS_NUM_CD_CRDT_NOTE;
+		} else if (invoiceVO.getDocTypeCd().equals("P")) {
+			sysCd = CommonConstant.SYS_NUM_CD_PAX_STMT;
+		}
+		
+//		eInvoiceDocumentVO.setSysDocType(sysCd);
+//
+//		SystemNumberGenerationVO systemNumberGenerationVO = systemNumberGenerationDAO.getSystemNumberGeneration(sysCd, invoiceVO.getCompanyId());
+//		eInvoiceDocumentVO.setSysPrefix(systemNumberGenerationVO.getPrefixid());
+//		
+//		eInvoiceDAO.insert(eInvoiceDocumentVO);
+//		
+//		EInvoiceSubmissionVO eInvoiceSubmissionVO = new EInvoiceSubmissionVO();
+//		eInvoiceSubmissionVO.setIdCompany(invoiceVO.getCompanyId());
+//		eInvoiceSubmissionVO.setSubmissionUid(submissionUid);
+//		eInvoiceSubmissionVO.setDocCnt(1);
+//		eInvoiceSubmissionVO.setStatusCode("in progress");
+//		eInvoiceDAO.insert(eInvoiceSubmissionVO);
+		
+		EInvoiceDocumentVO eInvoiceDocumentVO = insertDocument(docUuid, submissionUid, docStatus, invoiceVO.getId(), invoiceVO.getCode(), sysCd,
+				eInvoiceDocType, invoiceVO.getCompanyId(), 1, false);
+		
+		eInvoiceDocumentVO.setIdCust(invoiceVO.getCustomerId());
+		eInvoiceDAO.update(eInvoiceDocumentVO);
+		
+		return eInvoiceDocumentVO;
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertCreditNote(String docUuid, String submissionUid, String docStatus, InvoiceVO invoiceVO, Integer submissionDocCnt) throws BusinessException {
+				
+		EInvoiceDocumentVO eInvoiceDocumentVO = insertDocument(docUuid, submissionUid, docStatus, invoiceVO.getId(),
+				invoiceVO.getCode(), CommonConstant.SYS_NUM_CD_CRDT_NOTE, EInvoiceConstant.E_INV_DOC_TYPE_CREDIT_NOTE,
+				invoiceVO.getCompanyId(), submissionDocCnt, false);
+		
+		setRefDoc(eInvoiceDocumentVO, invoiceVO.getId());
+		
+		eInvoiceDocumentVO.setIdCust(invoiceVO.getCustomerId());
+		eInvoiceDAO.update(eInvoiceDocumentVO);
+		
+		return eInvoiceDocumentVO;
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertRefundNote(String docUuid, String submissionUid, String docStatus, InvoiceVO invoiceVO, Integer submissionDocCnt) throws BusinessException {
+				
+		EInvoiceDocumentVO eInvoiceDocumentVO = insertDocument(docUuid, submissionUid, docStatus, invoiceVO.getId(),
+				invoiceVO.getRnNo(), CommonConstant.SYS_NUM_CD_RFND_NOTE, EInvoiceConstant.E_INV_DOC_TYPE_REFUND_NOTE,
+				invoiceVO.getCompanyId(), submissionDocCnt, false);
+		
+		setRefDoc(eInvoiceDocumentVO, invoiceVO.getId());
+		
+		eInvoiceDocumentVO.setIdCust(invoiceVO.getCustomerId());
+		eInvoiceDAO.update(eInvoiceDocumentVO);
+		
+		return eInvoiceDocumentVO;
+	}
+	
+	@Override
+	public void insertSubmission(String submissionUid, Long idCompany, Integer submissionDocCnt) {
+		EInvoiceSubmissionVO eInvoiceSubmissionVO = new EInvoiceSubmissionVO();
+		eInvoiceSubmissionVO.setIdCompany(idCompany);
+		eInvoiceSubmissionVO.setSubmissionUid(submissionUid);
+		eInvoiceSubmissionVO.setDocCnt(submissionDocCnt);
+		eInvoiceSubmissionVO.setStatusCode(EInvoiceConstant.E_INV_SUB_STATUS_IN_PROGRESS);
+		eInvoiceDAO.insert(eInvoiceSubmissionVO);
+	}
+	
+	/**
+	 * @param docUuid
+	 * @param submissionUid
+	 * @param docStatus
+	 * @param refId
+	 * @param refNo
+	 * @param sysDocType - system document type code in CommonConstant
+	 * @param eInvoiceDocType
+	 * @param idCompany
+	 * @param submissionDocCnt - document count in the submission
+	 * @throws BusinessException
+	 */
+	@Override
+	public EInvoiceDocumentVO insertDocument(String docUuid, String submissionUid, String docStatus, Long refId, String refNo,
+			String sysDocType, String eInvoiceDocType, Long idCompany, Integer submissionDocCnt, Boolean isConsolEInv)
+			throws BusinessException {
+		
+		EInvoiceDocumentVO eInvoiceDocumentVO = new EInvoiceDocumentVO();
+    	eInvoiceDocumentVO.setSubmissionUid(submissionUid);
+    	eInvoiceDocumentVO.setDocumentUuid(docUuid);
+    	eInvoiceDocumentVO.setStatusCode(docStatus);
+    	eInvoiceDocumentVO.setIdCompany(idCompany);
+    	eInvoiceDocumentVO.setRefId(refId);
+    	eInvoiceDocumentVO.setRefNo(refNo);
+    	eInvoiceDocumentVO.seteInvoiceDocType(eInvoiceDocType);
+    	eInvoiceDocumentVO.setIsConsolEInv(isConsolEInv);		
+		eInvoiceDocumentVO.setSysDocType(sysDocType);
+
+//		System.out.println("CYY sysDocType: " + sysDocType);
+//		System.out.println("CYY idCompany: " + idCompany);
+		SystemNumberGenerationVO systemNumberGenerationVO = systemNumberGenerationDAO.getSystemNumberGeneration(sysDocType, idCompany);
+		if (systemNumberGenerationVO != null)	eInvoiceDocumentVO.setSysPrefix(systemNumberGenerationVO.getPrefixid());
+		
+//		if (sysDocType.equals(CommonConstant.SYS_NUM_CD_CRDT_NOTE) || sysDocType.equals(CommonConstant.SYS_NUM_CD_RFND_NOTE)) {
+//			setRefDoc(eInvoiceDocumentVO, refId);
+//		}
+		
+		eInvoiceDAO.insert(eInvoiceDocumentVO);
+		
+		return eInvoiceDocumentVO;
+		
+//		EInvoiceSubmissionVO eInvoiceSubmissionVO = new EInvoiceSubmissionVO();
+//		eInvoiceSubmissionVO.setIdCompany(idCompany);
+//		eInvoiceSubmissionVO.setSubmissionUid(submissionUid);
+//		eInvoiceSubmissionVO.setDocCnt(submissionDocCnt);
+//		eInvoiceSubmissionVO.setStatusCode("in progress");
+//		eInvoiceDAO.insert(eInvoiceSubmissionVO);
+	}
+	
+	/**
+	 * <p>set Original e-Invoice Reference data</p>
+	 * <code>idRefEInvDoc, idRefDoc, originalEInvRef</code>
+	 * @param eInvoiceDocumentVO
+	 * @param refId - id of CN
+	 * @throws BusinessException
+	 */
+	private void setRefDoc(EInvoiceDocumentVO eInvoiceDocumentVO, Long refId) throws BusinessException {
+		InvoiceVO creditNoteVO = invoiceDAO.getInvoiceById(refId);
+		InvoiceVO cnInvoiceVO = invoiceDAO.getInvoiceByCode(creditNoteVO.getCnInvNo());
+		eInvoiceDocumentVO.setIdRefDoc(cnInvoiceVO.getId());
+		
+		EInvoiceDocumentVO refEInvoiceDocumentVO = getEInvoiceByUuid(cnInvoiceVO.geteInvoiceDocumentUuid());
+		if (refEInvoiceDocumentVO != null)	eInvoiceDocumentVO.setIdRefEInvDoc(refEInvoiceDocumentVO.getId());
+		eInvoiceDocumentVO.setOriginalEInvRef(cnInvoiceVO.geteInvoiceDocumentUuid());
+	}
+	
+	/**
+	 * @param docUuid
+	 * @param submissionUid
+	 * @param docStatus
+	 * @param consolidateInvoiceList
+	 * @param eInvoiceDocType
+	 * @param sysDocType
+	 * @param refNo - e-Invoice Code / Number of consolidate invoice submitted to MyInvois
+	 * @param idCompany
+	 * @return 
+	 * @throws BusinessException
+	 */
+	@Override
+	public EInvoiceDocumentVO insertConsolidateInvoice(String docUuid, String submissionUid, String docStatus, List<InvoiceVO> consolidateInvoiceList, String eInvoiceDocType, String sysDocType, String refNo, Long idCompany) throws BusinessException {
+		
+		// to be removed if insertDocument stable
+//		EInvoiceDocumentVO eInvoiceDocumentVO = new EInvoiceDocumentVO();
+//    	eInvoiceDocumentVO.setSubmissionUid(submissionUid);
+//    	eInvoiceDocumentVO.setDocumentUuid(docUuid);
+//    	eInvoiceDocumentVO.setStatusCode(docStatus);
+//    	eInvoiceDocumentVO.setIdCompany(idCompany);
+//    	eInvoiceDocumentVO.setRefId(); // consol e inv, no ref id to set
+//    	eInvoiceDocumentVO.setRefNo(refNo);
+//    	eInvoiceDocumentVO.seteInvoiceDocType(eInvoiceDocType);
+//		eInvoiceDocumentVO.setSysDocType(sysDocType);
+//		eInvoiceDocumentVO.setIsConsolEInv(true);
+
+//		SystemNumberGenerationVO systemNumberGenerationVO = systemNumberGenerationDAO.getSystemNumberGeneration(sysDocType, idCompany);
+//		eInvoiceDocumentVO.setSysPrefix(systemNumberGenerationVO.getPrefixid());
+		
+//		eInvoiceDAO.insert(eInvoiceDocumentVO);
+		EInvoiceDocumentVO eInvoiceDocumentVO = insertDocument(docUuid, submissionUid, docStatus, null, refNo, sysDocType, eInvoiceDocType, idCompany, 1, true);
+		
+		insertSubmission(submissionUid, idCompany, 1);
+		// to be removed if insertSubmission stable
+//		EInvoiceSubmissionVO eInvoiceSubmissionVO = new EInvoiceSubmissionVO();
+//		eInvoiceSubmissionVO.setIdCompany(idCompany);
+//		eInvoiceSubmissionVO.setSubmissionUid(submissionUid);
+//		eInvoiceSubmissionVO.setDocCnt(1);
+//		eInvoiceSubmissionVO.setStatusCode("in progress");
+//		eInvoiceDAO.insert(eInvoiceSubmissionVO);
+		
+		for (InvoiceVO invoiceVO : consolidateInvoiceList) {
+			// update to invoice table
+			invoiceDAO.updateInvoiceEInvoiceData(invoiceVO.getId(), docUuid, submissionUid, docStatus);
+			
+			// insert record to e_invoice_consolidate table
+			EInvoiceConsolidateVO eInvoiceConsolidateVO = new EInvoiceConsolidateVO();
+			eInvoiceConsolidateVO.setRefId(invoiceVO.getId());
+			eInvoiceConsolidateVO.setRefNo(invoiceVO.getCode());
+			eInvoiceConsolidateVO.setDocumentUuid(docUuid);
+			eInvoiceConsolidateVO.setSubmissionUid(submissionUid);
+			eInvoiceConsolidateVO.seteInvoiceDocType(eInvoiceDocType);
+			eInvoiceConsolidateVO.setSysDocType(sysDocType);
+			eInvoiceConsolidateVO.setSysPrefix(eInvoiceDocumentVO.getSysPrefix());
+			eInvoiceConsolidateVO.setStatusCode(docStatus);
+			eInvoiceDAO.insert(eInvoiceConsolidateVO);
+		}
+		
+		return eInvoiceDocumentVO;
+	}
+	
+	/**
+	 * to be removed
+	 */
+	@Override
+	public void insertExOrderBill(EInvoiceDocumentVO eInvoiceVO, ExOrderBillVO exOrderBillVO, String eInvoiceDocType) throws BusinessException {
+		eInvoiceVO.setRefId(exOrderBillVO.getId());
+		eInvoiceVO.setRefNo(exOrderBillVO.getCode());
+		eInvoiceVO.seteInvoiceDocType(eInvoiceDocType);
+		eInvoiceVO.setSysDocType(CommonConstant.SYS_NUM_CD_PURC_BILL);
+
+		SystemNumberGenerationVO systemNumberGenerationVO = systemNumberGenerationDAO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_PURC_BILL, exOrderBillVO.getCompanyId());
+		eInvoiceVO.setSysPrefix(systemNumberGenerationVO.getPrefixid());
+		
+		eInvoiceDAO.insert(eInvoiceVO);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertExOrderBill(String docUuid, String submissionUid, String docStatus, ExOrderBillVO exOrderBillVO, String eInvoiceDocType) throws BusinessException {
+		
+		// to be removed if insertDocument stable
+//		EInvoiceDocumentVO eInvoiceDocumentVO = new EInvoiceDocumentVO();
+//    	eInvoiceDocumentVO.setSubmissionUid(submissionUid);
+//    	eInvoiceDocumentVO.setDocumentUuid(docUuid);
+//    	eInvoiceDocumentVO.setStatusCode(docStatus);
+//    	eInvoiceDocumentVO.setIdCompany(exOrderBillVO.getCompanyId());
+//    	eInvoiceDocumentVO.setRefId(exOrderBillVO.getId());
+//    	eInvoiceDocumentVO.setRefNo(exOrderBillVO.getCode());
+//    	eInvoiceDocumentVO.seteInvoiceDocType(eInvoiceDocType);
+//    	eInvoiceDocumentVO.setIsConsolEInv(false);
+		
+//		String sysCd = CommonConstant.SYS_NUM_CD_PURC_BILL;
+		
+//		eInvoiceDocumentVO.setSysDocType(sysCd);
+
+//		SystemNumberGenerationVO systemNumberGenerationVO = systemNumberGenerationDAO.getSystemNumberGeneration(sysCd, exOrderBillVO.getCompanyId());
+//		eInvoiceDocumentVO.setSysPrefix(systemNumberGenerationVO.getPrefixid());
+		
+//		eInvoiceDAO.insert(eInvoiceDocumentVO);
+		
+		EInvoiceDocumentVO eInvoiceDocumentVO = insertDocument(docUuid, submissionUid, docStatus, exOrderBillVO.getId(), exOrderBillVO.getCode(), CommonConstant.SYS_NUM_CD_PURC_BILL, eInvoiceDocType, exOrderBillVO.getCompanyId(), 1, false);
+		
+		if (exOrderBillVO.getSupplierId() != null) {
+			eInvoiceDocumentVO.setIdSupplier(exOrderBillVO.getSupplierId());
+		}
+		eInvoiceDAO.update(eInvoiceDocumentVO);
+		
+		// to be removed if insertSubmission stable
+//		EInvoiceSubmissionVO eInvoiceSubmissionVO = new EInvoiceSubmissionVO();
+//		eInvoiceSubmissionVO.setIdCompany(exOrderBillVO.getCompanyId());
+//		eInvoiceSubmissionVO.setSubmissionUid(submissionUid);
+//		eInvoiceSubmissionVO.setDocCnt(1);
+//		eInvoiceSubmissionVO.setStatusCode("in progress");
+//		eInvoiceDAO.insert(eInvoiceSubmissionVO);
+		// to be removed if EInvoiceUtils.processSubmitResponse eInvoiceBO.insertSubmission stable
+//		insertSubmission(submissionUid, exOrderBillVO.getCompanyId(), 1);
+		
+		return eInvoiceDocumentVO;
+	}
+	
+	/**
+	 * @param docUuid
+	 * @param submissionUid
+	 * @param docStatus
+	 * @param consolidateInvoiceList
+	 * @param eInvoiceDocType
+	 * @param sysDocType
+	 * @param refNo - e-Invoice Code / Number of consolidate invoice submitted to MyInvois
+	 * @param idCompany
+	 * @return 
+	 * @throws BusinessException
+	 */
+	@Override
+	public EInvoiceDocumentVO insertConsolidateExOrderBill(String docUuid, String submissionUid, String docStatus, List<ExOrderBillVO> consolidateBillList, String eInvoiceDocType, String sysDocType, String refNo, Long idCompany) throws BusinessException {
+		
+		// to be removed if insertDocument stable
+//		EInvoiceDocumentVO eInvoiceDocumentVO = new EInvoiceDocumentVO();
+//    	eInvoiceDocumentVO.setSubmissionUid(submissionUid);
+//    	eInvoiceDocumentVO.setDocumentUuid(docUuid);
+//    	eInvoiceDocumentVO.setStatusCode(docStatus);
+//    	eInvoiceDocumentVO.setIdCompany(idCompany);
+//    	eInvoiceDocumentVO.setRefId(); // consol e inv, no ref id to set
+//    	eInvoiceDocumentVO.setRefNo(refNo);
+//    	eInvoiceDocumentVO.seteInvoiceDocType(eInvoiceDocType);
+//		eInvoiceDocumentVO.setSysDocType(sysDocType);
+//		eInvoiceDocumentVO.setIsConsolEInv(true);
+
+//		SystemNumberGenerationVO systemNumberGenerationVO = systemNumberGenerationDAO.getSystemNumberGeneration(sysDocType, idCompany);
+//		eInvoiceDocumentVO.setSysPrefix(systemNumberGenerationVO.getPrefixid());
+		
+//		eInvoiceDAO.insert(eInvoiceDocumentVO);
+		EInvoiceDocumentVO eInvoiceDocumentVO = insertDocument(docUuid, submissionUid, docStatus, null, refNo, sysDocType, eInvoiceDocType, idCompany, 1, true);	
+		
+		// to be removed if insertSubmission stable
+//		EInvoiceSubmissionVO eInvoiceSubmissionVO = new EInvoiceSubmissionVO();
+//		eInvoiceSubmissionVO.setIdCompany(idCompany);
+//		eInvoiceSubmissionVO.setSubmissionUid(submissionUid);
+//		eInvoiceSubmissionVO.setDocCnt(1);
+//		eInvoiceSubmissionVO.setStatusCode("in progress");
+//		eInvoiceDAO.insert(eInvoiceSubmissionVO);
+		insertSubmission(submissionUid, idCompany, 1);
+		
+		for (ExOrderBillVO exOrderBillVO : consolidateBillList) {
+			// update to invoice table
+			billPymtDAO.updateExOrderBillEInvoiceData(exOrderBillVO.getId(), docUuid, submissionUid, docStatus);
+			
+			// insert record to e_invoice_consolidate table
+			EInvoiceConsolidateVO eInvoiceConsolidateVO = new EInvoiceConsolidateVO();
+			eInvoiceConsolidateVO.setRefId(exOrderBillVO.getId());
+			eInvoiceConsolidateVO.setRefNo(exOrderBillVO.getCode());
+			eInvoiceConsolidateVO.setDocumentUuid(docUuid);
+			eInvoiceConsolidateVO.setSubmissionUid(submissionUid);
+			eInvoiceConsolidateVO.seteInvoiceDocType(eInvoiceDocType);
+			eInvoiceConsolidateVO.setSysDocType(sysDocType);
+			eInvoiceConsolidateVO.setSysPrefix(eInvoiceDocumentVO.getSysPrefix());
+			eInvoiceConsolidateVO.setStatusCode(docStatus);
+			eInvoiceDAO.insert(eInvoiceConsolidateVO);
+		}
+		
+		return eInvoiceDocumentVO;
+	}
+	
+	@Override
+	public List<EInvoiceDocumentVO> getEInvoiceList(Long idCompany) {
+		return eInvoiceDAO.getEInvoiceList(idCompany);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO getEInvoiceByUuid(String uuid) {
+		return eInvoiceDAO.getEInvoiceByUuid(uuid);
+	}
+	
+	@Override
+	public EInvoiceConsolidateNumGenVO getEInvoiceConsolidateNumGenVO(Integer year, Integer month, String code, Long idCompany) {
+		return eInvoiceDAO.getEInvoiceConsolidateNumGenVO(year, month, code, idCompany);
+	}
+	
+	@Override
+	public void insertVO(BaseVO vo) {
+		eInvoiceDAO.insert(vo);
+	}
+	
+	@Override
+	public void updateVO(BaseVO vo) {
+		eInvoiceDAO.update(vo);
+	}
+	
+	@Override
+	public EInvoiceAccessTokenVO getValidAccessToken(Long idCompany) throws BusinessException {
+		return eInvoiceDAO.getValidAccessToken(idCompany);
+	}
+
+	@Override
+	public void insertAccessToken(EInvoiceAccessTokenVO eInvoiceAccessTokenVO) throws BusinessException {
+		eInvoiceAccessTokenVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+		eInvoiceDAO.insert(eInvoiceAccessTokenVO);
+	}
+	
+	@Override
+	public void updEInvoiceDocumentVO(EInvoiceDocumentVO eInvoiceDocumentVO, EInvoiceDocument eInvoiceDocument) throws BusinessException, ParseException {
+		
+		// update e_invoice_document
+		// copy details from eInvoiceDocument to eInvoiceDocumentVO
+		if (eInvoiceDocument != null) EInvoiceUtils.copyDetails(eInvoiceDocumentVO, eInvoiceDocument);
+		
+		// update validation error
+		if (eInvoiceDocumentVO.getStatusCode().equals(EInvoiceConstant.E_INV_STATUS_INVALID)) {
+			if (eInvoiceDocument != null && eInvoiceDocument.getValidationResults() != null && CollectionUtils.isNotEmpty(eInvoiceDocument.getValidationResults().getValidationSteps())) {
+				for (EInvoiceValidationStepResult step : eInvoiceDocument.getValidationResults().getValidationSteps()) {
+					if (step.getStatus().equals(EInvoiceConstant.E_INV_STATUS_INVALID)) {
+						for (EInvoiceStandardError err : step.getError().getInnerError()) {
+							if (StringUtils.isBlank(eInvoiceDocumentVO.getDocStatusReason())) {
+								eInvoiceDocumentVO.setDocStatusReason(err.getError());
+							} else {
+								eInvoiceDocumentVO.setDocStatusReason(eInvoiceDocumentVO.getDocStatusReason() + "\n" + err.getError());
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		eInvoiceDAO.update(eInvoiceDocumentVO);
+		
+		// if is consol inv, update e_invoice_consolidate table
+		if (eInvoiceDocumentVO.getIsConsolEInv()) {
+			eInvoiceDAO.updateEInvoiceConsolidate(eInvoiceDocumentVO.getDocumentUuid(), eInvoiceDocumentVO.getLongId(), eInvoiceDocumentVO.getStatusCode());
+		}
+		
+		// update e inv data in sys table
+		if (!StringUtils.equals(eInvoiceDocumentVO.getSysDocType(), CommonConstant.SYS_NUM_CD_RFND_NOTE)) {
+//		if (! eInvoiceDocumentVO.getSysDocType().equals(CommonConstant.SYS_NUM_CD_RFND_NOTE)) {
+			if (StringUtils.equals(eInvoiceDocumentVO.getSysDocType(), CommonConstant.SYS_NUM_CD_E_INV)) {
+				// e inv, nothing to update
+			} else {
+				String table = LookupItemUtils.getTableName(eInvoiceDocumentVO.getSysDocType()); // table name to update
+				updateEInvoiceStatus(eInvoiceDocumentVO.getDocumentUuid(), eInvoiceDocumentVO.getStatusCode(), table);
+			}
+		} else {
+			invoiceDAO.updateRefundNoteEInvoiceStatus(eInvoiceDocumentVO.getDocumentUuid(), eInvoiceDocumentVO.getStatusCode());
+		}
+	}
+	
+	@Override
+	public void updateEInvoiceStatus(String eInvoiceDocumentUuid, String eInvoiceStatus, String table)
+			throws BusinessException {
+		eInvoiceDAO.updateEInvoiceStatus(eInvoiceDocumentUuid, eInvoiceStatus, table);
+		// update invoice history
+		if (StringUtils.equalsIgnoreCase(table, "invoice")) {
+			if (StringUtils.equalsIgnoreCase(eInvoiceStatus, EInvoiceConstant.E_INV_STATUS_CANCELLED)) {
+				invoiceDAO.insertInvoiceHistory(getEInvoiceByUuid(eInvoiceDocumentUuid).getRefId(), CommonConstant.ACTION_CD_UPD, "Cancel E-Invoice");
+			} else {
+				invoiceDAO.insertInvoiceHistory(getEInvoiceByUuid(eInvoiceDocumentUuid).getRefId(), CommonConstant.ACTION_CD_UPD, "[Update E-Invoice Status]");
+			}
+			
+		}
+	}
+	
+	@Override
+	public void updateEInvoiceParty(@Nonnull Long idEInvDoc, @Nullable Long idCust, @Nullable Long idSupplier, @Nullable Long idEInvoiceBuyer, @Nullable Long idEInvoiceSupplier)
+			throws BusinessException {
+		eInvoiceDAO.updateEInvoiceParty(idEInvDoc, idCust, idSupplier, idEInvoiceBuyer, idEInvoiceSupplier);
+	}
+	
+	@Override 
+	public void cancelEInvoiceDocument(String eInvoiceDocumentUuid) throws BusinessException {
+		
+		EInvoiceDocumentVO eInvoiceDocumentVO = getEInvoiceByUuid(eInvoiceDocumentUuid);
+		
+		if (eInvoiceDocumentVO != null) {
+			
+			// update doc_type e inv status
+			updateEInvoiceStatus(eInvoiceDocumentUuid, EInvoiceConstant.E_INV_STATUS_CANCELLED, LookupItemUtils.getTableName(eInvoiceDocumentVO.getSysDocType()));
+
+			// update eInvoiceDocumentVO
+			eInvoiceDocumentVO.setStatusCode(EInvoiceConstant.E_INV_STATUS_CANCELLED);
+			eInvoiceDAO.update(eInvoiceDocumentVO);
+			
+			// update consol inv
+			if (eInvoiceDocumentVO.getIsConsolEInv()) {
+				eInvoiceDAO.updateEInvoiceConsolidate(eInvoiceDocumentUuid, null, EInvoiceConstant.E_INV_STATUS_CANCELLED);
+			}
+		}
+	}
+	
+	@Override 
+	public void cancelEInvoiceRefundNote(String eInvoiceDocumentUuid) throws BusinessException {
+		
+		EInvoiceDocumentVO eInvoiceDocumentVO = getEInvoiceByUuid(eInvoiceDocumentUuid);
+		
+		if (eInvoiceDocumentVO != null) {
+			// update doc_type e inv status
+			invoiceDAO.updateRefundNoteEInvoiceStatus(eInvoiceDocumentUuid, EInvoiceConstant.E_INV_STATUS_CANCELLED);
+
+			// update eInvoiceDocumentVO
+			eInvoiceDocumentVO.setStatusCode(EInvoiceConstant.E_INV_STATUS_CANCELLED);
+			eInvoiceDAO.update(eInvoiceDocumentVO);
+		}
+	}
+	
+	@Override
+	public List<EInvoiceConsolidateVO> getEInvConsolDetailsList(String documentUuid) {
+		return eInvoiceDAO.getEInvConsolDetailsList(documentUuid);
+	}
+	
+	@Override
+	public void insertDocumentDetails(InvoiceType invoiceType, EInvoiceDocumentVO eInvoiceDocumentVO) throws BusinessException {
+		insertDocumentItems(invoiceType, eInvoiceDocumentVO.getId(), eInvoiceDocumentVO.getDocumentUuid());
+		EInvoiceBuyerVO eInvoiceBuyerVO = insertEInvoiceBuyer(invoiceType.getAccountingCustomerParty().getParty(), eInvoiceDocumentVO.getId());
+		EInvoiceSupplierVO eInvoiceSupplierVO = insertEInvoiceSupplier(invoiceType.getAccountingSupplierParty().getParty(), eInvoiceDocumentVO.getId());
+	
+		// for EInvoiceServiceImpl.process...
+		eInvoiceDocumentVO.setIdEInvoiceBuyer(eInvoiceBuyerVO.getId());
+		eInvoiceDocumentVO.setIdEInvoiceSupplier(eInvoiceSupplierVO.getId());
+		
+		// for EInvoiceUtils.process...
+		eInvoiceDAO.updateEInvoiceParty(eInvoiceDocumentVO.getId(), null, null, eInvoiceBuyerVO.getId(), eInvoiceSupplierVO.getId());
+		eInvoiceDAO.updateEInvoiceDocTypeCd(eInvoiceDocumentVO.getId(), invoiceType.getInvoiceTypeCodeValue());
+	}
+	
+	/**
+	 * insert E-Invoice line items
+	 * @param invoiceType
+	 * @param idEInvDoc
+	 * @param docUuid
+	 */
+	private void insertDocumentItems(InvoiceType invoiceType, Long idEInvDoc, String docUuid) {
+		for (InvoiceLineType lineType : invoiceType.getInvoiceLine()) {
+			EInvoiceDocumentItemVO itemVO = new EInvoiceDocumentItemVO();
+			itemVO.setIdEInvDoc(idEInvDoc);
+			itemVO.setDocUuid(docUuid);
+			itemVO.setClassCode(lineType.getItem().getCommodityClassificationAtIndex(0).getItemClassificationCodeValue());
+			itemVO.setDesc(lineType.getItem().getDescriptionAtIndex(0).getValue());
+			itemVO.setQuantity(lineType.getInvoicedQuantityValue().intValue());
+			itemVO.setUnitPrice(lineType.getPrice().getPriceAmountValue().doubleValue());
+			itemVO.setAmount(lineType.getItemPriceExtension().getAmountValue().doubleValue());
+			
+			itemVO.setStatusCode(CommonConstant.STATUS_CD_AVAILABLE);
+						
+			eInvoiceDAO.insert(itemVO);
+		}
+	}
+	
+	/**
+	 * insert E-Invoice buyer details
+	 * @param customerPartyType - invoiceType.getAccountingCustomerParty().getParty()
+	 * @param idEInvDoc
+	 * @return EInvoiceBuyerVO
+	 */
+	private EInvoiceBuyerVO insertEInvoiceBuyer(PartyType customerPartyType, Long idEInvDoc) {
+		EInvoiceBuyerVO eInvoiceBuyerVO = new EInvoiceBuyerVO();
+		eInvoiceBuyerVO.setIdEInvDoc(idEInvDoc);
+		eInvoiceBuyerVO.setName(customerPartyType.getPartyLegalEntityAtIndex(0).getRegistrationNameValue());
+
+		// TIN, SST & identity
+		for (PartyIdentificationType pi : customerPartyType.getPartyIdentification()) {
+			if (pi.getID().getSchemeID().equals("TIN")) {
+				eInvoiceBuyerVO.setTin(pi.getIDValue());
+			} else if (pi.getID().getSchemeID().equals("SST")) {
+				eInvoiceBuyerVO.setSstRegNo(pi.getIDValue());
+			} else {
+				eInvoiceBuyerVO.setIdentityValue(pi.getIDValue());
+				eInvoiceBuyerVO.setIdentityType(pi.getID().getSchemeID());
+			}
+		}
+		
+		// E-mail & Contact Number
+		eInvoiceBuyerVO.setContactNo(customerPartyType.getContact().getTelephoneValue());
+		eInvoiceBuyerVO.setEmail(customerPartyType.getContact().getElectronicMailValue());
+		
+		// Address
+		AddressType addressType = customerPartyType.getPostalAddress();
+		eInvoiceBuyerVO.setAddr1(addressType.getAddressLineAtIndex(0).getLineValue());
+		if (addressType.getAddressLineCount() > 1)	eInvoiceBuyerVO.setAddr2(addressType.getAddressLineAtIndex(1).getLineValue());
+		if (addressType.getAddressLineCount() > 2)	eInvoiceBuyerVO.setAddr3(addressType.getAddressLineAtIndex(2).getLineValue());
+		
+		eInvoiceBuyerVO.setPostcode(addressType.getPostalZoneValue());
+		eInvoiceBuyerVO.setCity(addressType.getCityNameValue());
+		eInvoiceBuyerVO.setState(addressType.getCountrySubentityCodeValue());
+		eInvoiceBuyerVO.setCountry(addressType.getCountry().getIdentificationCodeValue());
+		
+		eInvoiceBuyerVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+		eInvoiceDAO.insert(eInvoiceBuyerVO);
+		
+		return eInvoiceBuyerVO;
+	}
+	
+	/**
+	 * insert E-Invoice supplier details
+	 * @param supplierPartyType - invoiceType.getAccountingSupplierParty().getParty()
+	 * @param idEInvDoc
+	 * @return EInvoiceSupplierVO
+	 */
+	private EInvoiceSupplierVO insertEInvoiceSupplier(PartyType supplierPartyType, Long idEInvDoc) {
+		EInvoiceSupplierVO eInvoiceSupplierVO = new EInvoiceSupplierVO();
+		eInvoiceSupplierVO.setIdEInvDoc(idEInvDoc);
+		eInvoiceSupplierVO.setName(supplierPartyType.getPartyLegalEntityAtIndex(0).getRegistrationNameValue());
+		
+		// TIN, SST & identity
+		for (PartyIdentificationType pi : supplierPartyType.getPartyIdentification()) {
+			if (pi.getID().getSchemeID().equals(EInvoiceConstant.E_INV_IDENTITY_TYPE_TIN)) {
+				eInvoiceSupplierVO.setTin(pi.getIDValue());
+			} else if (pi.getID().getSchemeID().equals(EInvoiceConstant.E_INV_IDENTITY_TYPE_SST)) {
+				eInvoiceSupplierVO.setSstRegNo(pi.getIDValue());
+			} else {
+				eInvoiceSupplierVO.setIdentityValue(pi.getIDValue());
+				eInvoiceSupplierVO.setIdentityType(pi.getID().getSchemeID());
+			}
+		}
+		
+		// E-mail & Contact Number
+		eInvoiceSupplierVO.setContactNo(supplierPartyType.getContact().getTelephoneValue());
+		eInvoiceSupplierVO.setEmail(supplierPartyType.getContact().getElectronicMailValue());
+		
+		// Address
+		AddressType addressType = supplierPartyType.getPostalAddress();
+		eInvoiceSupplierVO.setAddr1(addressType.getAddressLineAtIndex(0).getLineValue());
+		if (addressType.getAddressLineCount() > 1)	eInvoiceSupplierVO.setAddr2(addressType.getAddressLineAtIndex(1).getLineValue());
+		if (addressType.getAddressLineCount() > 2)	eInvoiceSupplierVO.setAddr3(addressType.getAddressLineAtIndex(2).getLineValue());
+		
+		eInvoiceSupplierVO.setPostcode(addressType.getPostalZoneValue());
+		eInvoiceSupplierVO.setCity(addressType.getCityNameValue());
+		eInvoiceSupplierVO.setState(addressType.getCountrySubentityCodeValue());
+		eInvoiceSupplierVO.setCountry(addressType.getCountry().getIdentificationCodeValue());
+		
+		// MSIC Code & Business Desc
+		eInvoiceSupplierVO.setMsicCode(supplierPartyType.getIndustryClassificationCodeValue());
+		eInvoiceSupplierVO.setBusinessDesc(supplierPartyType.getIndustryClassificationCode().getName());
+		
+		eInvoiceSupplierVO.setStatusCode(CommonConstant.STATUS_CD_AVAILABLE);
+		eInvoiceDAO.insert(eInvoiceSupplierVO);
+		
+		return eInvoiceSupplierVO;
+	}
+	
+	@Override
+	public List<EInvoiceDocumentItemVO> getEInvoiceDocumentItemList(Long idEInvDoc) {
+		return eInvoiceDAO.getEInvoiceDocumentItemList(idEInvDoc);
+	}
+	
+	@Override
+	public EInvoiceBuyerVO getEInvoiceBuyer(Long id) {
+		return eInvoiceDAO.getEInvoiceBuyer(id);
+	}
+	
+	@Override
+	public EInvoiceSupplierVO getEInvoiceSupplier(Long id) {
+		return eInvoiceDAO.getEInvoiceSupplier(id);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO getEInvoiceDetails(EInvoiceDocumentVO eInvoiceDocumentVO) throws BusinessException {
+		eInvoiceDocumentVO.setItemList(getEInvoiceDocumentItemList(eInvoiceDocumentVO.getId()));
+		eInvoiceDocumentVO.seteInvoiceBuyerVO(getEInvoiceBuyer(eInvoiceDocumentVO.getIdEInvoiceBuyer()));
+		eInvoiceDocumentVO.seteInvoiceSupplierVO(getEInvoiceSupplier(eInvoiceDocumentVO.getIdEInvoiceSupplier()));
+		
+		if (eInvoiceDocumentVO.geteInvoiceBuyerVO() != null)	populateAddress(eInvoiceDocumentVO.geteInvoiceBuyerVO());
+		if (eInvoiceDocumentVO.geteInvoiceSupplierVO() != null)	populateAddress(eInvoiceDocumentVO.geteInvoiceSupplierVO());
+		
+		setOriginalDocRef(eInvoiceDocumentVO);
+		
+		return eInvoiceDocumentVO;
+	}
+	
+	@Override
+	public EInvoiceBuyerVO populateAddress(EInvoiceBuyerVO buyerVO) throws BusinessException {
+		if (buyerVO != null) {
+			if (StringUtils.isNotBlank(buyerVO.getState())) {
+				if (!buyerVO.getState().equals(EInvoiceConstant.STATE_CD_NA)) {
+					buyerVO.setMalaysiaStateVO(
+							malaysiaStateDAO.getStateByEInvoiceStateCode(buyerVO.getState()));
+				}
+			}
+
+			if (StringUtils.isNotBlank(buyerVO.getCountry())) {
+				buyerVO.setCountryVO(regionDAO.getCountryByThreeLetterCode(buyerVO.getCountry()));
+			}
+			
+			String fullAddress = "";
+			fullAddress += buyerVO.getAddr1() + ", ";
+			if (StringUtils.isNotBlank(buyerVO.getAddr2())) fullAddress += buyerVO.getAddr2() + ", ";
+			if (StringUtils.isNotBlank(buyerVO.getAddr3())) fullAddress += buyerVO.getAddr3() + ", ";
+			if (StringUtils.isNotBlank(buyerVO.getPostcode())) fullAddress += buyerVO.getPostcode() + ", ";
+			if (StringUtils.isNotBlank(buyerVO.getCity())) fullAddress += buyerVO.getCity() + ", ";
+			if (buyerVO.getState().equals(EInvoiceConstant.STATE_CD_NA)) fullAddress += "Not Applicable, ";
+			else	fullAddress += buyerVO.getMalaysiaStateVO().getName() + ", ";
+			fullAddress += buyerVO.getCountryVO().getCountry();
+			
+			System.out.println("CYY fullAddress: " + fullAddress);
+			buyerVO.setFullAddress(fullAddress);
+		}
+		
+		return buyerVO;
+	}
+	
+	private void setOriginalDocRef(EInvoiceDocumentVO eInvoiceDocumentVO) throws BusinessException {
+		if (EInvoiceConstant.E_INV_TYPE_CREDIT_NOTE.equals(eInvoiceDocumentVO.geteInvoiceDocTypeCd())
+				|| EInvoiceConstant.E_INV_TYPE_REFUND_NOTE.equals(eInvoiceDocumentVO.geteInvoiceDocTypeCd())) {
+			InvoiceVO refInvoiceVO = invoiceDAO.getInvoiceById(eInvoiceDocumentVO.getIdRefDoc());
+			if (refInvoiceVO != null) {
+				SystemNumberGenerationVO sysNumGenVO = systemNumberGenerationDAO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_INVC, eInvoiceDocumentVO.getIdCompany());
+				refInvoiceVO.setPrefix(sysNumGenVO.getPrefixid());
+			}
+			eInvoiceDocumentVO.setRefInvoiceVO(refInvoiceVO);
+		}
+	}
+	
+	@Override
+	public void updateRecentDocumentsToApiDailySnapshot(List<ApiDocumentQueryResponseVO> responseList, Date dtTrans, CompanyVO companyVO) throws KeyManagementException, BusinessException,
+			NoSuchAlgorithmException, IOException, JSONException, ParseException {
+		terminateApiDailySnapshot(dtTrans);
+		insertApiDocumentQueryResponse(responseList, dtTrans, companyVO.getId());
+	}
+	
+	/**
+	 * Copies API document query data {@code ApiDocumentQueryResponseVO} into a daily snapshot object {@code EInvoiceApiDailySnapshotVO}.
+	 * 
+	 * @param fromVO
+	 * @param toVO
+	 * @param d
+	 * @param idCompany
+	 * @return
+	 */
+	private EInvoiceApiDailySnapshotVO copyApiResponseToSnapshot(ApiDocumentQueryResponseVO fromVO, EInvoiceApiDailySnapshotVO toVO, Date d, Long idCompany) {
+		
+		toVO.setIdCompany(idCompany);
+		toVO.setDtTrans(d);
+		toVO.setJsonResponse(fromVO.getJsonResponse());
+		toVO.setTotalCount(fromVO.getMetadata().getTotalCount());
+		toVO.setPageNo(fromVO.getPageNo());
+		toVO.setPageSize(fromVO.getResult().size());
+		toVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+		
+		return toVO;
+	}
+	
+	@Override
+	public void insertApiDocumentQueryResponse(List<ApiDocumentQueryResponseVO> responseList, Date d, Long idCompany) {
+		for (ApiDocumentQueryResponseVO responseVO : responseList) {
+			EInvoiceApiDailySnapshotVO snapshotVO = new EInvoiceApiDailySnapshotVO();
+			copyApiResponseToSnapshot(responseVO, snapshotVO, d, idCompany);
+			
+			eInvoiceDAO.insert(snapshotVO);
+		}
+	}
+	
+	private void terminateApiDailySnapshot(Date dtTrans) {
+		List<EInvoiceApiDailySnapshotVO> snapshotList = eInvoiceDAO.getApiDailySnapshotList(dtTrans);
+		
+		for (EInvoiceApiDailySnapshotVO snapshotVO : snapshotList) {
+			snapshotVO.setStatusCode(BaseConstant.STATUS_DELETED);
+			eInvoiceDAO.update(snapshotVO);
+		}
+	}
+	
+	@Override
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Date dtTrans) {
+		return eInvoiceDAO.getApiDailySnapshotList(dtTrans);
+	}
+	
+	@Override
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Map<String, Object> params) {
+		return eInvoiceDAO.getApiDailySnapshotList(params);
+	}
+	
+	@Override
+	public void insertEInvoiceApiDailySnapshotTransactions(List<ApiDocumentQueryResponseVO> responseList, Date d, Long idCompany) {
+		terminateApiDailySnapshotTransactions(idCompany, d);
+		for (ApiDocumentQueryResponseVO responseVO : responseList) {
+			for (EInvoiceApiDailySnapshotTransVO transVO : responseVO.getResult()) {
+				transVO.setIdCompany(idCompany);
+				transVO.setDtTrans(d);
+				transVO.setExistsInLocalStatus(EInvoiceConstant.EXISTS_STATUS_PENDING);
+				transVO.setProcessStatus(CommonConstant.EMAIL_PMNT_PENDING);
+				transVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				eInvoiceDAO.insert(transVO);
+			}
+		}
+	}
+	
+	private void terminateApiDailySnapshotTransactions(Long idCompany, Date dtTrans) {
+		List<EInvoiceApiDailySnapshotTransVO> transList = eInvoiceDAO.getApiDailySnapshotTransList(idCompany, dtTrans);
+		
+		for (EInvoiceApiDailySnapshotTransVO transVO : transList) {
+			transVO.setStatusCode(BaseConstant.STATUS_DELETED);
+			eInvoiceDAO.update(transVO);
+		}
+	}
+	
+	@Override
+	public List<EInvoiceApiDailySnapshotTransVO> getApiDailySnapshotTransList(Long idCompany, Date dtTrans) {
+		return eInvoiceDAO.getApiDailySnapshotTransList(idCompany, dtTrans);
+	}
+	
+	/**
+	 * Copies API document query data {@code ApiDocumentQueryResponseVO} into a daily snapshot object {@code EInvoiceApiDailySnapshotVO}.
+	 * 
+	 * @param fromVO
+	 * @param toVO
+	 * @param d
+	 * @param idCompany
+	 * @return
+	 */
+	private EInvoiceDocumentVO copyDailyTransToDocVO(EInvoiceApiDailySnapshotTransVO fromVO, EInvoiceDocumentVO toVO, Date d, Long idCompany) {
+		
+//		toVO.setIdCompany(idCompany);
+//		toVO.setDtTrans(d);
+//		toVO.setJsonResponse(fromVO.getJsonResponse());
+//		toVO.setTotalCount(fromVO.getMetadata().getTotalCount());
+//		toVO.setPageNo(fromVO.getPageNo());
+//		toVO.setPageSize(fromVO.getResult().size());
+//		toVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+		
+		return toVO;
+	}
+	
+	/**
+	 * @param tin - company TIN
+	 * @param isOnBehalf
+	 * @param companyVO - to get myInvoisClientId, myInvoisClientSecret1, myInvoisClientSecret2
+	 * @return
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws BusinessException
+	 * @throws KeyManagementException 
+	 * @throws NoSuchAlgorithmException 
+	 */
+	@Override
+	public String getAuthAccessToken(CompanyVO companyVO, Boolean isOnBehalf) throws IOException, JSONException, BusinessException, KeyManagementException, NoSuchAlgorithmException {
+		
+		System.out.println("CYY isOnBehalf: " + isOnBehalf);
+		// check client id, client secret, tax no. is blank
+		EInvoiceUtils.validateMyInvoisCredentials(companyVO);
+		
+		String url = EInvoiceProperties.getSystemApiUrl() + EInvoiceProperties.API_LOGIN;
+		System.out.println("CYY url: " + url);
+		
+		// open connection
+		HttpsURLConnection connection = EInvoiceUtils.openAuthAccessTokenHttpsURLConnection(new URL(url), "POST", isOnBehalf, companyVO);
+
+        // get response code
+        int status = connection.getResponseCode();
+        System.out.println("CYY response code: " + status);
+        
+        if (status == HttpUtils.STATUS_CD_GATEWAY_TIMEOUT) {
+        	throw new BusinessException(CommonErrConstant.ERR_GATEWAY_TIMEOUT);
+        }
+        
+        // get response message from connection
+        String response = EInvoiceUtils.getConnectionResponse(status, connection);
+        System.out.println("CYY response: " + response);
+        
+        // convert to JSON format
+        JSONObject jsonResponse = new JSONObject(response);
+        System.out.println(jsonResponse.toString(4));
+//        logger.info("[EInvoiceUtils - getAuthAccessToken][jsonResponse]: " + response);
+        
+        // check if access token exists, if no, throw err
+        if (jsonResponse.isNull("access_token") || StringUtils.isBlank(jsonResponse.getString("access_token")) || jsonResponse.getString("access_token") == null) {
+        	throw new BusinessException(CommonErrConstant.ERR_E_INVOICE_API_LOGIN_FAILED);
+        } 
+        
+        // insert access token
+        EInvoiceAccessTokenVO eInvoiceAccessTokenVO = EInvoiceUtils.generateEInvoiceAccessTokenVO(companyVO.getId(), jsonResponse);
+        insertAccessToken(eInvoiceAccessTokenVO);
+        
+        return eInvoiceAccessTokenVO.getAccessToken();
+	}
+	
+	@Override
+	public String getAccessToken(InvoiceVO invoiceVO, Boolean isOnBehalf, CompanyVO companyVO) throws BusinessException, IOException, JSONException, KeyManagementException, NoSuchAlgorithmException {
+		
+		if (invoiceVO.getCustDetailsVO() == null) {
+			throw new BusinessException(CommonErrConstant.ERR_CUST_DETAILS_MISSING);
+		} else if (StringUtils.isBlank(invoiceVO.getCustDetailsVO().getTaxIdNo())) {
+			throw new BusinessException(CommonErrConstant.ERR_CUST_NO_TIN);
+		} else if (CollectionUtils.isEmpty(invoiceVO.getCustDetailsVO().getIdentityList())) {
+			throw new BusinessException(CommonErrConstant.ERR_CUST_IDENTITY_MISSING);
+		}
+		
+		return getAuthAccessToken(companyVO, isOnBehalf);
+	}
+	
+	@Override
+	public String getAccessToken(SupplierVO supplierVO, Boolean isOnBehalf, CompanyVO companyVO) throws BusinessException, IOException, JSONException, KeyManagementException, NoSuchAlgorithmException {
+		
+		if (StringUtils.isBlank(supplierVO.getTaxIdNo())) {
+			throw new BusinessException(CommonErrConstant.ERR_COMPANY_NO_TIN);
+		}
+		
+		return getAuthAccessToken(companyVO, isOnBehalf);
+	}
+	
+	@Override
+	public String getAccessToken(CompanyVO companyVO, Boolean isOnBehalf) throws BusinessException, IOException, JSONException, KeyManagementException, NoSuchAlgorithmException {
+		EInvoiceAccessTokenVO eInvoiceAccessTokenVO = getValidAccessToken(companyVO.getId());
+		
+		if (eInvoiceAccessTokenVO != null && StringUtils.isNotEmpty(eInvoiceAccessTokenVO.getAccessToken())) {
+			return eInvoiceAccessTokenVO.getAccessToken();
+		} else {
+			return getAuthAccessToken(companyVO, isOnBehalf);
+		}
+	}
+	
+	@Override
+	public List<ApiDocumentQueryResponseVO> getRecentDocuments(Date getRecentDocumentsDate, CompanyVO companyVO) throws KeyManagementException, BusinessException, NoSuchAlgorithmException, IOException, JSONException, ParseException {
+		List<ApiDocumentQueryResponseVO> responseList = new ArrayList<ApiDocumentQueryResponseVO>();
+
+		String accessToken = getAccessToken(companyVO, false);
+		ApiDocumentQueryResponseVO responseVO = EInvoiceUtils.getRecentDocuments(accessToken, getRecentDocumentsDate);
+		responseList.add(responseVO);
+
+		if (responseVO.getMetadata().getTotalCount() > EInvoiceConstant.MAX_PAGE_SIZE) {
+			for (int pageNo = 2; pageNo <= responseVO.getMetadata().getTotalPages(); pageNo++) {
+				ApiDocumentQueryResponseVO respVO = EInvoiceUtils.getRecentDocuments(accessToken, getRecentDocumentsDate, EInvoiceConstant.MAX_PAGE_SIZE, pageNo);
+				responseList.add(respVO);
+			}
+		}
+		
+		updateRecentDocumentsToApiDailySnapshot(responseList, getRecentDocumentsDate, companyVO);
+		insertEInvoiceApiDailySnapshotTransactions(responseList, getRecentDocumentsDate, companyVO.getId());
+		
+		return responseList;
+	}
+	
+	@Override
+	public void updateApiDailySnapshotTransStatus(Long idTrans, String existsInLocalStatus, String processStatus,
+			String statusReason) {
+		eInvoiceDAO.updateApiDailySnapshotTransStatus(idTrans, existsInLocalStatus, processStatus, statusReason);
+	}
+	
+	@Override
+	public JSONObject submitCreditNoteType(EInvoiceDocumentVO vo) throws BusinessException, KeyManagementException, NoSuchAlgorithmException, IOException, JSONException {
+		EInvoiceDocumentVO eInvoiceDocumentVO = getEInvoiceDetails(vo);
+		InvoiceType creditNoteType = EInvoiceUtils.generateCreditNoteType(eInvoiceDocumentVO);
+		
+		CompanyVO companyVO = corporateProfileDAO.getCompanyDetails(vo.getIdCompany());
+		String accessToken = getAccessToken(companyVO, false);            	
+		
+		JSONObject eInvoiceDocuments = EInvoiceUtils.generateEInvoiceDocuments(creditNoteType);
+		JSONObject submitResponse = EInvoiceUtils.submitAPI(eInvoiceDocuments, accessToken);
+		
+		processCreditNoteInvoiceTypeSubmitResponse(submitResponse, vo, creditNoteType);
+		
+		return submitResponse;
+	}
+	
+	/**
+	 * <pre>
+	 * Process submission response after submit to E-Invoice API
+	 * Single submission
+	 * https://sdk.myinvois.hasil.gov.my/einvoicingapi/02-submit-documents/
+	 * </pre>
+	 * 
+	 * @param submitResponse
+	 * @param invoiceVO
+	 * @throws JSONException
+	 * @throws BusinessException
+	 */
+	public void processCreditNoteInvoiceTypeSubmitResponse(JSONObject submitResponse, EInvoiceDocumentVO refDocVO, InvoiceType invoiceType) throws JSONException, BusinessException {
+		
+		EInvoiceUtils.checkResponseErr(submitResponse);
+		
+		refDocVO = getEInvoiceDetails(refDocVO);
+		
+		String submissionUid = submitResponse.getString("submissionUid");
+		JSONArray acceptedDocuments = submitResponse.getJSONArray("acceptedDocuments");
+		JSONArray rejectedDocuments = submitResponse.getJSONArray("rejectedDocuments");
+		
+		insertSubmission(submissionUid, refDocVO.getIdCompany(), acceptedDocuments.length());
+
+		for (int j = 0; j < acceptedDocuments.length(); j++) {
+			String documentUuid = acceptedDocuments.getJSONObject(j).getString("uuid");
+//			String invoiceCodeNumber = acceptedDocuments.getJSONObject(j).getString("invoiceCodeNumber");
+	        	
+			EInvoiceDocumentVO eInvoiceDocumentVO = insertDocument(documentUuid, submissionUid,
+					EInvoiceConstant.E_INV_STATUS_SUBMIT, null, invoiceType.getIDValue(), CommonConstant.SYS_NUM_CD_E_INV,
+					null, refDocVO.getIdCompany(), 1, false);
+			insertDocumentDetails(invoiceType, eInvoiceDocumentVO);
+			
+			eInvoiceDocumentVO.setRefId(eInvoiceDocumentVO.getId());
+			eInvoiceDocumentVO.seteInvoiceDocTypeCd(EInvoiceUtils.resolveCreditNoteType(refDocVO.geteInvoiceDocTypeCd()));
+			eInvoiceDocumentVO.seteInvoiceDocType(LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_E_INV_DOC_TYPE, eInvoiceDocumentVO.geteInvoiceDocTypeCd()));
+			eInvoiceDocumentVO.setIdRefEInvDoc(refDocVO.getId());
+			eInvoiceDocumentVO.setIdRefDoc(refDocVO.getId());
+			eInvoiceDocumentVO.setOriginalEInvRef(refDocVO.getDocumentUuid());
+			
+//			TODO set e invoice id cust/id supl
+//			eInvoiceDocumentVO.setIdCust();
+			eInvoiceDAO.update(eInvoiceDocumentVO);
+		}
+		
+    	if (rejectedDocuments.length() > 0) {
+    		for (int k = 0; k < rejectedDocuments.length(); k++) {
+    			JSONObject err = rejectedDocuments.getJSONObject(k).getJSONObject("error");
+            	JSONArray details = err.getJSONArray("details");
+            	
+            	for (int j = 0; j < details.length(); j++) {
+                    JSONObject innerErr = details.getJSONObject(j);
+    				throw new BusinessException(CommonErrConstant.ERR_E_INV_ERR_MSG, null, new String[] {innerErr.getString("message")});
+                }
+    		}
+    		
+    		throw new BusinessException(CommonErrConstant.ERR_E_INVOICE_API_SUBMISSION_FAILED);
+    	}
+	}
+	
+	@Override
+	public ApiGetSubmissionResponseVO getSubmission(String submissionUid, Long idCompany) throws BusinessException, KeyManagementException, NoSuchAlgorithmException, IOException, JSONException, ParseException {
+		
+		CompanyVO companyVO = corporateProfileDAO.getCompanyDetails(idCompany);
+		String accessToken = getAccessToken(companyVO, false);            	
+		
+		ApiGetSubmissionResponseVO responseVO = EInvoiceUtils.getSubmission(accessToken, submissionUid, EInvoiceConstant.MAX_PAGE_SIZE, 1);
+		
+		EInvoiceSubmissionVO subVO = eInvoiceDAO.getEInvoiceSubmissionVO(submissionUid);
+		
+		if (responseVO.getResponseCode() == HttpUtils.STATUS_CD_NOT_FOUND) {
+			handleGetSubmissionError(subVO, responseVO);
+			return responseVO;
+		}
+		
+		if (!StringUtils.equals(responseVO.getOverallStatus(), EInvoiceConstant.E_INV_SUB_STATUS_IN_PROGRESS)) {
+			updateEInvSubmissionFromApiResp(subVO, responseVO, accessToken);
+		}
+		
+		return responseVO;
+	}
+	
+	/**
+	 * Updates the local e-invoice submission and related document records
+	 * based on response returned by e-Invoice GetSubmission API.
+	 * <p>
+	 * This method:
+	 * <ul>
+	 *   <li>Updates document details for submitted documents</li>
+	 *   <li>Handles invalid documents if detected</li>
+	 *   <li>Updates the overall submission status</li>
+	 * </ul>
+	 * 
+	 * @param subVO					The local e-invoice submission record to update.
+	 * @param responseVO			The response received from the MyInvois GetSubmission API.
+	 * @param accessToken
+	 * @throws BusinessException	
+	 * @throws ParseException
+	 */
+	private void updateEInvSubmissionFromApiResp(EInvoiceSubmissionVO subVO, ApiGetSubmissionResponseVO responseVO, String accessToken) throws BusinessException, ParseException {
+		// update e-invoice document
+		for (ApiDocumentSummaryVO apiDocVO : responseVO.getDocumentSummary()) {
+			EInvoiceDocumentVO documentVO = getEInvoiceByUuid(apiDocVO.getUuid());
+			if (StringUtils.equals(documentVO.getStatusCode(), EInvoiceConstant.E_INV_STATUS_SUBMIT)) {
+				EInvoiceUtils.copyDetails(documentVO, apiDocVO);
+				updEInvoiceDocumentVO(documentVO, null);
+				
+				handleInvalidDoc(documentVO, accessToken);
+			}
+		}
+		
+		// update e-invoice submission
+		subVO.setStatusCode(responseVO.getOverallStatus());
+		eInvoiceDAO.update(subVO);
+	}
+	
+	private void handleInvalidDoc(EInvoiceDocumentVO documentVO, String accessToken) {
+		if (StringUtils.equalsIgnoreCase(documentVO.getStatusCode(), EInvoiceConstant.E_INV_STATUS_INVALID)) {
+			try {
+				EInvoiceDocumentVO eInvoiceDocumentVO = updDocumentDetails(documentVO.getDocumentUuid(), accessToken);
+//				if (!EInvoiceProperties.isTesting()) {
+					eInvoiceSchedulerService.notifyInvalidEInvoice(eInvoiceDocumentVO);
+//				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private void handleGetSubmissionError(EInvoiceSubmissionVO subVO, ApiGetSubmissionResponseVO responseVO) {
+		subVO.setStatusCode(EInvoiceConstant.E_INV_SUB_STATUS_ERROR);
+		subVO.setRemarks(responseVO.getErrMsg());
+		eInvoiceDAO.update(subVO);
+	}
+	
+	@Override
+	public List<EInvoiceSubmissionVO> getEInvoiceSubmissionByStatus(String statusCd, Long idCompany) {
+		return getEInvoiceSubmissionByStatus(FunctionUtils.generateArrayFromStr(statusCd), idCompany);
+	}
+	
+	@Override
+	public List<EInvoiceSubmissionVO> getEInvoiceSubmissionByStatus(String[] statusList, Long idCompany) {
+		return eInvoiceDAO.getEInvoiceSubmissionByStatus(statusList, idCompany);
+	}
+	
+	/**
+	 * update document and related table details when user refresh E-Invoice status
+	 * 
+	 * @param docUuid
+	 * @param accessToken
+	 * @return
+	 * @throws KeyManagementException
+	 * @throws NoSuchAlgorithmException
+	 * @throws MalformedURLException
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws BusinessException
+	 * @throws ParseException
+	 */
+	@Override
+	public EInvoiceDocumentVO updDocumentDetails(String docUuid, String accessToken) throws KeyManagementException, NoSuchAlgorithmException, MalformedURLException, IOException, JSONException, BusinessException, ParseException {
+
+		/* read InvoiceType from document */
+//		EInvoiceDocument eInvoiceDocument1 = getDocument(docUuid, accessToken);
+//		JAXBContext jaxbContext = JAXBContext.newInstance(
+//			    "oasis.names.specification.ubl.schema.xsd.invoice_21:" +
+//			    "oasis.names.specification.ubl.schema.xsd.commonbasiccomponents_21:" +
+//			    "oasis.names.specification.ubl.schema.xsd.commonaggregatecomponents_21"
+//			);
+//		
+//		Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+//		StringReader reader = new StringReader(eInvoiceDocument1.getDocument());
+//		JAXBElement<InvoiceType> je = (JAXBElement<InvoiceType>) unmarshaller.unmarshal(reader);
+//		InvoiceType invoice = je.getValue();
+
+		String url = UriComponentsBuilder
+				.fromHttpUrl(EInvoiceProperties.getSystemApiUrl() + "api/v1.0/documents/" + docUuid + "/details")
+				.build().toUriString();
+		
+		// open connection
+		HttpsURLConnection connection = EInvoiceUtils.openHttpsURLConnection(new URL(url), "GET", accessToken);
+		
+		// get response code
+		int respCode = connection.getResponseCode();
+//		System.out.println("CYY respCode: " + respCode);
+		
+		// get response message from connection
+        String response = EInvoiceUtils.getConnectionResponse(respCode, connection); 
+
+        JSONObject jsonResponse = new JSONObject(response);
+		
+		System.out.println(jsonResponse.toString(4));
+		
+		if (respCode == org.springframework.http.HttpStatus.TOO_MANY_REQUESTS.value()) {
+			String errMsg = "Rate limit is exceeded. Try again in 60 seconds.";
+			if (jsonResponse.has("message")) {
+				errMsg = jsonResponse.getString("message");
+			}
+			throw new BusinessException(CommonErrConstant.ERR_E_INV_ERR_MSG, null, FunctionUtils.generateArrayFromStr(errMsg));
+		}
+		
+		if (respCode == org.springframework.http.HttpStatus.NOT_FOUND.value()) {
+			String errMsg = "404 NotFound";
+			if (jsonResponse.has("error")) {
+				ObjectMapper mapper = new ObjectMapper();
+				JsonNode root = mapper.readTree(jsonResponse.toString());
+
+				String message = root
+				        .path("error")
+				        .path("details")
+				        .get(0)
+				        .path("message")
+				        .asText();
+
+				System.out.println(message);
+
+				if(StringUtils.isNotBlank(message)) {
+					errMsg = message;
+				}
+//				errMsg = jsonResponse.getString("message");
+			}
+			throw new BusinessException(CommonErrConstant.ERR_E_INV_ERR_MSG, null, FunctionUtils.generateArrayFromStr(errMsg));
+		}
+		
+		Gson gson = new Gson();
+		EInvoiceDocument eInvoiceDocument = gson.fromJson(jsonResponse.toString(), EInvoiceDocument.class);
+		
+		eInvoiceDocument.printValidationResults();
+//		System.out.println("new JSONObject(eInvoiceDocument).toString(4)");
+//		System.out.println(new JSONObject(eInvoiceDocument).toString(4));
+		
+		EInvoiceDocumentVO eInvoiceDocumentVO = getEInvoiceByUuid(docUuid);
+		updEInvoiceDocumentVO(eInvoiceDocumentVO, eInvoiceDocument);
+		
+//		searchDocuments(docUuid, accessToken);
+		
+		return eInvoiceDocumentVO;
+	}
+}

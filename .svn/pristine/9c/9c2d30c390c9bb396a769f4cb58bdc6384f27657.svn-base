@@ -1,0 +1,1979 @@
+package com.bcs.zsg.db.bterp.dao.accttrans;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.ObjectUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Restrictions;
+import org.primefaces.model.SortOrder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import com.bcs.zsg.acct.vo.AcctBalVO;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctTransViewVO;
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.DatesUtils;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.sales.helper.SalesConstant;
+
+public class AccountTransDAOImpl extends BaseHibernateDAO implements AccountTransDAO {
+	
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
+	
+	private String invPrefix;
+	private String psPrefix;
+	private String cnPrefix;
+	private String jrnlPrefix;
+	
+	@Override
+	public List<AcctTransVO> getAccountTransList() {
+		return getAccountTransList(null);
+	}
+	
+	/**
+	 * You Yuan 2026.1.23
+	 * long story short, acctTransDAO.getAccountTransList function will cause 
+	 * org.hibernate.exception.GenericJDBCException: Cannot open connection
+	 * Caused by: org.apache.tomcat.jdbc.pool.PoolExhaustedException: [http-nio-8080-exec-1] Timeout: Pool empty. Unable to fetch a connection in 10 seconds, none available[size:15; busy:15; idle:0; lastwait:10000].
+	 * 
+	 * So Session session = getSessionFactory().openSession();... code is added to avoid this
+	 * please continue the comment if any changes is needed
+	 * 
+	 * You Yuan 2026.1.23
+	 * but Session session = getSessionFactory().openSession();... code will cause cache
+	 * specifically journal editing won't apply soon, after edit journal, close and open, the data still the same
+	 * please continue the comment if any changes is needed
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransVO> getAccountTransList(Map<String, Object> param) {
+		
+		// required to free pool connection (You Yuan)
+		Session session;
+		boolean manual = false;
+
+		if (TransactionSynchronizationManager.isActualTransactionActive()) {
+		    session = getSessionFactory().getCurrentSession();
+		} else {
+			session = getSessionFactory().openSession();
+			session.beginTransaction();
+		    manual = true;
+		}
+		
+		try {
+//			session.doWork(new Work() {
+//			    @Override
+//			    public void execute(Connection connection) throws SQLException {
+//			        connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+//			    }
+//			});
+
+//			session.beginTransaction();
+//			session.clear();
+			
+			Criteria criteria = session.createCriteria(AcctTransVO.class);
+//			Criteria criteria = createCriteria(AcctTransVO.class);
+			criteria = criteriaRestrictionEq(criteria, param);
+			
+			List<AcctTransVO> resultList = criteria.list();
+			return resultList;
+		} catch (Exception e) {
+			throw e;
+		} finally {
+			if (manual) session.close();
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransVO> getAccountTransListFilterID(Map<String, Object> param, Object[] ids, boolean filterIN) {
+
+		Criteria criteria = getSession().createCriteria(AcctTransVO.class);
+		criteria = criteriaRestrictionEq(criteria, param);
+		
+		if(ids.length > 0) {
+			Criterion objFilterCriteria = Restrictions.in("id", ids);
+			if(filterIN)
+				criteria.add(objFilterCriteria);
+			else
+				criteria.add(Restrictions.not(objFilterCriteria));
+		}
+		return criteria.list();
+	}
+	
+	private Criteria criteriaRestrictionEq(Criteria _criteria, Map<String, Object> params) {
+		if(params == null || params.isEmpty())
+			return _criteria;
+
+		for (Iterator<Entry<String, Object>> it = params.entrySet().iterator() ; it.hasNext() ;) {
+			Entry<String, Object> entry = it.next();
+			_criteria.add(Restrictions.eq(entry.getKey(), entry.getValue()));
+		}
+		
+		return _criteria;
+	}
+	
+	@Override
+	public AcctTransVO getAccountTrans() {
+		return getAccountTrans(null);
+	}
+	
+	@Override
+	public AcctTransVO getAccountTrans(Map<String, Object> params) {
+		Criteria criteria = getSession().createCriteria(AcctTransVO.class);
+		criteria = criteriaRestrictionEq(criteria, params);
+		return (AcctTransVO) criteria.uniqueResult();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.db.bterp.dao.accttrans.AccountTransDAO#getAccountTransSumDebitCreditByAcctId(java.util.Map<String, Object>)
+	 */
+	@Override
+	public AcctTransVO getAccountTransSumDebitCreditByAcctId(Map<String, Object> params) throws BusinessException {
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT SUM(debit) AS totalDebit, SUM(credit) AS totalCredit FROM (	")
+			.append("	SELECT ").append(getSwapNegativeDebitCreditCase("acctTrans"))
+			.append("	FROM account_trans acctTrans WHERE ")
+			.append(queryWhereClauseBuilder(params, false))
+			.append("		AND status_cd = :statusCode ");
+		
+		sb.append(") A ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query = queryParamMapping(query, params);
+		
+		Object results = query.uniqueResult();
+		AcctTransVO acctTransVO = new AcctTransVO();
+
+		if(results != null) {
+			Object[] row = (Object[]) results;
+			if(row[0] != null)
+				acctTransVO.setDebit((Double) row[0]);
+			if(row[1] != null)
+				acctTransVO.setCredit((Double) row[1]);
+		} 
+
+		if(acctTransVO.getDebit() == null)
+			acctTransVO.setDebit(0.00);
+		if(acctTransVO.getCredit() == null)
+			acctTransVO.setCredit(0.00);
+		return acctTransVO;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.db.bterp.dao.accttrans.AccountTransDAO#getAccountBfBalance(java.util.Map)
+	 */
+	@Override
+	public AcctTransVO getAccountBfBalance(Map<String, Object> params) throws BusinessException {
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT IFNULL(SUM(debit), 0) AS totalDebit, IFNULL(SUM(credit), 0) AS totalCredit, acct_cat FROM ( ").
+			append("SELECT ").
+				append("CASE WHEN t.debit < 0 THEN 0.00 WHEN t.credit < 0 THEN t.credit * -1 ELSE t.debit END AS debit, ").
+				append("CASE WHEN t.credit < 0 THEN 0.00 WHEN t.debit < 0 THEN t.debit * -1 ELSE t.credit END AS credit, ").
+				append("ac.code AS acct_cat ").
+			append("FROM account_trans t ").
+				append("LEFT JOIN (SELECT c.code, a.id from account a, account_cat c WHERE a.id_company = :idCompany AND a.id_acct_cat = c.id) ac on ac.id = t.id_acct ").
+			append("WHERE t.id_company = :idCompany  AND t.id_acct = :idAcct  AND (t.dt_trans BETWEEN :fromDate AND :toDate) ").
+				//append("AND (CASE WHEN ac.code in ('I', 'X', 'P', 'OI') THEN DATE(t.dt_trans) >= DATE(:finDate) ELSE 1=1 END) ").
+				append("AND t.status_cd = :statusCode ").
+		append(") A ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", (Long) params.get("idCompany"));
+		query.setParameter("idAcct", (Long) params.get("idAcct"));
+		query.setParameter("fromDate", (Date) params.get("fromDate"));
+		query.setParameter("toDate", (Date) params.get("toDate"));
+		//query.setParameter("finDate", (Date) params.get("finDate"));
+		query.setParameter("statusCode", BaseConstant.STATUS_ACTIVE);
+		
+		//query = queryParamMapping(query, params);
+		
+		Object results = query.uniqueResult();
+		AcctTransVO acctTransVO = new AcctTransVO();
+
+		if(results != null) {
+			Object[] row = (Object[]) results;
+			if(row[0] != null)
+				acctTransVO.setDebit((Double) row[0]);
+			if(row[1] != null)
+				acctTransVO.setCredit((Double) row[1]);
+			acctTransVO.setTempAcct((String) row[2]);
+		} 
+
+		if(acctTransVO.getDebit() == null)
+			acctTransVO.setDebit(0.00);
+		if(acctTransVO.getCredit() == null)
+			acctTransVO.setCredit(0.00);
+		return acctTransVO;
+	}
+	
+	protected static String getSwapNegativeDebitCreditCase(String tablePrefix) {
+		if(tablePrefix == null)
+			tablePrefix = "";
+		if(StringUtils.isNotEmpty(tablePrefix))
+			tablePrefix += ".";
+		
+		return " CASE WHEN " + tablePrefix + "debit < 0 THEN 0.00 WHEN " + tablePrefix + "credit < 0 "
+					+ "THEN " + tablePrefix + "credit * -1 ELSE " + tablePrefix + "debit END AS debit, " 
+				+ "	CASE WHEN " + tablePrefix + "credit < 0 THEN 0.00 WHEN " + tablePrefix + "debit < 0 "
+					+ "THEN " + tablePrefix + "debit * -1 ELSE " + tablePrefix + "credit END AS credit ";
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransVO> getAccountTransListGeneralLedger(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("SELECT id, dt_trans, ")
+			.append(getSwapNegativeDebitCreditCase(""))
+			.append(", destination, source, sys_cd, sys_no, sys_prefix, tax_code ")
+			.append("FROM account_trans ")
+			.append("WHERE ").append(queryWhereClauseBuilder(params, false))
+			.append("		AND status_cd = :statusCode ");
+		
+		sb = genAcctTransListFilter(sb, params);
+		
+		sb.append(" ORDER BY ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		String destination = null;
+		if (!filters.isEmpty()) {
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("destination".equals(entry.getKey())) {
+					destination = entry.getValue();
+				}
+			}
+		}
+		
+		String sortField = (String) params.get("sortField");
+		if (sortField == null) {
+			if (destination == null) sb.append("dt_trans");
+			else sb.append("case when destination like '").append(filters.get("destination")).append("%' then destination else concat('{0} ', destination) end");
+		} else {
+			if ("transDt".equals(sortField)) sb.append("dt_trans");
+			else if ("debit".equals(sortField)) sb.append("debit");
+			else if ("credit".equals(sortField)) sb.append("credit");
+			else if ("destination".equals(sortField)) sb.append("case when destination like '").append(filters.get("destination")).append("%' then destination else concat('{0} ', destination) end");
+			else if ("source".equals(sortField)) sb.append("case when source like '").append(filters.get("source")).append("%' then source else concat('{0} ', source) end");
+			else if ("taxCode".equals(sortField)) sb.append("tax_code");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query = queryParamMapping(query, params);
+		query.setFirstResult((int) params.get("first"));
+		query.setMaxResults((int) params.get("pageSize"));
+		
+		List<Object> results = query.list();
+		List<AcctTransVO> acctTransList = new ArrayList<AcctTransVO>();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			AcctTransVO vo = new AcctTransVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setTransDt((Date) row[1]);
+			vo.setDebit((Double) row[2]);
+			vo.setCredit((Double) row[3]);
+			vo.setDestination((String) row[4]);
+			vo.setSource((String) row[5]);
+			vo.setSysCode((String) row[6]);
+			vo.setSysNo((String) row[7]);
+			vo.setSysPrefix((String) row[8]);
+			vo.setTaxCode((String) row[9]);
+			acctTransList.add(vo);
+		}
+		
+		return acctTransList;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.db.bterp.dao.accttrans.AccountTransViewDAO#getAccountTransListSize(java.util.Map)
+	 */
+	@Override
+	public int getAccountTransListSize(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT count(id) ");
+		sb.append("FROM account_trans  WHERE ")
+		.append(queryWhereClauseBuilder(params, false))
+		.append("		AND status_cd = :statusCode ");
+		
+		sb = genAcctTransListFilter(sb, params);
+		
+		Query query = createSQLQuery(sb.toString());
+		query = queryParamMapping(query, params);
+		
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	@SuppressWarnings("unchecked")
+	private StringBuilder genAcctTransListFilter(StringBuilder _sb, Map<String, Object> params) {
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		
+		if (!filters.isEmpty()) {
+			_sb.append(" AND (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("transDt".equals(entry.getKey())) _sb.append("date_format(dt_trans, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("debit".equals(entry.getKey())) _sb.append("debit like '%").append(entry.getValue()).append("%'");
+				else if ("credit".equals(entry.getKey())) _sb.append("credit like '%").append(entry.getValue()).append("%'");
+				else if ("destination".equals(entry.getKey())) _sb.append("destination like '%").append(entry.getValue()).append("%'");
+				else if ("source".equals(entry.getKey())) _sb.append("source like '%").append(entry.getValue()).append("%'");
+				else if ("taxCode".equals(entry.getKey())) _sb.append("tax_code like '").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) _sb.append(" AND ");
+			}
+			_sb.append(") ");
+		}
+		return _sb;
+	}
+	
+	private String queryWhereClauseBuilder(Map<String, Object> params, boolean isAdditionalWhereClause) {
+		StringBuilder sb = new StringBuilder();
+		if(params.get("idCompany") != null)
+			sb.append(" AND id_company = :idCompany ");
+		
+		if(params.get("idAcct") != null)
+			sb.append(" AND id_acct = :idAcct ");
+		
+		if(params.get("fromDate") != null && params.get("toDate") == null) {
+			sb.append(" AND dt_trans = :fromDate ");
+			
+		} else if(params.get("fromDate") != null  && params.get("toDate") != null){
+			sb.append(" AND (dt_trans BETWEEN :fromDate AND :toDate)	");
+		}
+		
+		if(!isAdditionalWhereClause && sb.length() > 5 && sb.toString().startsWith(" AND "))
+			return sb.substring(4);
+			
+		return sb.toString();
+	}
+	
+	private Query queryParamMapping(Query _query, Map<String, Object> params) {
+		Date fromDate, toDate;
+		Long idCompany, idAcct;
+
+		idCompany = (Long) ObjectUtils.defaultIfNull(params.get("idCompany"), null);
+		idAcct = (Long) ObjectUtils.defaultIfNull(params.get("idAcct"), null);
+		fromDate = (Date) ObjectUtils.defaultIfNull(params.get("fromDate"), null);
+		toDate = (Date) ObjectUtils.defaultIfNull(params.get("toDate"), null);
+		
+		if(idCompany != null)
+			_query.setParameter("idCompany", idCompany);
+		
+		if(idAcct != null)
+			_query.setParameter("idAcct", idAcct);
+		
+		if(fromDate != null)
+			_query.setParameter("fromDate", fromDate);
+		
+		if(toDate != null)
+			_query.setParameter("toDate", toDate);
+
+		_query.setParameter("statusCode", BaseConstant.STATUS_ACTIVE);
+		return _query;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.db.bterp.dao.accttrans.AccountTransViewDAO#getGLBalanceList(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctViewVO> getGLBalanceList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		Session session = this.getSessionFactory().openSession();
+		List<AcctViewVO> acctViewList = new ArrayList<AcctViewVO>();
+		
+		if(invPrefix == null) invPrefix = LookupItemUtils.getInvPrefix(idCompany);
+		if(psPrefix == null) psPrefix = LookupItemUtils.getPsPrefix(idCompany);
+		if(cnPrefix == null) cnPrefix = LookupItemUtils.getCnPrefix(idCompany);
+		if(jrnlPrefix == null) jrnlPrefix = LookupItemUtils.getJrnlPrefix(idCompany);
+		
+		try {
+			session.getTransaction().setTimeout(360);
+			session.beginTransaction();
+			
+			StringBuilder sbCode = new StringBuilder();
+			StringBuilder sbSubCode = new StringBuilder();
+			StringBuilder sb = new StringBuilder();
+			
+			Calendar cal = null;
+			Date fromBfDate = null;
+			Date fromDate = null;
+			Date toDate = null;
+			Date finDate = null;
+			
+			sb.append("select a.dt_start from ( ").
+				append("select * from financial_period where id_company = :idCompany ").
+				append("and year = (select year from financial_period where id_company = :idCompany and (status != -1 or year = :year) group by id_company) ").
+				append("order by year, seq_no) a ").
+				append("group by year ");
+			
+			Query query = createSQLQuery(sb.toString());
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("year", searchParamVO.getObj2());
+			finDate =  (Date) query.uniqueResult();
+			
+			// Search By Date
+			//if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+			if (searchParamVO.getObj5()!=null) {
+				cal = DatesUtils.getDayTimeStart((Date) searchParamVO.getObj3());
+				cal.add(Calendar.DATE, -1);
+				fromBfDate = cal.getTime();
+				fromDate = (Date) searchParamVO.getObj3();
+				toDate = (Date) searchParamVO.getObj4();
+			} else { // Search All
+				cal = DatesUtils.getDayTimeStart((Date) searchParamVO.getFromDate());
+				cal.add(Calendar.DATE, -1);
+				fromBfDate = cal.getTime();
+				fromDate = (Date) searchParamVO.getFromDate();
+				toDate = (Date) searchParamVO.getToDate();
+			}
+			
+			sbCode.append("select a.id, a.code, a.description, ac.code as acct_cat_cd, ").
+				append("sum(ifnull(bg.begin_bal,0)), ").
+				append("sum(round(ifnull(bg.begin_bal,0) + ifnull(bf.b_bf_bal, 0),2)) as 'bf_bal', ").
+				append("sum(round(ifnull(bg.begin_bal,0) + ifnull(bc.b_bc_bal, 0),2)) as 'bc_bal' ").
+				//append("sum(ifnull(bal.debit,0)), ").
+				//append("sum(ifnull(bal.credit,0)) ").
+			append("from account a ").
+			append("left join account_cat ac on ac.id = a.id_acct_cat ").
+			append("left join ( ").
+				append("select id_acct, round(debit_begin_bal - credit_begin_bal,2) as 'begin_bal' from account_bal where dt_begin_bal = date(:finDate) "). //fromYearDate
+			append(") bg on bg.id_acct = a.id ").
+			append("left join ( ").
+				//append("select id_company, id_acct, round(sum(debit) - sum(credit),2) as 'b_bf_bal' from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:finDate) and date(:fromBfDate) group by id_acct ").
+				append("select t.id_company, t.id_acct, round(sum(t.debit) - sum(t.credit),2) as 'b_bf_bal' ").
+					append("from account_trans t ").
+					append("left join (select c.code, a.id from account a, account_cat c where a.id_company = :idCompany and a.id_acct_cat = c.id) ac on ac.id = t.id_acct ").
+				append("where t.id_company = :idCompany and t.status_cd = :statusCd and t.dt_trans between date(:finDate) and date(:fromBfDate) ").
+					append("and (case when ac.code in ('I', 'X', 'P', 'OI') then t.dt_trans >= date(:slctdFinDate) else 1=1 end) ").
+				append("group by t.id_acct ").
+			append(") bf on bf.id_acct = a.id ").
+			append("left join ( ").
+				//append("select id_company, id_acct, round(sum(debit) - sum(credit),2) as 'b_bc_bal' from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:finDate) and date(:toDate) group by id_acct ").
+				append("select t.id_company, t.id_acct, round(sum(t.debit) - sum(t.credit),2) as 'b_bc_bal' ").
+					append("from account_trans t ").
+					append("left join (select c.code, a.id from account a, account_cat c where a.id_company = :idCompany and a.id_acct_cat = c.id) ac on ac.id = t.id_acct ").
+				append("where t.id_company = :idCompany and t.status_cd = :statusCd and t.dt_trans between date(:finDate) and date(:toDate) ").
+					append("and (case when ac.code in ('I', 'X', 'P', 'OI') then t.dt_trans >= date(:slctdFinDate) else 1=1 end) ").
+				append("group by t.id_acct ").
+			append(") bc on bc.id_acct = a.id ").
+			/*append("left join ( ").
+				append("select id_company, id_acct, ").
+				append("sum(case when debit < 0 then 0.00 when credit < 0 then credit * -1 else debit end) as debit, ").
+				append("sum(case when credit < 0 then 0.00 when debit < 0 then debit * -1 else credit end) as credit ").
+				append("from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:fromDate) and date(:toDate) group by id_acct ").
+			append(") bal on bal.id_company = a.id_company and bal.id_acct = a.id ").*/
+			append("where a.id_company = :idCompany and a.status_cd = :statusCd ");
+			if (searchParamVO.getObj5()!=null) sbCode.append("and a.id = :acctId ");
+			if (searchParamVO.getObj7()!=null) sbCode.append("and a.id_acct_cat = :acctCatId ");
+			if (searchParamVO.getObj10()!=null) {
+				String assetType = (String) searchParamVO.getObj10();
+				if (StringUtils.isNotEmpty(assetType)) {
+					if (StringUtils.isNotEmpty((String) searchParamVO.getObj11())) {
+						if ("TDO".equals(assetType)) {
+							sbCode.append("and a.id in (").append(searchParamVO.getObj11().toString()).append(") ");
+						} else if ("WTD".equals(assetType)) {
+							sbCode.append("and a.id not in (").append(searchParamVO.getObj11().toString()).append(") ");
+						}
+					}
+				}
+			}
+			
+			sbCode.append("group by a.code ").
+			append("order by cast(a.code as decimal) ");
+			
+			sbSubCode.append("select a.id, a.code, a.sub_code, a.description, a.sub_description, ac.code as acct_cat_cd, ").
+				append("ifnull(bg.begin_bal,0), ").
+				append("round(ifnull(bg.begin_bal,0) + ifnull(bf.b_bf_bal, 0),2) as 'bf_bal', ").
+				append("round(ifnull(bg.begin_bal,0) + ifnull(bc.b_bc_bal, 0),2) as 'bc_bal' ").
+				//append("ifnull(bal.debit,0), ").
+				//append("ifnull(bal.credit,0) ").
+			append("from account a ").
+			append("left join account_cat ac on ac.id = a.id_acct_cat ").
+			append("left join ( ").
+				append("select id_acct, round(debit_begin_bal - credit_begin_bal,2) as 'begin_bal' from account_bal where dt_begin_bal = date(:finDate) "). //fromYearDate
+			append(") bg on bg.id_acct = a.id ").
+			append("left join ( ").
+				//append("select id_company, id_acct, round(sum(debit) - sum(credit),2) as 'b_bf_bal' from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:finDate) and date(:fromBfDate) group by id_acct ").
+				append("select t.id_company, t.id_acct, round(sum(t.debit) - sum(t.credit),2) as 'b_bf_bal' ").
+					append("from account_trans t ").
+					append("left join (select c.code, a.id from account a, account_cat c where a.id_company = :idCompany and a.id_acct_cat = c.id) ac on ac.id = t.id_acct ").
+				append("where t.id_company = :idCompany and t.status_cd = :statusCd and t.dt_trans between date(:finDate) and date(:fromBfDate) ").
+					append("and (case when ac.code in ('I', 'X', 'P', 'OI') then t.dt_trans >= date(:slctdFinDate) else 1=1 end) ").
+				append("group by t.id_acct ").
+			append(") bf on bf.id_acct = a.id ").
+			append("left join ( ").
+				//append("select id_company, id_acct, round(sum(debit) - sum(credit),2) as 'b_bc_bal' from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:finDate) and date(:toDate) group by id_acct ").
+				append("select t.id_company, t.id_acct, round(sum(t.debit) - sum(t.credit),2) as 'b_bc_bal' ").
+					append("from account_trans t ").
+					append("left join (select c.code, a.id from account a, account_cat c where a.id_company = :idCompany and a.id_acct_cat = c.id) ac on ac.id = t.id_acct ").
+				append("where t.id_company = :idCompany and t.status_cd = :statusCd and t.dt_trans between date(:finDate) and date(:toDate) ").
+					append("and (case when ac.code in ('I', 'X', 'P', 'OI') then t.dt_trans >= date(:slctdFinDate) else 1=1 end) ").
+				append("group by t.id_acct ").
+			append(") bc on bc.id_acct = a.id ").
+			/*append("left join ( ").
+				append("select id_company, id_acct, ").
+				append("sum(case when debit < 0 then 0.00 when credit < 0 then credit * -1 else debit end) as debit, ").
+				append("sum(case when credit < 0 then 0.00 when debit < 0 then debit * -1 else credit end) as credit ").
+				append("from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:fromDate) and date(:toDate) group by id_acct ").
+			append(") bal on bal.id_company = a.id_company and bal.id_acct = a.id ").*/
+			append("where a.id_company = :idCompany and a.status_cd = :statusCd ");
+			if (searchParamVO.getObj5()!=null) sbSubCode.append("and a.id = :acctId ");
+			if (searchParamVO.getObj7()!=null) sbSubCode.append("and a.id_acct_cat = :acctCatId ");
+			if (searchParamVO.getObj10()!=null) { // Trade Debtor Only or W/O Trade Debtor
+				String assetType = (String) searchParamVO.getObj10();
+				if (StringUtils.isNotEmpty(assetType)) {
+					if (StringUtils.isNotEmpty((String) searchParamVO.getObj11())) {
+						if ("TDO".equals(assetType)) {
+							sbSubCode.append("and a.id in (").append(searchParamVO.getObj11().toString()).append(") ");
+						} else if ("WTD".equals(assetType)) {
+							sbSubCode.append("and a.id not in (").append(searchParamVO.getObj11().toString()).append(") ");
+						}
+					}
+				}
+			}
+			sbSubCode.append("order by  cast(a.code as decimal), cast(a.sub_code as decimal) ");
+		
+			//Query queryCode = createSQLQuery(sbCode.toString());
+			Query queryCode = session.createSQLQuery(sbCode.toString());
+			queryCode.setParameter("idCompany", idCompany);
+			queryCode.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			if (searchParamVO.getObj5()!=null) queryCode.setParameter("acctId", searchParamVO.getObj5());
+			if (searchParamVO.getObj7()!=null) queryCode.setParameter("acctCatId", searchParamVO.getObj7());
+			queryCode.setParameter("finDate", finDate);
+			queryCode.setParameter("fromBfDate", fromBfDate);
+			//queryCode.setParameter("fromDate", fromDate);
+			queryCode.setParameter("toDate", toDate);
+			queryCode.setParameter("slctdFinDate", searchParamVO.getFromDate());
+			/*java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+			System.out.println("@@@@@@@@@@@@@@acctId : " + searchParamVO.getObj5());
+			System.out.println("@@@@@@@@@@@@@@acctCatId : " + searchParamVO.getObj7());
+			System.out.println("@@@@@@@@@@@@@@finDate : " + sdf.format(finDate));
+			System.out.println("@@@@@@@@@@@@@@fromBfDate : " + sdf.format(fromBfDate));
+			System.out.println("@@@@@@@@@@@@@@fromDate : " + sdf.format(fromDate));
+			System.out.println("@@@@@@@@@@@@@@toDate : " + sdf.format(toDate));
+			System.out.println("@@@@@@@@@@@@@@slctdFinDate : " + sdf.format(searchParamVO.getFromDate()));*/
+			
+			//Query querySubCode = createSQLQuery(sbSubCode.toString());
+			Query querySubCode = session.createSQLQuery(sbSubCode.toString());
+			querySubCode.setParameter("idCompany", idCompany);
+			querySubCode.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			if (searchParamVO.getObj5()!=null) querySubCode.setParameter("acctId", searchParamVO.getObj5());
+			if (searchParamVO.getObj7()!=null) querySubCode.setParameter("acctCatId", searchParamVO.getObj7());
+			querySubCode.setParameter("finDate", finDate);
+			querySubCode.setParameter("fromBfDate", fromBfDate);
+			//querySubCode.setParameter("fromDate", fromDate);
+			querySubCode.setParameter("toDate", toDate);
+			querySubCode.setParameter("slctdFinDate", searchParamVO.getFromDate());
+
+			List<Object> resultsSubCode = querySubCode.list();
+			List<Object> resultsCode = queryCode.list();
+			//List<AcctViewVO> acctViewList = new ArrayList<AcctViewVO>();
+			List<AcctViewVO> acctViewList2 = new ArrayList<AcctViewVO>();
+			
+			//int i = 1;
+			for (Iterator<Object> it = resultsSubCode.iterator(); it.hasNext();) {
+				Object[] row = (Object[]) it.next();
+				AcctViewVO vo = new AcctViewVO();
+				vo.setAcctBalVO(new AcctBalVO());
+				vo.setId(((BigInteger) row[0]).longValue());
+				vo.setCode((String) row[1]);
+				vo.setSubCode((String) row[2]);
+				vo.setDesc((String) row[3]);
+				vo.setSubDesc((String) row[4]);
+				vo.setAcctCatCode((String) row[5]);
+				vo.setBeginBal(Double.parseDouble(row[6].toString()));
+				vo.setBfBal(Double.parseDouble(row[7].toString()));
+				vo.setCurrBal(Double.parseDouble(row[8].toString()));
+				//vo.setTotalDebit(Double.parseDouble(row[9].toString()));
+				//vo.setTotalCredit(Double.parseDouble(row[10].toString()));
+				
+				List<AcctTransViewVO> acctTransViewList = getAcctTransViewList(idCompany, searchParamVO, vo, vo.getId(), vo.getAcctCatCode(), session);
+				vo.setAcctTransViewList(acctTransViewList);
+				acctViewList2.add(vo);
+				//i++;
+			}
+			
+			// Total No tally on account 4020 Mar 2019
+			BigDecimal totalDebit = BigDecimal.ZERO;
+			BigDecimal totalCredit = BigDecimal.ZERO;
+			for (Iterator<Object> it = resultsCode.iterator(); it.hasNext();) {
+				Object[] row = (Object[]) it.next();
+				AcctViewVO vo = new AcctViewVO();
+				vo.setAcctBalVO(new AcctBalVO());
+				vo.setId(((BigInteger) row[0]).longValue());
+				vo.setCode((String) row[1]);
+				vo.setDesc((String) row[2]);
+				vo.setAcctCatCode((String) row[3]);
+				
+				vo.setBeginBal(Double.parseDouble(row[4].toString()));
+				vo.setBfBal(Double.parseDouble(row[5].toString()));
+				vo.setCurrBal(Double.parseDouble(row[6].toString()));
+				
+				//vo.setTotalDebit(Double.parseDouble(row[7].toString()));
+				//vo.setTotalCredit(Double.parseDouble(row[8].toString()));
+				
+				vo.setAcctViewList(new ArrayList<AcctViewVO>());
+				totalDebit = BigDecimal.ZERO;
+				totalCredit = BigDecimal.ZERO;
+				for (AcctViewVO voSub : acctViewList2) {
+					if (vo.getCode().equals(voSub.getCode())) {
+						vo.getAcctViewList().add(voSub);
+						totalDebit = totalDebit.add(new BigDecimal(String.valueOf(voSub.getTotalDebit())));
+						totalCredit = totalCredit.add(new BigDecimal(String.valueOf(voSub.getTotalCredit())));
+					}
+				}
+				vo.setTotalDebit(totalDebit.doubleValue());
+				vo.setTotalCredit(totalCredit.doubleValue());
+				
+				acctViewList.add(vo);
+			}
+			session.getTransaction().commit();
+			
+			System.out.println("CYY totalCredit: " + totalCredit);
+			System.out.println("CYY totalDedit: " + totalDebit);
+			
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+			
+		} finally {
+			session.close();
+		}
+		return acctViewList;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.db.bterp.dao.accttrans.AccountTransDAO#getAcctTransViewList(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO, com.bcs.zsg.acct.vo.AcctViewVO, java.lang.Long, java.lang.String, org.hibernate.Session)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransViewVO> getAcctTransViewList(Long idCompany, SearchParamVO searchParamVO, AcctViewVO acctViewVO, Long acctId, String acctCatCd, Session session) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		long start = System.currentTimeMillis();
+		boolean isShowQty = (boolean) searchParamVO.getObj8();
+		String showColumnType = (String) searchParamVO.getObj9();
+		//String strLogs = "";
+		if (acctCatCd.equals("I") && (((boolean) searchParamVO.getObj6()) != true)) {
+			sb.append("select a.id, a.dt_trans, a.source, a.destination, ").
+				append("case when (sum(a.debit) - sum(a.credit)) < 0 then 0.00 else (sum(a.debit) - sum(a.credit)) end as 'debit', ").
+				append("case when (sum(a.debit) - sum(a.credit)) < 0 then (sum(a.debit) - sum(a.credit)) * -1 else 0.00 end as 'credit', ").
+				append("(select y.code ").
+					append("from account_trans x left join account y on x.id_acct = y.id ").
+					append("where x.id_company = :idCompany and x.status_cd = :statusCd ");
+						if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+							sb.append("and x.dt_trans between date(:fromDate) and date(:toDate) ");
+						}
+						sb.append("and x.id_acct != :acctId ").
+						append("and x.sys_cd = a.sys_cd and x.sys_no = a.sys_no ").
+					append("limit 1 ").
+				append(") as 'postCode', ").
+				append("c.prefix_id, a.sys_cd, a.sys_no, ").
+				append("a.sys_no as bp_code ").
+				append(", a.tax_code ");
+			if (StringUtils.isNotEmpty(showColumnType) && "TC".equals(showColumnType)) {
+				sb.append(", tdp.code as description ");
+			} else {
+				sb.append(", a.description ");
+			}		
+			if (isShowQty) {
+				sb.append(", i.quantity ");
+			} else {
+				sb.append(", 0 as quantity ");
+			}
+			sb.append(", ex3.invoices ");
+			if (StringUtils.isNotEmpty(showColumnType) && "RV".equals(showColumnType)) {
+				sb.append(", concat('" + jrnlPrefix + " ', COALESCE(j1.sys_no, j2.sys_no, j3.sys_no)) AS jrnl_no ");
+				sb.append(", concat('" + invPrefix + " ', COALESCE(jrnl_inv.code, inv_iv.code, inv_ps.code)) AS inv_no ");
+				sb.append(", concat('" + psPrefix + " ', COALESCE(jrnl_inv.ps_no, inv_iv.ps_no, inv_ps.ps_no)) AS ps_no ");
+			}
+			
+			sb.append("from account_trans a left join sys_num_conf c on c.id_company = :idCompany and a.sys_cd = c.code ");
+			if (StringUtils.isNotEmpty(showColumnType) && "TC".equals(showColumnType)) {
+//				sb.append("left join invoice iv on iv.id_company = :idCompany and iv.id_tour_dep is not null and case when iv.doc_type_cd = 'C' then a.sys_cd = 'crdt_note' else a.sys_cd = 'invc' end and a.sys_no = iv.code ").
+				sb.append("left join invoice iv on iv.id_company = :idCompany and iv.id_tour_dep is not null ").
+						append("and case when iv.doc_type_cd = 'C' then a.sys_cd = 'crdt_note' ").
+						append("when iv.doc_type_cd = 'P' then a.sys_cd = 'pax_statement' ").
+						append("else a.sys_cd = 'invc' end and a.sys_no = iv.code ").
+//						append("and a.sys_no = if(a.sys_cd = 'pax_statement', iv.ps_no, iv.code) ").
+					append("left join invoice psiv on psiv.id_company = :idCompany and psiv.id_tour_dep is not null and psiv.doc_type_cd = 'P' ").
+						append("	and a.sys_cd = 'pax_statement' and a.sys_no = psiv.ps_no ").
+					append("left join ( ").
+					append("	select c.code as invoiceno, i.id_tour_dep from invoice c ").
+					append("	left join invoice i on i.id_company = :idCompany and i.doc_type_cd = 'I' and c.cn_inv_no = i.code ").
+					append("	where c.id_company = :idCompany and c.doc_type_cd = 'C' and ifnull(c.cn_inv_no, '') != '' ").
+					append(") cn on a.sys_cd = 'crdt_note' and a.sys_no = cn.invoiceno ").
+					append("left join ( ").
+					append("	select c.sys_cd, c.sys_no, c.id_tour_dep from cash_book c, bank b ").
+					append("	where c.id_bank = b.id and b.id_company = :idCompany and c.id_tour_dep is not null and (c.sys_cd = 'bank_adjm' or c.sys_cd = 'rfnd') ").
+					append(") cb on cb.sys_cd = a.sys_cd and cb.sys_no = a.sys_no ").
+					append("left join journal jnl on jnl.id_company = :idCompany and jnl.id_tour_dep is not null and a.sys_cd = 'jrnl' and a.sys_no = jnl.sys_no ").
+					append("left join ex_order_bill ex on ex.id_company = :idCompany and ex.id_tour_dep is not null and a.sys_cd = 'purc_bill' and a.sys_no = ex.code ").
+					append("left join tour_dep tdp on tdp.id = case ").
+					append("when a.sys_cd = 'invc' then iv.id_tour_dep ").
+					append("when a.sys_cd = 'pax_statement' then psiv.id_tour_dep ").
+					append("when a.sys_cd = 'crdt_note' then cn.id_tour_dep ").
+					append("when a.sys_cd = 'bank_adjm' or a.sys_cd = 'rfnd' then cb.id_tour_dep ").
+					append("when a.sys_cd = 'jrnl' then jnl.id_tour_dep ").
+					append("when a.sys_cd = 'purc_bill' then ex.id_tour_dep end ");
+			}
+			if (StringUtils.isNotEmpty(showColumnType) && "RV".equals(showColumnType)) {
+				sb.append("left join journal j1 on j1.id_company = :idCompany and j1.id_inv is not null and  a.sys_cd = 'jrnl' AND a.sys_no = j1.sys_no ").
+				append("left join invoice jrnl_inv on jrnl_inv.doc_type_cd = 'I' and jrnl_inv.id = j1.id_inv ").
+				append("left join invoice inv_iv on inv_iv.id_company = :idCompany and inv_iv.doc_type_cd = 'I' and a.sys_cd = 'invc' AND a.sys_no = inv_iv.code ").
+				append("left join journal j2 on j2.id_inv is not null and inv_iv.id = j2.id_inv ").
+				append("left join invoice inv_ps on inv_ps.id_company = :idCompany and inv_ps.doc_type_cd = 'P' and a.sys_cd = 'pax_statement' AND a.sys_no = inv_ps.ps_no ").
+				append("left join journal j3 on inv_ps.id = j3.id_ps and j3.id_inv is not null ");
+			}
+			if (isShowQty) {
+				sb.append("left join invoice_item i on a.sys_cd = 'invc' and a.sys_no != a.ref_no and ifnull(a.ref_no, '') != '' and a.ref_no = i.id and i.status_cd = 'A' ");
+			}
+			sb.append("left join (select cb.sys_no, cb.invoices ").
+				append("from cash_book cb, bank b ").
+				append("where b.id = cb.id_bank and cb.sys_cd = 'bank_deps' and cb.status_cd = :statusCd and b.id_company = :idCompany ").
+			append(") ex3 on a.sys_cd = 'bank_deps' and a.sys_no = ex3.sys_no ");
+				sb.append(", account b ").
+			append("where a.id_company = b.id_company and a.id_acct = b.id and b.id_acct_cat = 4 and ").
+			append("a.id_company = :idCompany and ").
+			append("a.status_cd = :statusCd and ").
+			append("b.status_cd = :statusCd and ").
+			append("a.id_acct = :acctId ");
+			//append("and date(a.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+			if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+				sb.append("and a.dt_trans between date(:fromDate) and date(:toDate) ");
+			}
+			sb.append("group by a.id_acct, a.sys_cd, a.sys_no ");
+			sb.append("order by a.dt_trans ");
+		} else {
+			/*sb.append("select a.id, a.dt_trans, a.source, a.destination, ").
+				append("case when a.debit < 0 then 0.00 when a.credit < 0 then a.credit * -1 else a.debit end as debit, ").
+				append("case when a.credit < 0 then 0.00 when a.debit < 0 then a.debit * -1 else a.credit end as credit, ").
+				append("(select trans.code ").
+				append("from ( ").
+					append("select x.id, x.id_acct, x.sys_cd, x.sys_no, y.code ").
+					append("from account_trans x left join account y on x.id_acct = y.id ").
+					append("where x.id_company = :idCompany and x.status_cd = :statusCd ").
+						append("and date(x.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+					if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+						sb.append("and date(x.dt_trans) between date(:fromDate) and date(:toDate) ");
+					}
+						sb.append("and x.id_acct != :acctId ").
+					append("group by sys_cd, sys_no ").
+					append(") trans ").
+				append("where trans.sys_cd = a.sys_cd and trans.sys_no = a.sys_no ").
+				append("limit 1 ").
+				append(") as 'postCode', ").
+				append("b.prefix_id, a.sys_cd, a.sys_no, ").
+				append("if(ex.bp_code is null, a.sys_no, concat(a.sys_no,' (', ex.bp_code, ')')) as bp_code ").
+			append("from account_trans a left join sys_num_conf b on b.id_company = :idCompany and a.sys_cd = b.code ").
+			append("left join (select b.code as sys_no, group_concat(bp.code) as bp_code ").
+				append("from ex_order_bill b, ex_order_bill_pmnt bp ").
+				append("where b.id = bp.id_eo_bill and bp.status_cd = 'A' and b.id_company = 1 and b.status_cd not in ('CC', 'VD') ").
+				append("group by b.id) ex on a.sys_cd = 'purc_bill' and a.sys_no = ex.sys_no ").
+			append("where a.id_company = :idCompany and ").
+			append("a.status_cd = :statusCd and ").
+			append("a.id_acct = :acctId ").
+			append("and date(a.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+			if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+				sb.append("and date(a.dt_trans) between date(:fromDate) and date(:toDate) ");
+			}
+			sb.append("order by a.dt_trans ");*/
+			sb.append("select a.id, a.dt_trans, a.source, a.destination, ").
+				append("case when a.debit < 0 then 0.00 when a.credit < 0 then a.credit * -1 else a.debit end as debit, ").
+				append("case when a.credit < 0 then 0.00 when a.debit < 0 then a.debit * -1 else a.credit end as credit, ").
+				append("(select y.code ").
+					append("from account_trans x left join account y on x.id_acct = y.id ").
+					append("where x.id_company = :idCompany and x.status_cd = :statusCd ");
+						if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+							sb.append("and x.dt_trans between date(:fromDate) and date(:toDate) ");
+						}
+						sb.append("and x.id_acct != :acctId ").
+						append("and x.sys_cd = a.sys_cd and x.sys_no = a.sys_no ").
+					append("limit 1 ").
+				append(") as 'postCode', ").
+				
+				
+				append("b.prefix_id, a.sys_cd, a.sys_no, ").
+				append("case ").
+					append("when a.sys_cd = 'purc_bill' then ").
+						append("if(ex1.bp_code is null, a.sys_no, concat(a.sys_no,' (', ex1.bp_code, ')')) ").
+					append("when a.sys_cd = 'bank_pmnt' then ").
+						append("if(ex2.pb_code is null, a.sys_no, concat(a.sys_no,' (', ex2.pb_code, ')')) ").
+					append("else ").
+						append("a.sys_no ").
+				append("end as pb_code ").
+				append(", a.tax_code ");
+			if (StringUtils.isNotEmpty(showColumnType) && "TC".equals(showColumnType)) {
+				sb.append(", tdp.code as description ");
+			} else {
+				sb.append(", a.description ");
+			}
+			if (isShowQty) {
+				sb.append(", i.quantity ");
+			} else {
+				sb.append(", 0 as quantity ");
+			}
+			sb.append(", ex3.invoices ");
+			if (StringUtils.isNotEmpty(showColumnType) && "RV".equals(showColumnType)) {
+				sb.append(", concat('" + jrnlPrefix + " ', COALESCE(j1.sys_no, j2.sys_no, j3.sys_no)) AS jrnl_no ");
+				sb.append(", concat('" + invPrefix + " ', COALESCE(jrnl_inv.code, inv_iv.code, inv_ps.code)) AS inv_no ");
+				sb.append(", concat('" + psPrefix + " ', COALESCE(jrnl_inv.ps_no, inv_iv.ps_no, inv_ps.ps_no)) AS ps_no ");
+			}
+			sb.append("from account_trans a left join sys_num_conf b on b.id_company = :idCompany and a.sys_cd = b.code ");
+			if (StringUtils.isNotEmpty(showColumnType) && "TC".equals(showColumnType)) {
+//				sb.append("left join invoice iv on iv.id_company = :idCompany and iv.id_tour_dep is not null and case when iv.doc_type_cd = 'C' then a.sys_cd = 'crdt_note' else a.sys_cd = 'invc' end and a.sys_no = iv.code ").
+				sb.append("left join invoice iv on iv.id_company = :idCompany and iv.id_tour_dep is not null ").
+					append("and case when iv.doc_type_cd = 'C' then a.sys_cd = 'crdt_note' ").
+					append("when iv.doc_type_cd = 'P' then a.sys_cd = 'pax_statement' ").
+					append("else a.sys_cd = 'invc' end and a.sys_no = iv.code ").
+//					append("and a.sys_no = if(a.sys_cd = 'pax_statement', iv.ps_no, iv.code) ").
+					append("left join invoice psiv on psiv.id_company = :idCompany and psiv.id_tour_dep is not null and psiv.doc_type_cd = 'P' ").
+					append("	and a.sys_cd = 'pax_statement' and a.sys_no = psiv.ps_no ").
+					append("left join ( ").
+					append("	select c.code as invoiceno, i.id_tour_dep from invoice c ").
+					append("	left join invoice i on i.id_company = :idCompany and i.doc_type_cd = 'I' and c.cn_inv_no = i.code ").
+					append("	where c.id_company = :idCompany and c.doc_type_cd = 'C' and ifnull(c.cn_inv_no, '') != '' ").
+					append(") cn on a.sys_cd = 'crdt_note' and a.sys_no = cn.invoiceno ").
+					append("left join ( ").
+					append("	select c.sys_cd, c.sys_no, c.id_tour_dep from cash_book c, bank b ").
+					append("	where c.id_bank = b.id and b.id_company = :idCompany and c.id_tour_dep is not null and (c.sys_cd = 'bank_adjm' or c.sys_cd = 'rfnd') ").
+					append(") cb on cb.sys_cd = a.sys_cd and cb.sys_no = a.sys_no ").
+					append("left join journal jnl on jnl.id_company = :idCompany and jnl.id_tour_dep is not null and a.sys_cd = 'jrnl' and a.sys_no = jnl.sys_no ").
+					append("left join ex_order_bill ex on ex.id_company = :idCompany and ex.id_tour_dep is not null and a.sys_cd = 'purc_bill' and a.sys_no = ex.code ").
+					append("left join tour_dep tdp on tdp.id = case ").
+					append("when a.sys_cd = 'invc' then iv.id_tour_dep ").
+					append("when a.sys_cd = 'pax_statement' then psiv.id_tour_dep ").
+					append("when a.sys_cd = 'crdt_note' then cn.id_tour_dep ").
+					append("when a.sys_cd = 'bank_adjm' or a.sys_cd = 'rfnd' then cb.id_tour_dep ").
+					append("when a.sys_cd = 'jrnl' then jnl.id_tour_dep ").
+					append("when a.sys_cd = 'purc_bill' then ex.id_tour_dep end ");
+			}
+			if (StringUtils.isNotEmpty(showColumnType) && "RV".equals(showColumnType)) {
+				sb.append("left join journal j1 on j1.id_company = :idCompany and j1.id_inv is not null and  a.sys_cd = 'jrnl' AND a.sys_no = j1.sys_no ").
+				append("left join invoice jrnl_inv on jrnl_inv.doc_type_cd = 'I' and jrnl_inv.id = j1.id_inv ").
+				append("left join invoice inv_iv on inv_iv.id_company = :idCompany and inv_iv.doc_type_cd = 'I' and a.sys_cd = 'invc' AND a.sys_no = inv_iv.code ").
+				append("left join journal j2 on j2.id_inv is not null and inv_iv.id = j2.id_inv ").
+				append("left join invoice inv_ps on inv_ps.id_company = :idCompany and inv_ps.doc_type_cd = 'P' and a.sys_cd = 'pax_statement' AND a.sys_no = inv_ps.ps_no ").
+				append("left join journal j3 on inv_ps.id = j3.id_ps and j3.id_inv is not null ");
+			}
+			if (isShowQty) {
+				sb.append("left join invoice_item i on a.sys_cd = 'invc' and a.sys_no != a.ref_no and ifnull(a.ref_no, '') != '' and a.ref_no = i.id and i.status_cd = 'A' ");
+			}
+			sb.append("left join (select b.code as sys_no, group_concat(bp.code separator ', ') as bp_code ").
+				append("from ex_order_bill b, ex_order_bill_pmnt bp ").
+				append("where b.id = bp.id_eo_bill and bp.status_cd = :statusCd and b.id_company = :idCompany and b.status_cd not in ('CC', 'VD') ").
+				append("group by b.id) ex1 on a.sys_cd = 'purc_bill' and a.sys_no = ex1.sys_no ").
+			append("left join (select group_concat(b.code separator ', ') as pb_code, bp.code as sys_no ").
+				append("from ex_order_bill b, ex_order_bill_pmnt bp ").
+				append("where b.id = bp.id_eo_bill and bp.status_cd = :statusCd and b.id_company = :idCompany and b.status_cd not in ('CC', 'VD') ").
+				append("group by bp.code) ex2 on a.sys_cd = 'bank_pmnt' and a.sys_no = ex2.sys_no ").
+			append("left join (select cb.sys_no, cb.invoices ").
+				append("from cash_book cb, bank b ").
+				append("where b.id = cb.id_bank and cb.sys_cd = 'bank_deps' and cb.status_cd = :statusCd and b.id_company = :idCompany ").
+			append(") ex3 on a.sys_cd = 'bank_deps' and a.sys_no = ex3.sys_no ").
+			append("where a.id_company = :idCompany and ").
+			append("a.status_cd = :statusCd and ").
+			append("a.id_acct = :acctId ");
+			//append("and date(a.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+			if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+				sb.append("and a.dt_trans between date(:fromDate) and date(:toDate) ");
+			}
+			sb.append("order by a.dt_trans ");
+		}
+		
+		//Query query = createSQLQuery(sb.toString());
+		Query query = session.createSQLQuery(sb.toString());
+		if (acctId == 3) {
+			query.setTimeout(240);
+		}
+		query.setParameter("idCompany", idCompany);
+		query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+		query.setParameter("acctId", acctId);
+		//query.setParameter("fromYearDate", searchParamVO.getFromDate());
+		//query.setParameter("toYearDate", searchParamVO.getToDate());
+		if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+			query.setParameter("fromDate", (Date) searchParamVO.getObj3());
+			query.setParameter("toDate", (Date) searchParamVO.getObj4());
+		}
+		
+		List<Object> results = query.list();
+		List<AcctTransViewVO> acctTransViewList = new ArrayList<AcctTransViewVO>();
+		
+		BigDecimal reducingBal = new BigDecimal(String.valueOf(acctViewVO.getBfBal()));
+		
+		//strLogs = "#################Acct Cd: " + acctViewVO.getCode() + "-" + acctViewVO.getSubCode() + " Acct Id: " + acctId +  " Speed: " + (System.currentTimeMillis() - start);
+		//System.out.println(strLogs);
+		
+		// Total No tally on account 4020 Mar 2019
+		BigDecimal totalDebit = BigDecimal.ZERO;
+		BigDecimal totalCredit = BigDecimal.ZERO;
+		
+		for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+			Object[] row = (Object[]) it.next();
+			AcctTransViewVO vo = new AcctTransViewVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setTransDt((Date) row[1]);
+			vo.setSource((String) row[2]);
+			vo.setDestination((String) row[3]);
+			vo.setDebit(Double.parseDouble(row[4].toString()));
+			vo.setCredit(Double.parseDouble(row[5].toString()));
+			vo.setCode((String) row[6]);
+			vo.setSysPrefix((String) row[7]);
+			vo.setSysCode((String) row[8]);
+			vo.setSysNo((String) row[10]);
+			vo.setTaxCode((String) row[11]);
+			vo.setDesc((String) row[12]);
+			if (row[13] != null) vo.setQty(Integer.parseInt(row[13].toString())); else vo.setQty(0);
+			vo.setInvoiceNo((String) row[14]);
+			if (row.length > 15 && row[15] != null) vo.setJrnlNo((String) row[15]);
+			if (row.length > 16 && row[15] != null && row[16] != null) vo.setInvNo((String) row[16]);
+			if (row.length > 17 && row[17] != null) vo.setPsNo((String) row[17]);
+			
+			reducingBal = reducingBal.add(new BigDecimal(String.valueOf(vo.getDebit())));
+			reducingBal = reducingBal.subtract(new BigDecimal(String.valueOf(vo.getCredit())));
+			vo.setReducingBal(reducingBal.doubleValue());
+			
+			totalDebit = totalDebit.add(new BigDecimal(String.valueOf(vo.getDebit())));
+			totalCredit = totalCredit.add(new BigDecimal(String.valueOf(vo.getCredit())));
+			
+			acctTransViewList.add(vo);
+		}
+		acctViewVO.setTotalDebit(totalDebit.doubleValue());
+		acctViewVO.setTotalCredit(totalCredit.doubleValue());
+		
+		return acctTransViewList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctViewVO> getGLBalanceSmmyExtdList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		Session session = this.getSessionFactory().openSession();
+		List<AcctViewVO> acctViewList = new ArrayList<AcctViewVO>();
+		
+		try {
+			session.getTransaction().setTimeout(360);
+			session.beginTransaction();
+			
+			StringBuilder sbCode = new StringBuilder();
+			StringBuilder sbSubCode = new StringBuilder();
+			StringBuilder sb = new StringBuilder();
+			
+			Calendar cal = null;
+			Date fromBfDate = null;
+			Date fromDate = null;
+			Date toDate = null;
+			Date finDate = null;
+			
+			sb.append("select a.dt_start from ( ").
+				append("select * from financial_period where id_company = :idCompany ").
+				append("and year = (select year from financial_period where id_company = :idCompany and (status != -1 or year = :year) group by id_company) ").
+				append("order by year, seq_no) a ").
+				append("group by year ");
+			
+			Query query = createSQLQuery(sb.toString());
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("year", searchParamVO.getObj2());
+			finDate =  (Date) query.uniqueResult();
+			
+			// Search By Date
+			//if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+			if (searchParamVO.getObj5()!=null) {
+				cal = DatesUtils.getDayTimeStart((Date) searchParamVO.getObj3());
+				cal.add(Calendar.DATE, -1);
+				fromBfDate = cal.getTime();
+				fromDate = (Date) searchParamVO.getObj3();
+				toDate = (Date) searchParamVO.getObj4();
+			} else { // Search All
+				cal = DatesUtils.getDayTimeStart((Date) searchParamVO.getFromDate());
+				cal.add(Calendar.DATE, -1);
+				fromBfDate = cal.getTime();
+				fromDate = (Date) searchParamVO.getFromDate();
+				toDate = (Date) searchParamVO.getToDate();
+			}
+			
+			sbCode.append("select a.id, a.code, a.description, ac.code as acct_cat_cd, ").
+				append("sum(ifnull(bg.begin_bal,0)), ").
+				append("sum(round(ifnull(bg.begin_bal,0) + ifnull(bf.b_bf_bal, 0),2)) as 'bf_bal', ").
+				append("sum(round(ifnull(bg.begin_bal,0) + ifnull(bc.b_bc_bal, 0),2)) as 'bc_bal' ").
+				//append("sum(ifnull(bal.debit,0)), ").
+				//append("sum(ifnull(bal.credit,0)) ").
+			append("from account a ").
+			append("left join account_cat ac on ac.id = a.id_acct_cat ").
+			append("left join ( ").
+				append("select id_acct, round(debit_begin_bal - credit_begin_bal,2) as 'begin_bal' from account_bal where date(dt_begin_bal) = date(:finDate) "). //fromYearDate
+			append(") bg on bg.id_acct = a.id ").
+			append("left join ( ").
+				//append("select id_company, id_acct, round(sum(debit) - sum(credit),2) as 'b_bf_bal' from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:finDate) and date(:fromBfDate) group by id_acct ").
+				append("select t.id_company, t.id_acct, round(sum(t.debit) - sum(t.credit),2) as 'b_bf_bal' ").
+					append("from account_trans t ").
+					append("left join (select c.code, a.id from account a, account_cat c where a.id_company = :idCompany and a.id_acct_cat = c.id) ac on ac.id = t.id_acct ").
+				append("where t.id_company = :idCompany and t.status_cd = :statusCd and date(t.dt_trans) between date(:finDate) and date(:fromBfDate) ").
+					append("and (case when ac.code in ('I', 'X', 'P', 'OI') then date(t.dt_trans) >= date(:slctdFinDate) else 1=1 end) ").
+				append("group by t.id_acct ").
+			append(") bf on bf.id_acct = a.id ").
+			append("left join ( ").
+				//append("select id_company, id_acct, round(sum(debit) - sum(credit),2) as 'b_bc_bal' from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:finDate) and date(:toDate) group by id_acct ").
+				append("select t.id_company, t.id_acct, round(sum(t.debit) - sum(t.credit),2) as 'b_bc_bal' ").
+					append("from account_trans t ").
+					append("left join (select c.code, a.id from account a, account_cat c where a.id_company = :idCompany and a.id_acct_cat = c.id) ac on ac.id = t.id_acct ").
+				append("where t.id_company = :idCompany and t.status_cd = :statusCd and date(t.dt_trans) between date(:finDate) and date(:toDate) ").
+					append("and (case when ac.code in ('I', 'X', 'P', 'OI') then date(t.dt_trans) >= date(:slctdFinDate) else 1=1 end) ").
+				append("group by t.id_acct ").
+			append(") bc on bc.id_acct = a.id ").
+			/*append("left join ( ").
+				append("select id_company, id_acct, ").
+				append("sum(case when debit < 0 then 0.00 when credit < 0 then credit * -1 else debit end) as debit, ").
+				append("sum(case when credit < 0 then 0.00 when debit < 0 then debit * -1 else credit end) as credit ").
+				append("from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:fromDate) and date(:toDate) group by id_acct ").
+			append(") bal on bal.id_company = a.id_company and bal.id_acct = a.id ").*/
+			append("where a.id_company = :idCompany and a.status_cd = :statusCd ");
+			if (searchParamVO.getObj5()!=null) sbCode.append("and a.id = :acctId ");
+			if (searchParamVO.getObj7()!=null) sbCode.append("and a.id_acct_cat = :acctCatId ");
+			
+			sbCode.append("group by a.code ").
+			append("order by cast(a.code as decimal) ");
+			
+			sbSubCode.append("select a.id, a.code, a.sub_code, a.description, a.sub_description, ac.code as acct_cat_cd, ").
+				append("ifnull(bg.begin_bal,0), ").
+				append("round(ifnull(bg.begin_bal,0) + ifnull(bf.b_bf_bal, 0),2) as 'bf_bal', ").
+				append("round(ifnull(bg.begin_bal,0) + ifnull(bc.b_bc_bal, 0),2) as 'bc_bal' ").
+				//append("ifnull(bal.debit,0), ").
+				//append("ifnull(bal.credit,0) ").
+			append("from account a ").
+			append("left join account_cat ac on ac.id = a.id_acct_cat ").
+			append("left join ( ").
+				append("select id_acct, round(debit_begin_bal - credit_begin_bal,2) as 'begin_bal' from account_bal where date(dt_begin_bal) = date(:finDate) "). //fromYearDate
+			append(") bg on bg.id_acct = a.id ").
+			append("left join ( ").
+				//append("select id_company, id_acct, round(sum(debit) - sum(credit),2) as 'b_bf_bal' from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:finDate) and date(:fromBfDate) group by id_acct ").
+				append("select t.id_company, t.id_acct, round(sum(t.debit) - sum(t.credit),2) as 'b_bf_bal' ").
+					append("from account_trans t ").
+					append("left join (select c.code, a.id from account a, account_cat c where a.id_company = :idCompany and a.id_acct_cat = c.id) ac on ac.id = t.id_acct ").
+				append("where t.id_company = :idCompany and t.status_cd = :statusCd and date(t.dt_trans) between date(:finDate) and date(:fromBfDate) ").
+					append("and (case when ac.code in ('I', 'X', 'P', 'OI') then date(t.dt_trans) >= date(:slctdFinDate) else 1=1 end) ").
+				append("group by t.id_acct ").
+			append(") bf on bf.id_acct = a.id ").
+			append("left join ( ").
+				//append("select id_company, id_acct, round(sum(debit) - sum(credit),2) as 'b_bc_bal' from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:finDate) and date(:toDate) group by id_acct ").
+				append("select t.id_company, t.id_acct, round(sum(t.debit) - sum(t.credit),2) as 'b_bc_bal' ").
+					append("from account_trans t ").
+					append("left join (select c.code, a.id from account a, account_cat c where a.id_company = :idCompany and a.id_acct_cat = c.id) ac on ac.id = t.id_acct ").
+				append("where t.id_company = :idCompany and t.status_cd = :statusCd and date(t.dt_trans) between date(:finDate) and date(:toDate) ").
+					append("and (case when ac.code in ('I', 'X', 'P', 'OI') then date(t.dt_trans) >= date(:slctdFinDate) else 1=1 end) ").
+				append("group by t.id_acct ").
+			append(") bc on bc.id_acct = a.id ").
+			/*append("left join ( ").
+				append("select id_company, id_acct, ").
+				append("sum(case when debit < 0 then 0.00 when credit < 0 then credit * -1 else debit end) as debit, ").
+				append("sum(case when credit < 0 then 0.00 when debit < 0 then debit * -1 else credit end) as credit ").
+				append("from account_trans where id_company = :idCompany and status_cd = 'A' and date(dt_trans) between date(:fromDate) and date(:toDate) group by id_acct ").
+			append(") bal on bal.id_company = a.id_company and bal.id_acct = a.id ").*/
+			append("where a.id_company = :idCompany and a.status_cd = :statusCd ");
+			if (searchParamVO.getObj5()!=null) sbSubCode.append("and a.id = :acctId ");
+			if (searchParamVO.getObj7()!=null) sbSubCode.append("and a.id_acct_cat = :acctCatId ");
+			sbSubCode.append("order by  cast(a.code as decimal),  cast(a.sub_code as decimal) ");
+		
+			//Query queryCode = createSQLQuery(sbCode.toString());
+			Query queryCode = session.createSQLQuery(sbCode.toString());
+			queryCode.setParameter("idCompany", idCompany);
+			queryCode.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			if (searchParamVO.getObj5()!=null) queryCode.setParameter("acctId", searchParamVO.getObj5());
+			if (searchParamVO.getObj7()!=null) queryCode.setParameter("acctCatId", searchParamVO.getObj7());
+			queryCode.setParameter("finDate", finDate);
+			queryCode.setParameter("fromBfDate", fromBfDate);
+			//queryCode.setParameter("fromDate", fromDate);
+			queryCode.setParameter("toDate", toDate);
+			queryCode.setParameter("slctdFinDate", searchParamVO.getFromDate());
+			/*java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+			System.out.println("@@@@@@@@@@@@@@acctId : " + searchParamVO.getObj5());
+			System.out.println("@@@@@@@@@@@@@@acctCatId : " + searchParamVO.getObj7());
+			System.out.println("@@@@@@@@@@@@@@finDate : " + sdf.format(finDate));
+			System.out.println("@@@@@@@@@@@@@@fromBfDate : " + sdf.format(fromBfDate));
+			System.out.println("@@@@@@@@@@@@@@fromDate : " + sdf.format(fromDate));
+			System.out.println("@@@@@@@@@@@@@@toDate : " + sdf.format(toDate));
+			System.out.println("@@@@@@@@@@@@@@slctdFinDate : " + sdf.format(searchParamVO.getFromDate()));*/
+			
+			//Query querySubCode = createSQLQuery(sbSubCode.toString());
+			Query querySubCode = session.createSQLQuery(sbSubCode.toString());
+			querySubCode.setParameter("idCompany", idCompany);
+			querySubCode.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			if (searchParamVO.getObj5()!=null) querySubCode.setParameter("acctId", searchParamVO.getObj5());
+			if (searchParamVO.getObj7()!=null) querySubCode.setParameter("acctCatId", searchParamVO.getObj7());
+			querySubCode.setParameter("finDate", finDate);
+			querySubCode.setParameter("fromBfDate", fromBfDate);
+			//querySubCode.setParameter("fromDate", fromDate);
+			querySubCode.setParameter("toDate", toDate);
+			querySubCode.setParameter("slctdFinDate", searchParamVO.getFromDate());
+
+			List<Object> resultsSubCode = querySubCode.list();
+			List<Object> resultsCode = queryCode.list();
+			//List<AcctViewVO> acctViewList = new ArrayList<AcctViewVO>();
+			List<AcctViewVO> acctViewList2 = new ArrayList<AcctViewVO>();
+			
+			//int i = 1;
+			for (Iterator<Object> it = resultsSubCode.iterator(); it.hasNext();) {
+				Object[] row = (Object[]) it.next();
+				AcctViewVO vo = new AcctViewVO();
+				vo.setAcctBalVO(new AcctBalVO());
+				vo.setId(((BigInteger) row[0]).longValue());
+				vo.setCode((String) row[1]);
+				vo.setSubCode((String) row[2]);
+				vo.setDesc((String) row[3]);
+				vo.setSubDesc((String) row[4]);
+				vo.setAcctCatCode((String) row[5]);
+				vo.setBeginBal(Double.parseDouble(row[6].toString()));
+				vo.setBfBal(Double.parseDouble(row[7].toString()));
+				vo.setCurrBal(Double.parseDouble(row[8].toString()));
+				//vo.setTotalDebit(Double.parseDouble(row[9].toString()));
+				//vo.setTotalCredit(Double.parseDouble(row[10].toString()));
+				
+				List<AcctTransViewVO> acctTransViewList = getAcctTransViewSmmyExtdList(idCompany, searchParamVO, vo, vo.getId(), vo.getAcctCatCode(), session);
+				vo.setAcctTransViewList(acctTransViewList);
+				acctViewList2.add(vo);
+				//i++;
+			}
+			
+			// Total No tally on account 4020 Mar 2019
+			BigDecimal totalDebit = BigDecimal.ZERO;
+			BigDecimal totalCredit = BigDecimal.ZERO;
+			for (Iterator<Object> it = resultsCode.iterator(); it.hasNext();) {
+				Object[] row = (Object[]) it.next();
+				AcctViewVO vo = new AcctViewVO();
+				vo.setAcctBalVO(new AcctBalVO());
+				vo.setId(((BigInteger) row[0]).longValue());
+				vo.setCode((String) row[1]);
+				vo.setDesc((String) row[2]);
+				vo.setAcctCatCode((String) row[3]);
+				
+				vo.setBeginBal(Double.parseDouble(row[4].toString()));
+				vo.setBfBal(Double.parseDouble(row[5].toString()));
+				vo.setCurrBal(Double.parseDouble(row[6].toString()));
+				
+				//vo.setTotalDebit(Double.parseDouble(row[7].toString()));
+				//vo.setTotalCredit(Double.parseDouble(row[8].toString()));
+				
+				vo.setAcctViewList(new ArrayList<AcctViewVO>());
+				totalDebit = BigDecimal.ZERO;
+				totalCredit = BigDecimal.ZERO;
+				for (AcctViewVO voSub : acctViewList2) {
+					if (vo.getCode().equals(voSub.getCode())) {
+						vo.getAcctViewList().add(voSub);
+						totalDebit = totalDebit.add(new BigDecimal(String.valueOf(voSub.getTotalDebit())));
+						totalCredit = totalCredit.add(new BigDecimal(String.valueOf(voSub.getTotalCredit())));
+					}
+				}
+				vo.setTotalDebit(totalDebit.doubleValue());
+				vo.setTotalCredit(totalCredit.doubleValue());
+				
+				acctViewList.add(vo);
+			}
+			session.getTransaction().commit();
+			
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+			
+		} finally {
+			session.close();
+		}
+		return acctViewList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransViewVO> getAcctTransViewSmmyExtdList(Long idCompany, SearchParamVO searchParamVO, AcctViewVO acctViewVO, Long acctId, String acctCatCd, Session session) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		long start = System.currentTimeMillis();
+		//String strLogs = "";
+		if (acctCatCd.equals("I")) {
+			sb.append("select a.id, a.dt_trans, a.source, a.destination, ").
+				append("case when (sum(a.debit) - sum(a.credit)) < 0 then 0.00 else (sum(a.debit) - sum(a.credit)) end as 'debit', ").
+				append("case when (sum(a.debit) - sum(a.credit)) < 0 then (sum(a.debit) - sum(a.credit)) * -1 else 0.00 end as 'credit', ").
+				/*append("(select trans.code ").
+				append("from ( ").
+					append("select x.id, x.id_acct, x.sys_cd, x.sys_no, y.code ").
+					append("from account_trans x left join account y on x.id_acct = y.id ").
+					append("where x.id_company = :idCompany and x.status_cd = :statusCd ");
+						//append("and date(x.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+					if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+						sb.append("and date(x.dt_trans) between date(:fromDate) and date(:toDate) ");
+					}
+						sb.append("and x.id_acct != :acctId ").
+					append("group by sys_cd, sys_no ").
+					append(") trans ").
+				append("where trans.sys_cd = a.sys_cd and trans.sys_no = a.sys_no ").
+				append("limit 1 ").
+				append(") as 'postCode', ").*/
+				append("(select y.code ").
+					append("from account_trans x left join account y on x.id_acct = y.id ").
+					append("where x.id_company = :idCompany and x.status_cd = :statusCd ");
+						if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+							sb.append("and date(x.dt_trans) between date(:fromDate) and date(:toDate) ");
+						}
+						sb.append("and x.id_acct != :acctId ").
+						append("and x.sys_cd = a.sys_cd and x.sys_no = a.sys_no ").
+					append("limit 1 ").
+				append(") as 'postCode', ").
+				append("c.prefix_id, a.sys_cd, a.sys_no, ").
+				append("a.sys_no as bp_code ").
+				append(", a.tax_code, b.code, ").
+				append("case ").
+				append("when a.sys_cd='bank_adjm' OR a.sys_cd = 'bank_deps' OR a.sys_cd = 'bank_dpmt' OR a.sys_cd = 'rfnd' then ").
+					append("IF(tr1.code IS NULL, '', tr1.code) ").
+				append("when a.sys_cd = 'invc' then ").
+					append("IF(tr2.code IS NULL, '', tr2.code) ").
+				append("when a.sys_cd = 'crdt_note' then ").
+					append("IF(tr3.code IS NULL, '', tr3.code) ").
+				append("when a.sys_cd = 'purc_bill' then ").
+					append("IF(tr4.code IS NULL, '', tr4.code) ").
+				append("when a.sys_cd = 'jrnl' then ").
+					append("IF(tr5.code IS NULL, '', tr5.code) ").
+				append("else ").
+					append("'' ").
+			append("end as tour_code, ").
+			append("case ").
+				append("when a.sys_cd='purc_bill' then ").
+					append("IF(eob.comments IS NULL, '', eob.comments) ").
+				append("else ").
+					append("'' ").
+			append("end as comments ").
+			append("from account_trans a left join sys_num_conf c on c.id_company = :idCompany and a.sys_cd = c.code ").
+			append("left join ").
+				append("cash_book cb ON ((a.sys_cd = 'bank_adjm'and cb.sys_cd='bank_adjm') OR (a.sys_cd = 'bank_deps'and cb.sys_cd='bank_deps') OR (a.sys_cd = 'bank_pmnt'and cb.sys_cd='bank_pmnt') OR (a.sys_cd = 'rfnd'and cb.sys_cd='rfnd')) and cb.sys_no = a.sys_no ").
+			append("left join ").
+				append("tour_dep tr1 ON tr1.id = cb.id_tour_dep ").
+			append("left join ").
+				append("invoice iv ON iv.doc_type_cd = 'I' and a.sys_cd = 'invc' and a.sys_no = iv.code ").
+			append("left join ").
+				append("invoice iv_cn ON iv_cn.doc_type_cd = 'C' and a.sys_cd = 'crdt_note' and a.sys_no = iv_cn.code ").
+			append("left join ").
+				append("invoice iv_cn_cd ON iv_cn_cd.doc_type_cd = 'I' and iv_cn_cd.code = iv_cn.cn_inv_no ").
+			append("left join ").
+				append("invoice ps_cn_cd ON ps_cn_cd.doc_type_cd = 'P' and ps_cn_cd.ps_no = iv_cn.cn_ps_no ").
+			append("left join ").
+				append("tour_dep tr2 ON tr2.id = iv.id_tour_dep ").
+			append("left join ").
+				append("tour_dep tr3 ON tr3.id = if(iv_cn_cd.id_tour_dep is not null, iv_cn_cd.id_tour_dep, ps_cn_cd.id_tour_dep) ").
+			append("left join ").
+				append("ex_order_bill eob ON a.sys_no = eob.code and a.sys_cd = 'purc_bill' ").
+			append("left join ").
+				append("tour_dep tr4 ON tr4.id = eob.id_tour_dep ").
+			append("left join ").
+				append("journal jn ON a.sys_no = jn.sys_no and a.sys_cd = 'jrnl' ").
+			append("left join ").
+				append("tour_dep tr5 ON tr5.id = jn.id_tour_dep, account b ").
+			append("where a.id_company = b.id_company and a.id_acct = b.id and b.id_acct_cat = 4 and ").
+			append("a.id_company = :idCompany and ").
+			append("a.status_cd = :statusCd and ").
+			append("b.status_cd = :statusCd and ").
+			append("a.id_acct = :acctId ");
+			//append("and date(a.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+			if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+				sb.append("and date(a.dt_trans) between date(:fromDate) and date(:toDate) ");
+			}
+			sb.append("group by a.id_acct, a.sys_cd, a.sys_no ");
+			sb.append("order by a.dt_trans ");
+		} else {
+			/*sb.append("select a.id, a.dt_trans, a.source, a.destination, ").
+				append("case when a.debit < 0 then 0.00 when a.credit < 0 then a.credit * -1 else a.debit end as debit, ").
+				append("case when a.credit < 0 then 0.00 when a.debit < 0 then a.debit * -1 else a.credit end as credit, ").
+				append("(select trans.code ").
+				append("from ( ").
+					append("select x.id, x.id_acct, x.sys_cd, x.sys_no, y.code ").
+					append("from account_trans x left join account y on x.id_acct = y.id ").
+					append("where x.id_company = :idCompany and x.status_cd = :statusCd ").
+						append("and date(x.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+					if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+						sb.append("and date(x.dt_trans) between date(:fromDate) and date(:toDate) ");
+					}
+						sb.append("and x.id_acct != :acctId ").
+					append("group by sys_cd, sys_no ").
+					append(") trans ").
+				append("where trans.sys_cd = a.sys_cd and trans.sys_no = a.sys_no ").
+				append("limit 1 ").
+				append(") as 'postCode', ").
+				append("b.prefix_id, a.sys_cd, a.sys_no, ").
+				append("if(ex.bp_code is null, a.sys_no, concat(a.sys_no,' (', ex.bp_code, ')')) as bp_code ").
+			append("from account_trans a left join sys_num_conf b on b.id_company = :idCompany and a.sys_cd = b.code ").
+			append("left join (select b.code as sys_no, group_concat(bp.code) as bp_code ").
+				append("from ex_order_bill b, ex_order_bill_pmnt bp ").
+				append("where b.id = bp.id_eo_bill and bp.status_cd = 'A' and b.id_company = 1 and b.status_cd not in ('CC', 'VD') ").
+				append("group by b.id) ex on a.sys_cd = 'purc_bill' and a.sys_no = ex.sys_no ").
+			append("where a.id_company = :idCompany and ").
+			append("a.status_cd = :statusCd and ").
+			append("a.id_acct = :acctId ").
+			append("and date(a.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+			if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+				sb.append("and date(a.dt_trans) between date(:fromDate) and date(:toDate) ");
+			}
+			sb.append("order by a.dt_trans ");*/
+			sb.append("select a.id, a.dt_trans, a.source, a.destination, ").
+				append("case when a.debit < 0 then 0.00 when a.credit < 0 then a.credit * -1 else a.debit end as debit, ").
+				append("case when a.credit < 0 then 0.00 when a.debit < 0 then a.debit * -1 else a.credit end as credit, ").
+				/*append("(select trans.code ").
+				append("from ( ").
+					append("select x.id, x.id_acct, x.sys_cd, x.sys_no, y.code ").
+					append("from account_trans x left join account y on x.id_acct = y.id ").
+					append("where x.id_company = :idCompany and x.status_cd = :statusCd ");
+						//append("and date(x.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+					if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+						sb.append("and date(x.dt_trans) between date(:fromDate) and date(:toDate) ");
+					}
+						sb.append("and x.id_acct != :acctId ").
+					append("group by sys_cd, sys_no ").
+					append(") trans ").
+				append("where trans.sys_cd = a.sys_cd and trans.sys_no = a.sys_no ").
+				append("limit 1 ").
+				append(") as 'postCode', ").*/
+				
+				append("(select y.code ").
+					append("from account_trans x left join account y on x.id_acct = y.id ").
+					append("where x.id_company = :idCompany and x.status_cd = :statusCd ");
+						if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+							sb.append("and date(x.dt_trans) between date(:fromDate) and date(:toDate) ");
+						}
+						sb.append("and x.id_acct != :acctId ").
+						append("and x.sys_cd = a.sys_cd and x.sys_no = a.sys_no ").
+					append("limit 1 ").
+				append(") as 'postCode', ").
+				
+				
+				append("b.prefix_id, a.sys_cd, a.sys_no, ").
+				append("case ").
+					append("when a.sys_cd = 'purc_bill' then ").
+						append("if(ex1.bp_code is null, a.sys_no, concat(a.sys_no,' (', ex1.bp_code, ')')) ").
+					append("when a.sys_cd = 'bank_pmnt' then ").
+						append("if(ex2.pb_code is null, a.sys_no, concat(a.sys_no,' (', ex2.pb_code, ')')) ").
+					append("else ").
+						append("a.sys_no ").
+				append("end as pb_code ").
+				append(", a.tax_code, (select acct.code from account acct where acct.id = a.id_acct) as gl_code, ").
+				append("case ").
+					append("when a.sys_cd='bank_adjm' OR a.sys_cd = 'bank_deps' OR a.sys_cd = 'bank_dpmt' OR a.sys_cd = 'rfnd' then ").
+						append("IF(tr1.code IS NULL, '', tr1.code) ").
+					append("when a.sys_cd = 'invc' then ").
+						append("IF(tr2.code IS NULL, '', tr2.code) ").
+					append("when a.sys_cd = 'crdt_note' then ").
+						append("IF(tr3.code IS NULL, '', tr3.code) ").
+					append("when a.sys_cd = 'purc_bill' then ").
+						append("IF(tr4.code IS NULL, '', tr4.code) ").
+					append("when a.sys_cd = 'jrnl' then ").
+						append("IF(tr5.code IS NULL, '', tr5.code) ").
+					append("else ").
+						append("'' ").
+				append("end as tour_code, ").
+				append("case ").
+					append("when a.sys_cd='purc_bill' then ").
+						append("IF(eob.comments IS NULL, '', eob.comments) ").
+					append("else ").
+						append("'' ").
+				append("end as comnments ").
+			append("from account_trans a left join sys_num_conf b on b.id_company = :idCompany and a.sys_cd = b.code ").
+			append("left join (select b.code as sys_no, group_concat(bp.code separator ', ') as bp_code ").
+				append("from ex_order_bill b, ex_order_bill_pmnt bp ").
+				append("where b.id = bp.id_eo_bill and bp.status_cd = :statusCd and b.id_company = :idCompany and b.status_cd not in ('CC', 'VD') ").
+				append("group by b.id) ex1 on a.sys_cd = 'purc_bill' and a.sys_no = ex1.sys_no ").
+			append("left join (select group_concat(b.code separator ', ') as pb_code, bp.code as sys_no ").
+				append("from ex_order_bill b, ex_order_bill_pmnt bp ").
+				append("where b.id = bp.id_eo_bill and bp.status_cd = :statusCd and b.id_company = :idCompany and b.status_cd not in ('CC', 'VD') ").
+				append("group by bp.code) ex2 on a.sys_cd = 'bank_pmnt' and a.sys_no = ex2.sys_no ").
+			append("left join ").
+				append("cash_book cb ON ((a.sys_cd = 'bank_adjm'and cb.sys_cd='bank_adjm') OR (a.sys_cd = 'bank_deps'and cb.sys_cd='bank_deps') OR (a.sys_cd = 'bank_pmnt'and cb.sys_cd='bank_pmnt') OR (a.sys_cd = 'rfnd'and cb.sys_cd='rfnd')) and cb.sys_no = a.sys_no ").
+			append("left join ").
+				append("tour_dep tr1 ON tr1.id = cb.id_tour_dep ").
+			append("left join ").
+				append("invoice iv ON iv.doc_type_cd = 'I' and a.sys_cd = 'invc' and a.sys_no = iv.code ").
+			append("left join ").
+				append("invoice iv_cn ON iv_cn.doc_type_cd = 'C' and a.sys_cd = 'crdt_note' and a.sys_no = iv_cn.code ").
+			append("left join ").
+				append("invoice iv_cn_cd ON iv_cn_cd.doc_type_cd = 'I' and iv_cn_cd.code = iv_cn.cn_inv_no ").
+			append("left join ").
+				append("invoice ps_cn_cd ON ps_cn_cd.doc_type_cd = 'P' and ps_cn_cd.ps_no = iv_cn.cn_ps_no ").
+			append("left join ").
+				append("tour_dep tr2 ON tr2.id = iv.id_tour_dep ").
+			append("left join ").
+				append("tour_dep tr3 ON tr3.id = if(iv_cn_cd.id_tour_dep is not null, iv_cn_cd.id_tour_dep, ps_cn_cd.id_tour_dep) ").
+			append("left join ").
+				append("ex_order_bill eob ON a.sys_no = eob.code and a.sys_cd = 'purc_bill' ").
+			append("left join ").
+				append("tour_dep tr4 ON tr4.id = eob.id_tour_dep ").
+			append("left join ").
+				append("journal jn ON a.sys_no = jn.sys_no and a.sys_cd = 'jrnl' ").
+			append("left join ").
+				append("tour_dep tr5 ON tr5.id = jn.id_tour_dep ").
+			append("where a.id_company = :idCompany and ").
+			append("a.status_cd = :statusCd and ").
+			append("a.id_acct = :acctId ");
+			//append("and date(a.dt_trans) between date(:fromYearDate) and date(:toYearDate) ");
+			if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+				sb.append("and date(a.dt_trans) between date(:fromDate) and date(:toDate) ");
+			}
+			sb.append("order by a.dt_trans ");
+		}
+		
+		//Query query = createSQLQuery(sb.toString());
+		Query query = session.createSQLQuery(sb.toString());
+		if (acctId == 3) {
+			query.setTimeout(240);
+		}
+		query.setParameter("idCompany", idCompany);
+		query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+		query.setParameter("acctId", acctId);
+		//query.setParameter("fromYearDate", searchParamVO.getFromDate());
+		//query.setParameter("toYearDate", searchParamVO.getToDate());
+		if (searchParamVO.getObj3()!=null && searchParamVO.getObj4()!=null) {
+			query.setParameter("fromDate", (Date) searchParamVO.getObj3());
+			query.setParameter("toDate", (Date) searchParamVO.getObj4());
+		}
+		
+		List<Object> results = query.list();
+		List<AcctTransViewVO> acctTransViewList = new ArrayList<AcctTransViewVO>();
+		
+		BigDecimal reducingBal = new BigDecimal(String.valueOf(acctViewVO.getBfBal()));
+		
+		//strLogs = "#################Acct Cd: " + acctViewVO.getCode() + "-" + acctViewVO.getSubCode() + " Acct Id: " + acctId +  " Speed: " + (System.currentTimeMillis() - start);
+		//System.out.println(strLogs);
+		
+		// Total No tally on account 4020 Mar 2019
+		BigDecimal totalDebit = BigDecimal.ZERO;
+		BigDecimal totalCredit = BigDecimal.ZERO;
+		
+		for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+			Object[] row = (Object[]) it.next();
+			AcctTransViewVO vo = new AcctTransViewVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setTransDt((Date) row[1]);
+			vo.setSource((String) row[2]);
+			vo.setDestination((String) row[3]);
+			vo.setDebit(Double.parseDouble(row[4].toString()));
+			vo.setCredit(Double.parseDouble(row[5].toString()));
+			vo.setCode((String) row[6]);
+			vo.setSysPrefix((String) row[7]);
+			vo.setSysCode((String) row[8]);
+			vo.setSysNo((String) row[10]);
+			vo.setTaxCode((String) row[11]);
+			vo.setGlCode((String) row[12]);
+			vo.setTourCd((String) row[13]);
+			vo.setPbComment((String) row[14]);
+			reducingBal = reducingBal.add(new BigDecimal(String.valueOf(vo.getDebit())));
+			reducingBal = reducingBal.subtract(new BigDecimal(String.valueOf(vo.getCredit())));
+			vo.setReducingBal(reducingBal.doubleValue());
+			
+			totalDebit = totalDebit.add(new BigDecimal(String.valueOf(vo.getDebit())));
+			totalCredit = totalCredit.add(new BigDecimal(String.valueOf(vo.getCredit())));
+			
+			acctTransViewList.add(vo);
+		}
+		acctViewVO.setTotalDebit(totalDebit.doubleValue());
+		acctViewVO.setTotalCredit(totalCredit.doubleValue());
+		
+		return acctTransViewList;
+	}
+
+	@Override
+	public AcctTransVO getAccountTransFilterReferenceID(Map<String, Object> params) {
+		Criteria criteria = getSession().createCriteria(AcctTransVO.class);
+		criteria = criteriaRestrictionEq(criteria, params);
+		criteria.add(Restrictions.isNull("refId"));
+		criteria.add(Restrictions.isNull("type"));
+		return (AcctTransVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.db.bterp.dao.accttrans.AccountTransViewDAO#updateAcctTransDestinationCust(java.lang.Long, java.lang.Long)
+	 */
+	@Override
+	public void updateAcctTransDestinationCust(Long idCompany, Long customerId) throws BusinessException {
+		Session session = this.getSessionFactory().openSession();
+		long start = System.currentTimeMillis();
+		String strLogs = "";
+		
+		try {
+			session.getTransaction().setTimeout(300);
+			session.beginTransaction();
+			
+			StringBuilder sbPrd = new StringBuilder();
+			sbPrd.append("select dt_end from financial_period where id_company = :idCompany and status = -1 order by dt_start desc ");
+			Query queryPrd = session.createSQLQuery(sbPrd.toString());
+			queryPrd.setParameter("idCompany", idCompany);
+			queryPrd.setMaxResults(1);
+			Object finDateObj = queryPrd.uniqueResult();
+			
+			// Invoice
+			StringBuilder sbInv = new StringBuilder();
+			sbInv.append("update account_trans a, ").
+				append("(select iv.code, ").
+					append("concat('Cust-', ").
+					append("case ").
+						append("when cm.pc_type_cd = 'C' then cm.corporate_name ").
+						append("else concat(l.description, ' ', ps.last_name, ' ', ps.first_name) ").
+					append("end, ' ', cm.code) as 'destination' ").
+				append("from invoice iv, customer cm, person ps left join (select code, description from lookup_item where lookup_cat_cd = :salutatn) l on ps.salutation_cd = l.code ").
+				append("where ").
+					append("iv.id_company = :idCompany and cm.id_company = :idCompany and ").
+					append("iv.doc_type_cd IN :invOrCrdtNote and iv.status_cd != :statusCdVoid and ").
+					append("iv.id_customer = cm.id and cm.id_pc = ps.id and iv.id_customer = :customerId) b ").
+			append("set a.destination = b.destination ").
+			append("where ").
+				append("a.id_company = :idCompany and a.status_cd = :statusCd and a.sys_cd IN :sysCd and a.sys_no = b.code ");
+			if (finDateObj != null) sbInv.append("and date(a.dt_trans) > date(:finDate) ");
+			
+			Query queryInv = session.createSQLQuery(sbInv.toString());
+			queryInv.setParameter("idCompany", idCompany);
+			queryInv.setParameterList("sysCd", FunctionUtils.generateArrayFromStr(CommonConstant.SYS_NUM_CD_PAX_STMT, CommonConstant.SYS_NUM_CD_INVC));
+			queryInv.setParameter("salutatn", CommonConstant.LOOKUP_CAT_CD_SALUTATN);
+			queryInv.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryInv.setParameterList("invOrCrdtNote", FunctionUtils.generateArrayFromStr(SalesConstant.DOC_TYPE_CD_PAX_STMT, SalesConstant.DOC_TYPE_CD_INVC));
+			queryInv.setParameter("customerId", customerId);
+			queryInv.setParameter("statusCdVoid", CommonConstant.STATUS_CD_VOID);
+			if (finDateObj != null) queryInv.setParameter("finDate", finDateObj);
+			strLogs = "####Invoice records: " + queryInv.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Invoice Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			// Credit Note
+			StringBuilder sbCN = new StringBuilder();
+			sbCN.append("update account_trans a, ").
+				append("(select iv.code, ").
+					append("concat('Cust-', ").
+					append("case ").
+						append("when cm.pc_type_cd = 'C' then cm.corporate_name ").
+						append("else concat(l.description, ' ', ps.last_name, ' ', ps.first_name) ").
+					append("end, ' ', cm.code) as 'destination' ").
+				append("from invoice iv, customer cm, person ps left join (select code, description from lookup_item where lookup_cat_cd = :salutatn) l on ps.salutation_cd = l.code ").
+				append("where ").
+					append("iv.id_company = :idCompany and cm.id_company = :idCompany and ").
+					append("iv.doc_type_cd IN :invOrCrdtNote and iv.status_cd != :statusCdVoid and ").
+					append("iv.id_customer=cm.id and cm.id_pc=ps.id and iv.id_customer = :customerId) b ").
+			append("set a.destination = b.destination ").
+			append("where ").
+				append("a.id_company = :idCompany and a.status_cd = :statusCd and a.sys_cd IN :sysCd and a.sys_no = b.code ");
+			if (finDateObj != null) sbCN.append("and date(a.dt_trans) > date(:finDate) ");
+			
+			Query queryCN = session.createSQLQuery(sbCN.toString());
+			queryCN.setParameter("idCompany", idCompany);
+			queryCN.setParameterList("sysCd", FunctionUtils.generateArrayFromStr(CommonConstant.SYS_NUM_CD_INVC));
+			queryCN.setParameter("salutatn", CommonConstant.LOOKUP_CAT_CD_SALUTATN);
+			queryCN.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryCN.setParameterList("invOrCrdtNote", FunctionUtils.generateArrayFromStr(SalesConstant.DOC_TYPE_CD_CRDT_NOTE));
+			queryCN.setParameter("customerId", customerId);
+			queryCN.setParameter("statusCdVoid", CommonConstant.STATUS_CD_VOID);
+			if (finDateObj != null) queryCN.setParameter("finDate", finDateObj);
+			strLogs = "####Credit Note records: " + queryCN.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Credit Note Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			// Refund [Cash Book]
+			StringBuilder sbCBRfnd = new StringBuilder();
+			sbCBRfnd.append("update cash_book cb, bank b, customer cm, person ps left join (select code, description from lookup_item where lookup_cat_cd = :salutatn) l on ps.salutation_cd = l.code ").
+			append("set cb.payee = (case when cm.pc_type_cd = 'C' then cm.corporate_name else concat(l.description, ' ', ps.last_name, ' ', ps.first_name) end) ").
+			append("where ").
+				append("b.id_company = :idCompany and cm.id_company = :idCompany and b.status_cd = :statusCd and cb.status_cd = :statusCd and cb.sys_cd = :sysCd and ").
+				append("cb.id_bank = b.id and ").
+				append("cb.id_customer = cm.id and cm.id_pc = ps.id ").
+				append("and cb.id_customer = :customerId ").
+				append("and cb.payee != (case when cm.pc_type_cd = 'C' then cm.corporate_name else concat(l.description, ' ', ps.last_name, ' ', ps.first_name) end) ");
+			if (finDateObj != null) sbCBRfnd.append("and date(cb.dt_trans) > date(:finDate) ");
+			
+			Query queryCBRfnd = session.createSQLQuery(sbCBRfnd.toString());
+			queryCBRfnd.setParameter("idCompany", idCompany);
+			queryCBRfnd.setParameter("sysCd", CommonConstant.SYS_NUM_CD_RFND);
+			queryCBRfnd.setParameter("salutatn", CommonConstant.LOOKUP_CAT_CD_SALUTATN);
+			queryCBRfnd.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryCBRfnd.setParameter("customerId", customerId);
+			if (finDateObj != null) queryCBRfnd.setParameter("finDate", finDateObj);
+			strLogs = "####CB - Refund records: " + queryCBRfnd.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Refund [Cash Book] Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			// Refund [Account Trans]
+			StringBuilder sbRfnd = new StringBuilder();
+			sbRfnd.append("update account_trans a join ").
+			append("(select cb.sys_no, ").
+				append("concat(cb.remarks,' To-', case when cm.pc_type_cd = 'C' then cm.corporate_name else concat(l.description, ' ', ps.last_name, ' ', ps.first_name) end) as 'destination' ").
+			append("from cash_book cb, bank b, customer cm, person ps left join (select code, description from lookup_item where lookup_cat_cd = :salutatn) l on ps.salutation_cd = l.code ").
+			append("where b.id_company = :idCompany and cm.id_company = :idCompany and ").
+				append("b.status_cd = :statusCd and cb.status_cd = :statusCd and ").
+				append("cb.sys_cd = :sysCd and cb.id_bank = b.id and ").
+				append("cb.id_customer=cm.id and cm.id_pc=ps.id and ").
+				append("cb.id_customer = :customerId) c on a.sys_no = c.sys_no ").
+			append("set a.destination = c.destination ").
+			append("where ").
+				append("a.id_company = :idCompany and a.status_cd = :statusCd and a.sys_cd = :sysCd ");
+			if (finDateObj != null) sbRfnd.append("and date(a.dt_trans) > date(:finDate) ");
+			
+			Query queryRfnd = session.createSQLQuery(sbRfnd.toString());
+			queryRfnd.setParameter("idCompany", idCompany);
+			queryRfnd.setParameter("sysCd", CommonConstant.SYS_NUM_CD_RFND);
+			queryRfnd.setParameter("salutatn", CommonConstant.LOOKUP_CAT_CD_SALUTATN);
+			queryRfnd.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryRfnd.setParameter("customerId", customerId);
+			if (finDateObj != null) queryRfnd.setParameter("finDate", finDateObj);
+			strLogs = "####Trans - Refund records: " + queryRfnd.executeUpdate();
+			logger.info(strLogs);
+			//logger.error("################# Update Refund [Account Trans] Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			// Deposite - bank_deps [Cash Book]
+			StringBuilder sbCBDeps = new StringBuilder();
+			sbCBDeps.append("update cash_book cb, bank b, customer cm, person ps left join (select code, description from lookup_item where lookup_cat_cd = :salutatn) l on ps.salutation_cd = l.code ").
+			append("set cb.payee = (case when cm.pc_type_cd = 'C' then cm.corporate_name else concat(l.description, ' ', ps.last_name, ' ', ps.first_name) end) ").
+			append("where ").
+				append("b.id_company = :idCompany and cm.id_company = :idCompany and b.status_cd = :statusCd and cb.status_cd = :statusCd and cb.sys_cd = :sysCd and ").
+				append("cb.id_bank = b.id and ").
+				append("cb.id_customer = cm.id and cm.id_pc = ps.id ").
+				append("and cb.id_customer = :customerId ").
+				append("and cb.payee != (case ").
+					append("when cm.pc_type_cd = 'C' then cm.corporate_name ").
+					append("else concat(l.description, ' ', ps.last_name, ' ', ps.first_name) ").
+				append("end) ");
+			if (finDateObj != null) sbCBDeps.append("and date(cb.dt_trans) > date(:finDate) ");
+			
+			Query queryCBDeps = session.createSQLQuery(sbCBDeps.toString());
+			queryCBDeps.setParameter("idCompany", idCompany);
+			queryCBDeps.setParameter("sysCd", CommonConstant.SYS_NUM_CD_BANK_DEPS);
+			queryCBDeps.setParameter("salutatn", CommonConstant.LOOKUP_CAT_CD_SALUTATN);
+			queryCBDeps.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryCBDeps.setParameter("customerId", customerId);
+			if (finDateObj != null) queryCBDeps.setParameter("finDate", finDateObj);
+			strLogs = "####CB - Deposite records: " + queryCBDeps.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Deposite - bank_deps [Cash Book] Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			// Deposite - bank_deps [Account Trans]
+			StringBuilder sbDeps = new StringBuilder();
+			sbDeps.append("update account_trans a join ").
+			append("(select cb.sys_no, ").
+				append("concat(cb.remarks,' Cust-', ").
+				append("case ").
+					append("when cm.pc_type_cd = 'C' then cm.corporate_name ").
+					append("else concat(l.description, ' ', ps.last_name, ' ', ps.first_name) ").
+				append("end, ' ', cm.code) as 'destination' ").
+			append("from cash_book cb, bank b, customer cm, person ps left join (select code, description from lookup_item where lookup_cat_cd = :salutatn) l on ps.salutation_cd = l.code ").
+			append("where b.id_company = :idCompany and cm.id_company = :idCompany and ").
+				append("b.status_cd = :statusCd and cb.status_cd = :statusCd and ").
+				append("cb.sys_cd = :sysCd and cb.id_bank = b.id and ").
+				append("cb.id_customer = cm.id and cm.id_pc = ps.id and ").
+				append("cb.id_customer = :customerId) c on a.sys_no = c.sys_no ").
+			append("set a.destination = c.destination ").
+			append("where ").
+				append("a.id_company = :idCompany and a.status_cd = :statusCd and a.sys_cd = :sysCd ");
+			if (finDateObj != null) sbDeps.append("and date(a.dt_trans) > date(:finDate) ");
+			
+			Query queryDeps = session.createSQLQuery(sbDeps.toString());
+			queryDeps.setParameter("idCompany", idCompany);
+			queryDeps.setParameter("sysCd", CommonConstant.SYS_NUM_CD_BANK_DEPS);
+			queryDeps.setParameter("salutatn", CommonConstant.LOOKUP_CAT_CD_SALUTATN);
+			queryDeps.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryDeps.setParameter("customerId", customerId);
+			if (finDateObj != null) queryDeps.setParameter("finDate", finDateObj);
+			strLogs = "####Trans - Deposite records: " + queryDeps.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Deposite - bank_deps [Account Trans] Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			session.getTransaction().commit();
+			strLogs = "################# updateAcctTransDestinationCust Speed: " + (System.currentTimeMillis() - start);
+			logger.error(strLogs);
+			
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+			
+		} finally {
+			session.close();
+		}
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.db.bterp.dao.accttrans.AccountTransViewDAO#updateAcctTransDestinationSpplr(java.lang.Long, java.lang.Long)
+	 */
+	@Override
+	public void updateAcctTransDestinationSpplr(Long idCompany, Long supplierId) throws BusinessException {
+		Session session = this.getSessionFactory().openSession();
+		long start = System.currentTimeMillis();
+		String strLogs = "";
+		
+		try {
+			session.getTransaction().setTimeout(300);
+			session.beginTransaction();
+			
+			System.out.println("@@@@@@@@@@@@@@@@@@supplierId: " + supplierId);
+			
+			StringBuilder sbPrd = new StringBuilder();
+			sbPrd.append("select dt_end from financial_period where id_company = :idCompany and status = -1 order by dt_start desc ");
+			Query queryPrd = session.createSQLQuery(sbPrd.toString());
+			queryPrd.setParameter("idCompany", idCompany);
+			queryPrd.setMaxResults(1);
+			Object finDate = queryPrd.uniqueResult();
+			
+			// Bank Payment - bank_pmnt [Cash Book]
+			StringBuilder sbCBBP = new StringBuilder();
+			sbCBBP.append("update cash_book cb, bank b, ( ").
+					append("select s.id, s.sys_no, c.name ").
+					append("from supplier s ").
+						append("left join person p on s.id_person=p.id ").
+						append("left join corporate c on p.id=c.id_person ").
+					append("where s.id_company = :idCompany and s.id = :supplierId ").
+					append(") sp ").
+			append("set cb.payee = sp.name ").
+			append("where b.id_company = :idCompany and b.status_cd = :statusCd and cb.status_cd = :statusCd and cb.sys_cd = :sysCd and ").
+				append("cb.id_bank = b.id and cb.id_supplier=sp.id ").
+				append("and cb.payee != sp.name ");
+			if (finDate != null) sbCBBP.append("and date(cb.dt_trans) > date(:finDate) ");
+			
+			Query queryCBBP = session.createSQLQuery(sbCBBP.toString());
+			queryCBBP.setParameter("idCompany", idCompany);
+			queryCBBP.setParameter("sysCd", CommonConstant.SYS_NUM_CD_BANK_PMNT);
+			queryCBBP.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryCBBP.setParameter("supplierId", supplierId);
+			if (finDate != null) queryCBBP.setParameter("finDate", finDate);
+			strLogs = "####CB - Bank Payment records: " + queryCBBP.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Bank Payment - bank_pmnt [Cash Book] Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			// Bank Payment - bank_pmnt [Account Trans]
+			StringBuilder sbBP = new StringBuilder();
+			sbBP.append("update account_trans a, ").
+				append("(select cb.sys_cd, cb.sys_no, cb.id_customer, ").
+					append("concat(cb.remarks,' To-', sp.name) as 'destination' ").
+				append("from cash_book cb, bank b, ( ").
+					append("select s.id, c.name ").
+					append("from supplier s ").
+						append("left join person p on s.id_person=p.id ").
+						append("left join corporate c on p.id=c.id_person ").
+					append("where s.id_company = :idCompany and s.id = :supplierId ").
+					append(") sp ").
+					append("where b.id_company = :idCompany and b.status_cd = :statusCd and cb.status_cd = :statusCd and cb.sys_cd = :sysCd and ").
+						append("cb.id_bank = b.id and ").
+				append("cb.id_supplier=sp.id) c ").
+			append("set a.destination = c.destination ").
+			append("where ").
+			append("a.id_company = :idCompany and a.status_cd = :statusCd and a.sys_cd = :sysCd and ").
+			append("a.sys_no = c.sys_no and a.destination != c.destination ");
+			if (finDate != null) sbBP.append("and date(a.dt_trans) > date(:finDate) ");
+			
+			Query queryBP = session.createSQLQuery(sbBP.toString());
+			queryBP.setParameter("idCompany", idCompany);
+			queryBP.setParameter("sysCd", CommonConstant.SYS_NUM_CD_BANK_PMNT);
+			queryBP.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryBP.setParameter("supplierId", supplierId);
+			if (finDate != null) queryBP.setParameter("finDate", finDate);
+			strLogs = "####Trans - Bank Payment records: " + queryBP.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Bank Payment - bank_pmnt [Account Trans] Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			// Purchase Bill - purc_bill
+			StringBuilder sbPB = new StringBuilder();
+			sbPB.append("update account_trans a, ").
+			append("( ").
+				append("select ex.code, ex.id_supplier, ex.cn_no, ").
+					append("concat_ws(' ', sp.name, sp.sys_no, concat('Inv-', ex.cn_no)) as 'destination' ").
+				append("from ex_order_bill ex, ").
+					append("(select s.id, s.sys_no, c.name ").
+					append("from supplier s ").
+					append("left join person p on s.id_person=p.id ").
+					append("left join corporate c on p.id=c.id_person ").
+					append("where s.id_company= :idCompany and s.id = :supplierId ").
+					append(") sp ").
+				append("where ex.id_company= :idCompany and ex.status_cd != :statusCdVoid and ").
+					append("ex.id_supplier=sp.id ").
+			append(") b ").
+			append("set a.destination = b.destination ").
+			append("where ").
+				append("a.id_company= :idCompany and a.status_cd = :statusCd and a.sys_cd = :sysCd and ").
+				append("a.sys_no = b.code and a.destination != b.destination ");
+			if (finDate != null) sbPB.append("and date(a.dt_trans) > date(:finDate) ");
+			
+			Query queryPB = session.createSQLQuery(sbPB.toString());
+			queryPB.setParameter("idCompany", idCompany);
+			queryPB.setParameter("sysCd", CommonConstant.SYS_NUM_CD_PURC_BILL);
+			queryPB.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryPB.setParameter("supplierId", supplierId);
+			queryPB.setParameter("statusCdVoid", CommonConstant.STATUS_CD_VOID);
+			if (finDate != null) queryPB.setParameter("finDate", finDate);
+			strLogs = "####Trans - Purchase Bill records: " + queryPB.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Purchase Bill - purc_bill Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			session.getTransaction().commit();
+			strLogs = "################# updateAcctTransDestinationSpplr Speed: " + (System.currentTimeMillis() - start);
+			logger.error(strLogs);
+			
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+			
+		} finally {
+			session.close();
+		}
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.db.bterp.dao.accttrans.AccountTransViewDAO#updateAcctTransAcctIdSupplr(java.lang.Long, java.lang.Long)
+	 */
+	@Override
+	public void updateAcctTransAcctIdSupplr(Long idCompany, Long supplierId) throws BusinessException {
+		Session session = this.getSessionFactory().openSession();
+		long start = System.currentTimeMillis();
+		String strLogs = "";
+		
+		try {
+			session.getTransaction().setTimeout(300);
+			session.beginTransaction();
+			
+			System.out.println("@@@@@@@@@@@@@@@@@@supplierId: " + supplierId);
+			
+			StringBuilder sbPrd = new StringBuilder();
+			sbPrd.append("select dt_end from financial_period where id_company = :idCompany and status = -1 order by dt_start desc ");
+			Query queryPrd = session.createSQLQuery(sbPrd.toString());
+			queryPrd.setParameter("idCompany", idCompany);
+			queryPrd.setMaxResults(1);
+			Object finDate = queryPrd.uniqueResult();
+			
+			// Ex Order Bill
+			StringBuilder sbEOBill = new StringBuilder();
+			sbEOBill.append("update ex_order_bill b, supplier s left join company c on s.id_company = c.id ").
+			append("set b.id_acct = if(s.type_cd='TC', c.id_acct_purchase_trade, c.id_acct_purchase_sundry) ").
+			append("where b.id_supplier = s.id and b.id_company = :idCompany and s.id = :supplierId ");
+			if (finDate != null) sbEOBill.append("and date(b.dt_bill) > date(:finDate) ");
+			
+			Query queryEOBill = session.createSQLQuery(sbEOBill.toString());
+			queryEOBill.setParameter("idCompany", idCompany);
+			queryEOBill.setParameter("supplierId", supplierId);
+			if (finDate != null) queryEOBill.setParameter("finDate", finDate);
+			strLogs = "####Ex Order Bill records: " + queryEOBill.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Ex Order Bill Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			// Purchase Bill - purc_bill [Account Trans]
+			StringBuilder sbPB = new StringBuilder();
+			sbPB.append("update account_trans a, ( ").
+				append("select s.sys_no, if(s.type_cd='TC', c.id_acct_purchase_trade, c.id_acct_purchase_sundry) as id_acct, b.code ").
+				append(",ac.code as ac_code, ac.sub_code, ac.description, ac.sub_description ").
+				append("from ex_order_bill b, supplier s ").
+				append("left join company c on s.id_company = c.id ").
+				append("left join account ac on s.id_company = ac.id_company and if(s.type_cd='TC', c.id_acct_purchase_trade, c.id_acct_purchase_sundry) = ac.id ").
+				append("where b.id_supplier = s.id and b.id_company = :idCompany and s.id = :supplierId ").
+			append(") bp ").
+			append("set a.id_acct = bp.id_acct, ").
+			append("a.code = bp.id_acct, ").
+			append("a.code = concat(bp.ac_code, (case when bp.sub_code is null or bp.sub_code = '' then '' else concat('-', bp.sub_code) end)), ").
+			append("a.description = concat(bp.description, (case when bp.sub_description is null or bp.sub_description = '' then '' else concat(', ', bp.sub_description) end)) ").
+			append("where a.status_cd = :statusCd and a.id_company = :idCompany and a.sys_cd = :sysCd and bp.code = a.sys_no and a.id_ref is null and ifnull(a.type_cd,'') not in ('" + CommonConstant.SYS_NUM_CD_TAX + "', '" + CommonConstant.SYS_NUM_CD_ROUNDING + "', '" + CommonConstant.SYS_NUM_CD_NCT + "') and bp.id_acct != a.id_acct ");
+			if (finDate != null) sbPB.append("and date(a.dt_trans) > date(:finDate) ");
+			
+			Query queryPB = session.createSQLQuery(sbPB.toString());
+			queryPB.setParameter("idCompany", idCompany);
+			queryPB.setParameter("sysCd", CommonConstant.SYS_NUM_CD_PURC_BILL);
+			queryPB.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryPB.setParameter("supplierId", supplierId);
+			if (finDate != null) queryPB.setParameter("finDate", finDate);
+			strLogs = "####Trans - Purchase Bill records: " + queryPB.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Purchase Bill - purc_bill [Account Trans] Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			// Bank Payment - bank_pmnt [Account Trans]
+			StringBuilder sbBP = new StringBuilder();
+			sbBP.append("update account_trans a, ").
+			append("( ").
+				append("select bp.code, if(s.type_cd='TC', c.id_acct_purchase_trade, c.id_acct_purchase_sundry) as id_acct ").
+				append(",ac.code as ac_code, ac.sub_code, ac.description, ac.sub_description ").
+				append("from ex_order_bill_pmnt bp, ex_order_bill b, supplier s ").
+				append("left join company c on s.id_company = c.id ").
+				append("left join account ac on s.id_company = ac.id_company and if(s.type_cd='TC', c.id_acct_purchase_trade, c.id_acct_purchase_sundry) = ac.id ").
+				append("where b.id_company = :idCompany and bp.id_eo_bill = b.id and b.id_supplier = s.id and bp.status_cd = :statusCd and s.id = :supplierId ").
+				append("group by bp.code ").
+			append(") p ").
+			append("set a.id_acct = p.id_acct, ").
+			append("a.code = concat(p.ac_code, (case when p.sub_code is null or p.sub_code = '' then '' else concat('-', p.sub_code) end)), ").
+			append("a.description = concat(p.description, (case when p.sub_description is null or p.sub_description = '' then '' else concat(', ', p.sub_description) end)) ").
+			append("where a.id_company = :idCompany and a.sys_cd = :sysCd and a.status_cd = :statusCd and a.sys_no = p.code and a.type_cd = 'gnrl_pymt' and p.id_acct != a.id_acct ");
+			if (finDate != null) sbBP.append("and date(a.dt_trans) > date(:finDate) ");
+			
+			Query queryBP = session.createSQLQuery(sbBP.toString());
+			queryBP.setParameter("idCompany", idCompany);
+			queryBP.setParameter("sysCd", CommonConstant.SYS_NUM_CD_BANK_PMNT);
+			queryBP.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			queryBP.setParameter("supplierId", supplierId);
+			if (finDate != null) queryBP.setParameter("finDate", finDate);
+			strLogs = "####Trans - Bank Payment records: " + queryBP.executeUpdate();
+			logger.error(strLogs);
+			//logger.error("################# Update Bank Payment - bank_pmnt [Account Trans] Speed: " + (System.currentTimeMillis() - start));
+			//start = System.currentTimeMillis();
+			
+			session.getTransaction().commit();
+			strLogs = "################# updateAcctTransAcctIdSupplr Speed: " + (System.currentTimeMillis() - start);
+			logger.error(strLogs);
+			
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+			
+		} finally {
+			session.close();
+		}
+	}
+	
+	@Override
+	public void updateAllCustNmToRelatedTbl(Long idCompany) throws BusinessException {
+		Query query = createSQLQuery("CALL prc_upd_acct_trans_dest_cust(:p_id_company)");
+		query.setParameter("p_id_company", idCompany);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public List<AcctTransVO> getAcctTransTaxRndList(Long idCompany, String sysCode, String sysNo) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(AcctTransVO.class);
+		criteria.add(Restrictions.eq("sysNo", sysNo));
+		criteria.add(Restrictions.eq("sysCode", sysCode));
+		criteria.add(Restrictions.eq("companyId", idCompany));
+		criteria.add(Restrictions.or(
+				Restrictions.or(Restrictions.eq("type", CommonConstant.SYS_NUM_CD_TAX),Restrictions.eq("type", CommonConstant.SYS_NUM_CD_NCT)),
+				Restrictions.eq("type", CommonConstant.SYS_NUM_CD_ROUNDING)));
+		return criteria.list();
+	}
+}

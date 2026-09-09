@@ -1,0 +1,103 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+	<p:growl id="msg" />
+
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varVoucherCatalogDialog.hide();" />
+	</h:panelGrid>
+
+	<p:dataTable widgetVar="varVoucherListTable"
+		value="#{salesBean.voucherList}" var="voucherVO" paginator="true" rows="10"
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+		filterEvent="enter">
+
+		<p:column headerText="Code">
+			<p:commandLink id="idVoucher" actionListener="#{salesBean.onVoucherSelected(voucherVO)}" update=":idVoucherDetailsForm" oncomplete="varVoucherDetailsDialog.show()" process="@this">
+				<i class="fa fa-info-circle" aria-hidden="true" />
+			</p:commandLink>
+			<h:outputText value=" #{voucherVO.redemptionCode}" />
+			<pe:tooltip for="idVoucher" shared="true" showDelay="300" targetPosition="top left" position="bottom right">
+		        <h:panelGrid columns="2">
+		            <h:outputText value="Name:" /><h:outputText value="#{voucherVO.name}" />
+		            <h:outputText value="Description:" /><h:outputText value="#{voucherVO.description}" />
+					<h:outputText value="Expiry Days:" /><h:outputText value="#{voucherVO.expiryDays}" />
+		        </h:panelGrid>				
+		    </pe:tooltip>
+		</p:column>
+		<p:column headerText="Category">
+			<h:outputText value="#{voucherVO.categoryName}" />
+		</p:column>
+		<p:column headerText="Points Required">
+			<!-- Cash Voucher -->
+			<h:outputText value="#{voucherVO.minPoints}" rendered="#{voucherVO.categoryName eq 'Cash'}" />
+			
+			<!-- Discount Voucher -->
+			<h:outputText value="#{voucherVO.minPoints}" rendered="#{voucherVO.categoryName eq 'Discount'}" />
+			
+			<!-- Merchandise Voucher -->
+			<h:outputText value="#{voucherVO.minPoints}" rendered="#{voucherVO.categoryName eq 'Merchandise'}" />
+			
+			<!-- Rebate Voucher -->
+			<h:outputText value="-" rendered="#{voucherVO.categoryName eq 'Rebate'}" />
+		</p:column>
+		<p:column headerText="Value">
+		
+			<!-- Cash Voucher -->
+			<h:outputText value="RM#{voucherVO.discountAmt}" rendered="#{voucherVO.categoryName eq 'Cash'}" />
+			
+			<!-- Discount Voucher -->
+			<h:outputText value="#{voucherVO.percentage}%" rendered="#{voucherVO.categoryName eq 'Discount'}" />
+			<h:outputText value=" (Max. RM#{voucherVO.maxDiscountCapped})" rendered="#{voucherVO.categoryName eq 'Discount' and voucherVO.maxDiscountCapped ne null}" />
+			
+			<!-- Merchandise Voucher -->
+			<h:outputText value="-" rendered="#{voucherVO.categoryName eq 'Merchandise'}" />
+			
+			<!-- Rebate Voucher -->
+			<h:outputText value="#{voucherVO.conversionPoints} points : RM#{voucherVO.conversionRebateAmt}" rendered="#{voucherVO.categoryName eq 'Rebate'}" />
+		</p:column>
+		<p:column headerText="Valid From">
+			<h:outputText value="#{voucherVO.effectiveFrom}">
+				<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Valid Until">
+			<h:outputText value="#{voucherVO.effectiveUntil}">
+				<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Remarks">
+			<!-- Rebate Voucher -->
+			<h:outputText value="Min. Redemption Point : #{voucherVO.minPoints}" rendered="#{voucherVO.categoryName eq 'Rebate'}"></h:outputText>
+		</p:column>
+		<p:column headerText="Claim">
+			<!-- Non Rebate Voucher -->
+			<p:commandButton id="idClaimButton" value="Claim" rendered="#{voucherVO.categoryName ne 'Rebate'}"
+				actionListener="#{salesBean.onClaimVoucher(voucherVO)}" disabled="#{not voucherVO.isVoucherClaimable(salesBean.customerPointTierVO)}"
+				oncomplete="if (args &amp;&amp; !args.validationFailed) varConfirmClaimVoucherDialog.show()"
+				process="@this" update=":idVoucherCatalogForm:msg" />
+			<pe:tooltip for="idClaimButton" shared="true" showDelay="300" targetPosition="top left" position="bottom right" 
+				rendered="#{not voucherVO.isVoucherClaimable(salesBean.customerPointTierVO)}">
+				<h:outputText value="Insufficient points" escape="true" style="white-space: pre-wrap"/>
+		   	</pe:tooltip>
+				
+			<!-- Rebate Voucher -->
+			<p:commandButton value="Claim" rendered="#{voucherVO.categoryName eq 'Rebate'}"
+				actionListener="#{salesBean.onClaimVoucher(voucherVO)}"
+				oncomplete="if (args &amp;&amp; !args.validationFailed) varRebatePointsDialog.show()"
+				process="@this" update=":idRebatePointsForm :idVoucherCatalogForm:msg" />
+		</p:column>
+	</p:dataTable>
+	
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varVoucherCatalogDialog.hide();" />
+	</h:panelGrid>
+</ui:composition>

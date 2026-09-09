@@ -1,0 +1,55 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+	<ui:define name="content">
+	<script type="text/javascript">
+		document.addEventListener('DOMContentLoaded', function() {
+			var filters = document.querySelectorAll('input.ui-column-filter');
+			filters.forEach(function(filter) {
+				filter.setAttribute('enterkeyhint', 'enter');
+			});
+		});
+	</script>
+		<p:panel header="Tour Departure Rooming List Maintenance">
+			<h:form id="idForm">
+			    <p:growl id="msg"/> 
+					
+				<p:dataTable id="idTourDepList" value="#{roomingListBean.lazyDMTourDepWithInvoicePaxVO}" var="vo" paginator="true" rows="20" lazy="true" 
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+					rowsPerPageTemplate="20, 30, 40" rowStyleClass="#{vo.groupColor eq 0 ? 'group-color-one' : 'group-color-two'}"
+					filterEvent="enter">
+					
+					<p:column styleClass="txt_center" style="width:45px;">
+						<p:commandButton icon="ui-icon-pencil" action="addRoomingList" actionListener="#{roomingListBean.handleAccountDepSelect(vo)}" process="@this"/>
+					</p:column>
+					<p:column headerText="Tour Code" style="width:180px;font-size:10px;text-align:center;" filterBy="#{vo.code}">
+						<h:outputText value="#{vo.code}"/>
+					</p:column>
+					<p:column headerText="Dep Date" style="width:120px;font-size:10px;text-align:center;">
+						<h:outputText value="#{vo.dtDep}">
+							<f:convertDateTime pattern="dd-MMM-yyyy"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Tour Category" style="width:120px;font-size:10px; text-align:center;" filterBy="#{vo.tourCategoryName}">
+						<h:outputText value="#{vo.tourCategoryName}"/>
+					</p:column>
+					<p:column headerText="Country" style="width:80px; font-size:10px; text-align:center;" filterBy="#{vo.countryName}">
+						<h:outputText value="#{vo.countryName}"/>
+					</p:column> 
+					<p:column headerText="Package Name" style="font-size:10px; text-align:center;">
+						<h:outputText value="#{vo.packageName}"/>
+					</p:column>
+				</p:dataTable>
+			</h:form>		
+		</p:panel>
+	 
+	</ui:define>
+</ui:composition>

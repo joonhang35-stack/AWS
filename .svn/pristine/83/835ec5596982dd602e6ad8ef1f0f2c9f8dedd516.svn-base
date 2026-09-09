@@ -1,0 +1,72 @@
+package com.bcs.zsg.mail.bo;
+
+import java.io.File;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.cfg.sec.vo.PasswordResetVO;
+import com.bcs.zsg.component.security.vo.UserVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.mail.service.EmailingService;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.sales.vo.InvoiceEmailPaymentVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+public class EmailingBOImpl implements EmailingBO {
+	
+	@Autowired
+	private EmailingService emailingService;
+	
+	@Override
+	public void sendForgotPasswordEmail(PasswordResetVO vo, UserVO userVO) throws Exception {
+		emailingService.sendForgotPasswordEmail(vo, userVO);
+	}
+
+	@Override
+	public void sendInvChangesBySpecificPerson(InvoiceVO invoiceVO, String prefixValue, List<String> emailList,
+			List<String> invoiceChangesList, String otherTypeRemark, UserVO userVO) throws BusinessException {
+		emailingService.sendInvChangesBySpecificPerson(invoiceVO, prefixValue, emailList, invoiceChangesList, otherTypeRemark, userVO);
+	}
+	
+	@Override
+	public void sendInvChangesByDepartment(InvoiceVO invoiceVO, String prefixValue, List<String> departmentList, List<String> invoiceChangesList, String otherTypeRemark, Long companyId, UserVO userVO) throws BusinessException {
+		emailingService.sendInvChangesByDepartment(invoiceVO, prefixValue, departmentList, invoiceChangesList, otherTypeRemark, companyId, userVO);
+	}
+	
+	@Override
+	public void sendEOChangesBySpecificPerson(ExOrderVO exOrderVO, String prefixValue, List<String> emailList,
+			List<String> eoChangesList, String otherTypeRemark, UserVO userVO) throws BusinessException {
+		emailingService.sendEOChangesBySpecificPerson(exOrderVO, prefixValue, emailList, eoChangesList, otherTypeRemark, userVO);
+	}
+	
+	@Override
+	public void sendEOChangesByDepartment(ExOrderVO exOrderVO, String prefixValue, List<String> departmentList, List<String> eoChangesList, String otherTypeRemark, Long companyId, UserVO userVO) throws BusinessException {
+		emailingService.sendEOChangesByDepartment(exOrderVO, prefixValue, departmentList, eoChangesList, otherTypeRemark, companyId, userVO);
+	}
+	
+	@Override
+	public void sendTourDepNOEmailByIndividual(TourDepartureVO tourDepVO, List<String> emailEmployeeList,
+			String remarks, UserVO userVO) throws BusinessException {
+		emailingService.sendTourDepNOEmailByIndividual(tourDepVO, emailEmployeeList, remarks, userVO);
+	}
+
+	@Override
+	public void sendTourDepNOEmailByDepartment(TourDepartureVO tourDepVO, List<String> departmentList, String remarks,
+			Long companyId, UserVO userVO) throws BusinessException {
+		emailingService.sendTourDepNOEmailByDepartment(tourDepVO, departmentList, remarks, companyId, userVO);
+	}
+
+	@Override
+	public void sendEmailPaymentEmail(InvoiceEmailPaymentVO invoiceEmailPaymentVO, UserVO userVO)
+			throws BusinessException {
+		emailingService.sendEmailPaymentEmail(invoiceEmailPaymentVO, userVO);
+	}
+
+	@Override
+	public void sendEmailInvoiceEmail(InvoiceVO invoiceVO, UserVO userVO, List<String> emailList, File file, String termsAndConditionFile, String itineraryPath) throws Exception {
+		emailingService.sendEmailInvoiceEmail(invoiceVO, userVO, emailList, file, termsAndConditionFile, itineraryPath);		
+	}
+
+}

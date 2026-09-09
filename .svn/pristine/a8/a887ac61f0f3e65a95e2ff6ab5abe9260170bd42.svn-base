@@ -1,0 +1,352 @@
+package com.bcs.zsg.acct.dao;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+
+import com.bcs.zsg.acct.vo.EInvoiceAccessTokenVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotTransVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotVO;
+import com.bcs.zsg.acct.vo.EInvoiceBuyerVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateNumGenVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentItemVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.acct.vo.EInvoiceSupplierVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.core.vo.BaseVO;
+
+public class EInvoiceDAOImpl extends BaseHibernateDAO implements EInvoiceDAO {
+
+	@Override
+	public List<EInvoiceDocumentVO> getEInvoiceList(Long idCompany) {
+		Criteria criteria = createCriteria(EInvoiceDocumentVO.class);
+		criteria.add(Restrictions.eq("idCompany", idCompany));
+		criteria.addOrder(Order.desc("createdDate"));
+		criteria.addOrder(Order.desc("id"));
+		List<EInvoiceDocumentVO> ls = criteria.list();
+		
+		return ls;
+	}
+	
+	@Override
+	public EInvoiceDocumentVO getEInvoiceByUuid(String uuid) {
+		Criteria criteria = createCriteria(EInvoiceDocumentVO.class);
+		criteria.add(Restrictions.eq("documentUuid", uuid));
+		return (EInvoiceDocumentVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public EInvoiceConsolidateNumGenVO getEInvoiceConsolidateNumGenVO(Integer year, Integer month, String code, Long idCompany) {
+		Criteria criteria = createCriteria(EInvoiceConsolidateNumGenVO.class);
+		criteria.add(Restrictions.eq("year", year));
+		criteria.add(Restrictions.eq("month", month));
+		criteria.add(Restrictions.eq("code", code));
+		criteria.add(Restrictions.eq("idCompany", idCompany));
+		return (EInvoiceConsolidateNumGenVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public EInvoiceAccessTokenVO getValidAccessToken(Long idCompany) throws BusinessException {
+		Criteria criteria = createCriteria(EInvoiceAccessTokenVO.class);
+		criteria.add(Restrictions.eq("idCompany", idCompany));
+		criteria.add(Restrictions.ge("dateValid", new Date()));
+		criteria.addOrder(Order.desc("id"));
+		criteria.setMaxResults(1);
+		return (EInvoiceAccessTokenVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public List<EInvoiceConsolidateVO> getEInvoiceConsolidateList(String eInvoiceDocUuid) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(EInvoiceConsolidateVO.class);
+		criteria.add(Restrictions.eq("documentUuid", eInvoiceDocUuid));
+//		criteria.addOrder(Order.desc("id"));
+		
+		List<EInvoiceConsolidateVO> ls = criteria.list();
+		return ls;
+	}
+	
+	@Override
+	public void updateEInvoiceConsolidate(String eInvoiceDocUuid, String longId, String status) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(" update e_invoice_consolidate set ");
+		if (StringUtils.isNotBlank(longId))	sb.append(" long_id = :longId, ");
+		if (StringUtils.isNotBlank(status))	sb.append(" status_cd = :statusCd, ");
+		
+		sb.append(" upd_by = :updatedBy, ");
+		sb.append(" dt_upd = now() ");
+		
+		sb.append(" where document_uuid = :documentUuid ");
+		
+		Query query = createSQLQuery(sb.toString());
+		if (StringUtils.isNotBlank(longId))	query.setParameter("longId", longId);
+		if (StringUtils.isNotBlank(status))	query.setParameter("statusCd", status);
+		query.setParameter("documentUuid", eInvoiceDocUuid);
+		query.setParameter("updatedBy", updatedBy);
+		query.executeUpdate();
+	}
+	
+	/**
+	 * update e inv status to corresponding table (variable table name)
+	 * 
+	 * @param eInvoiceDocumentUuid
+	 * @param eInvoiceStatus
+	 * @param table - table name to update
+	 * @throws BusinessException
+	 */
+	@Override
+	public void updateEInvoiceStatus(String eInvoiceDocumentUuid, String eInvoiceStatus, String table) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(" update ");
+		sb.append(table);
+		sb.append(" set ");
+		if (StringUtils.isNotBlank(eInvoiceStatus))			sb.append(" e_invoice_status = :eInvoiceStatus, ");
+		
+		sb.append(" upd_by = :updatedBy, ");
+		sb.append(" dt_upd = now() ");
+		
+		sb.append(" where e_invoice_document_uuid = :eInvoiceDocumentUuid ");
+		
+//		System.out.println("CYY eInvoiceDocumentUuid: " + eInvoiceDocumentUuid);
+		
+		Query query = createSQLQuery(sb.toString());
+		if (StringUtils.isNotBlank(eInvoiceStatus))	query.setParameter("eInvoiceStatus", eInvoiceStatus);
+		query.setParameter("eInvoiceDocumentUuid", eInvoiceDocumentUuid);
+		query.setParameter("updatedBy", updatedBy);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updateEInvoiceParty(@Nonnull Long idEInvDoc, @Nullable Long idCust, @Nullable Long idSupplier, @Nullable Long idEInvoiceBuyer, @Nullable Long idEInvoiceSupplier) throws BusinessException {
+		String updatedBy = StringUtils.defaultIfBlank(
+		        BaseContext.getUserFullName(),
+		        StringUtils.defaultIfBlank(BaseContext.getLoginId(), "SYSTEM")
+		);
+
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(" update e_invoice_document set ");
+		if (idCust != null)				sb.append(" id_cust = :idCust, ");
+		if (idSupplier != null)			sb.append(" id_supplier = :idSupplier, ");
+		if (idEInvoiceBuyer != null)	sb.append(" id_e_invoice_buyer = :idEInvoiceBuyer, ");
+		if (idEInvoiceSupplier != null)	sb.append(" id_e_invoice_supplier = :idEInvoiceSupplier, ");
+		
+		sb.append(" upd_by = :updatedBy, ");
+		sb.append(" dt_upd = now() ");
+		
+		sb.append(" where id = :idEInvDoc ");
+		
+//		System.out.println("CYY idEInvDoc: " + idEInvDoc);
+//		System.out.println("CYY idEInvoiceBuyer: " + idEInvoiceBuyer);
+//		System.out.println("CYY idEInvoiceSupplier: " + idEInvoiceSupplier);
+		
+		Query query = createSQLQuery(sb.toString());
+		
+		if (idCust != null)				query.setParameter("idCust", idCust);
+		if (idSupplier != null)			query.setParameter("idSupplier", idSupplier);
+		if (idEInvoiceBuyer != null)	query.setParameter("idEInvoiceBuyer", idEInvoiceBuyer);
+		if (idEInvoiceSupplier != null)	query.setParameter("idEInvoiceSupplier", idEInvoiceSupplier);
+		query.setParameter("idEInvDoc", idEInvDoc);
+		query.setParameter("updatedBy", updatedBy);
+		
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updateEInvoiceDocTypeCd(@Nonnull Long idEInvDoc, @Nullable String eInvoiceDocTypeCd) throws BusinessException {
+		String updatedBy = StringUtils.defaultIfBlank(
+		        BaseContext.getUserFullName(),
+		        StringUtils.defaultIfBlank(BaseContext.getLoginId(), "SYSTEM")
+		);
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(" update e_invoice_document set ");
+		if (StringUtils.isNotBlank(eInvoiceDocTypeCd))	sb.append(" e_invoice_doc_type_cd = :eInvoiceDocTypeCd, ");
+		
+		sb.append(" upd_by = :updatedBy, ");
+		sb.append(" dt_upd = now() ");
+		
+		sb.append(" where id = :idEInvDoc ");
+		
+//		System.out.println("CYY idEInvDoc: " + idEInvDoc);
+		
+		Query query = createSQLQuery(sb.toString());
+		
+		if (StringUtils.isNotBlank(eInvoiceDocTypeCd))	query.setParameter("eInvoiceDocTypeCd", eInvoiceDocTypeCd);
+		query.setParameter("idEInvDoc", idEInvDoc);
+		query.setParameter("updatedBy", updatedBy);
+		
+		query.executeUpdate();
+	}
+	
+	@Override
+	public List<EInvoiceConsolidateVO> getEInvConsolDetailsList(String documentUuid) {
+		Criteria criteria = createCriteria(EInvoiceConsolidateVO.class);
+		criteria.add(Restrictions.eq("documentUuid", documentUuid));
+		criteria.addOrder(Order.desc("createdDate"));
+		criteria.addOrder(Order.desc("id"));
+		List<EInvoiceConsolidateVO> ls = criteria.list();
+		
+		return ls;
+	}
+	
+	@Override
+	public List<EInvoiceDocumentItemVO> getEInvoiceDocumentItemList(Long idEInvDoc) {
+		Criteria criteria = createCriteria(EInvoiceDocumentItemVO.class);
+		criteria.add(Restrictions.eq("idEInvDoc", idEInvDoc));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		List<EInvoiceDocumentItemVO> ls = criteria.list();
+		
+		return ls;
+	}
+	
+	@Override
+	public EInvoiceBuyerVO getEInvoiceBuyer(Long id) {
+		Criteria criteria = createCriteria(EInvoiceBuyerVO.class);
+		criteria.add(Restrictions.eq("id", id));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		return (EInvoiceBuyerVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public EInvoiceSupplierVO getEInvoiceSupplier(Long id) {
+		Criteria criteria = createCriteria(EInvoiceSupplierVO.class);
+		criteria.add(Restrictions.eq("id", id));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		return (EInvoiceSupplierVO) criteria.uniqueResult();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Date dtTrans) {
+		Criteria criteria = createCriteria(EInvoiceApiDailySnapshotVO.class);
+		criteria.add(Restrictions.eq("dtTrans", dtTrans));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		
+		List<EInvoiceApiDailySnapshotVO> ls = criteria.list();
+		
+		return ls;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Map<String, Object> params) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select ss.id, ss.id_company, ss.dt_trans, ss.total_count, sum(ss.page_size) ")
+			.append(" from e_invoice_api_daily_snapshot ss ")
+			.append(" where ss.id_company = :idCompany ");
+		
+		if (params.get("statusCd") != null)	sb.append(" and ss.status_cd = :statusCd ");
+		
+		sb.append(" group by ss.dt_trans ");
+		sb.append(" order by ss.dt_trans desc ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", params.get("idCompany"));
+		if (params.get("statusCd") != null)	query.setParameter("statusCd", params.get("statusCd"));
+
+//		if (params.get("first") != null && (Integer) params.get("first") >= 0)	query.setFirstResult((Integer) params.get("first"));
+//		if (params.get("pageSize") != null && (Integer) params.get("pageSize") >= 0)	query.setMaxResults((Integer) params.get("pageSize"));
+		
+		List<Object> results = query.list();
+		List<EInvoiceApiDailySnapshotVO> apiDailySnapshotList = new ArrayList<EInvoiceApiDailySnapshotVO>();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			EInvoiceApiDailySnapshotVO vo = new EInvoiceApiDailySnapshotVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setIdCompany(((BigInteger) row[1]).longValue());
+			vo.setDtTrans((Date) row[2]);
+			
+			if(row[3] != null) vo.setTotalCount((Integer.parseInt(row[3].toString())));
+			if(row[4] != null) vo.setPageSize((Integer.parseInt(row[4].toString())));
+
+			apiDailySnapshotList.add(vo);
+		}
+		return apiDailySnapshotList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<EInvoiceApiDailySnapshotTransVO> getApiDailySnapshotTransList(Long idCompany, Date dtTrans) {
+		Criteria criteria = createCriteria(EInvoiceApiDailySnapshotTransVO.class);
+		criteria.add(Restrictions.eq("idCompany", idCompany));
+		criteria.add(Restrictions.eq("dtTrans", dtTrans));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		
+		List<EInvoiceApiDailySnapshotTransVO> ls = criteria.list();
+		
+		return ls;
+	}
+	
+	@Override
+	public void updateApiDailySnapshotTransStatus(Long idTrans, String existsInLocalStatus, String processStatus, String statusReason) {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(" update e_invoice_api_daily_snapshot_trans set ");
+		if (StringUtils.isNotBlank(existsInLocalStatus))	sb.append(" exists_in_local_status = :existsInLocalStatus, ");
+		if (StringUtils.isNotBlank(processStatus))			sb.append(" process_status = :processStatus, ");
+		if (StringUtils.isNotBlank(statusReason))			sb.append(" status_reason = :statusReason, ");
+		
+		sb.append(" upd_by = :updatedBy, ");
+		sb.append(" dt_upd = now() ");
+		
+		sb.append(" where id = :idTrans ");
+		
+//		System.out.println("CYY eInvoiceDocumentUuid: " + eInvoiceDocumentUuid);
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idTrans", idTrans);
+		if (StringUtils.isNotBlank(existsInLocalStatus))	query.setParameter("existsInLocalStatus", existsInLocalStatus);
+		if (StringUtils.isNotBlank(processStatus))			query.setParameter("processStatus", processStatus);
+		if (StringUtils.isNotBlank(statusReason))			query.setParameter("statusReason", statusReason);
+		query.setParameter("updatedBy", updatedBy);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public Object insert(BaseVO vo) {
+		if (StringUtils.isBlank(BaseContext.getUserFullName()) && StringUtils.isBlank(BaseContext.getLoginId())) {
+			super.insert(vo, "SYSTEM");
+		} else {
+			super.insert(vo);
+		}
+		return vo;
+	}
+	
+	@Override
+	public void update(BaseVO vo) {
+		if (StringUtils.isBlank(BaseContext.getUserFullName()) && StringUtils.isBlank(BaseContext.getLoginId())) {
+			super.update(vo, "SYSTEM");
+		} else {
+			super.update(vo);
+		}
+	}
+}

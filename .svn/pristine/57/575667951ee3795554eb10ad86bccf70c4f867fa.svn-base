@@ -1,0 +1,340 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+
+<style>
+.ui-tooltip {
+	max-width: 800px;
+}
+</style>
+	
+<ui:define name="content">
+<script type="text/javascript">
+	document.addEventListener('DOMContentLoaded', function() {
+		var filters = document.querySelectorAll('input.ui-inputtext');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+	
+	document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+	
+	function setEnterKeyHint() {
+        var filters = document.querySelectorAll('input.ui-inputtext');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+        filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    }
+</script>
+<p:panel header="Deposit">
+<h:form id="idForm">
+    <p:growl id="msg"/>
+    <h:panelGrid columns="12" cellpadding="0" cellspacing="0" style="margin-bottom:10px; width:1200px">
+		<h:outputLabel>Date From</h:outputLabel>
+		<p:calendar value="#{depositBean.searchParamVO.fromDate}" id="idFromDate" pattern="#{config['date.display.pattern']}" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+		<h:outputLabel>Date To</h:outputLabel>
+		<p:calendar value="#{depositBean.searchParamVO.toDate}" id="idToDate" pattern="#{config['date.display.pattern']}" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+		<h:outputLabel>Bank Account</h:outputLabel>
+		<h:selectOneMenu id="idBankSearch" label="Bank Account" value="#{depositBean.searchParamVO.obj1}">
+			<f:selectItem itemLabel="All" itemValue=""/>
+			<f:selectItems value="#{depositBean.bankAcctViewList}" var="bankVO" itemLabel="#{bankVO.name}" itemValue="#{bankVO.id}"/>
+		</h:selectOneMenu>
+		<h:outputLabel>Deposit Number</h:outputLabel>
+		<h:outputText value="#{depositBean.prefixValue}"/>
+		<p:inputText value="#{depositBean.searchParamVO.obj3}"/>
+		<p:commandButton value="Search" actionListener="#{depositBean.search}" oncomplete="setEnterKeyHint();" update="@form"/>
+		<p:commandButton value="All Dates" actionListener="#{depositBean.searchAll}" oncomplete="setEnterKeyHint();" update="@form"/>
+	</h:panelGrid>
+	<p:panelGrid columns="3" cellpadding="0" cellspacing="0" style="margin-bottom:10px; width:380px">
+		<p:commandButton id="idDeposit" value="Add Deposit"
+			oncomplete="varAddDepositDialog.show()" actionListener="#{depositBean.onAddDeposit}" 
+			update=":idAddDepositDialog,:idAddDeposit:idBankAcct,:idAddDeposit:idAddEODt" />
+		<p:commandButton value="#{msg['common.button.label.print']} [PDF]" icon="ui-icon-print"
+				actionListener="#{depositBean.printReportDepositList('PDF')}" ajax="false"
+					rendered="#{not empty depositBean.ldmDeposit}"/>
+		<p:commandButton value="#{msg['common.button.label.print']} [Excel]" icon="ui-icon-print"
+				actionListener="#{depositBean.printReportDepositList('XLS')}" ajax="false"
+					rendered="#{not empty depositBean.ldmDeposit}"/>
+	</p:panelGrid>
+			
+	<p:dataTable id="idPaymentTable" value="#{depositBean.ldmDeposit}" widgetVar="varDepositList"
+		var="cashBookVO" filterEvent="enter" paginator="true" rows="20" lazy="true"
+		paginatorTemplate="#{bterp:pageTemplate()}" 
+		rowsPerPageTemplate="10, 20, 30, 100, 300, 500, 1000, 1500">
+		<p:column headerText="Edit" style="text-align:center" width="30" rendered="#{depositBean.listingTableViewVO.verifyVisibility(1)}">
+			<p:commandButton icon="ui-icon-pencil" 
+				update=":idAddDepositDialog"
+				actionListener="#{depositBean.onDepositSelected(cashBookVO)}"
+				oncomplete="varAddDepositDialog.show()"/>
+		</p:column>
+		<p:column headerText="Delete" style="text-align:center" width="35" rendered="#{depositBean.listingTableViewVO.verifyVisibility(2)}">
+			<p:commandButton icon="ui-icon-close" 
+				actionListener="#{depositBean.onDepositSelected(cashBookVO)}"
+				oncomplete="varDelPaymentDialog.show()" disabled="#{not depositBean.invPmntAuthVO.pmntDel}"/>
+		</p:column>
+		<p:column sortBy="#{cashBookVO.bankName}" filterBy="#{cashBookVO.bankName}" filterMatchMode="contains"  headerText="Bank Name" width="120" rendered="#{depositBean.listingTableViewVO.verifyVisibility(3)}">
+			  <h:outputText value="#{cashBookVO.bankName}"/>
+		</p:column>
+		<p:column sortBy="#{cashBookVO.sysNo}" filterBy="#{cashBookVO.sysNo}" filterMatchMode="contains" headerText="Deposit Number" width="120" rendered="#{depositBean.listingTableViewVO.verifyVisibility(4)}">
+			  <h:outputText value="#{cashBookVO.sysPrefix}-#{cashBookVO.sysNo}"/>
+			  </p:column>
+		<p:column sortBy="#{cashBookVO.dtTrans}" filterBy="#{cashBookVO.dtTrans}" filterMatchMode="contains" filterStyle="width:70px;" headerText="Deposit Date" width="80" rendered="#{depositBean.listingTableViewVO.verifyVisibility(5)}">
+			  <h:outputText value="#{cashBookVO.dtTrans}"><f:convertDateTime pattern="#{config['date.display.pattern']}"/></h:outputText>
+		</p:column>
+		<p:column sortBy="#{cashBookVO.payee}" filterBy="#{cashBookVO.payee}" filterMatchMode="contains" headerText="Receive From" width="200" rendered="#{depositBean.listingTableViewVO.verifyVisibility(6)}">
+			  <h:outputText value="#{cashBookVO.payee}"/>
+		</p:column>
+		<p:column sortBy="#{cashBookVO.taxCodeGroup}" filterBy="#{cashBookVO.taxCodeGroup}" filterMatchMode="contains" headerText="Tax Code Applied" width="120" rendered="#{depositBean.listingTableViewVO.verifyVisibility(7)}">
+			<h:outputText value="#{cashBookVO.taxCodeGroup}"/>
+		</p:column>
+		<p:column sortBy="#{cashBookVO.debit}" filterBy="#{cashBookVO.debit}" filterMatchMode="contains" headerText="Amount" width="120" rendered="#{depositBean.listingTableViewVO.verifyVisibility(8)}">
+			  <h:outputText value="#{cashBookVO.debit}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText>
+		</p:column>
+		<p:column sortBy="#{cashBookVO.refNo}" filterBy="#{cashBookVO.refNo}" filterMatchMode="contains" headerText="Cheque No" width="150" rendered="#{depositBean.listingTableViewVO.verifyVisibility(10)}">
+			  <h:outputText value="#{cashBookVO.refNo}"/>
+		</p:column>
+		<p:column sortBy="#{cashBookVO.remarks}" filterBy="#{cashBookVO.remarks}" filterMatchMode="contains" headerText="Memo" width="200" style="word-wrap:break-word;" rendered="#{depositBean.listingTableViewVO.verifyVisibility(11)}">
+			  <h:outputText value="#{cashBookVO.remarks}"  />
+		</p:column>
+		<p:column sortBy="#{cashBookVO.groupNo}" filterBy="#{cashBookVO.groupNo}" filterMatchMode="contains" headerText="Group" width="120" rendered="#{depositBean.listingTableViewVO.verifyVisibility(12)}">
+			  <h:outputText value="#{cashBookVO.groupNo}"/>
+		</p:column>
+		<p:column sortBy="#{cashBookVO.invoices}" filterBy="#{cashBookVO.invoices}" filterMatchMode="contains" headerText="Documents" width="200" style="word-wrap:break-word;" rendered="#{depositBean.listingTableViewVO.verifyVisibility(13)}">
+			  <ui:repeat value="#{cashBookVO.invoices.split(',')}" var="invoice" varStatus="loop" rendered="#{not empty cashBookVO.invoices}">
+        			<p:commandLink actionListener="#{salesInvBean.handleInvRefNoClick(invoice)}" style="color:#0040FF;"
+                       		update=":idAddInvoiceRefDialog" oncomplete="varAddInvoiceRefDialog.show()">
+            			<h:outputText value="#{invoice}" />
+            			<ui:fragment rendered="#{not loop.last}">,</ui:fragment>
+        			</p:commandLink>
+    		</ui:repeat>
+		</p:column>
+	</p:dataTable>
+	<h:panelGrid columns="3" cellpadding="0" cellspacing="0" style="margin-top:10px; width:380px">
+		<p:commandButton id="idDepositDup" value="Add Deposit" 
+			oncomplete="varAddDepositDialog.show()" actionListener="#{depositBean.onAddDeposit}" update=":idAddDepositDialog,:idAddDeposit:idBankAcct"/>
+		<p:commandButton value="#{msg['common.button.label.print']} [PDF]" icon="ui-icon-print"
+				actionListener="#{depositBean.printReportDepositList('PDF')}" ajax="false"
+					rendered="#{not empty depositBean.ldmDeposit}"/>
+		<p:commandButton value="#{msg['common.button.label.print']} [Excel]" icon="ui-icon-print"
+				actionListener="#{depositBean.printReportDepositList('XLS')}" ajax="false"
+					rendered="#{not empty depositBean.ldmDeposit}"/>
+	</h:panelGrid>
+    	
+</h:form>		
+</p:panel>
+
+	
+<p:dialog id="idAddDepositDialog" widgetVar="varAddDepositDialog" header="Deposit" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddDeposit" >
+		<ui:include src="add_deposit.xhtml"/>
+	</h:form>
+</p:dialog>
+	
+<p:dialog id="idAcctTransDialog" header="Account Transaction" widgetVar="varAccountTransactionDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddAcctTrans">
+		<ui:include src="add_acctTransDPInAdd.xhtml"/>
+	</h:form>
+</p:dialog>
+	
+
+
+<p:confirmDialog widgetVar="varDelPaymentDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{depositBean.deleteDeposit}" update="@form,:idForm" oncomplete="varDelPaymentDialog.hide()"/>
+		<p:commandButton value="Cancel" oncomplete="varDelPaymentDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<p:dialog id="idCustListDialog" header="Customer List" widgetVar="varCustListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idCustListForm">
+		<ui:include src="customer_list.xhtml" />
+		</h:form>
+</p:dialog>
+
+<p:dialog id="idAcctListDialog" widgetVar="varAcctListDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+		<h:form id="idAddAccount">
+	<p:dataTable id="idAddAcctTable" widgetVar="varAddAcctTable" value="#{depositBean.acctViewList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="#{bterp:pageTemplate()}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+		<p:ajax event="rowSelect" listener="#{depositBean.handleAcctSelect}" update=":idAddAcctTrans" oncomplete="varAcctListDialog.hide();varAddAcctTable.clearFilters();"/>
+		
+		<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}-#{vo.subCode}" filterMatchMode="contains">
+			<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+			<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+		</p:column>
+		<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}, #{vo.subDesc}" filterMatchMode="contains">
+			<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+			<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+		</p:column>
+	</p:dataTable>
+	</h:form>
+</p:dialog>
+
+
+<p:dialog id="idInvTransDialog" header="Invoice Payment List" widgetVar="varInvTransDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idInvListForm">
+	<p:growl id="msg"/>
+	<p:dataTable id="idInvListTable" widgetVar="varInvListTable" value="#{depositBean.invPaymentList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="#{bterp:pageTemplate()}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filteredValue="#{depositBean.filteredObjList}" filterEvent="enter">
+	  	<p:ajax event="rowSelect" listener="#{depositBean.handleInvSelect}" update="@form,:idAddDeposit:idShowInv" oncomplete="varInvTransDialog.hide()"/>
+		<p:column headerText="Document No" sortBy="#{vo.invoiceDocTypeCd eq 'P' ? vo.psNo : vo.invoiceNo}" filterBy="#{vo.invoiceDocTypeCd eq 'P' ? vo.psNo : vo.invoiceNo}" filterMatchMode="contains">
+			<h:outputText rendered="#{vo.invoiceDocTypeCd eq 'I'}" value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'invc').prefixid}  #{vo.invoiceNo} " /> 
+			<h:outputText rendered="#{vo.invoiceDocTypeCd eq 'P'}" value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'pax_statement').prefixid} #{vo.psNo} " /> 
+		</p:column>
+		<p:column headerText="Tour Code" sortBy="#{vo.tourCode}" filterBy="#{vo.tourCode}" filterMatchMode="contains">
+			<h:outputText value="#{vo.tourCode}"/>  
+		</p:column>
+		<p:column headerText="Payment Date" sortBy="#{vo.pmntDt}" filterBy="#{depositBean.dateFormat(vo.pmntDt, config['date.display.pattern'])})"
+		 	filterMatchMode="contains">
+			<h:outputText value="#{vo.pmntDt}">
+				<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Issued Date" sortBy="#{vo.createdDate}" style="width:200px;"
+			filterBy="#{depositBean.dateFormat(vo.createdDate, 'dd-MMM-yyyy hh:mm:ss a')}" filterMatchMode="contains">
+			<h:outputText value="#{vo.createdDate}">
+				<f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss a"/>
+			</h:outputText>
+			<p:graphicImage id="idIssuedDate" value="/img/more.png" width="11" style="margin-left: 3px;" rendered="#{not empty vo.invPmntTooltip}"/>
+			<pe:tooltip for="idIssuedDate" shared="true" showDelay="3000"  position="top left"
+				rendered="#{not empty vo.invPmntTooltip}" >
+				<h:outputText value="#{vo.invPmntTooltip}" escape="false" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+		</p:column>
+		<p:column headerText="Reference No" sortBy="#{vo.refNo}" filterBy="#{vo.refNo}" filterMatchMode="contains">
+			<h:outputText value="#{vo.refNo}" /> 
+		</p:column>
+		<p:column headerText="Payment Type" sortBy="#{bterp:lookupItemDesc('pymt_type', vo.pmntTypeCd)}" filterBy="#{bterp:lookupItemDesc('pymt_type', vo.pmntTypeCd)}" filterMatchMode="contains">
+			<h:outputText value="#{bterp:lookupItemDesc('pymt_type', vo.pmntTypeCd)}"/>  
+		</p:column>
+		<p:column headerText="Reference No" sortBy="#{vo.refNo}" filterBy="#{vo.refNo}">
+			<h:outputText value="#{vo.refNo}" /> 
+		</p:column>
+		<p:column headerText="Received From" sortBy="#{vo.recievedFr}" filterBy="#{vo.recievedFr}" filterMatchMode="contains">
+			<h:outputText value="#{vo.recievedFr}" /> 
+		</p:column>
+		<p:column headerText="Amount" sortBy="#{vo.amount}" filterBy="#{vo.amount}" style="text-align:center;" filterMatchMode="contains">
+			<h:outputText value="#{vo.amount}">
+				<f:convertNumber pattern="#,##0.00" />
+			</h:outputText> 
+		</p:column>
+		<p:column headerText="Attachment" style="width:80px; text-align:center;">
+			<ui:repeat value="#{vo.invoicePaymentAttachmentList}" var="attVO">
+				<h:outputText value="["/>
+				<h:outputLink id="idTTAttachment" target="_blank" value="#{request.contextPath}#{depositBean.destinationPaymentAttachmentPath}/#{attVO.filePath}"
+					style="color: #db3333;text-decoration: underline;"
+					rendered="#{not empty attVO.scannedPath and not empty attVO.filePath}" >
+					<h:outputText value="#{vo.invoicePaymentAttachmentList.indexOf(attVO)+1}"/>
+				</h:outputLink>
+				<h:outputText value="] "/>
+				<pe:tooltip for="idTTAttachment" shared="true" showDelay="3000"  position="top right"
+					rendered="#{not empty attVO.scannedPath and not empty attVO.filePath}">
+					<h:outputText value="#{attVO.scannedPath}" escape="true" style="white-space: pre-wrap"/>
+				</pe:tooltip>
+			</ui:repeat>
+		</p:column>
+	</p:dataTable>
+	</h:form> 
+</p:dialog>
+
+<p:dialog id="idListingTableViewDialog" header="Listing Table View"
+			widgetVar="varListingTableViewDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idListingTableViewForm">
+				<ui:include
+					src="../../maintenance/listingtableview/listing_dpt_table_view.xhtml" />
+			</h:form>
+		</p:dialog>
+
+<p:dialog id="idGSTListDialog" widgetVar="varGSTListDialog" header="GST Tax Code" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<p:tabView >
+    	<p:tab title="Input Tax" style="width:150px;">
+			<p:dataTable id="idInputTaxCodeList" value="#{depositBean.inputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{depositBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" 
+					update=":idAddAcctTrans"/>
+				<p:column headerText="No." width="25" style="text-align:right;">
+					<h:outputText value="#{vo.seqNo}"/>
+				</p:column>
+				<p:column headerText="Code" width="50">
+					<h:outputText value="#{vo.code}" />
+				</p:column>
+				<p:column headerText="Description" >
+					<h:outputText value="#{vo.description}" />
+				</p:column>
+				<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+					<h:outputText value="#{vo.rate}"/>
+				</p:column>
+			</p:dataTable>
+		</p:tab>
+		<p:tab title="Output Tax" style="width:150px;">
+			<p:dataTable id="idOutputTaxCodeList" value="#{depositBean.outputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{depositBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" 
+					update=":idAddAcctTrans"/>
+				<p:column headerText="No." width="25" style="text-align:right;">
+					<h:outputText value="#{vo.seqNo}"/>
+				</p:column>
+				<p:column headerText="Code" width="50">
+					<h:outputText value="#{vo.code}" />
+				</p:column>
+				<p:column headerText="Description" >
+					<h:outputText value="#{vo.description}" />
+				</p:column>
+				<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+					<h:outputText value="#{vo.rate}"/>
+				</p:column>
+			</p:dataTable>
+		</p:tab>
+	</p:tabView>
+</p:dialog>
+
+<p:dialog id="idAddInvoiceRefDialog" header="Invoice"
+	widgetVar="varAddInvoiceRefDialog" modal="true" resizable="false"
+	dynamic="true" closable="true" styleClass="invoiceRefDialog">
+	<h:form id="idAddInvoiceRefForm">
+		<div style="height:550px;">
+		<ui:include src="../../sales/inv/add_ref_invoice.xhtml" />
+		</div>
+	</h:form>
+</p:dialog>
+
+<!-- <p:dialog id="idPassportImageDialog"
+			widgetVar="varPassportImageDialog" header="Passport Image"
+			modal="true" resizable="false" draggable="true" closable="true"
+			width="800" height="600">
+			<h:form style="height: 100%;">
+				<iframe
+					src="#{request.contextPath}#{salesBean.destinationPassportPath}/#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}"
+					style="width: 100%; height: 100%;" frameborder="0"></iframe>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						oncomplete="varPassportImageDialog.hide();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog> -->
+</ui:define>
+</ui:composition>

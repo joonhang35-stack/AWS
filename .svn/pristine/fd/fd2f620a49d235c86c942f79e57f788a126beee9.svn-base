@@ -1,0 +1,14 @@
+package com.bcs.zsg.common.helper;
+
+public class CRMCommonConstant {
+	
+	public final static String API_STATUS_FAILD = "FAILED";
+	public final static String API_STATUS_SUCCESS = "SUCCESS";
+	
+	// CRM - Invoice Posting Sales
+	public static final String CRM_INV_POSTING_PENDING = "P";
+	public static final String CRM_INV_POSTING_SUCCESS = "S";
+	public static final String CRM_INV_POSTING_FAILED = "F";
+	public static final String CRM_INV_POSTING_INCOMPLETED = "I";
+	
+}

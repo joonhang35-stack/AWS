@@ -1,0 +1,213 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddPassangerDetailsDialog.show();
+		} else {
+			varAddPassangerDetailsDialog.hide();
+		}
+	}
+</script>
+
+<div style="height:500px;overflow:auto;">
+	<p:panelGrid>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idSalutate">Salutation <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column colspan="3">
+				<h:selectOneMenu id="idSalutate" label="Salutation" value="#{salesBean.passangerVO.personVO.salutation}" required="true">  
+		            <f:selectItem itemLabel="Select One" itemValue=""/>  
+		            <f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		        </h:selectOneMenu>
+	        </p:column>
+		</p:row>
+		 
+		<p:row>
+			<p:column>
+	        	<h:outputLabel for="idLastName">Last Name <span class="required">*</span></h:outputLabel>
+	        </p:column>
+			<p:column>
+				<p:inputText id="idLastName" label="Last Name" value="#{salesBean.passangerVO.personVO.lastName}" maxlength="50" required="true"/>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idGivenName">Given Name <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idGivenName" label="Given Name" value="#{salesBean.passangerVO.personVO.givenName}" maxlength="50" required="true"/>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<p:commandButton value="Add ID" actionListener="#{salesBean.setIdentityAdd(true)}" oncomplete="varIDDialog.show()" immediate="true"/><span class="required"> *</span>
+			</p:column>
+			<p:column colspan="3">
+				<p:panel id ="idIDListPanel" style="border:none">
+					<p:dataTable id="idIDListTable" value="#{salesBean.passangerVO.identityList}" var="identityVO" rowKey="#{identityVO.idNo}" selectionMode="single" rendered="#{not empty salesBean.passangerVO.identityList}">
+						<p:column headerText="Edit" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onIdentitySelected(identityVO)}" oncomplete="varIDDialog.show()" process="@this" update=":idIDDialog"/>
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteIdentity(identityVO)}" update=":idAddPassangerDetailsForm:idIDListPanel" process="@this"/>
+						</p:column>
+						<p:column headerText="ID Type">
+							<h:outputText value="#{bterp:lookupItemDesc('id_type', identityVO.idType)}"/>
+						</p:column>
+						<p:column headerText="ID No">
+							<h:outputText value="#{identityVO.idNo}"/>
+						</p:column>
+					</p:dataTable>
+				</p:panel>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idDOB">Date of Birth (DOB)</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:calendar id="idDOB" label="Date of Birth" value="#{salesBean.passangerVO.personVO.dob}" readonlyInput="true" navigator="true" showButtonPanel="true" yearRange="c-100:c-0" pattern="dd-MMM-yyyy">
+					<p:ajax event="dateSelect" listener="#{salesBean.calculateAge}" update="idAge"/> 
+				</p:calendar>
+	        </p:column>
+		</p:row>
+		
+		<p:row>
+	        <p:column>
+				<h:outputLabel for="idAge">Age</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAge" label="Age" value="#{salesBean.passangerVO.personVO.age}" size="3" readonly="true"/>
+	        </p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<p:commandButton value="Add Spoken Languages" actionListener="#{salesBean.setLanguageAdd(true)}" oncomplete="varLangDialog.show()" immediate="true"/>
+			</p:column>
+			<p:column colspan="3">
+				<p:panel id ="idLangListPanel" style="border:none">
+					<p:dataTable id="idLangListTable" value="#{salesBean.passangerVO.personLangList}" var="languageVO" rowKey="#{languageVO.langCd}" selectionMode="single" rendered="#{not empty salesBean.passangerVO.personLangList}">
+						<p:column headerText="Edit" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onLanguageSelected(languageVO)}" oncomplete="varLangDialog.show()" process="@this" update=":idLangDialog"/>
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteLanguage(languageVO)}" update=":idAddPassangerDetailsForm:idLangListPanel" process="@this"/>
+						</p:column>
+						<p:column headerText="Language">
+							<h:outputText value="#{bterp:lookupItemDesc('lang_dilc', languageVO.langCd)}"/>
+						</p:column>
+					</p:dataTable>
+				</p:panel>
+			</p:column>
+		</p:row>
+		
+		<!--p:row>
+			<p:column>
+				<h:outputLabel for="idInsBrought">Insurance Brought</h:outputLabel>
+			</p:column>
+			<p:column colspan="3">
+				<h:selectOneMenu id="idInsBrought" label="Insurance Brought" value="#{salesBean.passangerVO.personVO.insurance}">  
+		            <f:selectItem itemLabel="Select One" itemValue="0"/>
+		            <f:selectItem itemLabel="No" itemValue="0"/>
+		            <f:selectItem itemLabel="Yes" itemValue="1"/>
+		        </h:selectOneMenu>
+	        </p:column>
+		</p:row-->
+		
+		<p:row>
+			<p:column>
+				<p:commandButton value="Add Meals" actionListener="#{salesBean.setMealAdd(true)}" oncomplete="varMealDialog.show()" immediate="true"/>
+			</p:column>
+			<p:column colspan="3">
+				<p:panel id ="idMealListPanel" style="border:none">
+					<p:dataTable id="idMealListTable" value="#{salesBean.passangerVO.personMealList}" var="mealVO" rowKey="#{mealVO.mealCd}" selectionMode="single" rendered="#{not empty salesBean.passangerVO.personMealList}">
+						<p:column headerText="Edit" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onMealSelected(mealVO)}" oncomplete="varMealDialog.show()" process="@this" update=":idMealDialog"/>
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteMeal(mealVO)}" update=":idAddPassangerDetailsForm:idMealListPanel" process="@this"/>
+						</p:column>
+						<p:column headerText="Meal">
+							<h:outputText value="#{bterp:lookupItemDesc('meal_pref', mealVO.mealCd)}"/>
+						</p:column>
+					</p:dataTable>
+				</p:panel>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<p:commandButton value="Add Contacts" actionListener="#{salesBean.setContactAdd(true)}" oncomplete="varContactDialog.show()" immediate="true"/>
+			</p:column>
+			<p:column colspan="3">
+				<p:panel id ="idContactListPanel" style="border:none">
+					<p:dataTable id="idContactListTable" value="#{salesBean.passangerVO.personContactList}" var="contactVO" rowKey="#{contactVO.number}" selectionMode="single" rendered="#{not empty salesBean.passangerVO.personContactList}">
+						<p:column headerText="Edit" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onContactSelected(contactVO)}" oncomplete="varContactDialog.show()" process="@this" update=":idContactDialog"/>
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteContact(contactVO)}" update=":idAddPassangerDetailsForm:idContactListPanel" process="@this"/>
+						</p:column>
+						<p:column headerText="Contact Type">
+							<h:outputText value="#{bterp:lookupItemDesc('cntc_type', contactVO.typeCd)}"/>
+						</p:column>
+						<p:column headerText="Contact No">
+							<h:outputText value="#{contactVO.number}"/>
+						</p:column>
+					</p:dataTable>
+				</p:panel>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<p:commandButton value="Add Remarks" actionListener="#{salesBean.setRemarksAdd(true)}" oncomplete="varRemarksDialog.show()" immediate="true"/>
+			</p:column>
+			<p:column colspan="3">
+				<p:panel id ="idRemarksListPanel" style="border:none">
+					<p:dataTable id="idRemarksListTable" value="#{salesBean.passangerVO.custRemarksList}" var="remarksVO" rowKey="#{remarksVO.timestamp}" selectionMode="single" rendered="#{not empty salesBean.passangerVO.custRemarksList}">
+						<p:column headerText="Edit" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onRemarksSelected(remarksVO)}" oncomplete="varRemarksDialog.show()" process="@this" update=":idRemarksDialog"/>
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteRemarks(remarksVO)}" update=":idAddPassangerDetailsForm:idRemarksListPanel" process="@this"/>
+						</p:column>
+						<p:column headerText="Remarks Details">
+							<h:outputText value="#{remarksVO.remarksDetails}"/>
+						</p:column>
+						<p:column headerText="Time Stamp">
+							<h:outputText value="#{remarksVO.timestamp}">
+								<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss"/>  
+							</h:outputText>
+						</p:column>
+					</p:dataTable>
+				</p:panel>
+			</p:column>
+		</p:row>
+		
+	</p:panelGrid>
+</div>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{salesBean.addPassanger}" update="@form" oncomplete="onValidation(xhr, status, args)"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetInvPassForm}" update="@form" process="@this" oncomplete="varAddPassangerDetailsDialog.hide()" global="false">
+		<pe:resetEditableValues for="idAddPassangerDetailsForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

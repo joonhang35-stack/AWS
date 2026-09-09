@@ -1,0 +1,843 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	template="/WEB-INF/views/layouts/main.xhtml"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<ui:define name="content">
+
+<style>
+.ui-datepicker-calendar {
+    display: none;
+    }
+</style>
+
+<script type="text/javascript">
+//<![CDATA[
+	var dateFrom, dateTo;
+	
+	function handleComplete(xhr, status, args) {
+		if(args.file != undefined)
+	   		window.open('gst-03.xhtml?file=' + args.file);
+	}
+
+	$(document).ready(function() {
+		//First time set to today's Month and Year
+      	$("#ui-datepicker-div .ui-datepicker-month :selected").val();
+      	$("#ui-datepicker-div .ui-datepicker-year :selected").val();
+      	
+      	dateFrom = $("#idForm\\:idDateFrom").val();
+      	dateTo = $("#idForm\\:idDateTo").val(); 
+      	
+		RefreshScreen ();
+	});
+		
+    function RefreshScreen () {
+	    $("#idForm\\:idTabSummary tfoot tr").each(function() {
+	    	var strText = $(this).find("td:nth(0)").text();
+	    	
+		    if(strText.indexOf("Total") == -1 && strText != "Adjustments") {
+		    	$(this).addClass("ui-widget-content ui-datatable-even").attr("role", "row");
+		    	$(this).find("td").removeClass("ui-state-default");
+	    	}
+	    });
+	    
+	    $('.date-picker').datepicker( {
+	        changeMonth: true,
+	        changeYear: true,
+	        showButtonPanel: true,
+	        dateFormat: 'M yy',
+			minDate: minDate, 
+			maxDate: new Date(), 
+			beforeShow: function() {
+		      	if ((selDate = $(this).val()).length > 0) {
+		      		year = selDate.substring(selDate.length - 4, selDate.length);
+		      		month = jQuery.inArray(selDate.substring(0, selDate.length - 5), $(this).datepicker('option', 'monthNamesShort'));
+	          	$(this).datepicker('option', 'defaultDate', new Date(year, month, 1));
+	          	$(this).datepicker('setDate', new Date(year, month, 1));
+			   		}
+			    },
+	        onClose: function(dateText, inst) { 
+	            var month = $("#ui-datepicker-div .ui-datepicker-month :selected").val();
+	            var year = $("#ui-datepicker-div .ui-datepicker-year :selected").val();
+	            
+	            var boolIsChanged = false;
+	            $(this).datepicker('setDate', new Date(year, month, 1));
+	            
+	            if($(this)[0].id.indexOf("From") > 0) {
+		            if($(this).val() != dateFrom) {
+		            	dateFrom = $(this).val();
+		            	boolIsChanged = true;
+		            }
+	            } else {
+					if($(this).val() != dateTo) {
+						dateTo = $(this).val();
+		            	boolIsChanged = true;
+		            }
+	            }
+	            
+	            if(boolIsChanged)
+					$(this).change();
+	        }
+	    });
+
+    }
+	//]]>
+</script>
+	<h:outputScript>var minDate = new Date("#{gstBean.companyTaxVO.gstFilling}");</h:outputScript>
+	<h:form id="idForm">
+		<p:growl id="msg" life="3000" autoUpdate="true" />
+	 	
+	 	<p:panel header="GST Return" >
+	 		<p:panelGrid >
+				<p:row>
+					<p:column style="width:150px;">
+					 	<h:outputLabel value="Company Tax Number" />
+					</p:column>
+					<p:column style="width:150px;">
+					 	<p:inputText id="idTaxNumber" value="#{gstBean.companyTaxVO.taxNumber}" disabled="true" />
+					</p:column>
+					<p:column style="width:150px;">
+					 	<h:outputLabel value="Carry Forward Refund" />
+					</p:column>
+					<p:column >
+					 	<p:inputText id="idCarryForwardFlag" value="#{gstBean.companyTaxVO.refundCarryForward.equals('Y') ? 'Yes' : 'No' }" 
+					 			disabled="true" style="width:50px;"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			
+	 		<p:panelGrid style="margin-top:15px;">
+				<p:row>
+					<p:column style="width:35px;">
+					 	<p:outputLabel value="From" for="idDateFrom" />
+					</p:column>
+					<p:column style="width:80px;">
+					 	<p:inputText id="idDateFrom" value="#{gstBean.dateFrom}" required="true"
+					    		styleClass="date-picker" style="width:60px;margin-right:10px"
+					    		disabled="#{not gstBean.isValidPeriod}">
+							<f:convertDateTime pattern="MMM yyyy"/>
+							<p:ajax listener="#{gstBean.updateDateRange(true)}" event="change"
+								update="idForm" oncomplete="RefreshScreen();"/>
+						</p:inputText>
+					</p:column>
+					<p:column style="width:30px;">
+					 	<p:outputLabel value="To" for="idDateTo" />
+					</p:column>
+					<p:column style="width:80px;">
+					 	<p:inputText id="idDateTo" value="#{gstBean.dateTo}" required="true"
+					    		styleClass="date-picker" style="width:60px;margin-right:10px"
+					    		disabled="#{not gstBean.isValidPeriod}">
+							<f:convertDateTime pattern="MMM yyyy"/>
+							<p:ajax listener="#{gstBean.updateDateRange(true)}" event="change"
+								update=":idForm,:idForm:idTabSummary" oncomplete="RefreshScreen();"/>
+						</p:inputText>
+					</p:column>
+					<p:column>
+						<p:commandButton value="View GST-03"
+								actionListener="#{gstBean.generatePDF()}" 
+								update=":idForm"
+								oncomplete="handleComplete(xhr, status, args);RefreshScreen();"
+								disabled="#{not gstBean.isValidPeriod or !gstBean.singleMonth or gstBean.companyTaxVO.gstFilling == null or empty gstBean.companyTaxVO.taxNumber}">
+						</p:commandButton>
+						
+						<p:commandButton value="Export GST Return File" style="margin-left:10px"
+								actionListener="#{gstBean.downloadTaxReturn()}" update="@form"
+								oncomplete="RefreshScreen();" ajax="false" 
+								disabled="#{not gstBean.isValidPeriod or !gstBean.singleMonth or gstBean.companyTaxVO.gstFilling == null or empty gstBean.companyTaxVO.taxNumber}">
+			        		<p:fileDownload value="#{gstBean.downloadTaxReturnStream}"/>
+						</p:commandButton>
+						
+						<p:commandButton value="Export GAF File" style="margin-left:10px"
+								actionListener="#{gstBean.downloadGAF()}" update="@form"
+								oncomplete="RefreshScreen();" ajax="false"  
+								disabled="#{not gstBean.isValidPeriod or !gstBean.singleMonth or gstBean.companyTaxVO.gstFilling == null or empty gstBean.companyTaxVO.taxNumber}">
+			        		<p:fileDownload value="#{gstBean.downloadGAFStream}"/>
+						</p:commandButton>
+					</p:column>
+				</p:row>
+				<c:if test="#{empty gstBean.companyTaxVO.taxNumber or gstBean.companyTaxVO.gstFilling == null}">
+				<p:row>
+					<p:column colspan="5" styleClass="ui-message-error">
+					 	<h:outputText value="* No GST tax registration found." style="display:block" styleClass="ui-message-error-detail" rendered="#{empty gstBean.companyTaxVO.taxNumber}"/>
+						
+						<h:outputText value="* No GST filling date found." styleClass="ui-message-error-detail" rendered="#{gstBean.companyTaxVO.gstFilling == null}" />
+					</p:column>
+				</p:row>
+				</c:if>
+			</p:panelGrid>
+		</p:panel>
+		
+		<p:tabView id="idTabSummary" style="margin-top:10px;" dynamic="true" cahce="true" 
+				activeIndex="#{gstBean.activeTabIndex}" disabled="#{not gstBean.isValidPeriod or gstBean.companyTaxVO.gstFilling == null or empty gstBean.companyTaxVO.taxNumber}">
+			<p:ajax event="tabChange" oncomplete="RefreshScreen();" />
+			<p:tab title="Month Summary" disabled="#{not gstBean.isValidPeriod}">
+				<p:dataTable id="idMonthlySummaryList" value="#{gstBean.monthlySummaryList}" var="vo" rendered="#{gstBean.isValidPeriod}">
+					<p:column headerText="Date From" style="width:120px;">
+						<h:outputText value="#{vo.dateFrom}">
+							<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Date To" style="width:120px;">
+						<h:outputText value="#{vo.dateTo}" >
+							<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Balance B/F" styleClass="txt_right" style="width:130px;" >
+						<h:outputText value="#{vo.openingBalance}"  >
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Output Tax" styleClass="txt_right" style="width:130px;" >
+						<h:outputText value="#{vo.outputTax}" >
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Input Tax" styleClass="txt_right" style="width:130px;" >
+						<h:outputText value="#{vo.inputTax}" >
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Payable/(Claimable)" styleClass="txt_right" style="width:130px;" >
+						<h:outputText value="#{vo.amountPayable}" rendered="#{vo.amountPayable > 0}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+						<h:outputText value="#{vo.amountClaimable}" rendered="#{vo.amountPayable == 0}">
+							<f:convertNumber pattern="'('#{config['amount.format.pattern']}')'"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Balance C/F" styleClass="txt_right" style="width:130px;" >
+						<h:outputText value="#{vo.closingBalance}" >
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Carry Forward" styleClass="txt_center" >
+						<h:outputText value="#{vo.refundCarryForward.equals('Y') ? 'Yes' : 'No' }" />
+					</p:column>
+					<p:column headerText="Status" styleClass="txt_center" >
+						<h:outputText value="#{gstBean.getProcessStatusDescription(vo.processed)}" />
+					</p:column>
+					<p:column rendered="#{gstBean.authorizedUser}" style="width:280px;" styleClass="txt_center">
+						<p:commandButton value="Lock" rendered="#{vo.processed.equals('P')}"
+							actionListener="#{gstBean.selectProcessPeriod(vo, 'L')}" style="margin-right:10px;" 
+							update=":idDialogSubmit" oncomplete="varDialogSubmit.show()">
+						</p:commandButton>
+						<p:commandButton value="Refresh" rendered="#{vo.processed.equals('P') or vo.processed.equals('L')}"
+							actionListener="#{gstBean.refreshPeriod(vo)}"  style="margin-right:10px;" 
+							update="@form" >
+						</p:commandButton>
+						<p:commandButton value="Unlock" rendered="#{vo.processed.equals('L')}"
+							actionListener="#{gstBean.selectProcessPeriod(vo, 'U')}" style="margin-right:10px;" 
+							update=":idDialogSubmit" oncomplete="varDialogSubmit.show()">
+						</p:commandButton>
+						<p:commandButton value="Submit" rendered="#{vo.processed.equals('L')}"
+							actionListener="#{gstBean.selectProcessPeriod(vo, 'S')}"
+							update=":idDialogSubmit" oncomplete="varDialogSubmit.show()">
+						</p:commandButton>
+					</p:column>
+				</p:dataTable>
+			</p:tab>
+			
+			<p:tab title="Tax Summary (GST-03 Items)" disabled="#{not gstBean.isValidPeriod or gstBean.companyTaxVO.gstFilling == null or empty gstBean.companyTaxVO.taxNumber}">
+				<p:panelGrid>
+					<p:row>
+						<p:column style="width:10px;">5)
+						</p:column>
+						<p:column style="width:350px;">Output Tax
+						</p:column>
+						<p:column>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+						</p:column>
+						<p:column> a) Total Value of Standard Rated Supply 
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.formTotalAmountList.get(0).amount}" styleClass="txt_right" disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+						</p:column>
+						<p:column> b) Total Output Tax (Inclusive of Tax Value 􏰀on Bad Debt Recovered and other Adjustments)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.formTotalAmountList.get(2).taxAmount}" styleClass="txt_right" disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+						</p:column>
+						<p:column colspan="2">
+							<p:dataTable id="idTaxSummaryOutputList" value="#{gstBean.formOutputTaxList}" var="vo" 
+								style="width:500px;margin-left:20px;">
+								<p:column headerText="Tax Code" style="width:130px;">
+									<h:outputText value="#{vo.taxCode}" />
+								</p:column>
+								<p:column headerText="Rate (%)" styleClass="txt_right" style="width:60px;" >
+									<h:outputText value="#{vo.rate}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Amount" styleClass="txt_right" style="width:130px;">
+									<h:outputText value="#{vo.amount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Taxable Amount" styleClass="txt_right" >
+									<h:outputText value="#{vo.taxAmount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:columnGroup type="footer">
+								  	<p:row>
+								    	<p:column colspan="2" style="text-align:right;" footerText="Sub Total" />
+								    	<p:column style="text-align:right" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(0).amount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+								    	<p:column style="text-align:right;" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(0).taxAmount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+									</p:row>
+								  	<p:row>
+								    	<p:column colspan="2" style="text-align:left;" footerText="Adjustments" />
+								    	<p:column footerText="" />
+							        	<p:column style="" footerText="" />
+							   		</p:row>
+							   		
+							   		<c:forEach items="#{gstBean.formOutputTaxAdjustmentList}" var="voAdjust">
+								    <p:row>
+								    	<p:column style="text-align:left" footerText="#{voAdjust.taxCode}" />
+								    	<p:column style="text-align:right">
+											<f:facet name="footer">
+								                <h:outputText value="#{voAdjust.rate}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+							            </p:column>
+								    	<p:column style="text-align:right">
+											<f:facet name="footer">
+								                <h:outputText value="#{voAdjust.amount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+								        </p:column>
+							        	<p:column style="text-align:right">
+											<f:facet name="footer">
+								                <h:outputText value="#{voAdjust.taxAmount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+							   		</p:row>
+								    </c:forEach>
+								  	<p:row>
+								    	<p:column colspan="2" style="text-align:right;" footerText="Sub Total" />
+								    	<p:column style="text-align:right" footerText="#{gstBean.formTotalAmountList.get(1).amount}" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(1).amount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+								    	<p:column style="text-align:right;" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(1).taxAmount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+								  	</p:row>
+								  	
+								  	<p:row>
+								    	<p:column colspan="2" style="text-align:right" footerText="Total" />
+								   	 	<p:column style="text-align:right" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(2).amount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+								    	<p:column style="text-align:right" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(2).taxAmount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+							   		</p:row>
+								</p:columnGroup>
+							</p:dataTable>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>6)
+						</p:column>
+						<p:column >Input Tax
+						</p:column>
+						<p:column>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+						</p:column>
+						<p:column> a) Total Value of Standard Rate and Flat Rate Acquisitions 
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.formTotalAmountList.get(3).amount}" styleClass="txt_right" disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+						</p:column>
+						<p:column> b) Total Input Tax (Inclusive of Tax Value on Bad Debt Relief and other Adjustments)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.formTotalAmountList.get(5).taxAmount}" styleClass="txt_right" disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+						</p:column>
+						<p:column colspan="2">
+							<p:dataTable id="idInputTaxList" value="#{gstBean.formInputTaxList}" var="vo" 
+								style="width:500px;margin-left:20px;">
+								<p:column headerText="Tax Code" style="width:130px;">
+									<h:outputText value="#{vo.taxCode}" />
+								</p:column>
+								<p:column headerText="Rate (%)" styleClass="txt_right" style="width:60px;" >
+									<h:outputText value="#{vo.rate}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Amount" styleClass="txt_right" style="width:130px;">
+									<h:outputText value="#{vo.amount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Taxable Amount" styleClass="txt_right" >
+									<h:outputText value="#{vo.taxAmount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:columnGroup type="footer">
+								  	<p:row>
+								    	<p:column colspan="2" style="text-align:right;"  footerText="Sub Total" />
+									    <p:column style="text-align:right;" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(3).amount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+									    <p:column style="text-align:right;" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(3).taxAmount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+								  	</p:row>
+								  	<p:row>
+								    	<p:column colspan="2" style="text-align:left;"  footerText="Adjustments" />
+								    	<p:column footerText="" />
+							        	<p:column footerText="" />
+							   		</p:row>
+							   		
+							   		<c:forEach items="#{gstBean.formInputTaxAdjustmentList}" var="voAdjust">
+								    <p:row>
+								    	<p:column style="text-align:left" footerText="#{voAdjust.taxCode}" />
+								    	<p:column style="text-align:right">
+											<f:facet name="footer">
+								                <h:outputText value="#{voAdjust.rate}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+							            </p:column>
+								    	<p:column style="text-align:right">
+											<f:facet name="footer">
+								                <h:outputText value="#{voAdjust.amount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+								        </p:column>
+							        	<p:column style="text-align:right">
+											<f:facet name="footer">
+								                <h:outputText value="#{voAdjust.taxAmount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+							   		</p:row>
+								    </c:forEach>
+								  	<p:row>
+								    	<p:column colspan="2" style="text-align:right"  footerText="Sub Total" />
+								   	 	<p:column style="text-align:right" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(4).amount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+								    	<p:column style="text-align:right" >
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(4).taxAmount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+							   		</p:row>
+								  	<p:row>
+								    	<p:column colspan="2" style="text-align:right" footerText="Total" />
+								   	 	<p:column style="text-align:right">
+								   	 		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(5).amount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+								    	<p:column style="text-align:right">
+								    		<f:facet name="footer">
+								                <h:outputText value="#{gstBean.formTotalAmountList.get(5).taxAmount}">
+													<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								                </h:outputText>
+								            </f:facet>
+										</p:column>
+							   		</p:row>
+								</p:columnGroup>
+							</p:dataTable>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>7)
+						</p:column>
+						<p:column>GST Amount Payable (Item 5b - Item 6b) 
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.amountPayable}" styleClass="txt_right" disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>8)
+						</p:column>
+						<p:column>GST Amount Claimable (Item 6b - Item 5b) 
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.amountClaimable}" styleClass="txt_right" disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>10) 
+						</p:column>
+						<p:column>Total Value of Local Zero-Rated Supplies (ZRL)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.gstVO.totalLocalZeroRatedSupplies}" styleClass="txt_right" 
+								disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>11) 
+						</p:column>
+						<p:column>Total Value of Export Supplies (ZRE)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.gstVO.totalExportSupplies}" styleClass="txt_right" 
+								disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>12) 
+						</p:column>
+						<p:column>Total Value of Exempt Supplies
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.gstVO.totalExemptSupplies}" styleClass="txt_right" 
+								disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+						</p:column>
+						<p:column colspan="2">
+							<p:dataTable id="idExepmtedSupplyList" value="#{gstBean.formExemptedSupplyList}" var="vo" 
+								style="width:500px;margin-left:20px;">
+								<p:column headerText="Tax Code" style="width:130px;">
+									<h:outputText value="#{vo.taxCode}" />
+								</p:column>
+								<p:column headerText="Rate (%)" styleClass="txt_right" style="width:60px;" >
+									<h:outputText value="#{vo.rate}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Amount" styleClass="txt_right" style="width:130px;">
+									<h:outputText value="#{vo.amount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Taxable Amount" styleClass="txt_right" >
+									<h:outputText value="#{vo.taxAmount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:columnGroup type="footer">
+								  <p:row>
+								    <p:column colspan="2" style="text-align:right" footerText="Grand Total" />
+								    <p:column style="text-align:right" >
+							    		<f:facet name="footer">
+							                <h:outputText value="#{gstBean.formTotalAmountList.get(6).amount}">
+												<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							                </h:outputText>
+							            </f:facet>
+									</p:column>
+								    <p:column style="text-align:right" >
+							    		<f:facet name="footer">
+							                <h:outputText value="#{gstBean.formTotalAmountList.get(6).taxAmount}">
+												<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							                </h:outputText>
+							            </f:facet>
+									</p:column>
+								  </p:row>
+								</p:columnGroup>
+							</p:dataTable>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>13) 
+						</p:column>
+						<p:column>Total Value of Supplies Granted GST Relief (RS)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.gstVO.totalSuppliesGrantedRelief}" styleClass="txt_right" 
+								disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>14) 
+						</p:column>
+						<p:column>Total Value of Goods Imported Under Approved Trader Scheme (IS)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.gstVO.totalGoodsImportedApproved}" styleClass="txt_right" 
+								disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>15) 
+						</p:column>
+						<p:column>Total Value of GST Suspended under item 14 (IS)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.gstVO.totalSuspendedUnder14}" styleClass="txt_right" 
+								disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>16) 
+						</p:column>
+						<p:column>Total Value of Capital Goods Acquired (TX)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.gstVO.totalCapitalGoodsAcquired}" styleClass="txt_right" 
+								disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>17) 
+						</p:column>
+						<p:column>Total value of Bad Debt Relief Inclusive Tax (AJP)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.gstVO.totalBadDebtRelief}" styleClass="txt_right" 
+								disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>18) 
+						</p:column>
+						<p:column>Total value of Bad Debt Recovered Inclusive Tax (AJS)
+						</p:column>
+						<p:column>
+							<p:inputText value="#{gstBean.viewSummaryVO.gstVO.totalBadDebtRecovered}" styleClass="txt_right" 
+								disabled="true" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:tab>
+			<p:tab title="Tax Summary (Non-GST-03 Items)" disabled="#{not gstBean.isValidPeriod or gstBean.companyTaxVO.gstFilling == null or empty gstBean.companyTaxVO.taxNumber}">
+				<p:panelGrid>
+					<p:row>
+						<p:column style="width:10px;">1) 
+						</p:column>
+						<p:column>(Input) Purchases with/without GST incurred AND not claimable
+						</p:column>
+						<p:column>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column> 
+						</p:column>
+						<p:column colspan="2">
+							<p:dataTable id="idTaxSummaryInputNonClaimList" value="#{gstBean.viewSummaryVO.inputNonClaimableVOList}" 
+									var="vo" style="width:500px;margin-left:20px;">
+								<p:column headerText="Tax Code" style="width:130px;">
+									<h:outputText value="#{vo.taxCode}" />
+								</p:column>
+								<p:column headerText="Rate (%)" styleClass="txt_right" style="width:60px;" >
+									<h:outputText value="#{vo.rate}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Amount" styleClass="txt_right" style="width:130px;">
+									<h:outputText value="#{vo.amount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Taxable Amount" styleClass="txt_right" >
+									<h:outputText value="#{vo.taxAmount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:columnGroup type="footer">
+								  <p:row>
+								    <p:column colspan="2" style="text-align:right" footerText="Grand Total" />
+								    <p:column style="text-align:right" >
+							    		<f:facet name="footer">
+							                <h:outputText value="#{gstBean.formTotalAmountList.get(7).amount}">
+												<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							                </h:outputText>
+							            </f:facet>
+									</p:column>
+								    <p:column style="text-align:right" >
+							    		<f:facet name="footer">
+							                <h:outputText value="#{gstBean.formTotalAmountList.get(7).taxAmount}">
+												<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							                </h:outputText>
+							            </f:facet>
+									</p:column>
+								  </p:row>
+								</p:columnGroup>
+							</p:dataTable>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width:10px;">2) 
+						</p:column>
+						<p:column>(Output) Supplies with/without GST incurred AND not chargable
+						</p:column>
+						<p:column>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column> 
+						</p:column>
+						<p:column colspan="2">
+							<p:dataTable id="idOutputNonClaimList" value="#{gstBean.viewSummaryVO.outputNonClaimableVOList}" 
+									var="vo" style="width:500px;margin-left:20px;">
+								<p:column headerText="Tax Code" style="width:130px;">
+									<h:outputText value="#{vo.taxCode}" />
+								</p:column>
+								<p:column headerText="Rate (%)" styleClass="txt_right" style="width:60px;" >
+									<h:outputText value="#{vo.rate}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Amount" styleClass="txt_right" style="width:130px;">
+									<h:outputText value="#{vo.amount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:column headerText="Taxable Amount" styleClass="txt_right" >
+									<h:outputText value="#{vo.taxAmount}" >
+										<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+								</p:column>
+								<p:columnGroup type="footer">
+								  <p:row>
+								    <p:column colspan="2" style="text-align:right" footerText="Grand Total" />
+								    <p:column style="text-align:right" >
+							    		<f:facet name="footer">
+							                <h:outputText value="#{gstBean.formTotalAmountList.get(8).amount}">
+												<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							                </h:outputText>
+							            </f:facet>
+									</p:column>
+								    <p:column style="text-align:right" >
+							    		<f:facet name="footer">
+							                <h:outputText value="#{gstBean.formTotalAmountList.get(8).taxAmount}">
+												<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							                </h:outputText>
+							            </f:facet>
+									</p:column>
+								    	
+								  </p:row>
+								</p:columnGroup>
+							</p:dataTable>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:tab>
+			
+		</p:tabView>
+		
+	
+	</h:form>
+	<p:confirmDialog id="idDialogSubmit" widgetVar="varDialogSubmit"
+		message="Are you sure want to #{gstBean.processMessage} this GST Return period 
+					[ #{gstBean.formatDate(gstBean.selectedSummaryVO.dateFrom)} - 
+					#{gstBean.formatDate(gstBean.selectedSummaryVO.dateTo)} ] ?">
+		<h:form>
+			<p:commandButton value="#{msg['common.button.label.yes']}"
+				actionListener="#{gstBean.processGSTPeriod(true)}"
+				oncomplete="varDialogSubmit.hide()"
+				update="@form,:idForm"/>
+			<p:commandButton value="#{msg['common.button.label.cancel']}" type="button" 
+				onclick="varDialogSubmit.hide()"/>
+		</h:form>
+	</p:confirmDialog>
+	
+</ui:define>
+</ui:composition>

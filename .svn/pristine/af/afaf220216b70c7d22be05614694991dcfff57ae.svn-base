@@ -1,0 +1,170 @@
+package com.bcs.zsg.crm.dao;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Session;
+import org.hibernate.criterion.Restrictions;
+
+import com.bcs.zsg.common.helper.CRMCommonConstant;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemConstant;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.crm.vo.InvoicePosSalesVO;
+import com.bcs.zsg.purchase.vo.AddressVO;
+import com.bcs.zsg.purchase.vo.CorAddressVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.purchase.vo.CorporateVO;
+import com.bcs.zsg.purchase.vo.PersonVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.sales.vo.PersonComplicationVO;
+import com.bcs.zsg.sales.vo.PersonContactVO;
+import com.bcs.zsg.sales.vo.PersonEmailVO;
+
+public class InvoicePosSalesDAOImpl extends BaseHibernateDAO implements InvoicePosSalesDAO {
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public InvoicePosSalesVO getInvoicePosSales(InvoiceVO invoiceVO) throws BusinessException {
+		Criteria criteria = createCriteria(InvoicePosSalesVO.class);
+		criteria.add(Restrictions.eq("idInvoice", invoiceVO.getId()));
+		criteria.add(Restrictions.eq("idCompany", invoiceVO.getCompanyId()));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.setMaxResults(1);
+		return (InvoicePosSalesVO) criteria.uniqueResult();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public InvoicePosSalesVO getInvoicePosSalesExist(InvoiceVO invoiceVO) throws BusinessException {
+		Criteria criteria = createCriteria(InvoicePosSalesVO.class);
+		criteria.add(Restrictions.eq("idInvoice", invoiceVO.getId()));
+		criteria.add(Restrictions.eq("idCompany", invoiceVO.getCompanyId()));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.setMaxResults(1);
+		return (InvoicePosSalesVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public List<InvoicePosSalesVO> getInvoicePosSalesList() throws BusinessException {
+		Criteria criteria = createCriteria(InvoicePosSalesVO.class);
+		criteria.add(Restrictions.eq("statusCode", CommonConstant.STATUS_CD_ACTIVE));
+		criteria.add(Restrictions.eq("postingStatus", CRMCommonConstant.CRM_INV_POSTING_PENDING));
+		criteria.setMaxResults(1000);
+		List<InvoicePosSalesVO> ls = criteria.list();
+		return ls;
+	}
+
+	
+	
+	@Override
+	public CustomerVO getCustomerVO(Long idCustomer) throws BusinessException {
+		
+		Criteria criteria = createCriteria(CustomerVO.class);
+		criteria.add(Restrictions.eq("id", idCustomer));
+		CustomerVO vo = (CustomerVO) criteria.uniqueResult();
+		
+		vo.setBillAddressVO(new AddressVO());
+		vo.setCorBillAddressVO(new CorAddressVO());
+		vo.setPersonContactList(new ArrayList<PersonContactVO>());
+		vo.setCorContactList(new ArrayList<CorContactVO>());
+		vo.setPersonComplicationList(new ArrayList<PersonComplicationVO>());
+		vo.setAddressList(new ArrayList<AddressVO>());
+		vo.setCorAddressList(new ArrayList<CorAddressVO>());
+		
+		if (vo.getPcTypeCd().equals("C")) {
+			criteria = createCriteria(CorporateVO.class);
+			criteria.add(Restrictions.eq("id", vo.getCorporateId()));
+			CorporateVO corporateVO = (CorporateVO) criteria.uniqueResult();
+			vo.setCorporateVO(corporateVO);
+			
+			criteria = createCriteria(PersonVO.class);
+			criteria.add(Restrictions.eq("id", vo.getPersCorpId()));
+			PersonVO personVO = (PersonVO) criteria.uniqueResult();
+			if (personVO != null) { 
+				personVO.setSalutation(StringUtils.equals(personVO.getSalutation(), LookupItemConstant.SALUTATION_EMPTY_CD) ? "" : personVO.getSalutation());
+				vo.setPersonVO(personVO); 
+			}
+			
+			criteria = createCriteria(CorAddressVO.class);
+			criteria.add(Restrictions.eq("corporateId", vo.getCorporateVO().getId()));
+			criteria.add(Restrictions.eq("addrType", CommonConstant.BILL_ADDR));
+			criteria.setMaxResults(1);
+			CorAddressVO corAddressVO = (CorAddressVO) criteria.uniqueResult();
+			if (corAddressVO != null)vo.setCorBillAddressVO(corAddressVO);
+			
+			criteria = createCriteria(CorContactVO.class);
+			criteria.add(Restrictions.eq("corporateId", vo.getCorporateVO().getId()));
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			List<CorContactVO> contactList = criteria.list();
+			if (CollectionUtils.isNotEmpty(contactList)) vo.setCorContactList(contactList);
+			
+		} else {
+			criteria = createCriteria(PersonVO.class);
+			criteria.add(Restrictions.eq("id", vo.getPersCorpId()));
+			PersonVO personVO = (PersonVO) criteria.uniqueResult();
+			if (personVO != null) {
+				personVO.setSalutation(StringUtils.equals(personVO.getSalutation(), LookupItemConstant.SALUTATION_EMPTY_CD) ? "" : personVO.getSalutation());
+				vo.setPersonVO(personVO); 
+			}
+			
+			criteria = createCriteria(AddressVO.class);
+			criteria.add(Restrictions.eq("personId", vo.getPersonVO().getId()));
+			criteria.add(Restrictions.eq("addrType", CommonConstant.BILL_ADDR));
+			AddressVO addressVO = (AddressVO) criteria.uniqueResult();
+			if (addressVO != null) vo.setBillAddressVO(addressVO);
+			
+			criteria = createCriteria(PersonContactVO.class);
+			criteria.add(Restrictions.eq("personId", vo.getPersonVO().getId()));
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			List<PersonContactVO> contactList = criteria.list();
+			if (CollectionUtils.isNotEmpty(contactList)) vo.setPersonContactList(contactList);
+			
+		}
+		
+		criteria = createCriteria(PersonEmailVO.class);
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.add(Restrictions.eq("idPerson", vo.getPersonVO().getId()));
+		
+		List<PersonEmailVO> emailList = criteria.list();
+		if (CollectionUtils.isNotEmpty(emailList)) vo.getPersonVO().setEmailList(emailList);
+		
+		return vo;
+	}
+
+	@Override
+	public void updateInvoicePosSalesStatus(List<InvoicePosSalesVO> invoicePosSalesList) throws BusinessException {
+		Session session = this.getSessionFactory().openSession();
+		
+		try {
+			session.getTransaction().setTimeout(60);
+			session.beginTransaction();
+			
+			for (int i = 0; i < invoicePosSalesList.size(); i++) {
+		        session.saveOrUpdate(invoicePosSalesList.get(i));
+	
+		        if (i % 50 == 0) {
+		            session.flush();
+		            session.clear();
+		        }
+		    }
+		
+			session.getTransaction().commit();
+		} catch (Exception e) {
+		    if (session.getTransaction() != null) {
+		    	session.getTransaction().rollback();
+		    }
+		    throw e;
+		} finally {
+		    if (session != null) {
+		        session.close();
+		    }
+		}
+	}
+}

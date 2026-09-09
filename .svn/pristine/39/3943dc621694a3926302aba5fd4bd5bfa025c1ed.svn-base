@@ -1,0 +1,46 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varPastInvDialog.show();
+			} else {
+				varPastInvDialog.hide();
+			}
+		}
+	</script>
+	<p:growl id="msg"/>
+	<p:panelGrid>
+		<p:row>
+			<p:column>
+				<p:outputLabel value="Process Reverse Sales Journal Schedule Upload Time (Daily)"/>
+			</p:column>
+			<p:column style="width: 10px;">
+				<p:separator style="width:2px;height:20px"/>
+			</p:column>
+			<p:column>
+				<pe:timePicker id="idSelScheduleTime" mode="popup" value="#{journalBean.schedulerTime}" intervalMinutes="1"/>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width: 1px; margin-top: 5px">
+		<p:commandButton value="Save"
+			actionListener="#{journalBean.saveAppSettingData}" 
+			update="@form" 
+			oncomplete="onValidation(xhr, status, args);" 
+		>
+		</p:commandButton>
+										
+		<p:commandButton value="#{msg['common.button.label.cancel']}" type="button" onclick="varConfigDialog.hide()"/>
+	</p:panelGrid>
+	
+</ui:composition>

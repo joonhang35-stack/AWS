@@ -1,0 +1,206 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:panel style="border:0; width:800px;">
+	<f:facet name="header">
+		<h:outputText value="Booking ID : "/><h:outputFormat value="#{salesBean.bookingViewVO.id}"/>
+	</f:facet>
+	<div style="height:500px; overflow:auto;">
+	<p:panelGrid>
+		<p:row>
+			<p:column colspan="2"><h:outputText value="#{salesBean.bookingViewVO.tourDepViewVO.tourPkgVO.numDays}D/#{salesBean.bookingViewVO.tourDepViewVO.tourPkgVO.numNights}N "/><h:outputText value="#{salesBean.bookingViewVO.tourDepViewVO.tourPkgVO.nameEn}"/> <h:outputText value=" [#{salesBean.bookingViewVO.tourDepViewVO.desc}]" style="color:#FF0000;" rendered="#{not empty salesBean.bookingViewVO.tourDepViewVO.desc}"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:120px;"><h:outputText value="Departure Date"/></p:column>
+			<p:column><h:outputText value="#{salesBean.bookingViewVO.tourDepViewVO.dtDep}"><f:convertDateTime pattern="#{config['date.display.pattern2']}"/></h:outputText></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputText value="Invoice No."/></p:column>
+			<p:column><h:outputText value="#{bterp:sysNumGenVO(salesBean.bookingVO.idCompany, 'invc').prefixid}#{salesBean.bookingViewVO.invoiceVO.code}" rendered="#{not empty salesBean.bookingViewVO.invoiceVO}"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputText value="Bill To"/></p:column>
+			<p:column><h:outputText value="#{bterp:lookupItemDesc('salutatn', salesBean.bookingViewVO.customerVO.personVO.salutation)} #{salesBean.bookingViewVO.customerVO.personVO.lastName} #{salesBean.bookingViewVO.customerVO.personVO.givenName}" style="text-transform:uppercase;"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="2">
+				<p:dataTable value="#{salesBean.bookingViewVO.customerVO.identityList}" var="vo">
+					<f:facet name="header">ID</f:facet>
+					<p:column headerText="ID Type" style="width:50%;"><h:outputText value="#{bterp:lookupItemDesc('id_type', vo.idType)}"/></p:column>
+					<p:column headerText="Number"><h:outputText value="#{vo.idNo}"/></p:column>
+				</p:dataTable>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="2">
+				<p:dataTable value="#{salesBean.bookingViewVO.customerVO.personContactList}" var="vo">
+					<f:facet name="header">Contact</f:facet>
+					<p:column headerText="ID Type" style="width:50%;"><h:outputText value="#{bterp:lookupItemDesc('cntc_type', vo.typeCd)}"/></p:column>
+					<p:column headerText="Number"><h:outputText value="#{vo.fullPhoneNo}"/></p:column>
+				</p:dataTable>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="2">
+				<!--p:dataTable value="#{salesBean.bookingViewVO.bookingItemList}" var="vo">
+					<f:facet name="header">Pax</f:facet>
+					<p:column headerText="No. of Pax" style="width:50%;"><h:outputText value="#{zsg:referenceDataValue('BOOK_PAX_TYPE', vo.typeCd)}"/></p:column>
+					<p:column headerText="Qty"><h:outputText value="#{vo.quantity}"/></p:column>
+				</p:dataTable-->
+				<h:outputText value="Booking Pax"/>
+				<div class="ui-datatable ui-widget">
+					<table>
+						<thead>
+							<tr>
+								<th class="ui-state-default" width="30%" style="padding:5px;"><h:outputText value="No. of Pax"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Qty"/></th>
+							</tr>
+						</thead>
+						<tbody class="ui-datatable-data ui-widget-content">
+							<c:forEach items="#{salesBean.bookingViewVO.bookingChargeItemList}" var="vo">
+								<c:if test="#{(vo.code.startsWith('FT') or vo.code.startsWith('GA')) and vo.quantity gt 0}">
+								<tr>
+									<td style="padding:5px;"><h:outputText value="#{zsg:referenceDataValue('TOUR_DEP_ITM_CD', vo.code)}"/></td>
+									<td style="text-align:center;"><h:outputText value="#{vo.quantity}"/></td>
+								</tr>
+								</c:if>
+							</c:forEach>
+						</tbody>
+					</table>
+				</div>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="2">
+				<h:outputText value="Full Tour Price"/>
+				<div class="ui-datatable ui-widget">
+					<table>
+						<thead>
+							<tr>
+								<th colspan="2" class="ui-state-default" style="padding:5px;"><h:outputText value="ADULT (RM)"/></th>
+								<th colspan="3" class="ui-state-default" style="padding:5px;"><h:outputText value="CHILD (RM)"/></th>
+							</tr>
+							<tr>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="TWN"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="SGL"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="CTW"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="CWB"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="CNB"/></th>
+							</tr>
+						</thead>
+						<tbody class="ui-datatable-data ui-widget-content">
+							<tr>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtFullTwn}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtFullSgl}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtFullCtw}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtFullCeb}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtFullCnb}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<br/>
+				<h:outputText value="Ground Only Price"/>
+				<div class="ui-datatable ui-widget">
+					<table>
+						<thead>
+							<tr>
+								<th colspan="2" class="ui-state-default" style="padding:5px;"><h:outputText value="ADULT (RM)"/></th>
+								<th colspan="3" class="ui-state-default" style="padding:5px;"><h:outputText value="CHILD (RM)"/></th>
+							</tr>
+							<tr>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="TWN"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="SGL"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="CTW"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="CWB"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="CNB"/></th>
+							</tr>
+						</thead>
+						<tbody class="ui-datatable-data ui-widget-content">
+							<tr>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtGrndTwn}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtGrndSgl}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtGrndCtw}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtGrndCeb}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.amtGrndCnb}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputText value="Payment Status"/></p:column>
+			<p:column><h:outputText value="#{zsg:referenceDataValue('BOOK_PMNT_STATUS', salesBean.bookingViewVO.pmntStatusCd)}"/></p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputText value="Booking Expiry"/></p:column>
+			<p:column><h:outputText value="#{salesBean.bookingViewVO.dtExp}"><f:convertDateTime pattern="#{config['date.display.pattern2']}"/></h:outputText></p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:150px;"><h:outputText value="Date Booking Made"/></p:column>
+			<p:column><h:outputText value="#{salesBean.bookingViewVO.createdDate}"><f:convertDateTime pattern="#{config['date.display.pattern2']}"/></h:outputText></p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:150px;"><h:outputText value="Discount"/></p:column>
+			<p:column>
+				<div class="ui-datatable ui-widget" style="width: 320px;">
+					<table>
+						<thead>
+							<tr>
+								<th colspan="2" class="ui-state-default" style="padding:5px;"><h:outputText value="Level 1"/></th>
+								<th colspan="2" class="ui-state-default" style="padding:5px;"><h:outputText value="Level 2"/></th>
+								<th rowspan="2" class="ui-state-default" style="padding:5px;"><h:outputText value="Not Entitled"/></th>
+							</tr>
+							<tr>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Amount"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Seat"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Amount"/></th>
+								<th class="ui-state-default" style="padding:5px;"><h:outputText value="Seat"/></th>
+							</tr>
+						</thead>
+						<tbody class="ui-datatable-data ui-widget-content">
+							<tr>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.discount1}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.discountPax1}"></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.discount2}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.discountPax2}"></h:outputText></td>
+								<td style="text-align:center; padding:5px;"><h:outputText value="#{salesBean.bookingVO.notEntitledDiscountPax}"></h:outputText></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:150px;"><h:outputText value="MISC"/></p:column>
+			<p:column>
+				(<h:outputText value="Visa : "/><h:outputText value="#{salesBean.bookingVO.airlineVisa}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", A/C : "/><h:outputText value="#{salesBean.bookingVO.airlineAC}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", Tipping : "/><h:outputText value="#{salesBean.bookingVO.airlineTipping}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", APT Tax (ADT/CHD : "/><h:outputText value="#{salesBean.bookingVO.airlineAptAdt}"><f:convertNumber pattern="#,##0.00"/></h:outputText><h:outputText value="/"/><h:outputText value="#{salesBean.bookingVO.airlineAptChd}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value="), YQ &amp; Fuel Tax (ADT/CHD : "/><h:outputText value="#{salesBean.bookingVO.airlineYqAdt}"><f:convertNumber pattern="#,##0.00"/></h:outputText><h:outputText value="/"/><h:outputText value="#{salesBean.bookingVO.airlineYqChd}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value="), Travel Insurance : "/><h:outputText value="#{salesBean.bookingVO.airlineTrvlIns}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				<h:outputText value=", Other : "/><h:outputText value="#{salesBean.bookingVO.airlineExtra}"><f:convertNumber pattern="#,##0.00"/></h:outputText>)
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column style="width:150px;"><h:outputText value="Booked Itinerary"/></p:column>
+			<p:column>
+				<h:outputText value="#{salesBean.bookingVO.bookedItinerary} #{salesBean.bookingVO.itineraryUpdBy}"/>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	</div>
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetBookingForm}" onclick="varBookingDetailsDialog.hide()"/>
+	</h:panelGrid>
+</p:panel>
+</ui:composition>

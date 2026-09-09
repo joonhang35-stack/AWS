@@ -1,0 +1,137 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddDetailDialog.show();
+		} else {
+			varAddDetailDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idFareType">Fare Range Type <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<h:selectOneMenu id="idFareType" labe="Fare Range Type"
+					value="#{salesCommConfigBean.salesCommConfigDetailVO.fareRangetype}"
+					effect="fade">
+					<f:selectItem itemLabel="&lt;" itemValue="LT" />
+					<f:selectItem itemLabel="Range" itemValue="RG" />
+					<f:selectItem itemLabel="&gt;" itemValue="GT" />
+				</h:selectOneMenu>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column></p:column>
+			<p:column>
+				<p:inputText id="idFrAmt" label="From Amount"
+					value="#{salesCommConfigBean.salesCommConfigDetailVO.frAmt}" size="10" required="true">
+					<f:convertNumber pattern="#,##0.00" />
+					<pe:keyFilter regEx="/[\d\.\s,]/" />
+				</p:inputText>
+				<h:outputLabel> - </h:outputLabel>
+				<p:inputText id="idToAmt" label="To Amount"
+					value="#{salesCommConfigBean.salesCommConfigDetailVO.toAmt}" size="10">
+					<f:convertNumber pattern="#,##0.00" />
+					<pe:keyFilter regEx="/[\d\.\s,]/" />
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idSpComm">SP Comm <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column colspan="2">
+				<p:inputText id="idSpComm" label="SP Comm"
+					value="#{salesCommConfigBean.salesCommConfigDetailVO.spComm}"
+					style="width:50px" required="true">
+					<f:convertNumber pattern="#,##0.00" />
+					<pe:keyFilter regEx="/[\d\.\s,]/" />
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idRefSpComm">Ref. SP Comm <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column colspan="2">
+				<p:inputText id="idRefSpComm" label="Ref. SP Comm"
+					value="#{salesCommConfigBean.salesCommConfigDetailVO.refSpComm}"
+					style="width:50px" required="true">
+					<f:convertNumber pattern="#,##0.00" />
+					<pe:keyFilter regEx="/[\d\.\s,]/" />
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idSsComm">SS Comm <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column colspan="2">
+				<p:inputText id="idSsComm" label="SS Comm"
+					value="#{salesCommConfigBean.salesCommConfigDetailVO.ssComm}"
+					style="width:50px" required="true">
+					<f:convertNumber pattern="#,##0.00" />
+					<pe:keyFilter regEx="/[\d\.\s,]/" />
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idHodComm">HOD Comm <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column colspan="2">
+				<p:inputText id="idHodComm" label="HOD Comm"
+					value="#{salesCommConfigBean.salesCommConfigDetailVO.hodComm}"
+					style="width:50px" required="true">
+					<f:convertNumber pattern="#,##0.00" />
+					<pe:keyFilter regEx="/[\d\.\s,]/" />
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idOpComm">OP Comm <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column colspan="2">
+				<p:inputText id="idOpComm" label="OP Comm"
+					value="#{salesCommConfigBean.salesCommConfigDetailVO.opComm}"
+					style="width:50px" required="true">
+					<f:convertNumber pattern="#,##0.00" />
+					<pe:keyFilter regEx="/[\d\.\s,]/" />
+				</p:inputText>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+<p:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}"
+		actionListener="#{salesCommConfigBean.saveDetail}"
+		update="@form,:idSalesCommConfigForm:idShowDetailList"
+		rendered="#{salesCommConfigBean.detailAdd}" />
+	<p:commandButton value="#{msg['common.button.label.save']}"
+		actionListener="#{salesCommConfigBean.saveDetail}"
+		update="@form,:idSalesCommConfigForm:idShowDetailList"
+		oncomplete="onValidation(xhr, status, args)"
+		rendered="#{not salesCommConfigBean.detailAdd}" />
+	<p:commandButton value="#{msg['common.button.label.cancel']}"
+		actionListener="#{salesCommConfigBean.resetSalesCommConfigDetailForm}"
+		oncomplete="varAddDetailDialog.hide()"
+		process="@this">
+		<pe:resetEditableValues for="idAddDetailForm" />
+	</p:commandButton>
+</p:panelGrid>
+</ui:composition>

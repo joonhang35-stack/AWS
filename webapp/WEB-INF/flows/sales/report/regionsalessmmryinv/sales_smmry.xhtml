@@ -1,0 +1,140 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+<p:panel header="Staff Sales Summary - Invoice" toggleable="true" toggleSpeed="500">
+<h:form id="salesSmmryForm">
+<p:growl id="msg"/>
+<h:panelGrid columns="10" cellpadding="0" cellspacing="2" style="margin-bottom:10px; width:950px">
+	<h:outputLabel>Date From</h:outputLabel>
+	<p:calendar value="#{salesSmmryBean.searchParamVO.fromDate}" id="idFromDate" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+	<h:outputLabel>Date To</h:outputLabel>
+	<p:calendar value="#{salesSmmryBean.searchParamVO.toDate}" id="idToDate" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+	<h:outputLabel>Category</h:outputLabel>
+	<h:selectOneMenu id="idTourCat" label="Category" value="#{salesSmmryBean.searchParamVO.obj2}" effect="fade" required="true">
+		<f:selectItem itemLabel="Select One"/>
+		<f:selectItems value="#{salesSmmryBean.tourCatViewList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+		<p:ajax event="change" listener="#{salesSmmryBean.handleTourCatSelect}" update="idRegion"/>
+	</h:selectOneMenu>
+	<h:outputLabel>Region</h:outputLabel>
+	<h:selectOneMenu id="idRegion" label="Region" value="#{salesSmmryBean.searchParamVO.obj3}" effect="fade" required="true">
+		<f:selectItem itemLabel="Select One"/>
+		<f:selectItems value="#{salesSmmryBean.tourThemeList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+	</h:selectOneMenu>
+	<p:commandButton value="Search" actionListener="#{salesSmmryBean.search}" update="@form"/>
+</h:panelGrid>
+
+<p:dataTable id="idSalesSmmryTable" value="#{salesSmmryBean.salesSmmryList}" widgetVar="varSalesSmmryTable" var="vo"  paginator="true" rows="20" 
+	paginatorTemplate="#{bterp:pageTemplate()}" rowKey="#{vo.regionId}" selectionMode="single"
+	rowsPerPageTemplate="20, 30, 50" filteredValue="#{salesSmmryBean.filteredObjList}" lazy="true" filterEvent="enter">
+	<p:ajax event="rowSelect" listener="#{salesSmmryBean.handleSalesSmmrySelect}" update=":idSalesSmmryListDialog" oncomplete="varSalesSmmryListDialog.show();"/>
+	
+	<p:column width="35">
+		<f:facet name="header"><h:outputText value="Seq No" /></f:facet>
+		<h:outputText value="#{vo.rowNumber}" />
+	</p:column>
+	
+	<p:column filterBy="#{vo.regionName}" sortBy="#{vo.regionName}" filterMatchMode="contains">
+        <f:facet name="header">
+            <h:outputText value="Region Name" />  
+        </f:facet> 
+		<h:outputText value="#{vo.regionName}"/>
+	</p:column>
+	
+	<p:column>
+		<f:facet name="header"><h:outputText value="Total Invoiced"/></f:facet>
+		<h:outputText value="#{vo.invCount}" />
+	</p:column>
+	
+	<p:column sortBy="#{vo.invAmt}" styleClass="txt_right">
+		<f:facet name="header"><h:outputText value="Invoice Amount" /></f:facet>
+		<h:outputText value="#{vo.invAmt}">
+			<f:convertNumber pattern="#,##0.00" />
+		</h:outputText>
+	</p:column>
+	
+	<p:column sortBy="#{vo.invPaid}" styleClass="txt_right">
+		<f:facet name="header"><h:outputText value="Amount Paid" /></f:facet>
+		<h:outputText value="#{vo.invPaid}">
+			<f:convertNumber pattern="#,##0.00" />
+		</h:outputText>
+	</p:column>
+	
+	<p:column sortBy="#{vo.balance}" styleClass="txt_right">
+		<f:facet name="header"><h:outputText value="Amount Due" /></f:facet>
+		<h:outputText value="#{vo.balance}">
+			<f:convertNumber pattern="#,##0.00" />
+		</h:outputText>
+	</p:column>
+
+</p:dataTable>
+</h:form>
+</p:panel>
+
+<!--
+	DIALOG - Sales Summary Details LIST
+-->
+<p:dialog id="idSalesSmmryListDialog" header="Region #{salesSmmryBean.regionName}" widgetVar="varSalesSmmryListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idSalesSmmryListForm">
+		<p:dataTable id="idSalesSmmryListTable" widgetVar="varSalesSmmryListTable" value="#{salesSmmryBean.salesSmmryDetailList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" filterEvent="enter">
+			
+			<p:column headerText="Invoice No." sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains">
+				<h:outputText value="#{vo.code}"/>
+			</p:column>
+			<p:column headerText="Invoice Date" sortBy="#{vo.invoiceDt}" filterBy="#{vo.invoiceDt}">
+				<h:outputText value="#{vo.invoiceDt}">
+					<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Departure Date" sortBy="#{vo.departureDt}" filterBy="#{vo.departureDt}">
+				<h:outputText value="#{vo.departureDt}">
+					<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+				</h:outputText>
+			</p:column>
+			<!-- <p:column headerText="Sales Name" sortBy="#{vo.salerName}" filterBy="#{vo.salerName}" filterMatchMode="contains">
+				<h:outputText value="#{vo.salerName}"/>
+			</p:column> -->
+			<p:column headerText="Customer Name" sortBy="#{vo.custName}" filterBy="#{vo.custName}" filterMatchMode="contains">
+				<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.custSalutation)} #{vo.custName}"/>
+			</p:column>
+			<p:column headerText="Company Name" sortBy="#{vo.coName}" filterBy="#{vo.coName}" filterMatchMode="contains">
+				<h:outputText value="#{vo.coName}"/>
+			</p:column>
+			<p:column headerText="Tour Code" sortBy="#{vo.tourCd}" filterBy="#{vo.tourCd}" filterMatchMode="contains">
+				<h:outputText value="#{vo.tourCd}"/>
+			</p:column>
+			<p:column headerText="Amount" sortBy="#{vo.invAmt}" filterBy="#{vo.invAmt}" styleClass="txt_right">
+				<h:outputText value="#{vo.invAmt}">
+					<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+			</p:column>
+			<p:column headerText="Amount Paid" sortBy="#{vo.invPaid}" filterBy="#{vo.invPaid}" styleClass="txt_right">
+				<h:outputText value="#{vo.invPaid}">
+					<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+			</p:column>
+			<p:column headerText="Amount Paid" sortBy="#{vo.balance}" filterBy="#{vo.balance}" styleClass="txt_right">
+				<h:outputText value="#{vo.balance}">
+					<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+			</p:column>
+
+		</p:dataTable>
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varSalesSmmryListDialog.hide();"/>
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

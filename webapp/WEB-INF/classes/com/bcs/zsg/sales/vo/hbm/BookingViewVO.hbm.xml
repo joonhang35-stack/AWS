@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.bcs.zsg.sales.vo">
+
+    <class table="tour_booking" name="BookingViewVO" polymorphism="explicit">
+        <id name="id" type="long" column="ID">
+        	<generator class="identity"></generator>
+        </id>
+        <property name="idCompany" type="long" column="id_company"/>
+        <property name="idCust" type="long" column="id_cust"/>
+        <property name="idSalerTfair" type="long" column="id_saler_tfair"/>
+        <property name="idTourDepHist" type="long" column="id_tour_dep_hist"/>
+        <property name="orderTypeCd" type="string" column="order_type_cd"/>
+        <property name="quantity" type="integer" column="quantity"/>
+        <property name="pmntStatusCd" type="string" column="pmnt_status_cd"/>
+        <property name="lockStatus" type="boolean" column="lock_status"/>
+		<property name="dtExp" type="timestamp" column="dt_exp"/>
+		<property name="typeCd" type="string" column="type_cd"/>
+        <property name="cabinQty" type="integer" column="cabin_qty"/>
+        <property name="amount" type="double" column="amount"/>
+        <property name="bookedItinerary" type="string" column="booked_itinerary"/>
+		<property name="itineraryUpdBy" type="string" column="itinerary_upd_by"/>
+        
+        <many-to-one name="tourDepViewVO" class="com.bcs.zsg.product.vo.TourDepartureViewVO" column="id_tour_dep" lazy="false"/>
+        <many-to-one name="employeeViewVO" class="com.bcs.zsg.cfg.sec.vo.EmployeeViewVO" column="id_employee" lazy="false"/>
+        <!--set name="bookingItemSet" table="tour_booking_item" inverse="true" lazy="false" fetch="select" order-by="id">
+        	<key><column name="id_tour_booking"/></key>
+        	<one-to-many class="com.bcs.zsg.sales.vo.BookingItemVO"/>
+        </set-->
+        
+        <set name="bookingChargeItemSet" table="tour_booking_charge_item" inverse="true" lazy="false" fetch="select" order-by="id">
+        	<key><column name="id_tour_booking"/></key>
+        	<one-to-many class="com.bcs.zsg.sales.vo.BookingChargeItemVO" />
+        </set>
+        
+        <!-- BaseVO attributes -->
+        <property name="statusCode" type="string" column="status_cd"/>
+		<property name="createdDate" type="timestamp" column="DT_CREATED" update="false"/>
+		<property name="createdBy" type="string" column="CREATED_BY"/>
+		<property name="updatedDate" type="timestamp" column="DT_UPD"/>
+		<property name="updatedBy" type="string" column="UPD_BY"/>
+    </class>
+
+</hibernate-mapping>

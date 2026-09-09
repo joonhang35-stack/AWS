@@ -1,0 +1,706 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	  			
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddInvoiceDialog.show();
+		} else {
+			varReasonDialog.show();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column style="vertical-align: top;">
+			<p:fieldset legend="Customer Details" style="width: 580px;">
+				<p:panelGrid id="idCustDetails">
+					<p:row>
+						<p:column>
+							<h:outputLabel>Billing Person:</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idSoldToC" label="Customer Details" value="#{salesInvBean.invRefCustDetailsVO.companyName}"
+								readonly="true" size="60" style="background:#ccc" rendered="#{salesInvBean.invRefCustDetailsVO.custType == 'C'}"/>
+							<p:inputText id="idSoldToP" label="Customer Details"
+								value="#{salesInvBean.invRefCustDetailsVO.contPersonName}"
+								readonly="true" size="60" style="background:#ccc" rendered="#{salesInvBean.invRefCustDetailsVO.custType != 'C'}"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="2">
+							<p:panelGrid>
+								<p:row rendered="#{salesInvBean.invRefCustDetailsVO.custType == 'C'}">
+									<p:column style="width:130px;">
+										<h:outputText value="Company"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesInvBean.invRefCustDetailsVO.companyName}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column style="width:130px;">
+										<h:outputText value="Customer Number"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesInvBean.invRefCustDetailsVO.code}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="Address Line 1"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesInvBean.invRefCustDetailsVO.addressVO.addr1}#{salesInvBean.invRefCustDetailsVO.corAddressVO.addr1}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="Address Line 2"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesInvBean.invRefCustDetailsVO.addressVO.addr2}#{salesInvBean.invRefCustDetailsVO.corAddressVO.addr2}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="Address Line 3"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesInvBean.invRefCustDetailsVO.addressVO.addr3}#{salesInvBean.invRefCustDetailsVO.corAddressVO.addr3}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="City"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesInvBean.invRefCustDetailsVO.addressVO.city}#{salesInvBean.invRefCustDetailsVO.corAddressVO.city}"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="State"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesInvBean.invRefCustDetailsVO.addressVO.state}#{salesInvBean.invRefCustDetailsVO.corAddressVO.state}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="Postcode"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesInvBean.invRefCustDetailsVO.addressVO.postcode}#{salesInvBean.invRefCustDetailsVO.corAddressVO.postcode}"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="Country"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesInvBean.getCountryName(salesInvBean.invRefCustDetailsVO.addressVO.countryId)}#{salesInvBean.getCountryName(salesInvBean.invRefCustDetailsVO.corAddressVO.countryId)}"/>
+									</p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:fieldset>
+		</p:column>
+		<p:column>
+			<p:fieldset legend="#{salesInvBean.docTypeDesc} Issuance Status">
+				<p:panelGrid id="idInvIssStatus">
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idInvoiceNo">#{salesInvBean.docTypeDesc} No</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idInvoiceNo" value="#{salesInvBean.prefixValue} #{salesInvBean.docTypeCd eq 'P' ? salesInvBean.invRefVO.psNo : salesInvBean.invRefVO.code}" readonly="true" style="background:#ccc" required="true"/>
+						</p:column>
+						<p:column rowspan="3" rendered="#{not empty salesInvBean.invRefVO.transferredDate}">
+							<h:outputLabel value="Transferred"
+								style="color:red; font-weight:bold; font-size:30px; display:block; text-align:left;" />
+							<p:panelGrid columns="2"
+								style="margin-left:auto; margin-right:auto; text-align:left;">
+								<h:outputLabel value="Date" style="font-weight:bold; font-size:10px;" />
+            					<h:outputLabel value=": #{salesInvBean.invRefVO.formattedTransferredDate}" style="font-size:10px;" />
+            					<h:outputLabel value="By" style="font-weight:bold; font-size:10px;" />
+            					<h:outputLabel value=": #{salesInvBean.invRefVO.transferredBy}" style="font-size:10px;" />
+            					<h:outputLabel value="Original TC" style="font-weight:bold; font-size:10px;" />
+            					<h:outputLabel value=": #{salesInvBean.invRefVO.originalTc}" style="font-size:10px;" />
+							</p:panelGrid>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{salesInvBean.docTypeCd == 'P'}">
+						<p:column>
+							<h:outputLabel for="idDocTypeStatus">#{salesInvBean.docTypeDesc} Status</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idDocTypeStatus" label="Doc Type Status" value="#{zsg:referenceDataValue('PS_STATUS', salesInvBean.invRefVO.docTypeStatus)}" readonly="true" style="background:#ccc"/>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{salesInvBean.invRefVO.docTypeStatus ne 'SP'}">
+						<p:column>
+							<h:outputLabel for="idInvStatus">#{salesInvBean.docTypeDesc} Payment Status</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idInvStatus" label="Invoice Status" value="#{zsg:referenceDataValue('INV_STATUS', salesInvBean.invRefVO.statusCd)}" readonly="true" style="background:#ccc"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idBookingStatus">Booking Status</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idBookingStatus" label="Booking Status" value="#{zsg:referenceDataValue('BOOK_STATUS', salesInvBean.invRefVO.bookingStatusCd)}" readonly="true" style="background:#ccc"/>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{salesInvBean.docTypeCd != 'P'}">
+						<p:column>
+							<h:outputLabel for="idEInvoiceStatus">E-Invoice Status</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idEInvoiceStatus" label="E-Invoice Status" value="#{salesInvBean.invRefVO.eInvoiceStatus}" readonly="true" style="background:#ccc" rendered="#{salesInvBean.invRefVO.eInvoiceStatus ne null}"/>
+							<p:inputText id="idEInvoiceStatus2" label="E-Invoice Status" value="#{'Not Submitted'}" readonly="true" style="background:#ccc" rendered="#{salesInvBean.invRefVO.eInvoiceStatus eq null}"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idCompany">Company</h:outputLabel>
+						</p:column>
+						<p:column>
+						    <p:inputText id="idCompany" label="Company" value="#{salesInvBean.sessionInfoBean.companyVO.code}: #{salesInvBean.sessionInfoBean.companyVO.name}" readonly="true" style="background:#ccc"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel>Document Type</h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel>#{salesInvBean.docTypeDesc}</h:outputLabel>
+						</p:column>
+					</p:row> 
+					<p:row rendered="#{salesInvBean.docTypeCd == 'I' and not empty salesInvBean.invRefVO.psNo}">
+						<p:column>
+							<h:outputLabel>Convert From</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:commandLink 
+        						style="color: #db3333; text-decoration: underline;"
+        						actionListener="#{salesInvBean.handleInvRefNoClick(salesInvBean.invRefVO.psNo,'P')}"
+								update=":idAddInvoiceRefForm">
+								<h:outputText value="#{salesInvBean.psPrefixVal} #{salesInvBean.invRefVO.psNo}"/>
+							</p:commandLink>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{salesInvBean.docTypeCd == 'P' and not empty salesInvBean.invRefVO.code and salesInvBean.invRefVO.docTypeStatus == 'CV'}">
+						<p:column>
+							<h:outputLabel>Converted Invoice</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:commandLink 
+        						style="color: #db3333; text-decoration: underline;"
+        						actionListener="#{salesInvBean.handleInvRefNoClick(salesInvBean.invRefVO.code,'I')}"
+								update=":idAddInvoiceRefForm">
+								<h:outputText value="#{salesInvBean.invPrefixVal} #{salesInvBean.invRefVO.code}"/>
+							</p:commandLink>
+						</p:column>
+					</p:row>
+						<p:row rendered="#{salesInvBean.docTypeCd == 'P' and salesInvBean.invRefVO.idParentInv ne null}">
+						    <p:column>
+						        <h:outputLabel>Parent Pax Statement</h:outputLabel>
+						    </p:column>
+						    <p:column>
+						        <p:commandLink 
+						            style="color: #db3333; text-decoration: underline;"
+						            actionListener="#{salesInvBean.handleInvRefNoClick(salesInvBean.invRefVO.idParentInv, false)}"
+						            update=":idAddInvoiceRefForm"
+						            process="@this">
+						            <h:outputText value="#{salesInvBean.invRefVO.parentPsNo}"/>
+						        </p:commandLink>
+						    </p:column>
+						</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idInvCat">#{salesInvBean.docTypeDesc} Category <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idInvCat" label="#{salesInvBean.docTypeDesc} Category" value="#{salesInvBean.invRefVO.catCd}" required="true">
+					        	<f:selectItem itemLabel="Select One" itemValue=""/>
+					        	<f:selectItems value="#{bterp:lookupItemList('inv_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+					        	<!-- <p:ajax event="change" update=":idAddInvoiceForm:idTourCodeSearch,:idAddInvoiceForm:idDepartureDt"/> -->
+						    </h:selectOneMenu>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel for="idARAccount" rendered="#{empty salesInvBean.invRefAcctVO.subCode}">A/R Account</p:outputLabel>
+							<p:outputLabel for="idARAccountSub" rendered="#{not empty salesInvBean.invRefAcctVO.subCode}">A/R Account</p:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idARAccount" label="A/R Account" value="#{salesInvBean.invRefAcctVO.code}: #{salesInvBean.invRefAcctVO.desc}" readonly="true" style="background:#ccc" rendered="#{empty salesInvBean.invRefAcctVO.subCode}"/>
+							<p:inputText id="idARAccountSub" label="A/R Account" value="#{salesInvBean.invRefAcctVO.code}-#{salesInvBean.invRefAcctVO.subCode}: #{salesInvBean.invRefAcctVO.desc}, #{salesInvBean.invRefAcctVO.subDesc}" readonly="true" style="background:#ccc" rendered="#{not empty salesInvBean.invRefAcctVO.subCode}"/>
+							<!-- &nbsp;<p:commandButton icon="ui-icon-search" disabled="true" actionListener="#{salesInvBean.loadAcctARList}" oncomplete="varAcctARListDialog.show()" update=":idAcctARListDialog" process="@this" rendered="#{salesInvBean.invPmntAuthVO.accountManager}"/> -->
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel for="idConsolidatable">Consolidatable</p:outputLabel>
+						</p:column>
+						<p:column>
+							<p:outputLabel id="idConsolidatable" label="Consolidatable" value="#{salesInvBean.invRefVO.isConsolEInv ? 'Yes' : 'No'}" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:fieldset>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:panel>
+				<p:panelGrid style="#{panelGridStyle}">
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idInvDtDisplay">#{salesInvBean.docTypeDesc} Date</h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idAttTo">Attention To <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idSalesPerson">Sales Person <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idTour">Tour Code <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idBookingNo">Booking No</h:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:inputText id="idInvDtDisplay" value="#{salesInvBean.invRefVO.invoiceDt}" readonly="true" style="background:#ccc">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>
+							</p:inputText>
+						</p:column>
+						<p:column>
+							<p:inputText id="idAttTo" label="Attention To" value="#{salesInvBean.invRefVO.attnTo}" maxlength="255" required="true"/>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idSalesPerson" label="Sales Person" value="#{salesInvBean.invRefVO.salerId}" effect="fade" required="true" >
+								<f:selectItem itemLabel="Select One" itemValue=""/>
+								<f:selectItems value="#{salesInvBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+							</h:selectOneMenu>
+						</p:column>
+						<p:column>
+							<p:inputText id="idTour" label="Tour Code" value="#{salesInvBean.invRefVO.tourCd}" required="true" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;"/>&nbsp;
+						</p:column>
+						<p:column rendered="#{salesInvBean.invRefVO.docTypeCd eq 'P'}">
+							<p:inputText id="idBookingNo" label="Booking No" value="#{salesInvBean.invRefVO.bookingId}" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;"/>&nbsp;
+						</p:column>
+						<p:column rendered="#{salesInvBean.invRefVO.docTypeCd eq 'I'}">
+							<p:inputText id="idBookingNo2" label="Booking No" value="#{salesInvBean.invRefVO.idParentInvTourBooking}" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;"/>&nbsp;
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idDepartureDt">Check in Date <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idIssuedBy">Issued By <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idOrderSource">Order Source <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idInvDue">#{salesInvBean.docTypeDesc} Due</h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idGdsBookingRef">GDS Booking Reference/EO</h:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:calendar id="idDepartureDt" label="Check in Date" value="#{salesInvBean.invRefVO.departureDt}" navigator="true" showButtonPanel="true" readonlyInput="true" pattern="dd-MMM-yyyy" required="true"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idIssuedBy" value="#{salesInvBean.invRefVO.issuedBy}" readonly="true" style="background:#ccc"/>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idOrderSource" label="Order Source" value="#{salesInvBean.invRefVO.orderCd}" effect="fade" required="true">
+								<f:selectItem itemLabel="Select One" itemValue=""/>
+								<f:selectItems value="#{bterp:lookupItemList('ordr_sorc')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+							</h:selectOneMenu>
+						</p:column>
+						<p:column>
+							<p:inputText id="idInvDue" label="#{salesInvBean.docTypeDesc} Due" value="#{salesInvBean.invRefVO.invoiceDue}" readonly="true" style="background:#ccc;">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>
+							</p:inputText>
+						</p:column>
+						<p:column>
+							<p:inputText id="idGdsBookingRef" label="GDS Booking Reference" value="#{salesInvBean.invRefVO.gdsBookingRef}" maxlength="255"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column></p:column>
+						<p:column></p:column>
+						<p:column>Referral SP</p:column>
+					</p:row>
+					<p:row>
+						<p:column></p:column>
+						<p:column></p:column>
+						<p:column>
+							<p:inputText id="idTFairSalesPerson" label="Referral SP" value="#{salesInvBean.invRefVO.tfairSalerName}" readonly="true" style="background:#ccc;"/>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				<p:panelGrid>
+					<p:row>
+						<p:column style="width: 50%">
+							
+						</p:column>
+						<p:column>
+							
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="vertical-align: top;">
+							<p:panel id ="idInvRefListPanel" style="border:none">
+								<p:dataTable id="idInvRefListTable" value="#{salesInvBean.invRefVO.invoiceRefVOList}" var="invRefVO"
+									paginator="true" rows="10" 
+									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+									rendered="#{not empty salesInvBean.invRefVO.invoiceRefVOList}">
+									<p:column headerText="Invoice No">
+										<p:outputLabel value="#{invRefVO.invRefCode ne null ? salesInvBean.prefixValue.concat(' ').concat(invRefVO.invRefCode) : null}"/>
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+						<p:column style="vertical-align: top;">
+							<p:panel id ="idEOListPanel" style="border:none">
+								<p:dataTable id="idEOListTable" value="#{salesInvBean.invRefVO.eoInvList}" var="eoInvVO"
+									paginator="true" rows="10" 
+									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+									rendered="#{not empty salesInvBean.invRefVO.eoInvList}">
+									<p:column headerText="Exchange Order No">
+										<h:outputText value="#{eoInvVO.code}"/>
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+					</p:row>
+					
+					<p:row>
+						<p:column style="vertical-align: top;">
+							<p:panel id ="idInvAttachmentListPanel" style="border:none">
+								<p:dataTable id="idInvAttachmentListTable" value="#{salesInvBean.invRefVO.invoiceAttachmentVOList}" var="invAttachVO"
+									paginator="true" rows="10" 
+									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+									rendered="#{not empty salesInvBean.invRefVO.invoiceAttachmentVOList}">
+									
+									<p:column headerText="Attachment Type">
+										<p:outputLabel value="#{bterp:lookupItemDesc('attachment_type', invAttachVO.typeCd)}"/>
+									</p:column>
+									
+									<p:column headerText="File Path">
+										<h:outputLink target="_blank" value="#{request.contextPath}#{salesInvBean.destinationAttachmentPath}/#{invAttachVO.filePath}" style="color: #db3333;text-decoration: underline;margin-right: 10px;">
+											<h:outputText value="#{invAttachVO.scannedPath}"/>
+										</h:outputLink>
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:panelGrid columns="2">
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idSubjLine">RE: </h:outputLabel>
+					</p:column>
+					<p:column>
+						<p:inputText id="idSubjLine" label="RE" size="150" value="#{salesInvBean.invRefVO.subjLine}" maxlength="255"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:tabView id="idInvDetailsTab">
+				<p:tab id="idInvDetailsSubTab" title="#{salesInvBean.docTypeDesc} Details">
+					<p:dataTable id="idInvItemListTable" value="#{salesInvBean.invRefVO.invoiceItemList}" var="invoiceItemVO" paginator="true" rows="10" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50">
+						<p:column headerText="Description" style="width:250px;">
+							<h:panelGroup layout="block" style="display: flex; align-items: center;">
+						        <h:outputText value="#{invoiceItemVO.desc}" style="margin-right: 5px;"/>
+						        <p:rowToggler rendered="#{invoiceItemVO.airfare ne 0.0}" />
+						    </h:panelGroup>
+						</p:column>
+						<p:column headerText="Sub Description" style="width:250px;">
+							<h:outputText value="#{invoiceItemVO.subDesc}"/>
+						</p:column>
+						<p:column headerText="Sales Acct">
+							<h:outputText value="#{salesInvBean.getAcctCd(invoiceItemVO.acctId)}"/>
+						</p:column>
+						<p:column headerText="Sales Desc" style="width:250px;">
+							<h:outputText value="#{salesInvBean.getAcctDesc(invoiceItemVO.acctId)}"/>
+						</p:column>
+						<p:column headerText="Qty">
+							<h:outputText value="#{invoiceItemVO.qty}"/>
+						</p:column>
+						<p:column headerText="Price/Unit">
+							<h:outputText value="#{invoiceItemVO.unitPrice}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>
+						<p:column headerText="Amount">
+							<h:outputText value="#{invoiceItemVO.taxIncAmt}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>
+						
+						<p:rowExpansion>
+					        <h:outputLabel value="Tour Fare: " style="margin-right: 5px; padding-left:115px" />
+					        <h:outputText value="#{invoiceItemVO.tourFare}" style="margin-left: 0;">
+					        	<f:convertNumber pattern="#,##0.00"/>
+					        </h:outputText>
+							<br/>
+					        <h:outputLabel value="Airfare: " style="margin-right: 5px; padding-left:115px" />
+					        <h:outputText value="#{invoiceItemVO.airfare}" style="margin-left: 0;">
+					        	<f:convertNumber pattern="#,##0.00"/>
+					        </h:outputText>
+						</p:rowExpansion>
+					</p:dataTable>
+				</p:tab>
+				<p:tab id="idPassengerDetailsSubTab" title="Passenger Details">
+					
+					<p:dataTable id="idInvPaxListTable" value="#{salesInvBean.invRefVO.invoicePaxList}" var="invoicePaxVO" paginator="true" rows="10" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50">
+						<p:column headerText="Name">
+							<h:outputText value="#{bterp:lookupItemDesc('salutatn', invoicePaxVO.custDetailsVO.salutation)} #{invoicePaxVO.custDetailsVO.lastName} #{invoicePaxVO.custDetailsVO.firstName}"/>
+						</p:column>
+						<p:column headerText="Age" style="text-align:center;">
+							<h:outputText value="#{invoicePaxVO.custDetailsVO.age}"/>
+						</p:column>
+						<p:column headerText="Passport Details" style="text-align:center;">
+							<h:outputLink id="idTTIDAttachment" target="_blank" value="#{request.contextPath}#{salesInvBean.destinationPassportPath}/#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}" style="color: #db3333;text-decoration: underline;" rendered="#{not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.id}">
+								<h:outputText value="#{invoicePaxVO.custDetailsVO.passportIdVO.idNo}"/>
+							</h:outputLink>
+							<pe:tooltip for="idTTIDAttachment" shared="true" showDelay="3000"  position="top right"
+								rendered="#{not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath and not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}">
+								<h:outputText value="#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath}" escape="true" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+							<!-- <p:commandLink id="idTTIDAttachment" value="#{invoicePaxVO.custDetailsVO.passportIdVO.idNo}" style="color: #db3333;text-decoration: underline;"
+                           		oncomplete="varPassportImageDialog.show()" 
+                           		process="@this" 
+                           		update=":idPassportImageDialog"
+                           		rendered="#{not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.id}">
+            				</p:commandLink>
+            				<pe:tooltip for="idTTIDAttachment" shared="true" showDelay="3000"  position="top right"
+								rendered="#{not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath and not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}">
+								<h:outputText value="#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath}" escape="true" style="white-space: pre-wrap"/>
+							</pe:tooltip> -->
+						</p:column>
+						<p:column headerText="Nationality" style="text-align:center;">
+							<h:outputText value="#{salesInvBean.handleGrabCountryById(invoicePaxVO.custDetailsVO.countryId)}" />
+						</p:column>
+						<p:column headerText="Room Type" style="text-align:center;">
+							<h:outputText value="#{bterp:lookupItemDesc('room_type', invoicePaxVO.roomTypeCd)}"/>
+						</p:column>
+						<p:column headerText="Room Pairing No" style="text-align:center;">
+							<h:outputText value="#{invoicePaxVO.roomPairingNo}"/>
+						</p:column>
+						<p:column headerText="Trvl Ins Type" style="text-align:center;">
+							<h:outputText value="#{bterp:lookupItemDesc('travel_Ins_type', invoicePaxVO.travelInsType)}"/>
+						</p:column>
+						<p:column headerText="Trvl Ins Policy" style="text-align:center;">
+							<h:outputText value="#{invoicePaxVO.travelInsPolicy}"/>
+						</p:column>
+						<!-- <p:column headerText="Ticket No" style="text-align:center;">
+							<h:outputText value="#{invoicePaxVO.ticketNo}"/>
+						</p:column> -->
+						<p:column headerText="Reference No" style="text-align:center;">
+							<h:outputText id="idReferenceNo" value="#{invoicePaxVO.referenceNoPreview}" escape="false" style="display: block; text-align: left;"/>
+							<pe:tooltip for="idReferenceNo" shared="true" showDelay="3000"  position="top right"
+								rendered="#{invoicePaxVO.referenceNoPreview.contains('......')}">
+								<h:outputText value="#{invoicePaxVO.referenceNo}" escape="false" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+						</p:column>
+					</p:dataTable>
+				</p:tab>
+				<p:tab id="idPaymentsSubTab" title="Payments">
+					
+					<p:dataTable id="idInvPmntListTable" value="#{salesInvBean.invRefVO.invoicePaymentList}" var="invPmntVO" paginator="true" rows="10" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50">
+						<p:column headerText="Date">
+							<h:outputText value="#{invPmntVO.pmntDt}">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+							</h:outputText>
+						</p:column>
+						<p:column headerText="BD Date">
+							<h:outputText value="#{invPmntVO.cashBookDt}">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Payment Type">
+							<h:outputText value="#{bterp:lookupItemDesc('pymt_type', invPmntVO.pmntTypeCd)}"/>
+						</p:column>
+						<p:column headerText="Reference No">
+							<h:outputText value="#{invPmntVO.refNo}"/>
+						</p:column>
+						<p:column headerText="Recieved From">
+							<h:outputText value="#{invPmntVO.recievedFr}"/>
+						</p:column>
+						<p:column headerText="Amount">
+							<!--h:outputText value="#{invPmntVO.amount}"/-->
+							<h:outputText value="#{invPmntVO.amount}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>
+						<p:column headerText="Issued By">
+							<h:outputText value="#{salesInvBean.getUserName(invPmntVO.issuerId)}"/>
+						</p:column>
+					</p:dataTable>
+				</p:tab>
+			</p:tabView>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						#{salesInvBean.docTypeDesc} Activate &nbsp;
+						<p:selectBooleanButton id="idTrvWarrantChecked" value="#{salesInvBean.invRefVO.trvWarrantChecked}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:panelGrid>
+				<p:row>
+					<p:column style="width: 90px;padding-top: 10px;vertical-align: top;">
+						<p:outputLabel value="Notes Item"/>
+					</p:column>
+					<p:column>
+						<p:selectManyCheckbox id="idSelNotedItem" value="#{salesInvBean.invRefVO.noteItemsList}" layout="pageDirection" style="width: 180px;">
+				        	<f:selectItems value="#{bterp:lookupItemList('note_items')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+						</p:selectManyCheckbox>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+		<p:column>
+			<p:panelGrid id="idAmountPanelDialog">
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idTourFareAmt">Tour Fare</h:outputLabel>
+						<p:inputText id="idTourFareAmt" value="#{salesInvBean.invRefVO.tourFareAmt}" readonly="true" style="text-align:right;background:#ccc;margin-left:298px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idAirTicketAmt">Air Ticket</h:outputLabel>
+						<p:inputText id="idAirTicketAmt" value="#{salesInvBean.invRefVO.airTicketAmt}" readonly="true" style="text-align:right;background:#ccc;margin-left:298px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idVoucherAmt">Voucher</h:outputLabel>
+						<p:inputText id="idVoucherAmt" value="#{salesInvBean.invRefVO.voucherAmt}" readonly="true" style="text-align:right;background:#ccc;margin-left:305px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idTtlAmt">Total Amount Payable:</h:outputLabel>
+						<p:inputText id="idTtlAmt" value="#{salesInvBean.invRefVO.amount}" readonly="true" style="text-align:right;background:#ccc;margin-left:223px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<!-- 'Joon Hang - hide payment status for split statement' -->
+				<p:row rendered="#{salesInvBean.invRefVO.docTypeStatus ne 'SP' or salesInvBean.showHideAmtDue}">
+					<p:column>
+						<h:outputLabel for="idAmtPaid">Amount Paid:</h:outputLabel>
+
+						<p:inputText id="idAmtPaid" value="#{salesInvBean.invRefVO.amtPaid}" readonly="true" style="text-align:right;background:#ccc;margin-left:274px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<!-- 'Joon Hang - hide payment status for split statement' -->
+				<p:row rendered="#{salesInvBean.invRefVO.docTypeStatus ne 'SP' or salesInvBean.showHideAmtDue}">
+					<p:column>
+						<h:outputLabel for="idAmtDue">Amount Due:</h:outputLabel>
+
+						<p:inputText id="idAmtDue" value="#{salesInvBean.invRefVO.balance}" readonly="true" style="text-align:right;background:#ccc;margin-left:275px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<!-- 'Joon Hang - hide payment status for split statement' -->
+				<p:row rendered="#{salesInvBean.invRefVO.docTypeStatus eq 'SP'}">
+					<p:column>
+						<p:commandButton id="idShowAmtDueButtonDialog" value="#{salesInvBean.showHideAmtDue ? 'Hide' : 'Make it Visible'}" actionListener="#{salesInvBean.toggleShowHideAmtDue}" update="idAmountPanelDialog"/>
+						<pe:tooltip for="idShowAmtDueButtonDialog" value="#{salesInvBean.showHideAmtDue ? 'Click to hide the Amount Paid and Amount Due details.' : 'Click to show the Amount Paid and Amount Due details.'}"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column style="width: 250px;">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<h:outputLabel>Additional Remarks</h:outputLabel>&nbsp;&nbsp;
+						
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column><p:inputTextarea id="idComments" label="Additional Remarks" value="#{salesInvBean.invRefVO.remarks}" rows="10" cols="70" /></p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+		<p:column>
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<h:outputLabel>Internal Remarks</h:outputLabel>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column><p:inputTextarea id="idInternalRemarks" label="Internal Remarks" value="#{salesInvBean.invRefVO.internalRemarks}" rows="10" cols="70"/></p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="1" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" process="@this" oncomplete="if (typeof varAddInvoiceRefDialog !== 'undefined') varAddInvoiceRefDialog.hide(); if (typeof varSmallAddInvoiceRefDialog !== 'undefined') varSmallAddInvoiceRefDialog.hide()"/>
+</h:panelGrid>
+</ui:composition>

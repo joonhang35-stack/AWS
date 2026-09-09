@@ -1,0 +1,52 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varPassRefNoDialog.show();
+		} else {
+			varPassRefNoDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column>
+	        <h:outputLabel for="idReferenceType">Reference Type <span class="required">*</span></h:outputLabel>
+	    </p:column>
+	    <p:column>
+	        <h:selectOneMenu id="idReferenceType" label="Reference Type" value="#{salesBean.invoicePaxRefNoVO.refType}" required="true">
+	            <f:selectItem itemLabel="Select One" itemValue=""/>
+				<f:selectItems value="#{bterp:lookupItemList('inv_ref_no')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu>
+	    </p:column>
+	</p:row>
+    <p:row>
+	    <p:column>
+	        <h:outputLabel for="idReferenceNo">Reference No <span class="required">*</span></h:outputLabel>
+	    </p:column>
+	    <p:column>
+	        <p:inputText id="idReferenceNo" label="Reference No" value="#{salesBean.invoicePaxRefNoVO.refNo}" maxlength="255" disabled="#{empty salesBean.invoicePaxVO.custDetailsVO.countryId}"/>
+	    </p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="Add" actionListener="#{salesBean.addRefNo}" update="@form,:idAddInvoicePaxForm:idRefNoListTable" rendered="#{salesBean.refNoAdd}"/>
+	<p:commandButton value="Edit" actionListener="#{salesBean.updateRefNo}" update="@form,:idAddInvoicePaxForm:idRefNoListTable" oncomplete="onValidation(xhr, status, args)" rendered="#{not salesBean.refNoAdd}"/>
+	<p:commandButton value="Cancel" actionListener="#{salesBean.resetAddRefNoForm}" update="@form" process="@this" oncomplete="varPassRefNoDialog.hide()" global="false">
+		<pe:resetEditableValues for="idPassRefNoForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

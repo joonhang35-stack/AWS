@@ -1,0 +1,49 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varCustEmailDialog.show();
+		} else {
+			varCustEmailDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idEmail">Email <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idEmail" label="Email" value="#{salesBean.personEmailVO.email}" required="true" maxlength="50" validatorMessage="Invalid email format">
+				<f:validateRegex pattern="#{config['email.format.pattern']}" />
+			</p:inputText>
+        </p:column>
+        <p:column>
+			<h:outputLabel for="idPriEmail">Primary Email</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:selectBooleanCheckbox id="idPriEmail" value="#{salesBean.personEmailVO.isPrimary}"/>
+        </p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="Add" actionListener="#{salesBean.addEmail}" update="@form,:idAddCustForm:idPanelEmail,:idAddCustForm:idPanelCorEmail" rendered="#{salesBean.emailAdd}"/>
+	<p:commandButton value="Edit" actionListener="#{salesBean.updateEmail}" update="@form,:idAddCustForm:idPanelEmail,:idAddCustForm:idPanelCorEmail" oncomplete="onValidation(xhr, status, args)" rendered="#{not salesBean.emailAdd}"/>
+	<p:commandButton value="Cancel" actionListener="#{salesBean.resetAddEmailForm}" update="@form" process="@this" oncomplete="varCustEmailDialog.hide()" global="false">
+		<pe:resetEditableValues for="idCustEmailForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

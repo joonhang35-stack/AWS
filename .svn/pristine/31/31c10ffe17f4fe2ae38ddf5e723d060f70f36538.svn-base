@@ -1,0 +1,593 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddBookingDialog.hide();
+		}
+	}
+	function onAddValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddBookingDialog.hide();
+			//varBookingDetailsDialog.show();
+		}
+	}
+	function handleComplete(tourDepId) {
+		var ftTwnPax = $("#idAddInvoiceForm\\:idFtTwn").val();
+		var ftSglPax = $("#idAddInvoiceForm\\:idFtSgl").val();
+		var ftCtwPax = $("#idAddInvoiceForm\\:idFtCtw").val();
+		var ftCwbPax = $("#idAddInvoiceForm\\:idFtCwb").val();
+		var ftCnbPax = $("#idAddInvoiceForm\\:idFtCnb").val();
+		var ftInftPax = $("#idAddInvoiceForm\\:idFtInft").val();
+		var gaTwnPax = $("#idAddInvoiceForm\\:idGaTwn").val();
+		var gaSglPax = $("#idAddInvoiceForm\\:idGaSgl").val();
+		var gaCtwPax = $("#idAddInvoiceForm\\:idGaCtw").val();
+		var gaCwbPax = $("#idAddInvoiceForm\\:idGaCwb").val();
+		var gaCnbPax = $("#idAddInvoiceForm\\:idGaCnb").val();
+		var gaInftPax = $("#idAddInvoiceForm\\:idGaInft").val();
+		
+		var params = "&amp;ftTwnPax=" + ftTwnPax;
+		params += "&amp;ftSglPax=" + ftSglPax;
+		params += "&amp;ftCtwPax=" + ftCtwPax;
+		params += "&amp;ftCwbPax=" + ftCwbPax;
+		params += "&amp;ftCnbPax=" + ftCnbPax;
+		params += "&amp;ftInftPax=" + ftInftPax;
+		params += "&amp;gaTwnPax=" + gaTwnPax;
+		params += "&amp;gaSglPax=" + gaSglPax;
+		params += "&amp;gaCtwPax=" + gaCtwPax;
+		params += "&amp;gaCwbPax=" + gaCwbPax;
+		params += "&amp;gaCnbPax=" + gaCnbPax;
+		params += "&amp;gaInftPax=" + gaInftPax;
+		window.open('#{request.contextPath}/app/emailtmp/bookingemailtmp?tourDepId=' + tourDepId + params);
+	}
+	function onBookingTransferValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAvailableTourDepListDialog.show();
+		}
+	}
+	var regTwnVO = #{(salesBean.tourDepVO.fullTwn + salesBean.tourDepVO.miscAdt)};
+	var regSglVO = #{(salesBean.tourDepVO.fullSgl + salesBean.tourDepVO.miscAdt)};
+	var regCtwVO = #{(salesBean.tourDepVO.fullCtw + salesBean.tourDepVO.miscChd)};
+	var regCwbVO = #{(salesBean.tourDepVO.fullCeb + salesBean.tourDepVO.miscChd)};
+	var regCnbVO = #{(salesBean.tourDepVO.fullCnb + salesBean.tourDepVO.miscChd)};
+	var grdTwnVO = #{(salesBean.tourDepVO.grndTwn + salesBean.tourDepVO.grdMiscAdtChd)};
+	var grdSglVO = #{(salesBean.tourDepVO.grndSgl + salesBean.tourDepVO.grdMiscAdtChd)};
+	var grdCtwVO = #{(salesBean.tourDepVO.grndCtw + salesBean.tourDepVO.grdMiscAdtChd)};
+	var grdCwbVO = #{(salesBean.tourDepVO.grndCeb + salesBean.tourDepVO.grdMiscAdtChd)};
+	var grdCnbVO = #{(salesBean.tourDepVO.grndCnb + salesBean.tourDepVO.grdMiscAdtChd)};
+	var deposit = #{salesBean.tourPkgVO.deposit};
+	
+	$(function() {
+		var idFtTwn = document.getElementById('idAddInvoiceForm:idFtTwn').value;
+		var idFtSgl = document.getElementById('idAddInvoiceForm:idFtSgl').value;
+		var idFtCtw = document.getElementById('idAddInvoiceForm:idFtCtw').value;
+		var idFtCwb = document.getElementById('idAddInvoiceForm:idFtCwb').value;
+		var idFtCnb = document.getElementById('idAddInvoiceForm:idFtCnb').value;
+		var idFtInft = document.getElementById('idAddInvoiceForm:idFtInft').value;
+		
+		var idGaTwn = document.getElementById('idAddInvoiceForm:idGaTwn').value;
+		var idGaSgl = document.getElementById('idAddInvoiceForm:idGaSgl').value;
+		var idGaCtw = document.getElementById('idAddInvoiceForm:idGaCtw').value;
+		var idGaCwb = document.getElementById('idAddInvoiceForm:idGaCwb').value;
+		var idGaCnb = document.getElementById('idAddInvoiceForm:idGaCnb').value;
+		var idGaInft = document.getElementById('idAddInvoiceForm:idGaInft').value;
+
+		if(!idFtTwn){
+			idFtTwn = 0;
+		}
+		if(!idFtSgl){
+			idFtSgl = 0;
+		}
+		if(!idFtCtw){
+			idFtCtw = 0;
+		}
+		if(!idFtCwb){
+			idFtCwb = 0;
+		}
+		if(!idFtCnb){
+			idFtCnb = 0;
+		}
+		if(!idFtInft){
+			idFtInft = 0;
+		}
+		
+		if(!idGaTwn){
+			idGaTwn = 0;
+		}
+		if(!idGaSgl){
+			idGaSgl = 0;
+		}
+		if(!idGaCtw){
+			idGaCtw = 0;
+		}
+		if(!idGaCwb){
+			idGaCwb = 0;
+		}
+		if(!idGaCnb){
+			idGaCnb = 0;
+		}
+		if(!idGaInft){
+			idGaInft = 0;
+		}
+		document.getElementById('idAddInvoiceForm:idTotalTwn').value = parseFloat(parseFloat(regTwnVO*Number(idFtTwn)) + parseFloat(grdTwnVO*Number(idGaTwn))).toFixed(2);
+		document.getElementById('idAddInvoiceForm:idTotalSgl').value = parseFloat(parseFloat(regSglVO*Number(idFtSgl)) + parseFloat(grdSglVO*Number(idGaSgl))).toFixed(2);
+		document.getElementById('idAddInvoiceForm:idTotalCtw').value = parseFloat(parseFloat(regCtwVO*Number(idFtCtw)) + parseFloat(grdCtwVO*Number(idGaCtw))).toFixed(2);
+		document.getElementById('idAddInvoiceForm:idTotalCwb').value = parseFloat(parseFloat(regCwbVO*Number(idFtCwb)) + parseFloat(grdCwbVO*Number(idGaCwb))).toFixed(2);
+		document.getElementById('idAddInvoiceForm:idTotalCnb').value = parseFloat(parseFloat(regCnbVO*Number(idFtCnb)) + parseFloat(grdCnbVO*Number(idGaCnb))).toFixed(2);
+		document.getElementById('idAddInvoiceForm:idTotalInft').value = parseFloat(parseFloat(0*Number(idFtInft)) + parseFloat(0*Number(idGaInft))).toFixed(2);
+		var totalTwn = document.getElementById('idAddInvoiceForm:idTotalTwn').value;
+		var totalSgl = document.getElementById('idAddInvoiceForm:idTotalSgl').value;
+		var totalCtw = document.getElementById('idAddInvoiceForm:idTotalCtw').value;
+		var totalCwb = document.getElementById('idAddInvoiceForm:idTotalCwb').value;
+		var totalCnb = document.getElementById('idAddInvoiceForm:idTotalCnb').value;
+		var totalInft = document.getElementById('idAddInvoiceForm:idTotalInft').value;
+		
+		if(!totalTwn)
+			totalTwn = 0;
+		if(!totalSgl)
+			totalSgl = 0;
+		if(!totalCtw)
+			totalCtw = 0;
+		if(!totalCwb)
+			totalCwb = 0;
+		if(!totalCnb)
+			totalCnb = 0;
+		if(!totalInft)
+			totalInft = 0;
+		
+		document.getElementById('idAddInvoiceForm:idTotalAmount').value = parseFloat(parseFloat(totalTwn) + parseFloat(totalSgl) + parseFloat(totalCtw) + parseFloat(totalCwb) + parseFloat(totalCnb) + parseFloat(totalInft)).toFixed(2);
+		var bookingId = #{salesBean.bookingVO.id eq null ? 0 : salesBean.bookingVO.id};
+		if(Number(bookingId)==0){
+			var discount1 = #{salesBean.tourDepVO.discount1};
+			var discount2 = #{salesBean.tourDepVO.discount2};
+			var disc1Pax = #{salesBean.tourDepVO.discountPax1};	
+			var disc2Pax = #{salesBean.tourDepVO.discountPax2};	
+		}else{
+			var discount1 = #{salesBean.bookingVO.discount1};
+			var discount2 = #{salesBean.bookingVO.discount2};
+			var disc1Pax = #{salesBean.bookingVO.discountPax1};	
+			var disc2Pax = #{salesBean.bookingVO.discountPax2};	
+		}	
+		var totalPax = Number(idFtTwn) + Number(idFtSgl) + Number(idFtCtw) + Number(idFtCwb) + Number(idFtCnb);
+		var totalDiscPax = Number(disc1Pax) + Number(disc2Pax);
+		var remaining;
+		
+		var totalGaPax = Number(idGaTwn) + Number(idGaSgl) + Number(idGaCtw) + Number(idGaCwb) + Number(idGaCnb);
+		document.getElementById('idAddInvoiceForm:idDepositAmount').value = parseFloat((totalPax + totalGaPax) * Number(deposit)).toFixed(2);
+		
+		if(Number(disc1Pax) != 0){
+			if(Number(disc2Pax) != 0){
+				if(Number(totalPax) > Number(totalDiscPax)){
+					document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+				}else if(Number(totalPax) == Number(totalDiscPax)){
+					document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+				}else if(Number(totalDiscPax) > Number(totalPax)){
+					if(Number(disc1Pax) > Number(totalPax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(totalPax))).toFixed(2);
+					}else if(Number(disc1Pax) == Number(totalPax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+					}else if(Number(totalPax) > Number(disc1Pax)){
+						remaining = Number(totalPax) - Number(disc1Pax);
+						disc2Pax = remaining;
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+					}
+				}
+			} else{
+				if(Number(totalPax) > Number(disc1Pax)){
+					document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+				}else if(Number(totalPax) == Number(disc1Pax)){
+					document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+				}else if(Number(disc1Pax) > Number(totalPax)){
+					document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(totalPax))).toFixed(2);
+				}
+			}
+		}else{
+			if(Number(disc2Pax) != 0){
+				if(Number(totalPax) > Number(disc2Pax)){
+					document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+				}else if(Number(totalPax) == Number(disc2Pax)){
+					document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+				}else if(Number(disc2Pax) > Number(totalPax)){
+					document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(totalPax))).toFixed(2);
+				}
+			}else{
+				document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*0) + parseFloat(discount2*0)).toFixed(2);
+			}
+		}
+		var idDiscountAmount = document.getElementById("idAddInvoiceForm:idDiscountAmount").value;
+		document.getElementById('idAddInvoiceForm:idPayableAmount').value = parseFloat(parseFloat(document.getElementById('idAddInvoiceForm:idTotalAmount').value) - parseFloat(document.getElementById('idAddInvoiceForm:idDiscountAmount').value)).toFixed(2); 
+	});
+	
+	[document.getElementById('idAddInvoiceForm:idFtTwn'), document.getElementById('idAddInvoiceForm:idGaTwn'), document.getElementById('idAddInvoiceForm:idFtSgl'), document.getElementById('idAddInvoiceForm:idGaSgl'), document.getElementById('idAddInvoiceForm:idFtCtw'), document.getElementById('idAddInvoiceForm:idGaCtw'), document.getElementById('idAddInvoiceForm:idFtCwb'), document.getElementById('idAddInvoiceForm:idGaCwb'), document.getElementById('idAddInvoiceForm:idFtCnb'), document.getElementById('idAddInvoiceForm:idGaCnb'), document.getElementById('idAddInvoiceForm:idFtInft'), document.getElementById('idAddInvoiceForm:idGaInft')].forEach(item => {
+		  item.addEventListener('keyup', event => {
+			  var idFtTwn = document.getElementById('idAddInvoiceForm:idFtTwn').value;
+				var idFtSgl = document.getElementById('idAddInvoiceForm:idFtSgl').value;
+				var idFtCtw = document.getElementById('idAddInvoiceForm:idFtCtw').value;
+				var idFtCwb = document.getElementById('idAddInvoiceForm:idFtCwb').value;
+				var idFtCnb = document.getElementById('idAddInvoiceForm:idFtCnb').value;
+				var idFtInft = document.getElementById('idAddInvoiceForm:idFtInft').value;
+				
+				var idGaTwn = document.getElementById('idAddInvoiceForm:idGaTwn').value;
+				var idGaSgl = document.getElementById('idAddInvoiceForm:idGaSgl').value;
+				var idGaCtw = document.getElementById('idAddInvoiceForm:idGaCtw').value;
+				var idGaCwb = document.getElementById('idAddInvoiceForm:idGaCwb').value;
+				var idGaCnb = document.getElementById('idAddInvoiceForm:idGaCnb').value;
+				var idGaInft = document.getElementById('idAddInvoiceForm:idGaInft').value;
+				
+				if(!idGaTwn){
+					idGaTwn = 0;
+				}
+				if(!idGaSgl){
+					idGaSgl = 0;
+				}
+				if(!idGaCtw){
+					idGaCtw = 0;
+				}
+				if(!idGaCwb){
+					idGaCwb = 0;
+				}
+				if(!idGaCnb){
+					idGaCnb = 0;
+				}
+				if(!idGaInft){
+					idGaInft = 0;
+				}
+			
+			if(!idFtTwn){
+				idFtTwn = 0;
+			}
+			document.getElementById('idAddInvoiceForm:idTotalTwn').value = parseFloat(parseFloat(regTwnVO*Number(idFtTwn)) + parseFloat(grdTwnVO*Number(idGaTwn))).toFixed(2);
+			if(!idFtSgl){
+				idFtSgl = 0;
+			}
+			document.getElementById('idAddInvoiceForm:idTotalSgl').value = parseFloat(parseFloat(regSglVO*Number(idFtSgl)) + parseFloat(grdSglVO*Number(idGaSgl))).toFixed(2);
+			if(!idFtCtw){
+				idFtCtw = 0;			
+			}
+			document.getElementById('idAddInvoiceForm:idTotalCtw').value = parseFloat(parseFloat(regCtwVO*Number(idFtCtw)) + parseFloat(grdCtwVO*Number(idGaCtw))).toFixed(2);
+			if(!idFtCwb){
+				idFtCwb = 0;					
+			}
+			document.getElementById('idAddInvoiceForm:idTotalCwb').value = parseFloat(parseFloat(regCwbVO*Number(idFtCwb)) + parseFloat(grdCwbVO*Number(idGaCwb))).toFixed(2);
+			if(!idFtCnb){
+				idFtCnb = 0;					
+			}
+			document.getElementById('idAddInvoiceForm:idTotalCnb').value = parseFloat(parseFloat(regCnbVO*Number(idFtCnb)) + parseFloat(grdCnbVO*Number(idGaCnb))).toFixed(2);
+			document.getElementById('idAddInvoiceForm:idTotalInft').value = parseFloat(parseFloat(0*Number(idFtInft)) + parseFloat(0*Number(idGaInft))).toFixed(2);
+			var totalTwn = document.getElementById('idAddInvoiceForm:idTotalTwn').value;
+			var totalSgl = document.getElementById('idAddInvoiceForm:idTotalSgl').value;
+			var totalCtw = document.getElementById('idAddInvoiceForm:idTotalCtw').value;
+			var totalCwb = document.getElementById('idAddInvoiceForm:idTotalCwb').value;
+			var totalCnb = document.getElementById('idAddInvoiceForm:idTotalCnb').value;
+			var totalInft = document.getElementById('idAddInvoiceForm:idTotalInft').value;
+			
+			if(!totalTwn)
+				totalTwn = 0;
+			if(!totalSgl)
+				totalSgl = 0;
+			if(!totalCtw)
+				totalCtw = 0;
+			if(!totalCwb)
+				totalCwb = 0;
+			if(!totalCnb)
+				totalCnb = 0;
+			if(!totalInft)
+				totalInft = 0;
+			
+			document.getElementById('idAddInvoiceForm:idTotalAmount').value = parseFloat(parseFloat(totalTwn) + parseFloat(totalSgl) + parseFloat(totalCtw) + parseFloat(totalCwb) + parseFloat(totalCnb) + parseFloat(totalInft)).toFixed(2); 
+			var bookingId = #{salesBean.bookingVO.id eq null ? 0 : salesBean.bookingVO.id};
+			if(Number(bookingId)==0){
+				var discount1 = #{salesBean.tourDepVO.discount1};
+				var discount2 = #{salesBean.tourDepVO.discount2};
+				var disc1Pax = #{salesBean.tourDepVO.discountPax1};	
+				var disc2Pax = #{salesBean.tourDepVO.discountPax2};	
+			}else{
+				var discount1 = #{salesBean.bookingVO.discount1};
+				var discount2 = #{salesBean.bookingVO.discount2};
+				var disc1Pax = #{salesBean.bookingVO.discountPax1};	
+				var disc2Pax = #{salesBean.bookingVO.discountPax2};	
+			}
+			var totalPax = Number(idFtTwn) + Number(idFtSgl) + Number(idFtCtw) + Number(idFtCwb) + Number(idFtCnb);
+			var totalDiscPax = Number(disc1Pax) + Number(disc2Pax);
+			var remaining;
+			
+			var totalGaPax = Number(idGaTwn) + Number(idGaSgl) + Number(idGaCtw) + Number(idGaCwb) + Number(idGaCnb);
+			document.getElementById('idAddInvoiceForm:idDepositAmount').value = parseFloat((totalPax + totalGaPax) * Number(deposit)).toFixed(2);
+			
+			if(Number(disc1Pax) != 0){
+				if(Number(disc2Pax) != 0){
+					if(Number(totalPax) > Number(totalDiscPax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+					}else if(Number(totalPax) == Number(totalDiscPax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+					}else if(Number(totalDiscPax) > Number(totalPax)){
+						if(Number(disc1Pax) > Number(totalPax)){
+							document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(totalPax))).toFixed(2);
+						}else if(Number(disc1Pax) == Number(totalPax)){
+							document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+						}else if(Number(totalPax) > Number(disc1Pax)){
+							remaining = Number(totalPax) - Number(disc1Pax);
+							disc2Pax = remaining;
+							document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+						}
+					}
+				} else{
+					if(Number(totalPax) > Number(disc1Pax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+					}else if(Number(totalPax) == Number(disc1Pax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+					}else if(Number(disc1Pax) > Number(totalPax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(totalPax))).toFixed(2);
+					}
+				}
+			}else{
+				if(Number(disc2Pax) != 0){
+					if(Number(totalPax) > Number(disc2Pax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+					}else if(Number(totalPax) == Number(disc2Pax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+					}else if(Number(disc2Pax) > Number(totalPax)){
+						document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(totalPax))).toFixed(2);
+					}
+				}else{
+					document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*0) + parseFloat(discount2*0)).toFixed(2);
+				}
+			}
+			
+			var totalAmount = document.getElementById("idAddInvoiceForm:idTotalAmount").value;
+			var idDiscountAmount = document.getElementById("idAddInvoiceForm:idDiscountAmount").value;
+			document.getElementById("idAddInvoiceForm:idPayableAmount").value = parseFloat(parseFloat(totalAmount) - parseFloat(idDiscountAmount)).toFixed(2);
+		  })
+	});
+</script>
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputText value="Dep Date"/></p:column>
+		<p:column><h:outputText value="#{salesBean.tourDepVO.dtDep}"><f:convertDateTime pattern="#{config['date.display.pattern2']}"/></h:outputText></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputText value="Tour Name"/></p:column>
+		<p:column><h:outputText value="#{salesBean.tourPkgVO.numDays}D/#{salesBean.tourPkgVO.numNights}N "/><h:outputText value="#{salesBean.tourPkgVO.nameEn}"/> <h:outputText value=" [#{salesBean.tourDepVO.desc}]"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputText value="Invoice No."/></p:column>
+		<p:column><h:outputText value="#{salesBean.bookingVO.invoiceVO.code}" rendered="#{not empty salesBean.bookingVO.invoiceVO}"/></p:column>
+	</p:row>
+</p:panelGrid>
+<p:panel>
+	<p:panelGrid>
+		<p:row>
+			<p:column style="width: 100px;"><h:outputLabel>Sales Person</h:outputLabel></p:column>
+			<p:column style="width: 140px;">
+				<p:inputText value="#{salesBean.sessionInfoBean.userVO.name}" readonly="true" style="background:#ccc"
+					rendered="#{salesBean.bookBoolean.add and
+						((not salesBean.salesPersonAuth and not salesBean.salesManager and not salesBean.asstSalesManager) or
+						(not empty salesBean.bookingVO.invoiceVO and salesBean.bookingVO.invoiceVO.isLockSP))}"/>
+				<p:inputText value="#{salesBean.bookingVO.employeeViewVO.userVO.name}" readonly="true" style="background:#ccc"
+					rendered="#{salesBean.bookBoolean.upd and
+						((not salesBean.salesPersonAuth and not salesBean.salesManager and not salesBean.asstSalesManager) or
+						(not empty salesBean.bookingVO.invoiceVO and salesBean.bookingVO.invoiceVO.isLockSP))}"/>
+				<p:selectOneMenu value="#{salesBean.bookingVO.idEmployee}" filter="true"
+					rendered="#{(salesBean.bookBoolean.add or salesBean.bookBoolean.upd) and
+						(salesBean.salesPersonAuth or salesBean.salesManager or salesBean.asstSalesManager) and
+						(empty salesBean.bookingVO.invoiceVO or (not empty salesBean.bookingVO.invoiceVO and not salesBean.bookingVO.invoiceVO.isLockSP))}">
+					<f:selectItems value="#{salesBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+				</p:selectOneMenu>
+			</p:column>
+			<p:column style="width: 80px;">
+				<h:outputLabel for="idAddSurvey">Survey</h:outputLabel>
+			</p:column>
+			<p:column style="padding-top: 10px;padding-bottom: 0px;width: 300px;">
+				<p:selectCheckboxMenu id="idAddSurvey" label="Select" onHide="updateSurveyDesc();"
+					value="#{salesBean.bookingVO.idSurveyList}" filter="true" filterMatchMode="contains">
+					<f:selectItems value="#{bterp:lookupItemList('survey_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+				</p:selectCheckboxMenu>
+				<p:remoteCommand name="updateSurveyDesc" update="idSurveyDesc" global="false"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel>Order Source</h:outputLabel></p:column>
+			<p:column>
+				<h:selectOneMenu value="#{salesBean.bookingVO.orderTypeCd}" effect="fade" styleClass="orderSourceClass">
+					<f:selectItems value="#{bterp:lookupItemList('ordr_sorc')}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}"/>
+					<!-- <p:ajax process="@this" update="idTFairSalerList"/> -->
+				</h:selectOneMenu>
+			</p:column>
+			<p:column colspan="2" style="width: 300px;">
+				<p:outputLabel id="idSurveyDesc" value="#{salesBean.bookingVO.surveyDesc}" />
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel>Referral SP</h:outputLabel></p:column>
+			<p:column>
+				<p:inputText value="#{salesBean.bookingVO.refEmployeeViewVO.userVO.name}" readonly="true" style="background:#ccc"
+					rendered="#{( salesBean.bookBoolean.add or salesBean.bookBoolean.upd) and
+						((not salesBean.salesPersonAuth and not salesBean.salesManager and not salesBean.asstSalesManager) or
+						(not empty salesBean.bookingVO.invoiceVO and salesBean.bookingVO.invoiceVO.isLockSP))}"/>
+				<p:selectOneMenu id="idTFairSalerList" value="#{salesBean.bookingVO.idSalerTfair}" filter="true"
+					rendered="#{(salesBean.bookBoolean.add or salesBean.bookBoolean.upd) and
+						(salesBean.salesPersonAuth or salesBean.salesManager or salesBean.asstSalesManager) and
+						(empty salesBean.bookingVO.invoiceVO or (not empty salesBean.bookingVO.invoiceVO and not salesBean.bookingVO.invoiceVO.isLockSP))}">
+					<f:selectItem itemLabel="Select One"/>
+					<f:selectItems value="#{salesBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+				</p:selectOneMenu>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel>No. Of Pax <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column colspan="3">
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:fieldset legend="Full Tour">
+								<h:panelGrid columns="6">
+									<h:outputLabel>TWN</h:outputLabel>
+									<h:outputLabel>SGL</h:outputLabel>
+									<h:outputLabel>CTW</h:outputLabel>
+									<h:outputLabel>CWB</h:outputLabel>
+									<h:outputLabel>CNB</h:outputLabel>
+									<h:outputLabel>INFT</h:outputLabel>
+									<p:inputText label="FT TWN" id="idFtTwn" value="#{salesBean.bookingVO.paxFullTwn}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="FT SGL" id="idFtSgl" value="#{salesBean.bookingVO.paxFullSgl}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="FT CTW" id="idFtCtw" value="#{salesBean.bookingVO.paxFullCtw}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="FT CWB" id="idFtCwb" value="#{salesBean.bookingVO.paxFullCeb}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="FT CNB" id="idFtCnb" value="#{salesBean.bookingVO.paxFullCnb}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="FT INFT" id="idFtInft" value="#{salesBean.bookingVO.paxFullInft}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+								</h:panelGrid>
+							</p:fieldset>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:fieldset legend="Ground Only">
+								<h:panelGrid columns="6">
+									<h:outputLabel>TWN</h:outputLabel>
+									<h:outputLabel>SGL</h:outputLabel>
+									<h:outputLabel>CTW</h:outputLabel>
+									<h:outputLabel>CWB</h:outputLabel>
+									<h:outputLabel>CNB</h:outputLabel>
+									<h:outputLabel>INFT</h:outputLabel>
+									<c:set var="groundOnlyDisable" value="#{salesBean.tourDepVO.grndSgl == 0 and
+																			salesBean.tourDepVO.grndTwn == 0 and
+																			salesBean.tourDepVO.grndCtw == 0 and
+																			salesBean.tourDepVO.grndCeb == 0 and
+																			salesBean.tourDepVO.grndCnb == 0 and
+																			salesBean.tourDepVO.grndInft == 0}" />
+									<p:inputText label="GA TWN" id="idGaTwn" value="#{salesBean.bookingVO.paxGrndTwn}" required="true" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="GA SGL" id="idGaSgl" value="#{salesBean.bookingVO.paxGrndSgl}" required="true" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="GA CTW" id="idGaCtw" value="#{salesBean.bookingVO.paxGrndCtw}" required="true" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="GA CWB" id="idGaCwb" value="#{salesBean.bookingVO.paxGrndCeb}" required="true" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="GA CNB" id="idGaCnb" value="#{salesBean.bookingVO.paxGrndCnb}" required="true" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+									<p:inputText label="GA INFT" id="idGaInft" value="#{salesBean.bookingVO.paxGrndInft}" required="true" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+								</h:panelGrid>
+								<h:panelGrid columns="1" rendered="#{groundOnlyDisable}">
+									<h:outputText value="Ground only booking unavailable. Contact Operation for enquiry." rendered="#{groundOnlyDisable}" />
+								</h:panelGrid>
+							</p:fieldset>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel>
+					Sub Total Amount
+				</h:outputLabel>
+			</p:column>
+			<p:column colspan="3">
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<h:panelGrid columns="6">
+									<h:outputLabel>TWN</h:outputLabel>
+									<h:outputLabel>SGL</h:outputLabel>
+									<h:outputLabel>CTW</h:outputLabel>
+									<h:outputLabel>CWB</h:outputLabel>
+									<h:outputLabel>CNB</h:outputLabel>
+									<h:outputLabel>INFT</h:outputLabel>
+									<p:inputText id="idTotalTwn" label="TOTAL TWN"
+										readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+									<p:inputText id="idTotalSgl" label="TOTAL SGL"
+										readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+									<p:inputText id="idTotalCtw" label="TOTAL CTW"
+										readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+									<p:inputText id="idTotalCwb" label="TOTAL CWB"
+										readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+									<p:inputText id="idTotalCnb" label="TOTAL CNB"
+										readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+									<p:inputText id="idTotalInft" label="TOTAL INFT"
+										readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+								</h:panelGrid>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column />
+			<p:column colspan="3">
+				<p:panelGrid>
+					<p:row>
+						<p:column style="text-align:right">
+							<h:outputLabel>
+							Total Amount:
+							</h:outputLabel>&nbsp;
+							<p:inputText id="idTotalAmount" label="Total Amount"
+								required="true" readonly="true"
+								style="background:#ccc; text-transform:uppercase;" />
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="text-align:right">
+							<h:outputLabel>
+							Discount Amount:
+							</h:outputLabel>&nbsp;
+							<p:inputText id="idDiscountAmount" label="Discount Amount"
+								required="true" readonly="true"
+								style="background:#ccc; text-transform:uppercase;" />
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="text-align:right">
+							<h:outputLabel>
+							Deposit Amount:
+							</h:outputLabel>&nbsp;
+							<p:inputText id="idDepositAmount" label="Deposit Amount"
+								required="true" readonly="true"
+								style="background:#ccc; text-transform:uppercase;" />
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="text-align:right">
+							<h:outputLabel>
+							Total Amount Payable:
+							</h:outputLabel>&nbsp;
+							<p:inputText id="idPayableAmount" label="Total Amount Payable"
+								required="true" readonly="true"
+								style="background:#ccc; text-transform:uppercase;" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idCustDetails">Customer <span class="required">*</span></h:outputLabel></p:column>
+			<p:column colspan="3">
+				<p:inputText id="idCustDetails" label="Customer" value="#{salesBean.custDetailsVO.contPersonName}" required="true" readonly="true" style="background:#ccc; text-transform:uppercase;"/>&nbsp;
+				<!-- <p:commandButton icon="ui-icon-search" actionListener="#{salesBean.custSearch}" oncomplete="varCustListDialog.show()" update=":idCustListDialog"/> -->
+				<p:commandButton icon="ui-icon-search" oncomplete="varCustListDialog.show()" update=":idCustListDialog"/>
+				<p:commandButton icon="ui-icon-plus" actionListener="#{salesBean.onAddCust}" oncomplete="varAddCustDialog.show()" update=":idAddCustDialog"/>
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{custBean.onCustomerSelected(false, salesBean.bookingVO.idCust)}" oncomplete="varEditCustDialog.show()" update=":idEditCustDialog" />
+				<h:inputHidden id="idAttTo"/>
+				<h:inputHidden id="idTotalUPoint"/>
+				<h:inputHidden id="idTotalVoucher"/>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+</p:panel>
+<h:panelGrid columns="3" style="width:1px;">
+	<p:commandButton value="Book" actionListener="#{salesBean.addBooking}" update="@form,:idTourDepListForm" oncomplete="onAddValidation(xhr, status, args)" rendered="#{salesBean.bookBoolean.add}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{salesBean.updBooking}" update="@form,:idTourDepListForm,:idBookingListForm" oncomplete="onValidation(xhr, status, args)" rendered="#{salesBean.bookBoolean.upd and not salesBean.fromBookingPage}"/><!--  and empty salesBean.bookingVO.invoiceVO -->
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{salesBean.updBooking2}" update="@form,:idBookingListForm:idBookingList,:idAddInvoiceForm" oncomplete="onValidation(xhr, status, args)" rendered="#{salesBean.bookBoolean.upd and salesBean.fromBookingPage}"/><!--  and empty salesBean.bookingVO.invoiceVO -->
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetBookingForm}" update="@form" process="@this" oncomplete="varAddBookingDialog.hide()" rendered="#{not salesBean.fromBookingPage}">
+		<pe:resetEditableValues for="idAddInvoiceForm"/>
+	</p:commandButton>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" update="@form,:idAddInvoiceForm:idCustDetails" oncomplete="varAddBookingDialog.hide()" rendered="#{salesBean.fromBookingPage}"/>
+	<p:commandButton value="Price Quote" update="@form" style="width:100px;" oncomplete="handleComplete('#{salesBean.tourDepVO.id}');" rendered="#{salesBean.bookBoolean.add}" />
+	<p:commandButton value="Transfer" actionListener="#{salesBean.handleTransfer(false)}" oncomplete="onBookingTransferValidation(xhr, status, args)" update=":idAvailableTourDepList:idTourDepList" process="@this" rendered="#{not empty salesBean.bookingVO.id and (not sessionInfoBean.employeeVO.department.contains('sale') or salesBean.salesManager)}"/>
+</h:panelGrid>
+</ui:composition>

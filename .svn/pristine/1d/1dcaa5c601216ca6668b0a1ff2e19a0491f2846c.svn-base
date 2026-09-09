@@ -1,0 +1,111 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	  			
+<p:growl id="msg"/>
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varMultiPmntDialog.hide();
+		}
+	}
+	 
+	</script>
+	<p:panelGrid>		
+		<p:row>
+			<p:column><h:outputLabel for="idAddBankName">Bank Name <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddBankName" label="Bank Name" value="#{billPymtBean.cashBookVO.temp}" onclick="varBankAcctListDialog.show()" required="true"/>
+			</p:column>
+			<p:column><h:outputLabel for="idAddBankAcc">Bank Account <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddBankAcc" label="Bank Account" value="#{billPymtBean.cashBookVO.bankAcc}" onclick="varBankAcctListDialog.show()" required="true" />
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddDate">Date <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:calendar pattern="#{config['date.display.pattern']}" id="idAddDate" label="Date" value="#{billPymtBean.cashBookVO.dtTrans}" required="true" readonlyInput="true"
+					mindate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart, 'dd-MMM-yyyy')}" 
+					maxdate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd, 'dd-MMM-yyyy')}" navigator="true" showButtonPanel="true"/>
+			</p:column>
+			<p:column><h:outputLabel>Cheque No <span class="required">*</span></h:outputLabel></p:column>
+			<p:column><p:inputText label="Cheque No" value="#{billPymtBean.cashBookVO.refNo}" required="true"/></p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddPayTo">Pay to <span class="required">*</span></h:outputLabel></p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAddPayTo" label="Pay to" value="#{billPymtBean.cashBookVO.payee}" required="true" style="width:500px;" />  
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel>Amount Paid <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:inputText label="Amount Paid" value="#{billPymtBean.cashBookVO.credit}" required="true" readonly="true">
+					<f:convertNumber pattern="#,##0.00"/>
+				</p:inputText>
+			</p:column>
+			<p:column><h:outputLabel>Memo Text Box <span class="required">*</span></h:outputLabel></p:column>
+			<p:column><p:inputTextarea label="Memo Text Box" value="#{billPymtBean.cashBookVO.remarks}" required="true"/></p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column colspan="4">
+				<p:panel id ="idShowBillPmnt" style="border:none;">
+					<p:dataTable id="idShowInvList" value="#{billPymtBean.billPmntList}" var="eoBillVO"
+						scrollable="true" scrollHeight="200" style="width:860px;">
+						<p:column headerText="Supplier Type" style="text-align:center;" width="80">
+							<h:outputText value="#{eoBillVO.supplierType}"/>  
+						</p:column>
+						<p:column headerText="Supplier Name" style="text-align:center;" width="150">
+							<h:outputText value="#{eoBillVO.supplierName}"/>  
+						</p:column>
+						<p:column headerText="Bill Id" style="text-align:center;" width="80">
+							<h:outputText value="#{eoBillVO.code}"/>  
+						</p:column>
+						<p:column headerText="Bill Date" style="text-align:center;" width="100">
+							<h:outputText value="#{eoBillVO.billDt}"   >
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Amount" style="text-align:center;" width="100">
+							<h:outputText value="#{eoBillVO.billAmt}">
+								<f:convertNumber pattern="#,##0.00"/>
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Current Bal" style="text-align:center;" width="100">
+							<h:outputText value="#{eoBillVO.curBal}">
+								<f:convertNumber pattern="#,##0.00"/>
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Amount Allocate" style="text-align:center;" width="100">
+							<h:outputText value="#{eoBillVO.amtAllocate}">
+								<f:convertNumber pattern="#,##0.00"/>
+							</h:outputText>
+						</p:column>
+						<!-- <p:columnGroup type="footer">
+							<p:row>
+								<p:column colspan="4" footerText="Totals:" style="text-align:right"/>
+								<p:column footerText="#{billPymtBean.getDoubleDecimalFormat('#,##0.00', billPymtBean.cashBookVO.credit)}"/>
+							</p:row>
+						</p:columnGroup> -->
+					</p:dataTable>
+				</p:panel>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="Save" actionListener="#{billPymtBean.onMultiBillSelected}" update="@form,:idBillListForm:idPurBillPmntTable" process="@form" oncomplete="onValidation(xhr, status, args)"/>
+		<p:commandButton value="Cancel" actionListener="#{billPymtBean.resetMultiBillsForm}" oncomplete="varMultiPmntDialog.hide()" update="@form,:idBillListForm:idPurBillPmntTable" process="@this" /> 
+	</p:panelGrid>
+</ui:composition>

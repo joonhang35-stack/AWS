@@ -1,0 +1,506 @@
+package com.bcs.zsg.feedback.web.bean;
+
+import java.io.Serializable;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+import javax.net.ssl.HttpsURLConnection;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.feedback.bo.FeedbackBO;
+import com.bcs.zsg.mail.bo.EmailingBO;
+import com.bcs.zsg.product.vo.FeedbackVO;
+
+import org.primefaces.event.FileUploadEvent;
+import org.primefaces.model.UploadedFile;
+
+import com.bcs.zsg.common.helper.FileUploadUtils;
+import com.bcs.zsg.common.helper.AppConfigConstant;
+import java.util.UUID;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+
+import com.bcs.zsg.common.helper.AESEncryption;
+import com.bcs.zsg.mail.helper.EmailProperties;
+import com.bcs.zsg.web.SystemProperty;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.bcs.zsg.common.helper.HttpUtils;
+
+public class FeedbackBean extends AppBackingBean implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient FeedbackBO feedbackBO;
+
+	@Autowired
+	private transient EmailingBO emailingBO;
+
+	private List<FeedbackVO> feedbackList;
+	private FeedbackVO selectedFeedback;
+	private List<String> selectedFeedbackSections;
+	private Map<String, List<FeedbackVO>> selectedFeedbackDetailsMap;
+	private Map<String, String> feedbackLookupMap;
+
+	private String editingComments;
+	private String editingCommentsHos;
+	private List<FeedbackVO> customerAttachments;
+	private List<FeedbackVO> editingHosAttachments;
+	private List<Long> deletedAttachmentIds;
+	private Map<String, byte[]> newUploadedFilesMap;
+
+	public void init() {
+		try {
+			initSearchParam();
+			resetForm();
+			loadFeedbacks();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void loadFeedbacks() {
+		try {
+			feedbackList = feedbackBO.getAllFeedbacks();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void loadFeedbackDetails(FeedbackVO vo) {
+		try {
+			this.selectedFeedback = vo;
+			List<FeedbackVO> details = feedbackBO.getFeedbackDetails(vo.getIdFeedback());
+			
+			if (feedbackLookupMap == null) {
+				feedbackLookupMap = feedbackBO.getFeedbackLookupMap();
+			}
+			
+			selectedFeedbackSections = new ArrayList<String>();
+			selectedFeedbackDetailsMap = new LinkedHashMap<String, List<FeedbackVO>>();
+			
+			if (CollectionUtils.isNotEmpty(details)) {
+				FeedbackVO firstDetail = details.get(0);
+				this.selectedFeedback.setComments(firstDetail.getComments());
+				this.selectedFeedback.setCommentsHos(firstDetail.getCommentsHos());
+				this.selectedFeedback.setAttachment(firstDetail.getAttachment());
+				this.selectedFeedback.setAttachmentHos(firstDetail.getAttachmentHos());
+				
+				for (FeedbackVO detail : details) {
+					String secCode = detail.getSectionType();
+					if (secCode != null) {
+						if (!selectedFeedbackDetailsMap.containsKey(secCode)) {
+							selectedFeedbackDetailsMap.put(secCode, new ArrayList<FeedbackVO>());
+							selectedFeedbackSections.add(secCode);
+						}
+						selectedFeedbackDetailsMap.get(secCode).add(detail);
+					}
+				}
+			}
+
+			// Load attachments from database
+			List<FeedbackVO> allAttachments = feedbackBO.getAttachmentsByFeedbackId(vo.getIdFeedback());
+			this.customerAttachments = new ArrayList<FeedbackVO>();
+			this.editingHosAttachments = new ArrayList<FeedbackVO>();
+			this.deletedAttachmentIds = new ArrayList<Long>();
+			this.editingComments = vo.getComments();
+			this.editingCommentsHos = vo.getCommentsHos();
+			this.newUploadedFilesMap = new HashMap<String, byte[]>();
+
+			if (CollectionUtils.isNotEmpty(allAttachments)) {
+				for (FeedbackVO att : allAttachments) {
+					if ("cust".equals(att.getType())) {
+						this.customerAttachments.add(att);
+					} else if ("hos".equals(att.getType())) {
+						this.editingHosAttachments.add(att);
+					}
+				}
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void handleSendFeedbackEmail(FeedbackVO vo) {
+		try {
+			System.out.println("FeedbackBean.handleSendFeedbackEmail() - tourBookingId: " + vo.getTourBookingId());
+			List<FeedbackVO> list = feedbackBO.getInvoiceForFeedback(vo.getTourBookingId());
+			if (CollectionUtils.isNotEmpty(list)) {
+				emailingBO.sendCustomerFeedbackEmail(list);
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_INFO, "Feedback email sent successfully.", ""));
+			} else {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_WARN, "No eligible invoice found for this booking.", ""));
+			}
+			loadFeedbacks();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public boolean isFeedbackModuleEnabled() {
+		return SystemProperty.isFeedbackModuleEnabled();
+	}
+
+	@Override
+	public void resetForm() {
+		feedbackList = null;
+		selectedFeedback = null;
+		selectedFeedbackSections = null;
+		selectedFeedbackDetailsMap = null;
+		editingComments = null;
+		editingCommentsHos = null;
+		customerAttachments = null;
+		editingHosAttachments = null;
+		deletedAttachmentIds = null;
+		newUploadedFilesMap = null;
+	}
+
+	public void handleHosAttachmentUpload(FileUploadEvent event) {
+		try {
+			String originalName = event.getFile().getFileName();
+			String fileNameLower = originalName.toLowerCase();
+			
+			if (fileNameLower.endsWith(".jpg") ||
+				fileNameLower.endsWith(".jpeg") ||
+				fileNameLower.endsWith(".png") ||
+				fileNameLower.endsWith(".gif") ||
+				fileNameLower.endsWith(".webp") ||
+				fileNameLower.endsWith(".pdf")) {
+				System.out.println("Valid attachment file: " + originalName);
+			} else {
+				System.out.println("Invalid attachment file: " + originalName);
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_ERROR, "Invalid file type. Only JPG, JPEG, PNG, GIF, WEBP, and PDF files are allowed.", ""));
+				return;
+			}
+			
+			String ext = "";
+			int idx = originalName.lastIndexOf(".");
+			if (idx >= 0) {
+				ext = originalName.substring(idx);
+			}
+			String uuidFileName = UUID.randomUUID().toString() + ext;
+			
+			byte[] fileContents;
+			try (InputStream in = event.getFile().getInputstream();
+				 ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+				byte[] buf = new byte[1024];
+				int read;
+				while ((read = in.read(buf)) != -1) {
+					bos.write(buf, 0, read);
+				}
+				fileContents = bos.toByteArray();
+			}
+			
+			if (this.newUploadedFilesMap == null) {
+				this.newUploadedFilesMap = new HashMap<String, byte[]>();
+			}
+			this.newUploadedFilesMap.put(uuidFileName, fileContents);
+			
+			FeedbackVO att = new FeedbackVO();
+			att.setIdFeedback(selectedFeedback.getIdFeedback());
+			att.setAttachmentUrl("api/files/feedback/");
+			att.setFilename(uuidFileName);
+			att.setType("hos");
+			
+			if (this.editingHosAttachments == null) {
+				this.editingHosAttachments = new ArrayList<FeedbackVO>();
+			}
+			this.editingHosAttachments.add(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "File " + originalName + " selected.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_ERROR, "Failed to select file: " + t.getMessage(), ""));
+		}
+	}
+
+	public void removeHosAttachment(FeedbackVO att) {
+		try {
+			if (att.getIdAttachment() != null) {
+				this.deletedAttachmentIds.add(att.getIdAttachment());
+			} else {
+				if (this.newUploadedFilesMap != null) {
+					this.newUploadedFilesMap.remove(att.getFilename());
+				}
+			}
+			this.editingHosAttachments.remove(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "Attachment removed.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+
+
+	public String getHosAttachmentSecureUrl(FeedbackVO att) {
+		return getAttachmentSecureUrl(att);
+	}
+
+	public String getAttachmentSecureUrl(FeedbackVO att) {
+		if (att == null || att.getFilename() == null) return "#";
+		try {
+			// Check if file is local (not yet saved to external server)
+			if (this.newUploadedFilesMap != null && this.newUploadedFilesMap.containsKey(att.getFilename())) {
+				byte[] bytes = this.newUploadedFilesMap.get(att.getFilename());
+				String base64 = javax.xml.bind.DatatypeConverter.printBase64Binary(bytes);
+				String mimeType = "image/png";
+				String fn = att.getFilename().toLowerCase();
+				if (fn.endsWith(".pdf")) mimeType = "application/pdf";
+				else if (fn.endsWith(".jpg") || fn.endsWith(".jpeg")) mimeType = "image/jpeg";
+				else if (fn.endsWith(".gif")) mimeType = "image/gif";
+				else if (fn.endsWith(".webp")) mimeType = "image/webp";
+				return "data:" + mimeType + ";base64," + base64;
+			}
+
+			String privateKey = SystemProperty.SYSTEM_REQUEST_HEADER_AUTHORIZATION;
+			String raw = "file=" + att.getFilename() + "&privateKey=" + privateKey;
+			String encrypted = URLEncoder.encode(AESEncryption.encrypt(raw), "UTF-8");
+			return SystemProperty.FEEDBACK_GET_ATTACHMENT + att.getFilename() + "?key=" + encrypted;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return "#";
+		}
+	}
+
+	private String uploadFileToApi(String originalName, byte[] fileBytes, String useOriginalFilename) throws Exception {
+		String boundary = "===" + System.currentTimeMillis() + "===";
+		String LINE_FEED = "\r\n";
+		
+		URL url = new URL(SystemProperty.getSystemApiUrl() + "/api/files/upload");
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+		
+		if (conn instanceof HttpsURLConnection) {
+			((HttpsURLConnection) conn).setSSLSocketFactory(HttpUtils.getSslContext().getSocketFactory());
+		}
+		
+		conn.setUseCaches(false);
+		conn.setDoOutput(true);
+		conn.setDoInput(true);
+		conn.setRequestMethod("POST");
+		conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+		conn.setRequestProperty("x-api-key", SystemProperty.SYSTEM_REQUEST_HEADER_AUTHORIZATION);
+		
+		try (OutputStream outputStream = conn.getOutputStream();
+			 PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, "UTF-8"), true)) {
+			
+			// 1. Add "path" field
+			writer.append("--" + boundary).append(LINE_FEED);
+			writer.append("Content-Disposition: form-data; name=\"path\"").append(LINE_FEED);
+			writer.append("Content-Type: text/plain; charset=UTF-8").append(LINE_FEED);
+			writer.append(LINE_FEED);
+			writer.append("feedback").append(LINE_FEED);
+			writer.flush();
+			
+			// 2. Add "useOriginalFilename" field
+			writer.append("--" + boundary).append(LINE_FEED);
+			writer.append("Content-Disposition: form-data; name=\"useOriginalFilename\"").append(LINE_FEED);
+			writer.append("Content-Type: text/plain; charset=UTF-8").append(LINE_FEED);
+			writer.append(LINE_FEED);
+			writer.append(useOriginalFilename).append(LINE_FEED);
+			writer.flush();
+			
+			// 3. Add "file" field
+			writer.append("--" + boundary).append(LINE_FEED);
+			writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"" + originalName + "\"").append(LINE_FEED);
+			writer.append("Content-Type: " + URLConnection.guessContentTypeFromName(originalName)).append(LINE_FEED);
+			writer.append("Content-Transfer-Encoding: binary").append(LINE_FEED);
+			writer.append(LINE_FEED);
+			writer.flush();
+			
+			outputStream.write(fileBytes);
+			outputStream.flush();
+			
+			writer.append(LINE_FEED);
+			writer.flush();
+			
+			writer.append("--" + boundary + "--").append(LINE_FEED);
+			writer.flush();
+		}
+		
+		int responseCode = conn.getResponseCode();
+		if (responseCode == HttpURLConnection.HTTP_OK) {
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+				StringBuilder response = new StringBuilder();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					response.append(line);
+				}
+				return response.toString();
+			}
+		} else {
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream() != null ? conn.getErrorStream() : conn.getInputStream(), "UTF-8"))) {
+				StringBuilder errorResponse = new StringBuilder();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					errorResponse.append(line);
+				}
+				throw new IOException("Server returned HTTP response code: " + responseCode + ", details: " + errorResponse.toString());
+			}
+		}
+	}
+	
+	public void saveFeedbackEdits() {
+		try {
+			if (selectedFeedback == null) {
+				return;
+			}
+			
+			// 1. Upload new files to external server via Upload File API now
+			if (newUploadedFilesMap != null && !newUploadedFilesMap.isEmpty()) {
+				for (Map.Entry<String, byte[]> entry : newUploadedFilesMap.entrySet()) {
+					String uuidFileName = entry.getKey();
+					byte[] fileBytes = entry.getValue();
+					
+					System.out.println("FeedbackBean: Uploading file " + uuidFileName);
+					String responseStr = uploadFileToApi(uuidFileName, fileBytes, "true");
+					Gson gson = new Gson();
+					JsonObject json = gson.fromJson(responseStr, JsonObject.class);
+					
+					if (json == null || !json.has("status") || !"SUCCESS".equals(json.get("status").getAsString())) {
+						String errorMsg = (json != null && json.has("message")) ? json.get("message").getAsString() : "Unknown error";
+						throw new IOException("Failed to upload " + uuidFileName + " to server: " + errorMsg);
+					}
+					System.out.println("FeedbackBean: Upload successful for " + uuidFileName);
+				}
+			}
+			
+			// 2. Persist database records (deletes deleted attachment records and files)
+			feedbackBO.saveFeedbackEdits(selectedFeedback.getIdFeedback(), editingCommentsHos, editingHosAttachments, deletedAttachmentIds);
+			
+			selectedFeedback.setCommentsHos(editingCommentsHos);
+			
+			// 3. Clean up memory maps
+			if (newUploadedFilesMap != null) {
+				newUploadedFilesMap.clear();
+			}
+			if (deletedAttachmentIds != null) {
+				deletedAttachmentIds.clear();
+			}
+			loadFeedbacks();
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "Feedback comments and attachments updated successfully.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public List<FeedbackVO> getFeedbackList() {
+		return feedbackList;
+	}
+
+	public void setFeedbackList(List<FeedbackVO> feedbackList) {
+		this.feedbackList = feedbackList;
+	}
+
+	public FeedbackVO getSelectedFeedback() {
+		return selectedFeedback;
+	}
+
+	public void setSelectedFeedback(FeedbackVO selectedFeedback) {
+		this.selectedFeedback = selectedFeedback;
+	}
+
+	public List<String> getSelectedFeedbackSections() {
+		return selectedFeedbackSections;
+	}
+
+	public void setSelectedFeedbackSections(List<String> selectedFeedbackSections) {
+		this.selectedFeedbackSections = selectedFeedbackSections;
+	}
+
+	public Map<String, List<FeedbackVO>> getSelectedFeedbackDetailsMap() {
+		return selectedFeedbackDetailsMap;
+	}
+
+	public void setSelectedFeedbackDetailsMap(Map<String, List<FeedbackVO>> selectedFeedbackDetailsMap) {
+		this.selectedFeedbackDetailsMap = selectedFeedbackDetailsMap;
+	}
+
+	public Map<String, String> getFeedbackLookupMap() {
+		return feedbackLookupMap;
+	}
+
+	public void setFeedbackLookupMap(Map<String, String> feedbackLookupMap) {
+		this.feedbackLookupMap = feedbackLookupMap;
+	}
+
+	public String getEditingComments() {
+		return editingComments;
+	}
+
+	public void setEditingComments(String editingComments) {
+		this.editingComments = editingComments;
+	}
+
+	public String getEditingCommentsHos() {
+		return editingCommentsHos;
+	}
+
+	public void setEditingCommentsHos(String editingCommentsHos) {
+		this.editingCommentsHos = editingCommentsHos;
+	}
+
+	public List<FeedbackVO> getCustomerAttachments() {
+		return customerAttachments;
+	}
+
+	public void setCustomerAttachments(List<FeedbackVO> customerAttachments) {
+		this.customerAttachments = customerAttachments;
+	}
+
+	public List<FeedbackVO> getEditingHosAttachments() {
+		return editingHosAttachments;
+	}
+
+	public void setEditingHosAttachments(List<FeedbackVO> editingHosAttachments) {
+		this.editingHosAttachments = editingHosAttachments;
+	}
+
+	public List<Long> getDeletedAttachmentIds() {
+		return deletedAttachmentIds;
+	}
+
+	public void setDeletedAttachmentIds(List<Long> deletedAttachmentIds) {
+		this.deletedAttachmentIds = deletedAttachmentIds;
+	}
+
+
+}

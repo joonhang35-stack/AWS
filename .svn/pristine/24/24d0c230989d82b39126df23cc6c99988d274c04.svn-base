@@ -1,0 +1,88 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+
+
+<p:growl id="idEntryMsg" showDetail="true"/>
+<p:panelGrid style="width:500px">
+	<p:row>
+		<p:column style="width:166px">
+			<h:outputLabel for="idRegionId">Region Name<span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idRegionId" label="Region Name" value="#{regionAndCountriesBean.countryVO.regionId}">
+				<f:selectItems value="#{regionAndCountriesBean.regionMainList}" var="regionVO" itemLabel="#{regionVO.regionname}" itemValue="#{regionVO.id}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idCountryCode">Country Code<span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCountryCode" label="Country Code" value="#{regionAndCountriesBean.countryVO.code}" />
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idThreeLetterCode">Three Letter Code<span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idThreeLetterCode" label="Three Letter Code" value="#{regionAndCountriesBean.countryVO.threeLetterCode}" />
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idCountryName">Region Name<span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCountryName" label="Country Name" value="#{regionAndCountriesBean.countryVO.country}" />
+		</p:column>
+	</p:row>	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idIsActualCountry">Is Actual Country</h:outputLabel> 
+		</p:column>
+		<p:column>
+			<p:selectBooleanButton id="idIsActualCountry" value="#{regionAndCountriesBean.countryVO.isActualCountry}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idIsOnline">Show Online</h:outputLabel> 
+		</p:column>
+		<p:column>
+			<p:selectBooleanButton id="idIsOnline" value="#{regionAndCountriesBean.countryVO.isOnline}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid id="idPanelCountry" style="margin-bottom:10px; width:500px">
+	<p:row>
+		<p:column style="vertical-align: top; width:166px">
+			<h:outputLabel for="idCountryName">Country Image</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:fileUpload fileUploadListener="#{regionAndCountriesBean.uploadImage}"
+			mode="advanced" update="idEntryMsg, idPanelCountry" sizeLimit="100000"
+			allowTypes="/(\.|\/)(gif|jpe?g|png)$/" description="*.jpg;*.jpeg;*.gif;*.png" oncomplete="varStatusDialog.hide()" auto="true"/><br/>
+			<h:outputText id="idCountryImageName" value="#{regionAndCountriesBean.countryVO.image}" rendered="#{not empty regionAndCountriesBean.countryVO.image}" /><br/>
+			<p:graphicImage id="idCountryImage" value="#{bterp:globalConfigValue('GLOBAL', 'PATH_COUNTRY')}/#{regionAndCountriesBean.countryVO.image}" style="width:143px"/>	
+		</p:column>
+	</p:row>
+</p:panelGrid>			
+	<h:panelGrid id="idButtonGrid" columns="3" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" type="submit"  actionListener="#{regionAndCountriesBean.addCountry}" update="@form,:idForm:idCountryTable"/>
+	<p:commandButton id="idBtnAddCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{regionAndCountriesBean.cancel}" update="@form" process="@this" oncomplete="varAddCountryDialog.hide()" global="false">
+			<pe:resetEditableValues for="idAddCountry"/>
+	</p:commandButton>
+	</h:panelGrid>
+		
+</ui:composition>

@@ -1,0 +1,270 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+
+<script type="text/javascript">
+function monitorExporting(start, complete) {
+	if (start) {
+		start();
+	}
+
+	window.pdfExportingMonitor = setInterval(function() {
+		var exportingComplete = $.cookie('cookie.pdf.exporting');
+
+		if (exportingComplete === 'true') {
+			if (complete) {
+				complete();
+			}
+			$.cookie('cookie.pdf.exporting', null);
+			clearInterval(window.pdfExportingMonitor);
+		}
+	}, 500);
+}
+
+function start() {
+	statusDialog.show();
+}
+
+function stop() {
+	statusDialog.hide();
+}
+</script>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Report Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the report is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+<p:panel header="Creditor Report" toggleable="true" toggleSpeed="500">
+	<h:form id="idFormAccountReport">
+		<p:growl id="msg"/>
+		<p:panelGrid style="width:600px;">
+			<p:row>
+				<p:column style="width:100px;">
+					<h:outputLabel for="idReportType">Report Type <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idReportType" label="Report Type" value="#{acctRptBean.reportType}" effect="fade">
+						<p:ajax event="change" listener="#{acctRptBean.handleSelectReportType}" update="idFormAccountReport" />
+						<f:selectItem itemLabel="Select One" itemValue=""/>
+						<f:selectItem itemLabel="Bill Detail by Supplier" itemValue="CA"/>
+						<f:selectItem itemLabel="Bill Unpaid Detail by Supplier" itemValue="CC"/>
+						<f:selectItem itemLabel="Supplier List" itemValue="CB"/>
+						<f:selectItem itemLabel="Bank Payment by Payee" itemValue="CD"/>
+						<f:selectItem itemLabel="A/P Detail Aging by Supplier" itemValue="CE"/>
+						<f:selectItem itemLabel="Purchases In Advance" itemValue="CF"/>
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{acctRptBean.printReport('PDF')}" rendered="#{acctRptBean.reportType != ''}" ajax="false" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{acctRptBean.printReport('XLS')}" rendered="#{acctRptBean.reportType != ''}" ajax="false" onclick="monitorExporting(start,stop)"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:panelGrid id="idSearchTypeA" style="width:750px;">
+			<p:row rendered="#{acctRptBean.reportType == 'CA' ||
+								acctRptBean.reportType == 'CC' ||
+								acctRptBean.reportType =='CD' ||
+								acctRptBean.reportType =='CF' }">
+				<p:column style="width:110px;">
+					<h:outputLabel>Select Fiscal Year <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:80px;" colspan="2">
+				 	<h:selectOneMenu id="idFiscalYear" value="#{acctRptBean.searchParamVO.obj1}" effect="fade" required="true">
+			            <p:ajax event="change" listener="#{acctRptBean.handleSelectYear}" update="idFormAccountReport" />
+			            <f:selectItems value="#{acctRptBean.yearList}" var="#{year}" itemLabel="#{year}" itemValue="#{year}"/>
+			        </h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'CA' ||
+								acctRptBean.reportType == 'CC' ||
+								acctRptBean.reportType =='CD'  ||
+								acctRptBean.reportType =='CE' ||
+								acctRptBean.reportType =='CF' }">
+				<p:column style="width:110px;">
+					<h:outputLabel>Report Date <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:80px;" rendered="#{acctRptBean.reportType != 'CE'}">
+					<p:calendar id="idReportDateFr" label="Date From" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{acctRptBean.searchParamVO.obj2}" required="true"/>
+					<p:watermark for="idReportDateFr" value="Date From" />
+				</p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idReportDateTo" label="Date To" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{acctRptBean.searchParamVO.obj3}" required="true"/>
+					<p:watermark for="idReportDateTo" value="Date To" />
+				</p:column>
+				<p:column style="width:150px;">&nbsp;</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'CA' ||
+								acctRptBean.reportType == 'CC'}">
+				<p:column style="width:100px;">
+					<h:outputLabel>Departure Date</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:80px;">
+				 	<p:calendar id="idDepartureDateFr" label="Departure Date From" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{acctRptBean.searchParamVO.obj4}"/>
+					<p:watermark for="idDepartureDateFr" value="Departure Date From" />
+				</p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idDepartureDateTo" label="Departure Date To" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{acctRptBean.searchParamVO.obj5}"/>
+					<p:watermark for="idDepartureDateTo" value="Departure Date To" />
+				</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'CA' ||
+								acctRptBean.reportType == 'CC' ||
+								acctRptBean.reportType =='CD'  ||
+								acctRptBean.reportType =='CE' }">
+				<p:column style="width:110px;">
+					<h:outputLabel>Supplier</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="3">
+					<h:selectOneMenu Label="Supplier" value="#{acctRptBean.supplierVO.id}">                 
+						<f:selectItem itemLabel="All" itemValue="" />   
+			            <f:selectItems value="#{acctRptBean.supplierList}" var="vo" itemLabel="#{vo.fullName}" itemValue="#{vo.id}" /> 
+				    </h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'CA' ||
+								acctRptBean.reportType == 'CC'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>GL Code</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+					<p:selectBooleanButton value="#{acctRptBean.glCodeChecked}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+	        	</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'CB' ||
+								acctRptBean.reportType =='CD'  ||
+								acctRptBean.reportType =='CE' }">
+				<p:column style="width:110px;">
+					<h:outputLabel>Type of Supplier</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+					<h:selectOneMenu label="Type of Supplier" value="#{acctRptBean.supplierType}">  
+			            <f:selectItem itemLabel="All" itemValue="" />  
+			            <f:selectItem itemLabel="Trade Creditors" itemValue="TC" /> 
+			            <f:selectItem itemLabel="Sundry Creditors" itemValue="SC" />
+			        </h:selectOneMenu>
+	        	</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'CB'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Order By</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+					<h:selectOneMenu label="Order By" value="#{acctRptBean.orderType}">  
+			            <f:selectItem itemLabel="All" itemValue="" />  
+			            <f:selectItem itemLabel="Supplier Code" itemValue="SC" /> 
+			            <f:selectItem itemLabel="Supplier Name" itemValue="SuN" />
+			        </h:selectOneMenu>
+	        	</p:column>
+			</p:row>
+			<p:row rendered = "#{acctRptBean.reportType =='CD'}">
+				<p:column style="width:110px;">
+					<h:outputLabel for="idBankSearch">Bank Account</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+					<h:selectOneMenu id="idBankSearch" label="Bank Account" value="#{acctRptBean.bankAcctVO.id}">
+						<f:selectItem itemLabel="All"  itemValue=""/>
+						<f:selectItems value="#{acctRptBean.bankAcctViewList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.id}"/>
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{acctRptBean.reportType == 'CF'}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Tour Code</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:150px;" colspan="2">
+				<p:panel id="idTourCd">
+					 <p:inputText label="Tour Code" value="#{acctRptBean.tourDepVO.code}" readonly="true" size="30"/>
+					 &nbsp;
+			        <p:commandButton icon="ui-icon-search" actionListener="#{acctRptBean.loadTour}" update=":idTourCodeList" oncomplete="varTourCodeList.show()" process="@this" rendered="#{empty acctRptBean.tourDepVO.id}"/>
+					<p:commandButton icon="ui-icon-close" actionListener="#{acctRptBean.clearTourCode}" update=":idFormAccountReport:idTourCd" process="@this" rendered="#{not empty acctRptBean.tourDepVO.id}"/>
+				</p:panel>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	</h:form>
+</p:panel>
+
+<p:dialog header="Customer List" widgetVar="varCustListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idCustListForm">
+		<ui:include src="../common/customer_list.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - TOUR DEPARTURE LIST
+-->
+<p:dialog header="Tour Departure List" id="idTourCodeList" widgetVar="varTourCodeList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true" onShow="initializeFilters()">
+	<div style="overflow:auto; width:800px !important; height:500px !important;">
+	<h:form id="idTourDepListForm">
+		<p:dataTable value="#{acctRptBean.tourList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+			<p:ajax event="rowSelect" listener="#{acctRptBean.handleTourCodeSelect}" oncomplete="varTourCodeList.hide()"  update=":idFormAccountReport:idTourCd" />
+			<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:200px;">
+				<h:outputText value="#{vo.code}" />   
+			</p:column>
+			<p:column headerText="Departure Date" sortBy="#{vo.dtDep}" filterBy="#{acctRptBean.dateFormat(vo.dtDep, 'dd-MMM-yyyy')}" filterMatchMode="contains" style="width:60px;">
+				<h:outputText value="#{vo.dtDep}" >
+					<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+				</h:outputText> 
+			</p:column>
+			<p:column headerText="Package" sortBy="#{vo.packageDesc}" filterBy="#{vo.packageDesc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.packageDesc}" />   
+			</p:column>
+		</p:dataTable> 
+	</h:form>
+	</div>
+	<script type="text/javascript">
+        function initializeFilters() {
+            var filters = document.querySelectorAll('#idTourCodeList input.ui-column-filter');
+            filters.forEach(function(filter) {
+                filter.setAttribute('enterkeyhint', 'enter');
+            });
+        }
+    </script>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

@@ -1,0 +1,656 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+</script>
+<p:panel header="Exchange Order" toggleable="true" toggleSpeed="500">
+	<h:form>
+		<p:messages id="idEntryMsg"/>
+	</h:form>
+	
+	<h:form id="idShowExOrderForm">
+		<p:panelGrid style="margin-top:5px; width: 1350px">
+			<p:row>
+				<p:column style="width: 45px">
+					<p:commandButton value="Add" actionListener="#{purchaseEOBean.booleanAdd}" oncomplete="varAddFuncDialog.show()" process="@this" update=":idDetailsDialog"/>
+				</p:column>
+				<p:column style="width: 20px;">
+					<p:separator style="width:2px;height:20px" />
+				</p:column>
+				<p:column>
+					<p:commandButton id="toggler" value="Columns" style="float:left"
+						icon="ui-icon-calculator"
+						actionListener="#{purchaseEOBean.handleChangeColumnsViewClick}"
+						oncomplete="varListingTableViewDialog.show();" process="@this"
+						update=":idListingTableViewDialog" />
+				</p:column>
+				<p:column style="width:120px;"><h:outputLabel for="idDepDateFrom">Issued Date From</h:outputLabel></p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idInvDateFrom" value="#{purchaseEOBean.invDateFrom}" navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+						<p:ajax event="dateSelect" update="idInvDateTo" global="false"/>
+					</p:calendar>
+				</p:column>
+				<p:column style="width:20px;"><h:outputLabel for="idInvDateTo">To</h:outputLabel></p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idInvDateTo" value="#{purchaseEOBean.invDateTo}" mindate="#{purchaseEOBean.invDateFrom}"
+						navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+					</p:calendar>
+				</p:column>
+				<p:column style="width: 20px;">
+					<p:separator style="width:2px;height:20px" />
+				</p:column>
+				<p:column style="width:130px;"><h:outputLabel for="idDepDateFrom">Departure Date From</h:outputLabel></p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idDepDateFrom" value="#{purchaseEOBean.depDateFrom}" navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+						<p:ajax event="dateSelect" update="idDepDateTo" global="false"/>
+					</p:calendar>
+				</p:column>
+				<p:column style="width:20px;"><h:outputLabel for="idDepDateTo">To</h:outputLabel></p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idDepDateTo" value="#{purchaseEOBean.depDateTo}" mindate="#{purchaseEOBean.depDateFrom}"
+						navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+					</p:calendar>
+				</p:column>
+				<p:column style="width: 20px;">
+					<p:separator style="width:2px;height:20px" />
+				</p:column>`
+				<p:column>
+					<p:commandButton icon="ui-icon-search" value="Search" actionListener="#{purchaseEOBean.search}" update=":idShowExOrderForm:idPurEOTable,@form"/>
+				</p:column>
+				<p:column>
+					<p:commandButton icon="ui-icon-print" actionListener="#{purchaseEOBean.printExOrder()}" value="Export" ajax="false"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:panelGrid id="idSearchPanel" style="display: none;">
+			<p:row>		
+				<p:column style="width: 66px;">
+					<p:outputLabel for="idValidFrom" value="Date From" />
+				</p:column>
+				<p:column style="width: 80px;">
+					<p:calendar id="idValidFrom" navigator="true" showButtonPanel="true" size="12"
+						pattern="dd-MMM-yyyy" value="#{purchaseEOBean.fromDate}">
+					</p:calendar>
+	
+				</p:column>
+				<p:column style="width: 52px;">
+					<p:outputLabel value="Date To" for="idValidTo" />
+				</p:column>
+				<p:column style="width: 66px;">
+					<p:calendar id="idValidTo" navigator="true" showButtonPanel="true" size="12"
+						pattern="dd-MMM-yyyy" value="#{purchaseEOBean.toDate}">
+					</p:calendar>
+				</p:column>
+				<p:column style="width: 10px;">
+					<p:separator style="width:2px;height:20px" />
+				</p:column>
+				<p:column style="width: 94px;">
+					<p:outputLabel value="EO From"
+						for="idEoFrom" />
+				</p:column>
+				<p:column style="width: 180px;">
+					<p:inputText id="idEoFrom" maxlength="8" value="#{purchaseEOBean.eoFrom}" />
+					<pe:keyFilter for="idEoFrom" mask="num" /> 
+				</p:column>
+				<p:column style="width: 70px;">
+					<p:outputLabel value="EO To"
+						for="idEoTo" />
+				</p:column>
+				<p:column style="width: 180px;">
+					<p:inputText id="idEoTo" maxlength="8" value="#{purchaseEOBean.eoTo}" />
+					<pe:keyFilter for="idEoTo" mask="num" /> 
+				</p:column>
+				<p:column style="width: 10px;">
+					<p:separator style="width:2px;height:20px" />
+				</p:column>
+				<p:column>
+					<p:commandButton value="Search" actionListener="#{purchaseEOBean.handleFilterSource}" id="eoSearch" oncomplete="purEOTable.clearFilters()" update="@form">
+						</p:commandButton>
+					<p:defaultCommand target="eoSearch" scope="idSearchPanel"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:dataTable id="idPurEOTable" widgetVar="purEOTable" value="#{purchaseEOBean.ldmExOrder}" var="purEO" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" emptyMessage="#{msg['cust.tbl.empty.message']}"
+			lazy="true" filterEvent="enter">
+
+			<p:column headerText="Edit" style="width:50px; text-align:center;" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(1)}">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseEOBean.onEOSelected(purEO)}"
+					update=":idDetailsDialog" oncomplete="varAddFuncDialog.show()"/>
+			</p:column>
+			<p:column headerText="Cancel" style="width:50px; text-align:center;" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(2)}">
+				<p:commandButton icon="ui-icon-close" actionListener="#{purchaseEOBean.onEOSelected(purEO)}" oncomplete="varDelEODialog.show()" disabled="#{purEO.status eq 'Cancelled'}"/>
+			</p:column>
+			<p:column headerText="Supplier Name" sortBy="#{purEO.supplierName}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.supplierName}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(3)}">
+				<h:outputText value="#{purEO.supplierName}" />
+			</p:column>
+			<p:column headerText="EO Number" sortBy="#{purEO.code}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.code}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(4)}">
+				<h:outputText value="#{purEO.code}"/>
+			</p:column>
+			<p:column headerText="Ordered By" sortBy="#{purEO.orderBy}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.orderBy}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(5)}">
+				<h:outputText value="#{purEO.orderBy}" />
+			</p:column>
+			<p:column headerText="EO Date" sortBy="#{purEO.eoDt}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.eoDt}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(6)}">
+				<h:outputText value="#{purEO.eoDt}"> 
+					<f:convertDateTime pattern="dd-MMM-yyyy"/>
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Due Date" sortBy="#{purEO.dueDt}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.dueDt}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(7)}">
+				<h:outputText value="#{purEO.dueDt}">
+					<f:convertDateTime pattern="dd-MMM-yyyy"/>
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Tour Code" sortBy="#{purEO.tourCode}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.tourCode}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(8)}">
+				<h:outputText value="#{purEO.tourCode}"/>
+			</p:column>
+			<p:column headerText="Total Amount" sortBy="#{purEO.totalForeCurAmt}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.totalForeCurAmt}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(9)}">
+				<h:outputText value="#{purEO.totalForeCurAmt}"/>
+			</p:column>
+			<p:column headerText="Amount Due" sortBy="#{purEO.amtDue}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.amtDue}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(10)}">
+				<h:outputText label="Amount Due" value="#{purchaseEOBean.formatMyrCurrency(purEO.amtDue)}">
+					<!-- <f:convertNumber pattern="#,##0.00"/> -->
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Status" sortBy="#{purEO.status}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.status}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(11)}">
+				<h:outputText value="#{purEO.status}" />
+			</p:column>
+			<p:column headerText="Attachment" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.scannedPath}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(17)}">
+				<p:outputLabel id="idAttachment" value="View" rendered="#{not empty purEO.scannedPath}">
+					<i class="fa fa-info-circle" aria-hidden="true" />
+				</p:outputLabel>
+				<pe:tooltip for="idAttachment" showDelay="300" targetPosition="top left" position="bottom right">
+					<h:outputText value="#{purEO.scannedPath}" escape="false" style="white-space: pre-wrap"/>
+				</pe:tooltip>
+			</p:column>	
+			<p:column headerText="Additional Remarks" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.eoComments}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(12)}">
+				<p:outputLabel id="idAdditionalRemarks" value="View"
+					rendered="#{purEO.eoComments ne null and purEO.eoComments ne ''}">
+					<i class="fa fa-info-circle" aria-hidden="true" />
+				</p:outputLabel>
+				<pe:tooltip for="idAdditionalRemarks" shared="true" showDelay="300" targetPosition="top left" position="bottom right"
+					rendered="#{not empty purEO.eoComments}">
+					<h:outputText value="#{purEO.eoComments}" escape="true" style="white-space: pre-wrap"/>
+				</pe:tooltip>
+			</p:column>
+			<p:column headerText="Document No." sortBy="#{purEO.docList}" filterBy="#{purEO.docListFull}" style="width: 120px;" styleClass="txt_center" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(16)}">
+			    <h:outputText id="idDocText" value="#{purEO.docList}" escape="false"/> 
+			    <pe:tooltip for="idDocText" value="#{purEO.docListFull}" escape="false" rendered="#{not empty purEO.docListFull and purEO.docList.contains('......')}"/>
+			</p:column>
+			<p:column headerText="Internal Remarks" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.eoInternalComments}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(13)}">
+				<p:outputLabel id="idInternalRemarks" value="View"
+					rendered="#{purEO.eoInternalComments ne null and purEO.eoInternalComments ne ''}">
+					<i class="fa fa-info-circle" aria-hidden="true" />
+				</p:outputLabel>
+				<pe:tooltip for="idInternalRemarks" shared="true" showDelay="300" targetPosition="top left" position="bottom right"
+					rendered="#{not empty purEO.eoInternalComments}">
+					<h:outputText value="#{purEO.eoInternalComments}" escape="true" style="white-space: pre-wrap"/>
+				</pe:tooltip>
+			</p:column>
+			<p:column headerText="Updated By" sortBy="#{purEO.updatedBy}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.updatedBy}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(14)}">
+				<h:outputText value="#{purEO.updatedBy}" />
+			</p:column>
+			<p:column headerText="Updated Date" sortBy="#{purEO.updatedDate}" style="width: 80px;" styleClass="txt_center" filterBy="#{purEO.updatedDate}" rendered="#{purchaseEOBean.listingTableViewVO.verifyVisibility(15)}">
+				<h:outputText value="#{purEO.updatedDate}">
+					<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+				</h:outputText>
+			</p:column>
+		</p:dataTable>
+		<h:panelGrid>
+			<p:commandButton value="Add" actionListener="#{purchaseEOBean.booleanAdd}" oncomplete="varAddFuncDialog.show()" process="@this" update=":idDetailsDialog"/>
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<p:dialog id="idSuppOptDialog" widgetVar="varSuppOptDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+		<f:facet name="header">
+			<h:outputFormat value="Supplier/ Vendor" />
+		</f:facet>
+		<h:form id="idAddSupplierForm">
+		<ui:include src="../../purchase/common/exchange_order/add_supplier.xhtml"/>
+		</h:form>
+</p:dialog>
+	
+<p:dialog id="idDetailsDialog" widgetVar="varAddFuncDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+		<f:facet name="header">
+			<h:outputFormat value="Add Exchange Order" />
+		</f:facet>
+		<h:form id="idAddExOrderForm">
+		<ui:include src="../../purchase/common/exchange_order/add_exchange_order.xhtml"/>
+		</h:form>
+</p:dialog>
+
+
+<p:dialog id="idEODetailsDialog" widgetVar="varAddDetailsDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+		<f:facet name="header">
+			<h:outputFormat value="Add Exchange Order Details" />
+		</f:facet>
+		<h:form id="idAddEODetailsForm">
+		<ui:include src="../../purchase/common/exchange_order/add_eo_details.xhtml"/>
+		</h:form>
+</p:dialog>
+
+<p:dialog id="idEOPaxNameDialog" widgetVar="varAddPaxNameDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+		<f:facet name="header">
+			<h:outputFormat value="Add Pax Name" />
+		</f:facet>
+		<h:form id="idAddEOPaxNameForm">
+		<ui:include src="../../purchase/common/exchange_order/add_eo_paxname.xhtml"/>
+		</h:form>
+</p:dialog>
+
+<p:dialog id="idEOAirlineDialog" widgetVar="varAddAirlineDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+		<f:facet name="header">
+			<h:outputFormat value="Add Airline Details" />
+		</f:facet>
+		<h:form id="idAddEOAirlineForm">
+		<ui:include src="../../purchase/common/exchange_order/add_eo_airline.xhtml"/>
+		</h:form>
+</p:dialog>
+
+<p:dialog id="idEOHotelTourDialog" widgetVar="varAddHotelTourDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+		<f:facet name="header">
+			<h:outputFormat value="Add Hotel and Tour Details" />
+		</f:facet>
+		<h:form id="idAddEOHotelTourForm">
+		<ui:include src="../../purchase/common/exchange_order/add_eo_hoteltour.xhtml"/>
+		</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - EXCHANGE ORDER LIST
+-->
+<!-- <p:dialog widgetVar="varInvEODialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<h:form>
+	<p:dataTable id="idInvEOList" value="#{purchaseEOBean.invoiceAndEOList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single">
+		<p:ajax event="rowSelect" listener="#{purchaseEOBean.handleInvEOSelect}" 
+		update=":idAddEODetailsForm:idAddDesc,:idAddEODetailsForm:idAddPrice,:idAddEODetailsForm:idAddAmt,:idAddEODetailsForm:idAddFCAmt
+		:idEditEODtlsForm:idEditDesc,:idEditEODtlsForm:idEditPrice,:idEditEODtlsForm:idEditAmt,:idEditEODtlsForm:idEditForeCur" 
+		oncomplete="varInvEODialog.hide()"/>
+		
+		<p:column headerText="Description" sortBy="#{vo.description}" filterBy="#{vo.description}">
+			<h:outputText value="#{vo.description}" />
+		</p:column>
+		<p:column headerText="Amount" sortBy="#{vo.amount}" filterBy="#{vo.amount}">
+			<h:outputText value="#{vo.amount}" />
+		</p:column>
+	</p:dataTable>
+	</h:form>
+</p:dialog> -->
+	
+<!--
+	DIALOG - EXCHANGE ORDER LIST
+-->
+<p:dialog id="idInvNoDialog" header="Document List" widgetVar="varInvNoDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<p:ajax event="close" update=":idInvNoDialog" oncomplete="varInvNoDialog.hide()"/>
+	
+	<h:form id="idInvNoListForm">
+		<p:dataTable widgetVar="varInvNoTable" value="#{purchaseEOBean.lazyInvoiceDataModel}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			filterEvent="enter" lazy="true" rowKey="#{vo.id}" selectionMode="single">
+			<p:ajax event="rowSelect" listener="#{purchaseEOBean.handleInvNoSelect}"
+				update=":idInvNoDialog,:idAddExOrderForm:idEOInvListPanel"
+				oncomplete="varInvNoDialog.hide()"/>
+			
+			<!-- sortBy removed -->
+			<p:column headerText="Document No." 
+				
+				filterBy="#{vo.code}" 
+				filterMatchMode="contains">
+				<h:outputText rendered="#{vo.docTypeCd eq 'I'}" value="#{purchaseEOBean.invPrefixVal} #{vo.code}" /> 
+				<h:outputText rendered="#{vo.docTypeCd eq 'P'}" value="#{purchaseEOBean.psPrefixVal} #{vo.psNo}" /> 
+			</p:column>
+<!-- 			<p:column headerText="Document No." 
+				sortBy="#{vo.docTypeCd eq 'P' ? purchaseEOBean.invPrefixVal+vo.psNo : purchaseEOBean.invPrefixVal+vo.code}" 
+				filterBy="#{vo.docTypeCd eq 'P' ? purchaseEOBean.invPrefixVal+vo.psNo : purchaseEOBean.invPrefixVal+vo.code}" 
+				filterMatchMode="contains">
+				<h:outputText rendered="#{vo.docTypeCd eq 'I'}" value="#{purchaseEOBean.invPrefixVal} #{vo.code}" /> 
+				<h:outputText rendered="#{vo.docTypeCd eq 'P'}" value="#{purchaseEOBean.psPrefixVal} #{vo.psNo}" /> 
+			</p:column> -->
+			<p:column headerText="Document Date" sortBy="#{vo.invoiceDt}" filterBy="#{vo.invoiceDt}">
+				<h:outputText value="#{vo.invoiceDt}">
+				<f:convertDateTime pattern="dd-MMM-yyyy" />
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Customer No." sortBy="#{vo.custCd}" filterBy="#{vo.custCd}">
+				<h:outputText value="#{vo.custCd}" />
+			</p:column>
+			<p:column headerText="Customer Name" sortBy="#{vo.custName}" filterBy="#{vo.custName}" filterMatchMode="contains">
+				<h:outputText value="#{vo.custName}" />
+			</p:column>
+			<p:column headerText="Sales Amount" sortBy="#{vo.amount}" filterBy="#{vo.amount}">
+				<h:outputText value="#{vo.amount}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Issued By" sortBy="#{vo.issuedBy}" filterBy="#{vo.issuedBy}" filterMatchMode="contains">
+				<h:outputText value="#{vo.issuedBy}" />
+			</p:column>
+		</p:dataTable>
+		
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" update=":idInvNoDialog" oncomplete="varInvNoDialog.hide()"/>
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+	
+<p:confirmDialog widgetVar="varDelEODialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:commandButton value="Yes"
+			actionListener="#{purchaseEOBean.deleteEO}"
+			oncomplete="varDelEODialog.hide()"
+			update="@form,:idShowExOrderForm" />
+		<p:commandButton value="Cancel"
+			actionListener="#{purchaseEOBean.resetForm}"
+			oncomplete="varDelEODialog.hide()" />
+	</h:form>
+</p:confirmDialog>
+
+<p:dialog id="idListingTableViewDialog" header="Listing Table View"
+			widgetVar="varListingTableViewDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idListingTableViewForm">
+				<ui:include
+					src="../../maintenance/listingtableview/listing_ex_table_view.xhtml" />
+			</h:form>
+		</p:dialog>
+	 
+<!--
+	DIALOG - TOUR DEPARTURE LIST
+-->
+<p:dialog id="idTourCodeList" header="Tour List" widgetVar="varTourCodeList" modal="true" resizable="false" dynamic="true" draggable="true" closable="false">
+	<div style="overflow:auto; width:800px !important; height:500px !important;">
+	<h:form>
+	<p:dataTable id="idTourDepList" value="#{purchaseEOBean.lazyDataModelTourDep}" var="vo" paginator="true" rows="20" lazy="true" 
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowsPerPageTemplate="20, 30, 40" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+		
+		<p:ajax event="rowSelect" listener="#{purchaseEOBean.handleTourCodeSelect}" oncomplete="varTourCodeList.hide()"  update=":idTourCodeList,:idAddExOrderForm:idTabExOrder,:idAddExOrderForm:idTourCode,:idAddExOrderForm:idAddDepDt,:idAddExOrderForm:idAddRemarks,:idAddExOrderForm:msg" />
+		<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:200px;">
+			<h:outputText value="#{vo.code}" />   
+		</p:column>
+		<p:column headerText="Departure Date" sortBy="#{vo.dtDep}" filterBy="#{vo.dtDep}" filterMatchMode="contains" style="width:60px;">
+			<h:outputText value="#{vo.dtDep}">
+				<f:convertDateTime pattern="dd-MMM-yyyy" />
+			</h:outputText> 
+		</p:column>
+		
+		<p:column headerText="Package" sortBy="#{vo.packageDesc}" filterBy="#{vo.packageDesc}" filterMatchMode="contains">
+			<h:outputText value="#{vo.packageDesc}" />   
+		</p:column>
+	</p:dataTable>
+	<h:panelGrid columns="1" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{purchaseEOBean.resetImportEO}" onclick="varTourCodeList.hide();"/>
+	</h:panelGrid>
+	</h:form>
+	</div>
+</p:dialog>
+
+<p:dialog id="idAddEOAttachmentDialog" header="Invoice"
+	widgetVar="varAddEOAttachmentDialog" modal="true"
+	resizable="false" dynamic="true" closable="false" width="600">
+	<h:form id="idAddEOAttachmentForm">
+		<ui:include src="../../purchase/common/exchange_order/add_eo_attachment.xhtml" />
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idEORemarksLogDialog" header="Remark List"
+	widgetVar="varEORemarksLogDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="true" height="600">
+	<p:ajax event="close" oncomplete="varEORemarksLogDialog.hide()" />
+	
+	<h:form id="idEORemarksLogListForm">
+		<p:dataTable widgetVar="varEORemarksLogTable"
+			value="#{purchaseEOBean.eoHistoryList}" var="vo" paginator="true"
+			rows="10"
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+			filterEvent="enter" lazy="true" rowKey="#{vo.id}"
+			style="width: 1200px;">
+
+			<p:column headerText="Remarks" style="width:500px;">
+				<h:outputText value="#{vo.eoComments}" escape="true"
+					style="white-space: pre-wrap" />
+			</p:column>
+			<p:column headerText="Internal Remarks" style="width:500px;">
+				<h:outputText value="#{vo.eoInternalComments}" escape="true"
+					style="white-space: pre-wrap" />
+			</p:column>
+			<p:column headerText="Updated Date" sortBy="#{vo.updatedDate}"
+				filterBy="#{vo.updatedDate}" style="width:150px;">
+				<h:outputText value="#{vo.updatedDate}">
+					<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Updated By" sortBy="#{vo.updatedBy}"
+				filterBy="#{vo.updatedBy}" style="width:150px;">
+				<h:outputText value="#{vo.updatedBy}" />
+			</p:column>
+		</p:dataTable>
+
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varEORemarksLogDialog.hide()" />
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - DELETE ATTACHMENT CONFIRMATION -->
+<p:confirmDialog widgetVar="varDelAttachmentDialog" header="Confirmation" message="Are you sure want to delete this attachment permenently?"
+	closable="false">
+	<h:form>
+		<p:growl id="msg" />
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{purchaseEOBean.deleteInvAttachment}"
+			update=":idAddExOrderForm:idEOAttachmentListPanel"
+			oncomplete="if (args &amp;&amp; !args.validationFailed) varDelAttachmentDialog.hide()" />
+		<p:commandButton value="#{msg['common.button.label.no']}" onclick="varDelAttachmentDialog.hide()" />
+	</h:form>
+</p:confirmDialog>
+
+<p:confirmDialog widgetVar="varDelAttachmentScannedCopyDialog" message="Are you sure want to delete this scanned copy?">
+	<h:form>
+		<p:growl id="msg" />
+		<p:commandButton value="Yes" actionListener="#{purchaseEOBean.delAttachmentScannedCopy}"
+			update=":idAddEOAttachmentForm:idPanelAttachmentScannedCopy"
+			oncomplete="varDelAttachmentScannedCopyDialog.hide()" />
+		<p:commandButton value="Cancel" onclick="varDelAttachmentScannedCopyDialog.hide()" />
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - SEND EMAIL
+-->
+<p:dialog id="idSendEmailDialog" widgetVar="varSendEmailDialog"
+	modal="true" resizable="false" dynamic="true" draggable="true"
+	closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Send Email" />
+	</f:facet>
+	<h:form id="idSendEmailForm">
+		<div style="height: 270px; width:500px; overflow: auto;">
+		<p:growl id="msg" />
+		<p:panelGrid id="idTypeDetails">
+			<!-- <p:row>
+				<p:column>
+					<h:outputLabel for="idEmailType">Choose Category<span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idEmailType" label="Choose Category"
+						value="#{salesBean.emailType}" required="true">
+						<f:selectItem itemLabel="Individual" itemValue="IDV" />
+						<f:selectItem itemLabel="Department" itemValue="DPT" />
+						<p:ajax event="change" update=":idSendEmailForm:idTypeDetails" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row> -->
+			<p:row>
+				<p:column style="width:120px; text-align: left; vertical-align: top;">
+					<h:outputLabel for="idIndividualList">Specific Person</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu id="idIndividualList" value="#{purchaseEOBean.fullEmployeeList}" label="Specific Person" filter="true" filterMatchMode="contains"
+						onHide="executeSelectEmployeeOnhide();" style="display: flex;width: fit-content;">
+						<f:selectItems value="#{purchaseEOBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}" />
+					</p:selectCheckboxMenu>
+					<p:remoteCommand name="executeSelectEmployeeOnhide" actionListener="#{purchaseEOBean.handleNtfctItemChange(1)}"
+						update="idTxtSelectedEmployee" global="false" process="@this idSendEmailForm:idIndividualList"/>
+					<p:outputLabel id="idTxtSelectedEmployee" value="#{purchaseEOBean.selectedEmployee}" style="float:left;"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column style="width:120px; text-align: left; vertical-align: top;">
+					<h:outputLabel for="idDepartmentList">Department</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu id="idDepartmentList" value="#{purchaseEOBean.departmentList}" label="Department" filter="true" filterMatchMode="contains"
+						onHide="executeSelectDepartmentOnhide();" style="display: flex;width: fit-content;">
+						<f:selectItems value="#{bterp:lookupItemList('dept_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description} - #{vo.remarks}" />
+					</p:selectCheckboxMenu>
+					<p:remoteCommand name="executeSelectDepartmentOnhide" actionListener="#{purchaseEOBean.handleNtfctItemChange(2)}"
+						update="idTxtSelectedDepartment" global="false" process="@this idSendEmailForm:idDepartmentList"/>
+					<p:outputLabel id="idTxtSelectedDepartment" value="#{purchaseEOBean.selectedDepartment}" style="float:left;"/>
+				</p:column>
+			</p:row>
+			<!-- <p:row>
+				<p:column style="width:120px; text-align: left; vertical-align: top;">
+					<h:outputLabel for="idInvoiceChangesList">Invoice Changes <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu id="idInvoiceChangesList" value="#{salesBean.invoiceChangesList}" label="Invoice Changes"
+						filter="true" filterMatchMode="contains" required="true"
+						onHide="executeSelectChangesOnhide();" style="display: flex;width: fit-content;">
+						<f:selectItems value="#{bterp:lookupItemList('inv_changes')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+					</p:selectCheckboxMenu>
+					<p:remoteCommand name="executeSelectChangesOnhide" actionListener="#{salesBean.handleNtfctItemChange(3)}"
+						update="idTxtSelectedChanges" global="false" process="@this idSendEmailForm:idInvoiceChangesList"/>
+					<p:outputLabel id="idTxtSelectedChanges" value="#{salesBean.selectedChanges}" style="float:left;"/>
+				</p:column>
+			</p:row> -->
+		</p:panelGrid>
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:120px; text-align: left; vertical-align: top;">
+					<h:outputLabel for="idRemarksType">Remarks</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputTextarea id="idRemarksType" rows="10" cols="50"
+						value="#{purchaseEOBean.otherTypeRemark}"></p:inputTextarea>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		</div>
+
+		<h:panelGrid columns="2" style="width: 10px;">
+			<p:commandButton value="#{msg['common.button.label.send']}"
+				actionListener="#{purchaseEOBean.processSendEmail}" update="@form"
+				oncomplete="if (args &amp;&amp; !args.validationFailed) varSendEmailDialog.hide()" />
+			<p:commandButton value="#{msg['common.button.label.cancel']}"
+				actionListener="#{purchaseEOBean.resetEmailForm}" update="@form"
+				process="@this" oncomplete="varSendEmailDialog.hide()"
+				global="false">
+				<pe:resetEditableValues for="idSendEmailForm" />
+			</p:commandButton>
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idEONoDialog" header="Exchange Order List"
+	widgetVar="varEONoDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="true">
+	<p:ajax event="close" update=":idEONoDialog"
+		oncomplete="varEONoDialog.hide()" />
+
+	<h:form id="idEONoListForm">
+		<p:dataTable widgetVar="varEONoTable"
+			value="#{purchaseEOBean.lazyEORefDataModel}" var="vo" paginator="true"
+			rows="20"
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+			filterEvent="enter" lazy="true" rowKey="#{vo.id}"
+			selectionMode="single">
+			<p:ajax event="rowSelect" listener="#{purchaseEOBean.handleEONoSelect}"
+				update=":idEONoDialog, :idAddExOrderForm:idTabExOrder,
+					:idAddExOrderForm:msg"
+				oncomplete="varEONoTable.clearFilters();varEONoDialog.hide()" />
+
+			<p:column headerText="Supplier Name" sortBy="#{vo.supplierName}"
+				filterBy="#{vo.supplierName}" filterMatchMode="contains">
+				<h:outputText value="#{vo.supplierName}" />
+			</p:column>
+			<p:column headerText="EO Number" sortBy="#{vo.code}"
+				filterBy="#{vo.code}" filterMatchMode="contains">
+				<h:outputText value="#{vo.code}" />
+			</p:column>
+			<p:column headerText="Tour Code" sortBy="#{vo.tourCode}"
+				filterBy="#{vo.tourCode}" filterMatchMode="contains">
+				<h:outputText value="#{vo.tourCode}" />
+			</p:column>
+			<p:column headerText="EO Date" sortBy="#{vo.eoDt}"
+				filterBy="#{vo.eoDt}" filterMatchMode="contains">
+				<h:outputText value="#{vo.eoDt}"> 
+					<f:convertDateTime pattern="dd-MMM-yyyy"/>
+				</h:outputText>
+			</p:column>
+			<p:column headerText="Status" sortBy="#{vo.status}"
+				filterBy="#{vo.status}" filterMatchMode="contains">
+				<h:outputText value="#{vo.status}" />
+			</p:column>
+			<p:column headerText="Ordered By" sortBy="#{vo.orderBy}"
+				filterBy="#{vo.orderBy}" filterMatchMode="contains">
+				<h:outputText value="#{vo.orderBy}" />
+			</p:column>
+		</p:dataTable>
+
+		<h:panelGrid columns="1">
+			<p:commandButton value="#{msg['common.button.label.cancel']}"
+				update=":idEONoDialog" oncomplete="varEONoDialog.hide()" />
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idAddInvoiceRefDialog" header="Invoice"
+	widgetVar="varAddInvoiceRefDialog" modal="true" resizable="false"
+	dynamic="true" closable="true" styleClass="invoiceRefDialog">
+	<h:form id="idAddInvoiceRefForm">
+		<div style="height:550px;">
+		<ui:include src="../../sales/inv/add_ref_invoice.xhtml" />
+		</div>
+	</h:form>
+</p:dialog>
+
+<p:confirmDialog id="idPrintConfirmationDialog" widgetVar="varPrintConfirmationDialog" header="Confirmation" message="Do you want to save the changes before printing?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton icon="ui-icon-print" value="Save and Print" actionListener="#{purchaseEOBean.saveAndPrintReport('EO',false)}" onclick="varPrintConfirmationDialog.hide()" ajax="false"/>
+		<p:commandButton icon="ui-icon-print" value="Print without Save" actionListener="#{purchaseEOBean.printReport('EO')}" onclick="varPrintConfirmationDialog.hide()" ajax="false"/>
+		<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varPrintConfirmationDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<p:confirmDialog id="idPrintWithLetterConfirmationDialog" widgetVar="varPrintWithLetterConfirmationDialog" header="Confirmation" message="Do you want to save the changes before printing?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton icon="ui-icon-print" value="Save and Print" actionListener="#{purchaseEOBean.saveAndPrintReport('EO',true)}" onclick="varPrintWithLetterConfirmationDialog.hide()" ajax="false"/>
+		<p:commandButton icon="ui-icon-print" value="Print without Save" actionListener="#{purchaseEOBean.printInvoiceWithLetterHead('EO')}" onclick="varPrintWithLetterConfirmationDialog.hide()" ajax="false"/>
+		<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varPrintWithLetterConfirmationDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+</ui:define>
+</ui:composition>

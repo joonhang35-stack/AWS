@@ -1,0 +1,47 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+
+	<p:panel id="idChangePasswordPanel" header="Change Password" toggleable="true" toggleSpeed="100">
+		<h:form id="idSampleForm">
+			<p:messages/>
+			<p:focus context="idSampleForm"/>
+			<h:panelGrid id="formGrid" columns="3">
+			
+				<h:outputLabel for="idCurrentPassword">Current Password: </h:outputLabel>
+				<p:password id="idCurrentPassword" label="Current Password" value="#{changePasswordBean.changePasswordVO.currentPassword}" required="true" maxlength="16" feedback="false"/>
+				<p:message for="idCurrentPassword"/>
+				
+				<h:outputLabel for="idNewPassword">New Password: </h:outputLabel>
+				<p:password id="idNewPassword" label="New Password" value="#{changePasswordBean.changePasswordVO.newPassword}" required="true" maxlength="16" match="idConfirmPassword">
+					<f:validateLength minimum="8" maximum="16"/>
+				</p:password>
+				<p:message for="idNewPassword"/>
+				
+				<h:outputLabel for="idConfirmPassword">Confirm New Password: </h:outputLabel>
+				<p:password id="idConfirmPassword" label="Confirm New Password" value="#{changePasswordBean.changePasswordVO.confirmPassword}" required="true" maxlength="16" feedback="false">
+					<f:validateLength minimum="8" maximum="16"/>
+				</p:password>
+				<p:message for="idConfirmPassword"/>
+				
+				<h:outputText value=""/>
+				<p:commandButton id="idSubmitBtn" value="Submit" action="submit" update="@form"/>
+				<h:outputText value=""/>
+				
+			</h:panelGrid>
+			<p:tooltip for="idCurrentPassword" targetPosition="topRight" position="bottomLeft" value="Your current login password." style="cream"/>
+			<p:tooltip for="idNewPassword" targetPosition="topRight" position="bottomLeft" value="Your desired new password." style="cream"/>
+			<p:tooltip for="idConfirmPassword" targetPosition="topRight" position="bottomLeft" value="Your desired new password (re-enter to confirm)." style="cream"/>
+		</h:form>
+		
+	</p:panel>
+	
+</ui:define>
+</ui:composition>

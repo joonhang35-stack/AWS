@@ -1,0 +1,256 @@
+package com.bcs.zsg.product.vo;
+
+
+import java.util.List;
+
+import com.bcs.zsg.core.vo.BaseVO;
+
+public class InvoiceAndExchangeOrderVO extends BaseVO {
+
+	private static final long serialVersionUID = 1L;
+
+	private Long companyId;
+	private String catCd;
+	private String typeCd;
+	private String code;
+	private  String description;
+	private Double amount;
+	private Long acctId;
+	private String invCat;
+	private String invCatDesc;
+	private List<String> invCatList;
+	
+	//for View Purpose
+	private String acctCode;
+	private String acctSubCode;
+	private String acctDesc;
+	private String catDesc;
+	private String typeDesc;
+	
+	private String taxCode;
+	private Float taxRate;
+	private boolean acctMgrUse;
+	private Boolean isEditable = false;
+	private Boolean isDefAcct = false;
+	private boolean isShow;
+	// For Search
+	private Boolean filterAcctMgrUse;
+	private List<String> itemCatList;
+	private List<String> itemTypeList;
+
+	public String getCode() {
+		return code;
+	}
+
+	public void setCode(String code) {
+		this.code = code;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public Double getAmount() {
+		return amount;
+	}
+
+	public void setAmount(Double amount) {
+		this.amount = amount;
+	}
+
+	public Long getCompanyId() {
+		return companyId;
+	}
+
+	public void setCompanyId(Long companyId) {
+		this.companyId = companyId;
+	}
+
+	public Long getAcctId() {
+		return acctId;
+	}
+
+	public void setAcctId(Long acctId) {
+		this.acctId = acctId;
+	}
+
+	public String getAcctDesc() {
+		return acctDesc;
+	}
+
+	public void setAcctDesc(String acctDesc) {
+		this.acctDesc = acctDesc;
+	}
+
+	public String getAcctCode() {
+		return acctCode;
+	}
+
+	public void setAcctCode(String acctCode) {
+		this.acctCode = acctCode;
+	}
+
+	/**
+	 * @return the acctSubCode
+	 */
+	public String getAcctSubCode() {
+		return acctSubCode;
+	}
+
+	/**
+	 * @param acctSubCode the acctSubCode to set
+	 */
+	public void setAcctSubCode(String acctSubCode) {
+		this.acctSubCode = acctSubCode;
+	}
+
+	/**
+	 * @return the taxCode
+	 */
+	public String getTaxCode() {
+		return taxCode;
+	}
+
+	/**
+	 * @param taxCode the taxCode to set
+	 */
+	public void setTaxCode(String taxCode) {
+		this.taxCode = taxCode;
+	}
+
+	/**
+	 * @return the taxRate
+	 */
+	public Float getTaxRate() {
+		return taxRate;
+	}
+
+	/**
+	 * @param taxRate the taxRate to set
+	 */
+	public void setTaxRate(Float taxRate) {
+		this.taxRate = taxRate;
+	}
+
+	/**
+	 * @return the acctMgrUse
+	 */
+	public boolean getAcctMgrUse() {
+		return acctMgrUse;
+	}
+
+	/**
+	 * @param acctMgrUse the acctMgrUse to set
+	 */
+	public void setAcctMgrUse(boolean acctMgrUse) {
+		this.acctMgrUse = acctMgrUse;
+	}
+
+	public String getCatCd() {
+		return catCd;
+	}
+
+	public void setCatCd(String catCd) {
+		this.catCd = catCd;
+	}
+
+	public String getTypeCd() {
+		return typeCd;
+	}
+
+	public void setTypeCd(String typeCd) {
+		this.typeCd = typeCd;
+	}
+
+	public String getCatDesc() {
+		return catDesc;
+	}
+
+	public void setCatDesc(String catDesc) {
+		this.catDesc = catDesc;
+	}
+
+	public String getTypeDesc() {
+		return typeDesc;
+	}
+
+	public void setTypeDesc(String typeDesc) {
+		this.typeDesc = typeDesc;
+	}
+
+	public List<String> getItemCatList() {
+		return itemCatList;
+	}
+
+	public void setItemCatList(List<String> itemCatList) {
+		this.itemCatList = itemCatList;
+	}
+
+	public List<String> getItemTypeList() {
+		return itemTypeList;
+	}
+
+	public void setItemTypeList(List<String> itemTypeList) {
+		this.itemTypeList = itemTypeList;
+	}
+
+	public Boolean getIsEditable() {
+		return isEditable;
+	}
+
+	public void setIsEditable(Boolean isEditable) {
+		this.isEditable = isEditable;
+	}
+
+	public String getInvCat() {
+		return invCat;
+	}
+
+	public void setInvCat(String invCat) {
+		this.invCat = invCat;
+	}
+
+	public String getInvCatDesc() {
+		return invCatDesc;
+	}
+
+	public void setInvCatDesc(String invCatDesc) {
+		this.invCatDesc = invCatDesc;
+	}
+
+	public List<String> getInvCatList() {
+		return invCatList;
+	}
+
+	public void setInvCatList(List<String> invCatList) {
+		this.invCatList = invCatList;
+	}
+
+	public Boolean getFilterAcctMgrUse() {
+		return filterAcctMgrUse;
+	}
+
+	public void setFilterAcctMgrUse(Boolean filterAcctMgrUse) {
+		this.filterAcctMgrUse = filterAcctMgrUse;
+	}
+
+	public Boolean getIsDefAcct() {
+		return isDefAcct;
+	}
+
+	public void setIsDefAcct(Boolean isDefAcct) {
+		this.isDefAcct = isDefAcct;
+	}
+
+	public boolean getIsShow() {
+		return isShow;
+	}
+
+	public void setIsShow(boolean isShow) {
+		this.isShow = isShow;
+	}
+}

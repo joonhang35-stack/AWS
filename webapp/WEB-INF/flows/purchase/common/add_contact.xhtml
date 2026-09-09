@@ -1,0 +1,43 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	  			
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varContactDialog.show();
+		} else {
+			varContactDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+	<p:column><h:outputLabel for="idAddContactType">Contact Type <span class="required">*</span></h:outputLabel></p:column>
+	<p:column>
+	<h:selectOneMenu id="idAddContactType" value="#{purchaseBean.corContactVO.contactType}">  
+           <f:selectItems value="#{bterp:lookupItemList('cntc_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+       </h:selectOneMenu>
+       </p:column>
+       <p:column><h:outputLabel for="idAddContact">Contact Number <span class="required">*</span></h:outputLabel></p:column>
+	<p:column><p:inputText id="idAddContact" label="Contact No" value="#{purchaseBean.corContactVO.contactNo}" required="true"/></p:column>
+	</p:row>
+	
+</p:panelGrid>
+<p:panelGrid columns="3" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{purchaseBean.addCorContact}" update="@form,:idAddSupplierForm:idShowContact" rendered="#{purchaseBean.contactAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{purchaseBean.updateCorContact}" update="@form,:idAddSupplierForm:idShowContact" oncomplete="onValidation(xhr, status, args)" rendered="#{not purchaseBean.contactAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{purchaseBean.resetContactForm}" update="@form" process="@this" oncomplete="varContactDialog.hide()" global="false">
+		<pe:resetEditableValues for="idAddContactForm"/>
+	</p:commandButton>
+</p:panelGrid>
+</ui:composition>

@@ -1,0 +1,1213 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<script type="text/javascript">
+		function onTourDepValidation(xhr, status, args) {
+			if (!args.validationFailed) {
+				varEditTourDepDialog.hide();
+			}
+		}
+
+		function onTourDepReasonValidation(xhr, status, args) {
+			if (!args.validationFailed) {
+				varTourDepReasonDialog.show();
+			}
+		}
+	</script>
+	<p:growl id="msg" />
+	<div style="height: 500px; overflow: auto;">
+		<p:panelGrid>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idSeqNo">Sequence Number</h:outputLabel>
+				</p:column>
+				<p:column colspan="2">
+					<p:inputText label="Sequence Number" id="idSeqNo"
+						value="#{tourPkgBean.tourDepVO.seqNo}" maxlength="4" style="width:50px" >
+					</p:inputText>
+					<span style="font-style: italic; font-size: 9px; color: #333333;">max:
+						4 char</span>
+				</p:column>
+				<p:column>
+					<p:panelGrid style="border:0; margin:0; padding:0;">
+						<p:row>
+							<p:column style="width:100px;">
+								<h:outputLabel for="idPushToOnline">Push To Online</h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:selectBooleanButton label="Push To Online" id="idPushToOnline" value="#{tourPkgBean.tourDepVO.isPushToOnline}"
+									onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Departure ID </h:outputLabel>
+				</p:column>
+				<p:column colspan="2">#{tourPkgBean.tourDepVO.id} </p:column>
+				<p:column>
+					<p:panelGrid style="border:0; margin:0; padding:0;">
+						<p:row>
+							<p:column style="width:100px;">
+								<h:outputLabel for="idLock">Invoice Lock</h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:selectBooleanButton label="Invoice Lock" id="idLock" value="#{tourPkgBean.tourDepVO.isLock}"
+									onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close">
+									<p:ajax event="change" listener="#{tourPkgBean.setIsTourDepLockChanged(true)}" global="false"/>
+								</p:selectBooleanButton>
+								<pe:tooltip for="idLock">
+									<h:outputText value="Once lock all booking referring invoice remarks will not able to edit."/>
+								</pe:tooltip>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column style="width:150px"></p:column>
+				<p:column style="width:100px">
+					<p:inputText label="Days" value="#{tourPkgBean.tourDepVO.numDays}"
+						style="width:50px" /> Days</p:column>
+				<p:column>
+					<p:inputText label="Nights"
+						value="#{tourPkgBean.tourDepVO.numNights}" style="width:50px" /> Nights</p:column>
+				<p:column>
+					<p:panelGrid style="border:0; margin:0; padding:0;">
+						<p:row>
+							<p:column style="width:100px;">
+								<h:outputLabel for="idOpPicList">OP PIC</h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:selectCheckboxMenu id="idOpPicList" label="OP PIC"
+									value="#{tourPkgBean.tourDepVO.opPicList}" filter="true" filterMatchMode="contains" onHide="executeOnOpPicOnhide();" style="display: flex;width: fit-content;">
+									<f:selectItems value="#{tourPkgBean.employeeList}" var="picVO" itemValue="#{picVO.id}" itemLabel="#{picVO.userVO.name}"/>
+								</p:selectCheckboxMenu>
+								<p:remoteCommand name="executeOnOpPicOnhide" actionListener="#{tourPkgBean.handleOpPicChange('DEP')}" update="idTxtOpPicName" global="false"
+									process="@this, idOpPicList"/>
+								<p:outputLabel id="idTxtOpPicName" value="#{tourPkgBean.tourDepVO.opPicName}" style="float:left;" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idDtDep">Departure <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column colspan="2">
+					<p:calendar id="idDtDep" label="Departure" navigator="true" showButtonPanel="true"
+						value="#{tourPkgBean.tourDepVO.dtDep}" pattern="dd-MMM-yyyy" mindate="#{tourPkgBean.minDate}"
+                    	maxdate="#{tourPkgBean.maxDate}" required="true">
+						<p:ajax event="dateSelect"
+							listener="#{tourPkgBean.handleDepartureDateChange}"
+							update="idDtDep, idTourCd" global="false" />
+					</p:calendar>
+					<span style="font-style: italic; font-size: 9px; color: #333333;">(dd-MMM-yyyy)</span>
+				</p:column>
+				<p:column>
+					<p:panelGrid style="border:0; margin:0; padding:0;">
+						<p:row>
+							<p:column style="width:100px;">
+								<h:outputLabel for="idPrivateTour">Private Tour</h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:selectBooleanButton label="Private Tour" id="idPrivateTour" value="#{tourPkgBean.tourDepVO.isPrivateTour}"
+									onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close">
+									<p:ajax event="change"
+										update=":idAddTourDepForm:idPrivatePICPanel,:idEditTourDepForm:idPrivatePICPanel" />	
+								</p:selectBooleanButton>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idTourCd">Tour Code <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column colspan="2">
+					<p:inputText id="idTourCd" label="Tour Code"
+						value="#{tourPkgBean.tourDepVO.code}" maxlength="30"
+						required="true">
+						<p:ajax global="false" />
+					</p:inputText>
+					<span style="font-style: italic; font-size: 9px; color: #333333;">max:
+						30 char</span>
+				</p:column>
+				<p:column>
+					<p:panelGrid id="idPrivatePICPanel" style="border:0; margin:0; padding:0;">
+						<p:row rendered="#{tourPkgBean.tourDepVO.isPrivateTour}">
+							<p:column style="width:100px;">
+								<h:outputLabel for="idPrivatePicList">PIC <span class="required">*</span></h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:selectCheckboxMenu id="idPrivatePicList" label="Private PIC" required="true"
+									value="#{tourPkgBean.tourDepVO.privatePicList}" filter="true" filterMatchMode="contains"
+									onHide="executeOnPrivatePicOnhide();" style="display: flex;width: fit-content;">
+									<f:selectItems value="#{tourPkgBean.employeeList}" var="pvtPicVO" itemValue="#{pvtPicVO.id}" itemLabel="#{pvtPicVO.userVO.name}"/>
+								</p:selectCheckboxMenu>
+								<p:remoteCommand name="executeOnPrivatePicOnhide" actionListener="#{tourPkgBean.handlePrivatePicChange('DEP')}" update="idTxtPrivatePicName" global="false"
+									process="@this, idPrivatePicList"/>
+								<p:outputLabel id="idTxtPrivatePicName" value="#{tourPkgBean.tourDepVO.privatePicName}" style="float:left;" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idTourDesc">Desc</h:outputLabel>
+				</p:column>
+				<p:column colspan="2">
+					<p:inputText id="idTourDesc" value="#{tourPkgBean.tourDepVO.desc}"
+						maxlength="100" style="width:500px;" />
+					<span style="font-style: italic; font-size: 9px; color: #333333;">max:
+						100 char</span>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idTourDescZh">Desc (Chinese)</h:outputLabel>
+				</p:column>
+				<p:column colspan="2">
+					<p:inputText id="idTourDescZh" value="#{tourPkgBean.tourDepVO.descZh}"
+						maxlength="100" style="width:500px;" />
+					<span style="font-style: italic; font-size: 9px; color: #333333;">max:
+						100 char</span>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idSeason">Season</h:outputLabel>
+				</p:column>
+				<p:column colspan="2">
+					<p:selectManyCheckbox id="idSeason" label="Season"
+						value="#{tourPkgBean.tourDepVO.selectedSeason}">
+						<f:selectItems value="#{tourPkgBean.refDataListSeason}" var="vo"
+							itemLabel="#{vo.value}" itemValue="#{vo.code}" />
+						<p:ajax event="change" update="idSeason"
+							listener="#{tourPkgBean.selectAllSeason}" global="false" />
+					</p:selectManyCheckbox>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idDepartDateBadge">Depart Date Badge</h:outputLabel>
+				</p:column>
+				<p:column colspan="2">
+					<p:selectCheckboxMenu id="idDepartDateBadge" value="#{tourPkgBean.tourDepVO.departDateBadgeList}" label="Depart Date Badge" filter="true" filterMatchMode="contains" onHide="executeOnBadgeOnhide();" style="display: flex;width: fit-content;">
+						<f:selectItems value="#{bterp:lookupItemList('depart_date_badge')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+					</p:selectCheckboxMenu>
+					<p:remoteCommand name="executeOnBadgeOnhide" actionListener="#{tourPkgBean.handleDepartDateBadgeChange(false)}" update="idTxtDeptDateBadgeTag" global="false" />
+					<p:outputLabel id="idTxtDeptDateBadgeTag" value="#{tourPkgBean.deptDateDesc}" style="float:left;"/>
+				</p:column>
+			</p:row>
+			
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idDepartDateBadgeZh">Depart Date Badge (Chinese)</h:outputLabel>
+				</p:column>
+				<p:column colspan="2">
+					<p:selectCheckboxMenu id="idDepartDateBadgeZh" value="#{tourPkgBean.tourDepVO.departDateBadgeZhList}" label="Depart Date Badge (Chinese)" filter="true" filterMatchMode="contains" onHide="executeOnBadgeZHOnhide();" style="display: flex;width: fit-content;">
+						<f:selectItems value="#{bterp:lookupItemList('depart_date_badge_zh')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+					</p:selectCheckboxMenu>
+					<p:remoteCommand name="executeOnBadgeZHOnhide" actionListener="#{tourPkgBean.handleDepartDateBadgeChange(true)}" update="idTxtDeptDateBadgeZHTag" global="false" />
+					<p:outputLabel id="idTxtDeptDateBadgeZHTag" value="#{tourPkgBean.deptDateZhDesc}" style="float:left;"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column><h:outputLabel for="idLanguage">Language <span class="required">*</span></h:outputLabel></p:column>
+				<p:column colspan="2">
+					<h:selectOneMenu id="idLanguage" label="Season" value="#{tourPkgBean.tourDepVO.langCode}" effect="fade" required="true">
+						<f:selectItems value="#{bterp:lookupItemList('product_lang')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idDailyCMS">Itinerary CMS</h:outputLabel>
+				</p:column>
+				<p:column colspan="2">
+					<h:selectOneMenu id="idDailyCMS" label="Itinerary CMS"
+						value="#{tourPkgBean.tourDepVO.tourPkgDailyCms}"
+						effect="fade">
+						<f:selectItem itemLabel="Select One" />
+						<f:selectItems value="#{tourPkgBean.tourDepVO.tourPkgDailyItineraryVOList}"
+							var="vo" itemLabel="#{vo.code} - #{vo.title}" itemValue="#{vo.id}" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+
+			<p:row>
+				<p:column>
+					<h:outputLabel>Customer Itinerary</h:outputLabel>
+				</p:column>
+				<p:column colspan="2"></p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:panelGrid id="idShowTourItineries">
+			<p:row>
+				<p:column style="width:150px">
+					<h:outputLabel>
+						<p:commandButton value="English"
+							actionListener="#{tourPkgBean.handleTourItineryButtonClick('CUST', 'EN')}"
+							process="@this" oncomplete="varAddCustItineryDialog.show()"
+							update=":idAddCustItineryDialog" />
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:panelGrid id="idCustItineryEN" style="border:0">
+						<p:row>
+							<p:column style="width:20px">
+								<p:commandLink styleClass="ui-icon ui-icon-close"
+									actionListener="#{tourPkgBean.delTourItinery('CUST', 'EN')}"
+									update=":idAddTourDepForm:idCustItineryEN,:idEditTourDepForm:idCustItineryEN, :idAddTourDepForm:idCustItineryENUploadBy, :idEditTourDepForm:idCustItineryENUploadBy"
+									process="@this"
+									rendered="#{not empty tourPkgBean.itineryMap['CUSTEN'] and not tourPkgBean.itineryMap['CUSTEN'].isFromPkg}" />
+							</p:column>
+							<p:column>
+								<h:outputText
+									rendered="#{not tourPkgBean.itineryMap['CUSTEN'].isFromPkg}"
+									value="#{tourPkgBean.itineryMap['CUSTEN'].name}" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column />
+				<p:column>
+					<p:panelGrid id="idCustItineryENUploadBy" style="border:0">
+						<p:row
+							rendered="#{not empty tourPkgBean.itineryMap['CUSTEN'] and not tourPkgBean.itineryMap['CUSTEN'].isFromPkg}">
+							<p:column style="width:75px;">
+								<h:outputText value="Upload Date:" />
+							</p:column>
+							<p:column style="width:150px;">
+								<p:inputText
+									value="#{tourPkgBean.itineryMap['CUSTEN'].createdDate}"
+									readonly="true" style="background:#ccc">
+									<f:convertDateTime pattern="dd-MMM-yyyy" />
+								</p:inputText>
+							</p:column>
+							<p:column style="width:75px;">
+								<h:outputText value="Upload By:" />
+							</p:column>
+							<p:column>
+								<p:inputText
+									value="#{tourPkgBean.itineryMap['CUSTEN'].createdBy}"
+									readonly="true" style="background:#ccc" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>
+						<p:commandButton value="Chinese/Malay"
+							actionListener="#{tourPkgBean.handleTourItineryButtonClick('CUST', 'ZH')}"
+							process="@this" oncomplete="varAddCustItineryDialog.show()"
+							update=":idAddCustItineryDialog" />
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:panelGrid id="idCustItineryZH" style="border:0">
+						<p:row>
+							<p:column style="width:20px">
+								<p:commandLink styleClass="ui-icon ui-icon-close"
+									actionListener="#{tourPkgBean.delTourItinery('CUST', 'ZH')}"
+									update=":idAddTourDepForm:idCustItineryZH,:idEditTourDepForm:idCustItineryZH,:idAddTourDepForm:idCustItineryZHUploadBy,:idEditTourDepForm:idCustItineryZHUploadBy"
+									process="@this"
+									rendered="#{not empty tourPkgBean.itineryMap['CUSTZH'] and not tourPkgBean.itineryMap['CUSTZH'].isFromPkg}" />
+							</p:column>
+							<p:column>
+								<h:outputText
+									rendered="#{not tourPkgBean.itineryMap['CUSTZH'].isFromPkg}"
+									value="#{tourPkgBean.itineryMap['CUSTZH'].name}" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column />
+				<p:column>
+					<p:panelGrid id="idCustItineryZHUploadBy" style="border:0">
+						<p:row
+							rendered="#{not empty tourPkgBean.itineryMap['CUSTZH'] and not tourPkgBean.itineryMap['CUSTZH'].isFromPkg}">
+							<p:column style="width:75px;">
+								<h:outputText value="Upload Date:" />
+							</p:column>
+							<p:column style="width:150px;">
+								<p:inputText
+									value="#{tourPkgBean.itineryMap['CUSTZH'].createdDate}"
+									readonly="true" style="background:#ccc">
+									<f:convertDateTime pattern="dd-MMM-yyyy" />
+								</p:inputText>
+							</p:column>
+							<p:column style="width:75px;">
+								<h:outputText value="Upload By:" />
+							</p:column>
+							<p:column>
+								<p:inputText
+									value="#{tourPkgBean.itineryMap['CUSTZH'].createdBy}"
+									readonly="true" style="background:#ccc" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Agent Itinerary</h:outputLabel>
+				</p:column>
+				<p:column></p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>
+						<p:commandButton value="English"
+							actionListener="#{tourPkgBean.handleTourItineryButtonClick('AGENT', 'EN')}"
+							process="@this" oncomplete="varAddAgentItineryDialog.show()"
+							update=":idAddAgentItineryDialog" />
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:panelGrid id="idAgentItineryEN" style="border:0">
+						<p:row>
+							<p:column style="width:20px">
+								<p:commandLink styleClass="ui-icon ui-icon-close"
+									actionListener="#{tourPkgBean.delTourItinery('AGENT', 'EN')}"
+									update=":idAddTourDepForm:idAgentItineryEN,:idEditTourDepForm:idAgentItineryEN,:idAddTourDepForm:idAgentItineryENUploadBy,:idEditTourDepForm:idAgentItineryENUploadBy"
+									process="@this"
+									rendered="#{not empty tourPkgBean.itineryMap['AGENTEN'] and not tourPkgBean.itineryMap['AGENTEN'].isFromPkg}" />
+							</p:column>
+							<p:column>
+								<h:outputText
+									rendered="#{not tourPkgBean.itineryMap['AGENTEN'].isFromPkg}"
+									value="#{tourPkgBean.itineryMap['AGENTEN'].name}" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column />
+				<p:column>
+					<p:panelGrid id="idAgentItineryENUploadBy" style="border:0">
+						<p:row
+							rendered="#{not empty tourPkgBean.itineryMap['AGENTEN'] and not tourPkgBean.itineryMap['AGENTEN'].isFromPkg}">
+							<p:column style="width:75px;">
+								<h:outputText value="Upload Date:" />
+							</p:column>
+							<p:column style="width:150px;">
+								<p:inputText
+									value="#{tourPkgBean.itineryMap['AGENTEN'].createdDate}"
+									readonly="true" style="background:#ccc">
+									<f:convertDateTime pattern="dd-MMM-yyyy" />
+								</p:inputText>
+							</p:column>
+							<p:column style="width:75px;">
+								<h:outputText value="Upload By:" />
+							</p:column>
+							<p:column>
+								<p:inputText
+									value="#{tourPkgBean.itineryMap['AGENTEN'].createdBy}"
+									readonly="true" style="background:#ccc" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>
+						<p:commandButton value="Chinese/Malay"
+							actionListener="#{tourPkgBean.handleTourItineryButtonClick('AGENT', 'ZH')}"
+							process="@this" oncomplete="varAddAgentItineryDialog.show()"
+							update=":idAddAgentItineryDialog" />
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:panelGrid id="idAgentItineryZH" style="border:0">
+						<p:row>
+							<p:column style="width:20px">
+								<p:commandLink styleClass="ui-icon ui-icon-close"
+									actionListener="#{tourPkgBean.delTourItinery('AGENT', 'ZH')}"
+									update=":idAddTourDepForm:idAgentItineryZH,:idEditTourDepForm:idAgentItineryZH,:idAddTourDepForm:idAgentItineryZHUploadBy,:idEditTourDepForm:idAgentItineryZHUploadBy"
+									process="@this"
+									rendered="#{not empty tourPkgBean.itineryMap['AGENTZH'] and not tourPkgBean.itineryMap['AGENTZH'].isFromPkg}" />
+							</p:column>
+							<p:column>
+								<h:outputText
+									rendered="#{not tourPkgBean.itineryMap['AGENTZH'].isFromPkg}"
+									value="#{tourPkgBean.itineryMap['AGENTZH'].name}" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column />
+				<p:column>
+					<p:panelGrid id="idAgentItineryZHUploadBy" style="border:0">
+						<p:row
+							rendered="#{not empty tourPkgBean.itineryMap['AGENTZH'] and not tourPkgBean.itineryMap['AGENTZH'].isFromPkg}">
+							<p:column style="width:75px;">
+								<h:outputText value="Upload Date:" />
+							</p:column>
+							<p:column style="width:150px;">
+								<p:inputText
+									value="#{tourPkgBean.itineryMap['AGENTZH'].createdDate}"
+									readonly="true" style="background:#ccc">
+									<f:convertDateTime pattern="dd-MMM-yyyy" />
+								</p:inputText>
+							</p:column>
+							<p:column style="width:75px;">
+								<h:outputText value="Upload By:" />
+							</p:column>
+							<p:column>
+								<p:inputText
+									value="#{tourPkgBean.itineryMap['AGENTZH'].createdBy}"
+									readonly="true" style="background:#ccc" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:150px">
+					<h:outputLabel>Full Tour <span class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<h:panelGrid columns="5" style="text-align:center; border-collapse:collapse;">
+						<h:outputLabel for="idFullTourTwn">TWN</h:outputLabel>
+						<h:outputLabel for="idFullTourSgl">SGL</h:outputLabel>
+						<h:outputLabel for="idFullTourCtw">CTW</h:outputLabel>
+						<h:outputLabel for="idFullTourCeb">CEB</h:outputLabel>
+						<h:outputLabel for="idFullTourCnb">CNB</h:outputLabel>
+
+						<p:inputText id="idFullTourTwn" label="Full Tour TWN"
+							value="#{tourPkgBean.tourDepVO.fullTwn}" required="true"
+							style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+							<!-- <p:ajax listener="#{tourPkgBean.handleTwnSharingInput(0)}"
+								event="blur"
+								update="idFullTourTwn,idFullTourSgl,idFullTourCtw,idFullTourCeb,idFullTourCnb,idFullSalesComm,idGrndSalesComm" /> -->
+							<p:ajax listener="#{tourPkgBean.handleTwnSharingInput(0)}"
+								event="blur"
+								update="idFullTourTwn,idFullTourSgl,idFullTourCtw,idFullTourCeb,idFullTourCnb" />
+						</p:inputText>
+						<p:inputText id="idFullTourSgl" label="Full Tour SGL"
+							value="#{tourPkgBean.tourDepVO.fullSgl}" style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+						</p:inputText>
+						<p:inputText id="idFullTourCtw" label="Full Tour CTW"
+							value="#{tourPkgBean.tourDepVO.fullCtw}" style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+						</p:inputText>
+						<p:inputText id="idFullTourCeb" label="Full Tour CEB"
+							value="#{tourPkgBean.tourDepVO.fullCeb}" style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+						</p:inputText>
+						<p:inputText id="idFullTourCnb" label="Full Tour CNB"
+							value="#{tourPkgBean.tourDepVO.fullCnb}" style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+						</p:inputText>
+					</h:panelGrid>
+				</p:column>
+			</p:row>
+			<!-- <p:row>
+				<p:column>
+					<h:outputLabel>Sales Comm (FT)</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<h:panelGrid id="idFullSalesComm" columns="5" style="text-align:center; border-collapse:collapse;">
+						<h:outputLabel>SP</h:outputLabel>
+						<h:outputLabel>REF SP</h:outputLabel>
+						<h:outputLabel>SS</h:outputLabel>
+						<h:outputLabel>HOD</h:outputLabel>
+						<h:outputLabel>OP</h:outputLabel>
+						<p:inputText value="#{tourPkgBean.tourDepVO.fullSpComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+						<p:inputText value="#{tourPkgBean.tourDepVO.fullRefSpComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+						<p:inputText value="#{tourPkgBean.tourDepVO.fullSsComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+						<p:inputText value="#{tourPkgBean.tourDepVO.fullHodComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+						<p:inputText value="#{tourPkgBean.tourDepVO.fullOpComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+					</h:panelGrid>
+				</p:column>
+			</p:row> -->
+			<p:row>
+				<p:column>
+					<h:outputLabel>Airfare <span class="required">*</span></h:outputLabel> 
+				</p:column>
+				<p:column colspan="3">
+					<h:panelGrid columns="5" style="text-align:center; border-collapse:collapse;">
+						<h:outputLabel for="idAirfareOnlyTwn">TWN</h:outputLabel>
+						<h:outputLabel for="idAirfareOnlySgl">SGL</h:outputLabel>
+						<h:outputLabel for="idAirfareOnlyCtw">CTW</h:outputLabel>
+						<h:outputLabel for="idAirfareOnlyCeb">CEB</h:outputLabel>
+						<h:outputLabel for="idAirfareOnlyCnb">CNB</h:outputLabel>
+
+						<p:inputText id="idAirfareOnlyTwn" label="Airfare TWN" required="true"
+							value="#{tourPkgBean.tourDepVO.airfareTwn}" style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+							<!-- <p:ajax listener="#{tourPkgBean.handleTwnSharingInput(1)}"
+								event="blur"
+								update="idGrndOnlyTwn,idGrndOnlySgl,idGrndOnlyCtw,idGrndOnlyCeb,idGrndOnlyCnb,idFullSalesComm,idGrndSalesComm" /> -->
+							<p:ajax
+								listener="#{tourPkgBean.handleAirfareTwnSharingInputAndGrndCalculation()}"
+								event="blur"
+								update="idAirfareOnlyTwn,idAirfareOnlySgl,idAirfareOnlyCtw,idAirfareOnlyCeb,idAirfareOnlyCnb,idGrndOnlyTwn,idGrndOnlySgl,idGrndOnlyCtw,idGrndOnlyCeb,idGrndOnlyCnb" />
+						</p:inputText>
+						<p:inputText id="idAirfareOnlySgl" label="Airfare SGL" required="true"
+							value="#{tourPkgBean.tourDepVO.airfareSgl}" style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+							<p:ajax listener="#{tourPkgBean.handleCalculateGrndInput()}"
+								event="blur"
+								update="idGrndOnlySgl" />
+						</p:inputText>
+						<p:inputText id="idAirfareOnlyCtw" label="Airfare CTW" required="true"
+							value="#{tourPkgBean.tourDepVO.airfareCtw}" style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+							<p:ajax listener="#{tourPkgBean.handleCalculateGrndInput()}"
+								event="blur"
+								update="idGrndOnlyCtw" />
+						</p:inputText>
+						<p:inputText id="idAirfareOnlyCeb" label="Airfare CEB" required="true"
+							value="#{tourPkgBean.tourDepVO.airfareCeb}" style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+							<p:ajax listener="#{tourPkgBean.handleCalculateGrndInput()}"
+								event="blur"
+								update="idGrndOnlyCeb" />
+						</p:inputText> 
+						<p:inputText id="idAirfareOnlyCnb" label="Airfare CNB" required="true"
+							value="#{tourPkgBean.tourDepVO.airfareCnb}" style="width:50px">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+							<p:ajax listener="#{tourPkgBean.handleCalculateGrndInput()}"
+								event="blur"
+								update="idGrndOnlyCnb" />
+						</p:inputText>
+					</h:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column style="width:225px; padding-left:0px" >
+					<h:panelGrid columns="2" style="border-collapse:collapse;">
+						<h:outputLabel>Ground Only</h:outputLabel>
+            			<p:selectBooleanCheckbox id="idCheckboxNotApplicable" itemLabel="Not Applicable" value="#{tourPkgBean.tourDepVO.isGroundNotApplicable}">
+            				<p:ajax listener="#{tourPkgBean.handleCheckboxNotApplicable}" 
+            					event="change"
+								update="idGrndOnlyTwn,idGrndOnlySgl,idGrndOnlyCtw,idGrndOnlyCeb,idGrndOnlyCnb" process="@this"/>
+            			</p:selectBooleanCheckbox>
+					</h:panelGrid>
+				</p:column>
+				<p:column colspan="3">
+					<h:panelGrid columns="5" style="text-align:center; border-collapse:collapse;">
+						<h:outputLabel for="idFullTourTwn">TWN</h:outputLabel>
+						<h:outputLabel for="idFullTourSgl">SGL</h:outputLabel>
+						<h:outputLabel for="idFullTourCtw">CTW</h:outputLabel>
+						<h:outputLabel for="idFullTourCeb">CEB</h:outputLabel>
+						<h:outputLabel for="idFullTourCnb">CNB</h:outputLabel>
+						
+						<p:inputText id="idGrndOnlyTwn"
+							value="#{tourPkgBean.tourDepVO.grndTwn}" style="width:50px; background-color:#{tourPkgBean.tourDepVO.isGroundNotApplicable ? 'grey' : 'white'};"
+							disabled="#{tourPkgBean.tourDepVO.isGroundNotApplicable}">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+							<!-- <p:ajax listener="#{tourPkgBean.handleTwnSharingInput(1)}"
+								event="blur"
+								update="idGrndOnlyTwn,idGrndOnlySgl,idGrndOnlyCtw,idGrndOnlyCeb,idGrndOnlyCnb,idFullSalesComm,idGrndSalesComm" /> -->
+							<p:ajax listener="#{tourPkgBean.handleTwnSharingInput(1)}"
+								event="blur"
+								update="idGrndOnlyTwn,idGrndOnlySgl,idGrndOnlyCtw,idGrndOnlyCeb,idGrndOnlyCnb" />
+						</p:inputText>
+						<p:inputText id="idGrndOnlySgl"
+							value="#{tourPkgBean.tourDepVO.grndSgl}" style="width:50px; background-color:#{tourPkgBean.tourDepVO.isGroundNotApplicable ? 'grey' : 'white'};"
+							disabled="#{tourPkgBean.tourDepVO.isGroundNotApplicable}">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+						</p:inputText>
+						<p:inputText id="idGrndOnlyCtw"
+							value="#{tourPkgBean.tourDepVO.grndCtw}" style="width:50px; background-color:#{tourPkgBean.tourDepVO.isGroundNotApplicable ? 'grey' : 'white'};"
+							disabled="#{tourPkgBean.tourDepVO.isGroundNotApplicable}">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+						</p:inputText>
+						<p:inputText id="idGrndOnlyCeb"
+							value="#{tourPkgBean.tourDepVO.grndCeb}" style="width:50px; background-color:#{tourPkgBean.tourDepVO.isGroundNotApplicable ? 'grey' : 'white'};"
+							disabled="#{tourPkgBean.tourDepVO.isGroundNotApplicable}">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+						</p:inputText>
+						<p:inputText id="idGrndOnlyCnb"
+							value="#{tourPkgBean.tourDepVO.grndCnb}" style="width:50px; background-color:#{tourPkgBean.tourDepVO.isGroundNotApplicable ? 'grey' : 'white'};"
+							disabled="#{tourPkgBean.tourDepVO.isGroundNotApplicable}">
+							<f:convertNumber pattern="#,##0.00" />
+							<pe:keyFilter regEx="/[\d\.\s,]/" />
+						</p:inputText>
+					</h:panelGrid>
+				</p:column>
+			</p:row>
+			<!-- <p:row>
+				<p:column>
+					<h:outputLabel>Sales Comm (GA)</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<h:panelGrid id="idGrndSalesComm" columns="5" style="text-align:center; border-collapse:collapse;">
+						<h:outputLabel>SP</h:outputLabel>
+						<h:outputLabel>REF SP</h:outputLabel>
+						<h:outputLabel>SS</h:outputLabel>
+						<h:outputLabel>HOD</h:outputLabel>
+						<h:outputLabel>OP</h:outputLabel>
+						<p:inputText value="#{tourPkgBean.tourDepVO.grndSpComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+						<p:inputText value="#{tourPkgBean.tourDepVO.grndRefSpComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+						<p:inputText value="#{tourPkgBean.tourDepVO.grndSsComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+						<p:inputText value="#{tourPkgBean.tourDepVO.grndHodComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+						<p:inputText value="#{tourPkgBean.tourDepVO.grndOpComm}" readonly="true" style="background:#ccc; width:50px;">
+							<f:convertNumber pattern="#,##0.00" />
+						</p:inputText>
+					</h:panelGrid>
+				</p:column>
+			</p:row> -->
+			<p:row>
+				<p:column>
+					<h:outputLabel>Agent Commision (RM)</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:panelGrid>
+						<p:row>
+							<p:column>
+								<h:outputLabel style="width:50px;">ADT/NA</h:outputLabel>
+							</p:column>
+							<p:column>
+								<h:outputLabel style="width:50px;">ADT/PA</h:outputLabel>
+							</p:column>
+							<p:column>
+								<h:outputLabel style="width:50px;">ADT/SI</h:outputLabel>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column>
+								<p:inputText value="#{tourPkgBean.tourDepVO.cnaAdt}"
+									style="width:50px">
+									<f:convertNumber pattern="#,##0.00" />
+									<pe:keyFilter regEx="/[\d\.\s,]/" />
+								</p:inputText>
+							</p:column>
+							<p:column>
+								<p:inputText value="#{tourPkgBean.tourDepVO.cpaAdt}"
+									style="width:50px">
+									<f:convertNumber pattern="#,##0.00" />
+									<pe:keyFilter regEx="/[\d\.\s,]/" />
+								</p:inputText>
+							</p:column>
+							<p:column>
+								<p:inputText value="#{tourPkgBean.tourDepVO.csiAdt}"
+									style="width:50px">
+									<f:convertNumber pattern="#,##0.00" />
+									<pe:keyFilter regEx="/[\d\.\s,]/" />
+								</p:inputText>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Staff Comm Config </h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<h:outputText value="#{tourPkgBean.salesCommConfigVO.groupName}"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idFullTourRemark">Full Tour Remark</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputTextarea id="idFullTourRemark"
+						value="#{tourPkgBean.tourDepVO.fullRemarks}"
+						style="width:300px; height:80px;" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idGroundRemark">Ground Remark</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputTextarea id="idGroundRemark"
+						value="#{tourPkgBean.tourDepVO.grndRemarks}"
+						style="width:300px; height:80px;" />
+				</p:column>
+			</p:row>
+
+			<p:row>
+				<p:column>
+					<p:commandButton value="Add Remarks"
+						actionListener="#{tourPkgBean.setRemarksAdd(true)}"
+						oncomplete="varRemarksDialog.show()" immediate="true"
+						update=":idRemarksDialog" />
+				</p:column>
+
+				<p:column colspan="3">
+					<p:panel id="idRemarksListPanel" style="border:none">
+						<p:dataTable id="idRemarksListTable"
+							value="#{tourPkgBean.tourDepVO.tourPackageRemarksList}"
+							var="remarksVO" rowKey="#{remarksVO.timestamp}"
+							selectionMode="single"
+							rendered="#{not empty tourPkgBean.tourDepVO.tourPackageRemarksList}">
+							<p:column headerText="Edit"
+								style="width:50px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil"
+									actionListener="#{tourPkgBean.onRemarksSelected(remarksVO)}"
+									oncomplete="varRemarksDialog.show()" process="@this"
+									update=":idRemarksDialog" />
+							</p:column>
+							<p:column headerText="Delete"
+								style="width:50px; text-align:center;">
+								<p:commandButton icon="ui-icon-close"
+									actionListener="#{tourPkgBean.deleteRemarks(remarksVO)}"
+									update=":idAddTourDepForm:idRemarksListPanel,:idEditTourDepForm:idRemarksListPanel"
+									process="@this" />
+							</p:column>
+							<p:column headerText="Remarks Details">
+								<h:outputText value="#{remarksVO.remarksDetails}" />
+							</p:column>
+							<p:column headerText="Time Stamp">
+								<h:outputText value="#{remarksVO.timestamp}">
+									<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+								</h:outputText>
+							</p:column>
+						</p:dataTable>
+					</p:panel>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAirline">Airline <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idAirline" label="Airline"
+						value="#{tourPkgBean.tourDepVO.idAirline}" effect="fade"
+						required="true">
+						<f:selectItem itemLabel="Select One" />
+						<f:selectItems value="#{tourPkgBean.airlineList}" var="vo"
+							itemValue="#{vo.id}" itemLabel="#{vo.code}" />
+						<p:ajax listener="#{tourPkgBean.handleAirlineSelect}"
+							event="change" update=":idAirlineScheduleListForm, idTourCd"
+							oncomplete="varAirlineScheduleListDialog.show()" />
+					</h:selectOneMenu>
+					<p:commandButton icon="ui-icon-search"
+						actionListener="#{tourPkgBean.handleAirlineSelect}"
+						update=":idAirlineScheduleListDialog"
+						oncomplete="varAirlineScheduleListDialog.show()" process="@this" />
+				</p:column>
+				<p:column>
+					<p:commandLink actionListener="#{tourPkgBean.handleAirlineSelect}"
+						update=":idAirlineScheduleListForm"
+						oncomplete="varAirlineScheduleListDialog.show()" process="@this"
+						style="color:#0040FF; text-decoration:underline;">
+						<h:outputText id="idAirlineScheduleDesc"
+							value="#{tourPkgBean.tourDepVO.airlineScheduleVO.desc}" />
+					</p:commandLink>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idShowAirline">Show Flight Schedule</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:selectBooleanButton id="idShowAirline"
+						value="#{tourPkgBean.tourDepVO.isShowAirline}" onLabel="Yes"
+						offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idPNR">PNR</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idPNR" value="#{tourPkgBean.tourDepVO.prn}"
+						maxlength="20" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idSeatAllotment">Seat Allotment <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idSeatAllotment"
+						value="#{tourPkgBean.tourDepVO.seatAllot}" required="true"
+						maxlength="3">
+						<pe:keyFilter regEx="/[\d]/" />
+					</p:inputText>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idTourManagerPax">Tour Manager Pax <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idTourManagerPax"
+						value="#{tourPkgBean.tourDepVO.tourManagerPax}" required="true"
+						maxlength="2">
+						<pe:keyFilter regEx="/[\d]/" />
+					</p:inputText>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idReservedSeat">Reserved Seat <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idReservedSeat"
+						value="#{tourPkgBean.tourDepVO.reservedSeat}" required="true"
+						maxlength="2">
+						<p:ajax event="blur"
+							update=":idAddTourDepForm:idReservedSeatsPanel, :idEditTourDepForm:idReservedSeatsPanel" />
+						<pe:keyFilter regEx="/[\d]/" />
+					</p:inputText>
+				</p:column>
+				<p:column colspan="2">
+					<p:panelGrid id="idReservedSeatsPanel"
+						style="border:0; margin:0; padding:0;">
+						<p:row>
+							<p:column style="width:80px;">
+								<h:outputLabel id="idLabelReservedSeatReas2"
+									for="idReservedSeatReas2"
+									rendered="#{tourPkgBean.tourDepVO.reservedSeat == 0}">Reason <span
+										class="required"><h:outputText value="*"
+											rendered="#{tourPkgBean.tourDepVO.reservedSeat > 0}" /></span>
+								</h:outputLabel>
+								<h:outputLabel id="idLabelReservedSeatReas1"
+									for="idReservedSeatReas1"
+									rendered="#{tourPkgBean.tourDepVO.reservedSeat > 0}">Reason <span
+										class="required"><h:outputText value="*" /></span>
+								</h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:inputText id="idReservedSeatReas1"
+									label="Reserved Seat Reason"
+									value="#{tourPkgBean.tourDepVO.reservedSeatReason}"
+									required="true"
+									rendered="#{tourPkgBean.tourDepVO.reservedSeat > 0}" />
+								<p:inputText id="idReservedSeatReas2"
+									value="#{tourPkgBean.tourDepVO.reservedSeatReason}"
+									rendered="#{tourPkgBean.tourDepVO.reservedSeat == 0}" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<p:commandButton id="idBtnAddDiscount" value="Add Discount"
+						actionListener="#{tourPkgBean.initDiscount}"
+						oncomplete="varDiscountDialog.show();" process="@this"
+						update=":idDiscountDialog, :idAddTourDepForm:msg, :idEditTourDepForm:msg"
+						disabled="#{tourPkgBean.discountLimit != 0 and tourPkgBean.tourDepVO.tourDepartureDiscountVOList.size() eq tourPkgBean.discountLimit}" />
+				</p:column>
+				<p:column colspan="3">
+					<p:panel id="idDiscountListPanel" style="border:none">
+						<p:dataTable id="idDiscountListTable"
+							value="#{tourPkgBean.tourDepVO.tourDepartureDiscountVOList}"
+							var="discountVO"
+							rendered="#{not empty tourPkgBean.tourDepVO.tourDepartureDiscountVOList}">
+							<p:column headerText="Edit"
+								style="width:50px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil"
+									actionListener="#{tourPkgBean.onDiscountSelected(discountVO)}"
+									oncomplete="varDiscountDialog.show()" process="@this"
+									update=":idDiscountDialog" />
+							</p:column>
+							<p:column headerText="Delete"
+								style="width:50px; text-align:center;">
+								<p:commandButton icon="ui-icon-close"
+									actionListener="#{tourPkgBean.deleteDiscount(discountVO)}"
+									update=":idAddTourDepForm:idDiscountListPanel,:idEditTourDepForm:idDiscountListPanel, :idAddTourDepForm:idBtnAddDiscount, :idEditTourDepForm:idBtnAddDiscount"
+									process="@this" />
+							</p:column>
+							<p:column headerText="Discount Amount" style="text-align:center;">
+								<h:outputText value="#{discountVO.discountAmt}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+							</p:column>
+							<p:column headerText="Discount Pax" style="text-align:center;">
+								<h:outputText value="#{discountVO.discountPax}">
+								</h:outputText>
+							</p:column>
+						</p:dataTable>
+					</p:panel>
+				</p:column>
+			</p:row>
+
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idTrvlInsPolicyS">Trvl Ins Policy (S)</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputTextarea id="idTrvlInsPolicyS"
+						value="#{tourPkgBean.tourDepVO.travelInsPolicyS}"
+						style="width:200px;" />
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idTrvlInsPolicySIssued">Issued</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectBooleanButton id="idTrvlInsPolicySIssued"
+						value="#{tourPkgBean.tourDepVO.isIssuedS}" onLabel="Yes"
+						offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idTrvlInsPolicyF">Trvl Ins Policy (F)</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputTextarea id="idTrvlInsPolicyF"
+						value="#{tourPkgBean.tourDepVO.travelInsPolicyF}"
+						style="width:200px;" />
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idTrvlInsPolicyFIssued">Issued</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectBooleanButton id="idTrvlInsPolicyFIssued"
+						value="#{tourPkgBean.tourDepVO.isIssuedF}" onLabel="Yes"
+						offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idTourStatus">Tour Status</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idTourStatus"
+						value="#{tourPkgBean.tourDepVO.tourStatusCd}" effect="fade">
+						<f:selectItems value="#{bterp:lookupItemList('tour_status')}"
+							var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+						<p:ajax event="change"
+							listener="#{tourPkgBean.setIsTourStatusChanged(true)}"
+							update=":idAddTourDepForm:idTourStatusReasonPanel, :idEditTourDepForm:idTourStatusReasonPanel" />
+					</h:selectOneMenu>
+					
+					<p:commandButton icon="ui-icon-script" value="Audit Trail"
+						actionListener="#{tourPkgBean.loadTourStatusReasonHistoryList}"
+						oncomplete="varTourStatusReasonDialog.show()" update=":idTourStatusReasonDialog"
+						rendered="#{not empty tourPkgBean.tourDepVO.id}"
+						style="margin-left: 8px;"/>
+				</p:column>
+				
+				<p:column colspan="2">
+					<p:panelGrid id="idTourStatusReasonPanel" style="border:0; margin:0; padding:0;">
+						<p:row>
+							<p:column style="width:80px;">
+								<h:outputLabel id="idLabelTourStatusReason1" for="idTourStatusReason1"
+									 rendered="#{tourPkgBean.tourDepVO.tourStatusCd eq 'R' or tourPkgBean.tourDepVO.tourStatusCd eq 'N'}">Tour Status Reason <span class="required">
+									<h:outputText value="*" rendered="#{tourPkgBean.tourDepVO.tourStatusCd eq 'R' or tourPkgBean.tourDepVO.tourStatusCd eq 'N'}"/></span>
+								</h:outputLabel>
+								<h:outputLabel id="idLabelTourStatusReason2" for="idTourStatusReason2"
+									 rendered="#{tourPkgBean.tourDepVO.tourStatusCd ne 'R' and tourPkgBean.tourDepVO.tourStatusCd ne 'N'}">Tour Status Reason </h:outputLabel>
+							</p:column>
+							<p:column>
+								<p:inputTextarea id="idTourStatusReason1" label="Tour Status Reason" value="#{tourPkgBean.tourDepVO.tourStatusReason}" required="true" size="50"
+									rendered="#{tourPkgBean.tourDepVO.tourStatusCd eq 'R' or tourPkgBean.tourDepVO.tourStatusCd eq 'N'}"/>
+								<p:inputTextarea id="idTourStatusReason2" label="Tour Status Reason" value="#{tourPkgBean.tourDepVO.tourStatusReason}" size="50"
+									rendered="#{tourPkgBean.tourDepVO.tourStatusCd ne 'R' and tourPkgBean.tourDepVO.tourStatusCd ne 'N'}"/>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:column>
+				
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idDeadline">Deadline <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idDeadline" value="#{tourPkgBean.tourDepVO.deadline}" required="true" maxlength="3">
+						<pe:keyFilter regEx="/[\d]/" />
+					</p:inputText>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idVisaRequired">Visa Required</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectBooleanButton label="Visa Required" id="idVisaRequired" value="#{tourPkgBean.tourDepVO.isVisaRequired}"
+						onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idDepositPaid">Deposit Paid</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectBooleanButton id="idDepositPaid"
+						value="#{tourPkgBean.tourDepVO.isDepositPaid}" onLabel="Yes"
+						offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idPush">Is Push</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectBooleanButton id="idPush"
+						value="#{tourPkgBean.tourDepVO.isPush}" onLabel="Yes"
+						offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idHotDeal">Is Hot Deal</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectBooleanButton id="idHotDeal"
+						value="#{tourPkgBean.tourDepVO.isHotDeal}" onLabel="Yes"
+						offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>
+						<p:commandButton value="Hotel"
+							oncomplete="varAddHotelDialog.show()" update=":idAddHotelDialog" />
+					</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:panel id="idShowHotelList" style="border:0;">
+						<p:dataTable value="#{tourPkgBean.tourDepVO.tourHotelList}"
+							var="vo"
+							rendered="#{not empty tourPkgBean.tourDepVO.tourHotelList}">
+							<p:column style="width:30px;">
+								<p:commandLink styleClass="ui-icon ui-icon-close"
+									actionListener="#{tourPkgBean.delTourHotel(vo)}"
+									update=":idAddTourDepForm:idShowHotelList,:idEditTourDepForm:idShowHotelList,:idAddTourHotelForm" />
+							</p:column>
+							<p:column headerText="From Date" style="width:50px;">
+								<h:outputText value="#{vo.fromDate}">
+									<f:convertDateTime pattern="dd-MMM-yyyy" />
+								</h:outputText>
+							</p:column>
+							<p:column headerText="To Date" style="width:50px;">
+								<h:outputText value="#{vo.toDate}">
+									<f:convertDateTime pattern="dd-MMM-yyyy" />
+								</h:outputText>
+							</p:column>
+							<p:column headerText="Hotel Name">
+								<h:outputText value="#{vo.hotelVO.name}" />
+							</p:column>
+						</p:dataTable>
+					</p:panel>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>
+						<p:commandButton value="Company Code"
+							actionListener="#{tourPkgBean.showTourDepItemList}"
+							oncomplete="varDepItemListDialog.show()"
+							update=":idDepItemListDialog,:idAddTourDepForm:idDiscountListPanel"
+							process="@this,:idAddTourDepForm:idDiscountListPanel" />
+					</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:panel id="idShowCompanyCodeList" style="border:0;">
+						<ui:repeat value="#{tourPkgBean.tourDepItemList}" var="list">
+							<h:outputText value="#{list.get(0).companyVO.name}"
+								style="padding:2px 0;" />
+							<br />
+						</ui:repeat>
+					</p:panel>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idInvRemarks">Tour Remarks</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputTextarea id="idInvRemarks"
+						value="#{tourPkgBean.tourDepVO.invRemarks}" style="width:300px;" />
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	</div>
+	<h:panelGrid columns="3" style="width:1px">
+		<p:commandButton value="#{msg['common.button.label.save']}"
+			actionListener="#{tourPkgBean.addTourDep}"
+			update="@form,:idTourDepListForm:idTourDepList"
+			rendered="#{empty tourPkgBean.tourDepVO.id}" />
+		<p:commandButton value="#{msg['common.button.label.update']}"
+			actionListener="#{tourPkgBean.setReasonType2}"
+			oncomplete="onTourDepReasonValidation(xhr, status, args)"
+			update="@form,:idTourDepListForm:idTourDepList"
+			rendered="#{not empty tourPkgBean.tourDepVO.id}" />
+		<p:commandButton value="Airfare Update" style="width:200px;"
+			oncomplete="varUpdDocAirfareDialog.show()"
+			update="@form"
+			rendered="#{not empty tourPkgBean.tourDepVO.id}" />
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			actionListener="#{tourPkgBean.resetTourDepForm}"
+			oncomplete="varAddTourDepDialog.hide(),varEditTourDepDialog.hide()"
+			process="@this" update="@form">
+			<pe:resetEditableValues for="idAddTourDepForm,idEditTourDepForm" />
+		</p:commandButton>
+	</h:panelGrid>
+</ui:composition>

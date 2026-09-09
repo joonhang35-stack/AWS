@@ -1,0 +1,655 @@
+package com.bcs.zsg.product.dao;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.component.security.vo.UserVO;
+import com.bcs.zsg.core.dao.BaseDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.history.vo.TourDepHistoryVO;
+import com.bcs.zsg.maintenance.vo.CityVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.RegionVO;
+import com.bcs.zsg.product.vo.RoomTypeVO;
+import com.bcs.zsg.product.vo.TourCatVO;
+import com.bcs.zsg.product.vo.TourCruiseCabinVO;
+import com.bcs.zsg.product.vo.TourDepItemVO;
+import com.bcs.zsg.product.vo.TourDepartureDiscountVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.product.vo.TourDepartureViewVO;
+import com.bcs.zsg.product.vo.TourHotelVO;
+import com.bcs.zsg.product.vo.TourImageVO;
+import com.bcs.zsg.product.vo.TourItineryVO;
+import com.bcs.zsg.product.vo.TourPackageAttributeVO;
+import com.bcs.zsg.product.vo.TourPackageCommisionVO;
+import com.bcs.zsg.product.vo.TourPackageCountryVO;
+import com.bcs.zsg.product.vo.TourPackageDailyChecklistVO;
+import com.bcs.zsg.product.vo.TourPackageDailyItineraryItemVO;
+import com.bcs.zsg.product.vo.TourPackageDailyItineraryVO;
+import com.bcs.zsg.product.vo.TourPackageItineryVO;
+import com.bcs.zsg.product.vo.TourPackageRemarksVO;
+import com.bcs.zsg.product.vo.TourPackageRoomPriceVO;
+import com.bcs.zsg.product.vo.TourPackageTagVO;
+import com.bcs.zsg.product.vo.TourPackageVO;
+import com.bcs.zsg.product.vo.TourThemeCountryVO;
+import com.bcs.zsg.product.vo.TourThemeVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.sales.vo.BookingVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.mysql.cj.jdbc.exceptions.MySQLTimeoutException;
+
+public interface TourPackageDAO extends BaseDAO {
+
+	/**
+	 * 
+	 * @param searchParamVO
+	 * @param idParent 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<RoomTypeVO> getTourRoomTypeList() throws BusinessException;
+	/**
+	 * 
+	 * @param searchParamVO
+	 * @param idParent 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourThemeVO> getTourThemeList(SearchParamVO searchParamVO, Long idParent) throws BusinessException;
+
+	/**
+	 * 
+	 * @param tourThemeVO
+	 * @param year 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourPackageVO> getTourPkgViewList(TourThemeVO tourThemeVO, String year) throws BusinessException;
+
+	/**
+	 * 
+	 * @param tourThemeVO
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourThemeVO> getSpecTourThemeList(TourThemeVO tourThemeVO) throws BusinessException;
+
+	public List<TourThemeVO> getTourThemeList(Map<String, Object> params) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param id
+	 * @return
+	 * @throws BusinessException
+	 */
+	public boolean isChildThemeExisted(Long id) throws BusinessException;
+
+	/**
+	 * 
+	 * @param id
+	 * @return
+	 * @throws BusinessException
+	 */
+	public boolean isTourPkgExisted(Long id) throws BusinessException;
+
+	/**
+	 * 
+	 * @param tourDepVO
+	 * @param idTourPkg 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public boolean isTourDepExisted(TourDepartureVO tourDepVO, Long idTourPkg) throws BusinessException;
+
+	/**
+	 * 
+	 * @param typeCd
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourPackageVO> getTourFreeNEasyList(String typeCd) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @param idAirlineSchedule 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourDepartureVO> getTourDepList(Long idTourPkg, Long idAirlineSchedule) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param dtDep
+	 * @param code
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourDepartureVO> getFilterTourDepList(Date dtFrom, Date dtTo, String code, String title, Boolean filterInactiveRcrd, String filterTourStatusCd) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param dtDep
+	 * @param code
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourDepartureVO> getFilterBookingTourDepList(Date dtFrom, Date dtTo, String code, String title, Long idAirlineSchedule, String filterTourStatusCd) throws BusinessException;
+
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourItineryVO> getTourItineryList(Long idTourDep) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourPackageItineryVO> getTourPkgItineryList(Long idTourPkg) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkgDailyItinerary
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourPackageItineryVO> getTourPkgItineryListByIdTourPkgDailyItinerary(Long idTourPkgDailyItinerary) throws BusinessException;
+	
+	public List<TourPackageDailyChecklistVO> getTourPkgDailyChecklistByIdTourPkgDailyItinerary(Long idTourPkgDailyItinerary) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourPackageDailyItineraryVO> getTourPkgDailyItineraryList(Long idTourPkg) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param id
+	 * @return
+	 * @throws BusinessException
+	 */
+	public TourPackageDailyItineraryVO getTourPkgDailyItinerary(Long id) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkgDailyItinerary
+	 * @param langCd
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourPackageDailyItineraryItemVO> getTourPkgDailyItineraryItemList(Long idTourPkgDailyItinerary, String langCd) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourPackageTagVO> getTourPackageTagVOList(Long idTourPkg) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourHotelVO> getTourHotelList(Long idTourDep) throws BusinessException;
+
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CompanyVO> getTourDepItemCompanyList(Long idTourDep) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @param idCompany
+	 * @param amount
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourDepItemVO> getTourDepItemList(Long idTourDep, Long idCompany, Double amount) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @return
+	 * @throws BusinessException
+	 */
+	public TourDepartureVO getTourDep(Long idTourPkg) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @return
+	 * @throws BusinessException
+	 */
+	public TourDepartureVO getTourDepById(Long idTourDep) throws BusinessException;
+	public TourDepartureVO getTourDepByCodeAndDepDt(String code, Date depDt) throws BusinessException;
+	/**
+	 * 
+	 * @param idTourDep
+	 * @return
+	 * @throws BusinessException
+	 */
+	public TourItineryVO getTourItinery(Long idTourDep) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idRegion
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CountryVO> getCountryList(Long idRegion) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CityVO> getCityList(Long idCountry) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	
+	public List<TourPackageRemarksVO> getTourPackageRemarks(Long idCust) throws BusinessException;
+	
+	public List<TourDepartureDiscountVO> getTourDepDiscount(Long idTourDep) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	
+	public List<TourPackageRoomPriceVO> getTourPackageRoomPrice(Long idPkg) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idCust
+	 * @throws BusinessException
+	 */
+	public void delTourItinery(Long idTourDep) throws BusinessException;
+	
+	
+	public void delTourPackageItinery(Long id) throws BusinessException;
+	
+	public void delTourPkgDailyChecklist(Long id) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	public void delTourHotel(Long idTourDep) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	public void delTourDepItem(Long idTourDep) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	public void delTourDepRemarks(Long idTourDep) throws BusinessException;
+	
+	public void delTourDepDiscount(Long idTourDep) throws BusinessException;
+
+	/**
+	 * 
+	 * @param id
+	 * @return
+	 * @throws BusinessException
+	 */
+	public boolean isTourDepFirstTimeUpd(Long id) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourDepHist
+	 * @return
+	 * @throws BusinessException
+	 */
+	public TourDepHistoryVO getTourDepHistory(Long idTourDepHist) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idAirlineSchedule
+	 * @return
+	 * @throws BusinessException
+	 */
+	public boolean getIsScheduleVacant(Long idAirlineSchedule) throws BusinessException;
+
+	/**
+	 * 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourDepartureViewVO> getTourDepViewList() throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @return
+	 * @throws BusinessException
+	 */
+	public TourDepartureViewVO getTourDepViewById(Long idTourDep) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @return
+	 * @throws BusinessException
+	 */
+	public TourPackageVO getTourPackageById(Long idTourPkg) throws BusinessException;
+
+	/**
+	 * 
+	 * @param tourDepVO
+	 * @param companyVO 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public String getTourAcctCdStatusCd(TourDepartureVO tourDepVO, CompanyVO companyVO) throws BusinessException;
+	
+
+	public TourThemeVO getTourThemeById(Long idTourTheme) throws BusinessException ;
+
+	public TourCatVO getTourCatById(Long idTourCat) throws BusinessException ;
+
+	public List<TourDepartureVO> getTourDepListWithItems(Long idTourPkg) throws BusinessException ;
+	
+	public int getTourDepListCountWithInvoicePax(Map<String, Object> params) throws BusinessException;
+
+	public List<TourDepartureVO> getTourDepListWithInvoicePax(Map<String, Object> params) throws BusinessException ;
+	
+	/**
+	 * 
+	 * @param id
+	 * @param actionCdDel
+	 * @param reason
+	 * @throws BusinessException
+	 */
+	public void insertTourDepHistory(Long id, String actionCdDel, String reason) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param id
+	 * @param actionCdDel
+	 * @param reason
+	 * @throws BusinessException
+	 */
+	public void insertTourPkgHistory(Long id, String actionCdDel, String reason) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idCompany
+	 * @param invoiceVO 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourDepartureVO> getAvailableTourDepList(Long idCompany, InvoiceVO invoiceVO) throws BusinessException;
+
+	/**
+	 * 
+	 * @param tourThemeVO
+	 * @return
+	 * @throws BusinessException
+	 */
+	public boolean isTourThemeAvailable(TourThemeVO tourThemeVO) throws BusinessException;
+
+	/**
+	 * 
+	 * @param tourPkgVO
+	 */
+	public void updateTourDepsDiscount(TourPackageVO tourPkgVO) throws BusinessException;
+
+	/**
+	 * 
+	 * @param tourDepVO
+	 * @param bookingVO 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public boolean isInvEOIssued(TourDepartureVO tourDepVO, BookingVO bookingVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @param idAirlineSchedule
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourDepartureVO> getEOTourDepList(Long idTourPkg, Long idAirlineSchedule) throws BusinessException ;
+
+	/**
+	 * 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourDepartureVO> getTourDepListV2() throws BusinessException ;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	public void updateTourStatusFull(Long idTourDep) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param tourStatusCd
+	 * @param idTourDep
+	 * @throws BusinessException
+	 * @throws MySQLTimeoutException 
+	 */
+	public void updateTourStatus(String tourStatusCd, Long idTourDep) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param bakTourThemeVO
+	 * @return
+	 */
+	public boolean isSubThemeAvailable(TourThemeVO bakTourThemeVO) throws BusinessException;
+	
+	/**
+	 *
+	 * @param searchParamVO
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<TourDepartureVO> getTourDepListWithPush(SearchParamVO searchParamVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	public List<String> getTourDepSeason(Long idTourDep) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @param seasonList
+	 * @throws BusinessException
+	 */
+	public void updateTourDepSeason(Long idTourDep, List<String> seasonList) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourTheme
+	 * @throws BusinessException
+	 */
+	public List<TourThemeCountryVO> getThemeCountryList(Long idTourTheme) throws BusinessException;
+	
+	public List<CountryVO> getFullCountryList(Long idRegion) throws BusinessException;
+	
+	public List<RegionVO> getFullRegionList() throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourTheme
+	 * @throws BusinessException
+	 */
+	public void delTourThemeCountry(Long idTourTheme) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @throws BusinessException
+	 */
+	public List<TourPackageAttributeVO> getTourPackageAttributeList(Long idTourPkg) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @throws BusinessException
+	 */
+	public List<TourPackageCommisionVO> getTourPackageCommisionList(Long idTourPkg) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @param code
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<String> getPackageTagList(Long idTourPkg, String code) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @param code
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<String> getDepartureTagList(Long idTourDep, String code) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourPkg
+	 * @param pkgTagList
+	 * @throws BusinessException
+	 */
+	public void deleteTourPackageTags(Long idTourPkg) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	public void deleteTourDepartureTags(Long idTourDep) throws BusinessException;
+	
+	public UserVO getEmailByIndividual(Long id) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param companyId
+	 * @param code
+	 * @throws BusinessException
+	 */
+	public List<EmployeeViewVO> getDepartmentViewList(Long companyId, List<String> codeList) throws BusinessException;
+	
+	public List<TourPackageCountryVO> getLocationInfoList(Long idTourPkg) throws BusinessException;
+	
+	public void deleteTourPackageCountryTags(Long idTourPkg) throws BusinessException;
+	
+	public List<String> getTourPackageCountryList(Long idTourPkg, String code) throws BusinessException;
+	
+	public List<TourImageVO> getTourImageList(Long idTourPkg) throws BusinessException;
+	
+	public int getTourDepListSize(Map<String, Object> params) throws BusinessException;
+	
+	public List<TourDepartureVO> getTourDepList(Map<String, Object> params) throws BusinessException;
+	
+	public List<TourDepartureVO> getTourDepListBySearch(TourDepartureVO searchTourDep) throws BusinessException;
+	
+	public List<TourDepartureVO> getTourDepListCruiseBySearch(TourDepartureVO searchTourDep) throws BusinessException;
+	
+	public List<TourDepartureVO> getTourDepartureInsuranceList(SearchParamVO searchParamVO, Map<String, Object> params) throws BusinessException;
+	
+	public void saveTourDepartureInsurance(TourDepartureVO tourDepartureVO) throws BusinessException;
+	
+	public List<TourDepartureVO> getFilterTourDepList(TourDepartureVO searchTourDepFilter) throws BusinessException;
+	
+	public List<TourDepartureVO> getFilterBookingTourDepList(TourDepartureVO searchTourDepFilter) throws BusinessException;
+	
+	public List<TourDepHistoryVO> getTourDepHistoryList(Long idTourDep) throws BusinessException;
+	
+	public List<TourDepartureVO> getTourDepSalesSuppList(TourDepartureVO searchTourDepFilter, List<EmployeeViewVO> employeeList) throws BusinessException;
+	
+	public void saveTourDepSalesSupp(TourDepartureVO tourDepartureVO) throws BusinessException;
+	
+	public TourPackageItineryVO getTourPackageItineraryVOByCode(Long tourPkgId, Long idTourPkgDailyCms) throws BusinessException;
+	
+	public TourPackageDailyChecklistVO getTourPkgDailyChecklistVOById(Long idTourPkgDailyCms) throws BusinessException;
+	
+	// Tour departure cruise
+	public List<TourDepartureVO> getTourDepListCruise(Long idTourPkg, Long idAirlineSchedule, Long idCompany) throws BusinessException;
+	
+	public List<TourDepartureVO> getAgentTourDepListCruise(Long idTourPkg, Long idAirlineSchedule, Long idCompany) throws BusinessException;
+	
+	public List<TourDepartureVO> getFilterTourDepListCruise(Date dtFrom, Date dtTo, String code, String title, Boolean filterInactiveRcrd, String filterTourStatusCd, Long idCompany) throws BusinessException;
+	
+	public List<TourDepartureVO> getFilterTourDepListCruise(TourDepartureVO searchTourDepFilter, Long idCompany) throws BusinessException;
+
+	public void updateTourBookingChargeItem(TourCruiseCabinVO tourCruiseCabinVO) throws BusinessException;
+
+	public String getTourAcctCdStatusCd(TourDepartureVO tourDepVO, CompanyVO companyVO, String type) throws BusinessException;
+	
+	public void updateCruiseTourStatus(Long idTourDep) throws BusinessException;
+	
+	public TourDepItemVO getTourDepItem(Long idTourDep, String code, CompanyVO campanyVO) throws BusinessException;
+
+	public List<TourDepartureVO> getAvailableCruiseTourDepList(Long idCompany, InvoiceVO invoiceVO, BookingVO bookingVO)
+			throws BusinessException;
+	
+	public void updateTourDepsRemainTc(TourPackageVO tourPkgVO) throws BusinessException;
+	
+	public List<TourDepartureVO> getAgentTourDepList(Long idTourPkg, Long idAirlineSchedule) throws BusinessException;
+
+	public List<TourDepartureVO> getAvailableTourDepList(Long idCompany, InvoiceVO invoiceVO, String tourTypeCode) throws BusinessException;
+	
+	public void updateDocumentAirfare(Long idTourDep) throws BusinessException;
+	public void updateDocumentAirfareCN(Long idTourDep) throws BusinessException;
+	
+	public List<TourPackageVO> getTourPkgListForCMS(Map<String, Object> params) throws BusinessException;
+	
+	public List<TourDepartureVO> getTourDepartureInsurancePaxList(SearchParamVO searchParamVO, Map<String, Object> params) throws BusinessException;
+	
+	public List<TourDepartureVO> getTourDepListbyCruise(Long idCruiseSchedule) throws BusinessException;
+	
+	//public void insertFeedback(FeedbackVO feedbackVO) throws BusinessException;
+
+	//public List<FeedbackVO> getInvoiceForFeedback() throws BusinessException;
+	
+	//public List<FeedbackVO> getFeedbackListbyTourDepId(Long idTourDep) throws BusinessException;
+	
+	//public void updateFeedbackStatus(Long idInvoice, String status) throws BusinessException;
+
+	//public void updateFeedbackStatusByBookingId(Long idBooking, String status) throws BusinessException;
+
+}

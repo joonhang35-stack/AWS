@@ -1,0 +1,53 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varDiscountDialog.show();
+		} else {
+			varDiscountDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column>
+			<p:outputLabel for="idDiscountAmt" value="Discount Amt" />
+		</p:column>
+		<p:column>
+			<p:inputText id="idDiscountAmt" value="#{tourPkgBean.tourDepDiscountVO.discountAmt}" required="true">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+     	</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel for="idDiscountPax" value="Discount Pax" />
+		</p:column>
+		<p:column>
+			<p:inputText id="idDiscountPax" value="#{tourPkgBean.tourDepDiscountVO.discountPax}" maxlength="3" required="true">
+				<f:convertNumber pattern="#,##0"/>
+			</p:inputText>
+     	</p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 10px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{tourPkgBean.addDiscount}" update="@form,:idAddTourDepForm:idDiscountListPanel,:idEditTourDepForm:idDiscountListPanel, :idAddTourDepForm:idBtnAddDiscount, :idEditTourDepForm:idBtnAddDiscount" rendered="#{tourPkgBean.oriTourDepDiscountVO eq null}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{tourPkgBean.updateDiscount}" update="@form,:idAddTourDepForm:idDiscountListTable,:idEditTourDepForm:idDiscountListTable, :idAddTourDepForm:idBtnAddDiscount, :idEditTourDepForm:idBtnAddDiscount" oncomplete="onValidation(xhr, status, args)" rendered="#{tourPkgBean.oriTourDepDiscountVO ne null}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" update="@form" process="@this" oncomplete="varDiscountDialog.hide()" global="false">
+		<pe:resetEditableValues for="idDiscountForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

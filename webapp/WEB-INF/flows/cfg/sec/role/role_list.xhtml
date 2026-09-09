@@ -1,0 +1,68 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Role List" toggleable="true" toggleSpeed="100">
+	<h:form id="idDataForm">
+		<p:growl id="msg"/>
+		
+		<h:panelGrid columns="2" style="margin-bottom:5px">
+			<p:commandButton value="Add" oncomplete="varAddRoleDialog.show()" update=":idAddRoleDialog" immediate="true"/>
+		</h:panelGrid>
+		
+		<p:dataTable id="idRoleList" value="#{roleBean.roleList}" var="vo" paginator="true" rows="10" rowsPerPageTemplate="10,50,100"
+			filteredValue="#{roleBean.filteredRoleList}" filterEvent="enter">
+			<p:column style="width:80px; text-align:center">
+				<p:panelGrid columns="2">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{roleBean.setRoleVO(vo)}" update=":idAddRoleDialog" oncomplete="varAddRoleDialog.show()"/>
+					<p:commandButton icon="ui-icon-close" actionListener="#{roleBean.setRoleVO(vo)}" oncomplete="varDelRoleDialog.show()"/>
+				</p:panelGrid>
+			</p:column>
+			<!--p:column headerText="Row ID" sortBy="#{vo.uuid}" filterBy="#{vo.uuid}">
+				<h:outputText value="#{vo.uuid}"/>
+			</p:column-->
+			<p:column headerText="Role Code" sortBy="#{vo.roleCode}" filterBy="#{vo.roleCode}">
+				<h:outputText value="#{vo.roleCode}"/>
+			</p:column>
+			<p:column headerText="Role Name" sortBy="#{vo.roleName}" filterBy="#{vo.roleName}">
+				<h:outputText value="#{vo.roleName}"/>
+			</p:column>
+			<p:column headerText="Status" sortBy="#{vo.statusCode}" filterBy="#{vo.statusCode}" style="text-align:center">
+				<h:outputText value="#{vo.statusCode}"/>
+			</p:column>
+			<p:column headerText="Remarks">
+				<h:outputText value="#{vo.remarks}"/>
+			</p:column>
+		</p:dataTable>
+		
+		<h:panelGrid columns="2" style="margin-top:5px">
+			<p:commandButton value="Add" oncomplete="varAddRoleDialog.show()" update=":idAddRoleDialog" immediate="true"/>
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<!-- DIALOG - ADD ROLE -->
+<p:dialog id="idAddRoleDialog" header="Add Role" widgetVar="varAddRoleDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddRoleForm">
+		<ui:include src="role_add_form.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - DELETE ACCOUNT -->
+<p:confirmDialog widgetVar="varDelRoleDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{roleBean.deleteRole}" update="@form,:idDataForm" oncomplete="varDelRoleDialog.hide()"/>
+		<p:commandButton value="Cancel" actionListener="#{roleBean.resetForm}" oncomplete="varDelRoleDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+</ui:define>
+</ui:composition>

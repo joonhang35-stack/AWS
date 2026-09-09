@@ -1,0 +1,370 @@
+package com.bcs.zsg.sales.vo;
+
+import java.util.Date;
+import java.util.List;
+
+import com.bcs.zsg.core.vo.BaseVO;
+
+public class OnlineCustomerProfileUpdateVO extends BaseVO {
+
+	private static final long serialVersionUID = 1L;
+
+	private Long idCustomer;
+    private String keycloakId;
+
+    private String salutationCd;
+    private String titleCd;
+    private String gender;
+    private String surname;
+    private String givenName;
+    private String nickName;
+    private String taxIdNo;
+
+    private Long idCountry;
+    private String nric;
+    private String passportNo;
+    private Date dtBirth;
+
+    private Long idMobileNoCountryCd;
+    private String mobileNo;
+
+    private Long idOfficeNoCountryCd;
+    private String officeNo;
+
+    private String email;
+
+    private String raceCd;
+
+    private Date dtPssprtExpiry;
+    private Long idPssprtCountry;
+
+    private String billAddr1;
+    private String billAddr2;
+    private String billAddr3;
+    private String billAddrCity;
+    private String billAddrPostcode;
+    private String billAddrState;
+    private Long idBillAddrCountry;
+
+    private String mailAddr1;
+    private String mailAddr2;
+    private String mailAddr3;
+    private String mailAddrCity;
+    private String mailAddrPostcode;
+    private String mailAddrState;
+    private Long idMailAddrCountry;
+
+    private String ecSurname;
+    private String ecGivenName;
+    private Long ecIdCountryCd;
+    private String ecContactNo;
+    private String ecEmail;
+    private String ecRelationship;
+
+    private String updateStatus;
+    private Date dtReviewed;
+    private String reviewedBy;
+
+    private List<OnlineCustomerUpdLangVO> langList;
+    private List<OnlineCustomerUpdComplicationVO> complicationList;
+    private List<OnlineCustomerUpdMealVO> mealList;
+    
+    // Non-DB values
+    private String billAddrStateName;
+    private String mailAddrStateName;
+    
+	public String getBillAddrStateName() {
+		return billAddrStateName;
+	}
+	public void setBillAddrStateName(String billAddrStateName) {
+		this.billAddrStateName = billAddrStateName;
+	}
+	public String getMailAddrStateName() {
+		return mailAddrStateName;
+	}
+	public void setMailAddrStateName(String mailAddrStateName) {
+		this.mailAddrStateName = mailAddrStateName;
+	}
+	public Long getIdCustomer() {
+		return idCustomer;
+	}
+	public void setIdCustomer(Long idCustomer) {
+		this.idCustomer = idCustomer;
+	}
+	public String getKeycloakId() {
+		return keycloakId;
+	}
+	public void setKeycloakId(String keycloakId) {
+		this.keycloakId = keycloakId;
+	}
+	public String getSalutationCd() {
+		return salutationCd;
+	}
+	public void setSalutationCd(String salutationCd) {
+		this.salutationCd = salutationCd;
+	}
+	public String getTitleCd() {
+		return titleCd;
+	}
+	public void setTitleCd(String titleCd) {
+		this.titleCd = titleCd;
+	}
+	public String getGender() {
+		return gender;
+	}
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+	public String getSurname() {
+		return surname;
+	}
+	public void setSurname(String surname) {
+		this.surname = surname;
+	}
+	public String getGivenName() {
+		return givenName;
+	}
+	public void setGivenName(String givenName) {
+		this.givenName = givenName;
+	}
+	public String getNickName() {
+		return nickName;
+	}
+	public void setNickName(String nickName) {
+		this.nickName = nickName;
+	}
+	public String getTaxIdNo() {
+		return taxIdNo;
+	}
+	public void setTaxIdNo(String taxIdNo) {
+		this.taxIdNo = taxIdNo;
+	}
+	public Long getIdCountry() {
+		return idCountry;
+	}
+	public void setIdCountry(Long idCountry) {
+		this.idCountry = idCountry;
+	}
+	public String getNric() {
+		return nric;
+	}
+	public void setNric(String nric) {
+		this.nric = nric;
+	}
+	public String getPassportNo() {
+		return passportNo;
+	}
+	public void setPassportNo(String passportNo) {
+		this.passportNo = passportNo;
+	}
+	public Date getDtBirth() {
+		return dtBirth;
+	}
+	public void setDtBirth(Date dtBirth) {
+		this.dtBirth = dtBirth;
+	}
+	public Long getIdMobileNoCountryCd() {
+		return idMobileNoCountryCd;
+	}
+	public void setIdMobileNoCountryCd(Long idMobileNoCountryCd) {
+		this.idMobileNoCountryCd = idMobileNoCountryCd;
+	}
+	public String getMobileNo() {
+		return mobileNo;
+	}
+	public void setMobileNo(String mobileNo) {
+		this.mobileNo = mobileNo;
+	}
+	public Long getIdOfficeNoCountryCd() {
+		return idOfficeNoCountryCd;
+	}
+	public void setIdOfficeNoCountryCd(Long idOfficeNoCountryCd) {
+		this.idOfficeNoCountryCd = idOfficeNoCountryCd;
+	}
+	public String getOfficeNo() {
+		return officeNo;
+	}
+	public void setOfficeNo(String officeNo) {
+		this.officeNo = officeNo;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getRaceCd() {
+		return raceCd;
+	}
+	public void setRaceCd(String raceCd) {
+		this.raceCd = raceCd;
+	}
+	public Date getDtPssprtExpiry() {
+		return dtPssprtExpiry;
+	}
+	public void setDtPssprtExpiry(Date dtPssprtExpiry) {
+		this.dtPssprtExpiry = dtPssprtExpiry;
+	}
+	public Long getIdPssprtCountry() {
+		return idPssprtCountry;
+	}
+	public void setIdPssprtCountry(Long idPssprtCountry) {
+		this.idPssprtCountry = idPssprtCountry;
+	}
+	public String getBillAddr1() {
+		return billAddr1;
+	}
+	public void setBillAddr1(String billAddr1) {
+		this.billAddr1 = billAddr1;
+	}
+	public String getBillAddr2() {
+		return billAddr2;
+	}
+	public void setBillAddr2(String billAddr2) {
+		this.billAddr2 = billAddr2;
+	}
+	public String getBillAddr3() {
+		return billAddr3;
+	}
+	public void setBillAddr3(String billAddr3) {
+		this.billAddr3 = billAddr3;
+	}
+	public String getBillAddrCity() {
+		return billAddrCity;
+	}
+	public void setBillAddrCity(String billAddrCity) {
+		this.billAddrCity = billAddrCity;
+	}
+	public String getBillAddrPostcode() {
+		return billAddrPostcode;
+	}
+	public void setBillAddrPostcode(String billAddrPostcode) {
+		this.billAddrPostcode = billAddrPostcode;
+	}
+	public String getBillAddrState() {
+		return billAddrState;
+	}
+	public void setBillAddrState(String billAddrState) {
+		this.billAddrState = billAddrState;
+	}
+	public Long getIdBillAddrCountry() {
+		return idBillAddrCountry;
+	}
+	public void setIdBillAddrCountry(Long idBillAddrCountry) {
+		this.idBillAddrCountry = idBillAddrCountry;
+	}
+	public String getMailAddr1() {
+		return mailAddr1;
+	}
+	public void setMailAddr1(String mailAddr1) {
+		this.mailAddr1 = mailAddr1;
+	}
+	public String getMailAddr2() {
+		return mailAddr2;
+	}
+	public void setMailAddr2(String mailAddr2) {
+		this.mailAddr2 = mailAddr2;
+	}
+	public String getMailAddr3() {
+		return mailAddr3;
+	}
+	public void setMailAddr3(String mailAddr3) {
+		this.mailAddr3 = mailAddr3;
+	}
+	public String getMailAddrCity() {
+		return mailAddrCity;
+	}
+	public void setMailAddrCity(String mailAddrCity) {
+		this.mailAddrCity = mailAddrCity;
+	}
+	public String getMailAddrPostcode() {
+		return mailAddrPostcode;
+	}
+	public void setMailAddrPostcode(String mailAddrPostcode) {
+		this.mailAddrPostcode = mailAddrPostcode;
+	}
+	public String getMailAddrState() {
+		return mailAddrState;
+	}
+	public void setMailAddrState(String mailAddrState) {
+		this.mailAddrState = mailAddrState;
+	}
+	public Long getIdMailAddrCountry() {
+		return idMailAddrCountry;
+	}
+	public void setIdMailAddrCountry(Long idMailAddrCountry) {
+		this.idMailAddrCountry = idMailAddrCountry;
+	}
+	public String getEcSurname() {
+		return ecSurname;
+	}
+	public void setEcSurname(String ecSurname) {
+		this.ecSurname = ecSurname;
+	}
+	public String getEcGivenName() {
+		return ecGivenName;
+	}
+	public void setEcGivenName(String ecGivenName) {
+		this.ecGivenName = ecGivenName;
+	}
+	public Long getEcIdCountryCd() {
+		return ecIdCountryCd;
+	}
+	public void setEcIdCountryCd(Long ecIdCountryCd) {
+		this.ecIdCountryCd = ecIdCountryCd;
+	}
+	public String getEcContactNo() {
+		return ecContactNo;
+	}
+	public void setEcContactNo(String ecContactNo) {
+		this.ecContactNo = ecContactNo;
+	}
+	public String getEcEmail() {
+		return ecEmail;
+	}
+	public void setEcEmail(String ecEmail) {
+		this.ecEmail = ecEmail;
+	}
+	public String getEcRelationship() {
+		return ecRelationship;
+	}
+	public void setEcRelationship(String ecRelationship) {
+		this.ecRelationship = ecRelationship;
+	}
+	public String getUpdateStatus() {
+		return updateStatus;
+	}
+	public void setUpdateStatus(String updateStatus) {
+		this.updateStatus = updateStatus;
+	}
+	public Date getDtReviewed() {
+		return dtReviewed;
+	}
+	public void setDtReviewed(Date dtReviewed) {
+		this.dtReviewed = dtReviewed;
+	}
+	public String getReviewedBy() {
+		return reviewedBy;
+	}
+	public void setReviewedBy(String reviewedBy) {
+		this.reviewedBy = reviewedBy;
+	}
+	public List<OnlineCustomerUpdLangVO> getLangList() {
+		return langList;
+	}
+	public void setLangList(List<OnlineCustomerUpdLangVO> langList) {
+		this.langList = langList;
+	}
+	public List<OnlineCustomerUpdComplicationVO> getComplicationList() {
+		return complicationList;
+	}
+	public void setComplicationList(List<OnlineCustomerUpdComplicationVO> complicationList) {
+		this.complicationList = complicationList;
+	}
+	public List<OnlineCustomerUpdMealVO> getMealList() {
+		return mealList;
+	}
+	public void setMealList(List<OnlineCustomerUpdMealVO> mealList) {
+		this.mealList = mealList;
+	}
+}

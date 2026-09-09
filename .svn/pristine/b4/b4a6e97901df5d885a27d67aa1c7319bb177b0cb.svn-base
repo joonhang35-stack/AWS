@@ -1,0 +1,990 @@
+package com.bcs.zsg.purchase.service;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.cfg.sec.dao.UserDAO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeVO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.EInvoiceConstant;
+import com.bcs.zsg.common.helper.EInvoiceUtils;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.component.security.vo.UserVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.db.bterp.dao.view.supplier.SupplierViewDAO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.ForeignExRateVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.product.bo.TourPackageBO;
+import com.bcs.zsg.purchase.dao.PurchaseDAO;
+import com.bcs.zsg.purchase.dao.PurchaseEODAO;
+import com.bcs.zsg.purchase.vo.AddressVO;
+import com.bcs.zsg.purchase.vo.AirLineDetailsVO;
+import com.bcs.zsg.purchase.vo.ContactVO;
+import com.bcs.zsg.purchase.vo.CorAddressVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.purchase.vo.CorporateVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.EOInvoiceVO;
+import com.bcs.zsg.purchase.vo.ExOrderAttachmentVO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+import com.bcs.zsg.purchase.vo.ExOrderDetailsVO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.purchase.vo.HotelTourVO;
+import com.bcs.zsg.purchase.vo.PaxNameVO;
+import com.bcs.zsg.purchase.vo.PersonVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.dao.InvoiceDAO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.PersonContactVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+import com.bcs.zsg.zextra.backend.helper.SysNumGenUtil;
+
+import oasis.names.specification.ubl.schema.xsd.commonaggregatecomponents_21.PartyIdentificationType;
+
+public class PurchaseEOServiceImpl implements PurchaseEOService {
+
+	@Autowired
+	private PurchaseEODAO purchaseEODAO;
+	@Autowired
+	private PurchaseDAO purchaseDAO;
+	@Autowired
+	private SupplierViewDAO supplierViewDAO;
+	@Autowired
+	private InvoiceDAO invoiceDAO;
+	@Autowired
+	private TourPackageBO tourPkgBO;
+	@Autowired
+	private UserDAO userDAO;
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getExOrderList()
+	 */
+	@Override
+	public List<ExOrderVO> getExOrderList(Long companyId) throws BusinessException {
+		List<ExOrderVO> eoList = purchaseEODAO.getExOrderList(companyId);
+		UserVO orderUsrVO = new UserVO();
+		UserVO apprUsrVO = new UserVO();
+		
+		for(int i = 0; i < eoList.size(); i++) {
+			//Long exOrderId = eoList.get(i).getId();
+			Long supplierId = eoList.get(i).getSupplierId();
+			Long ordererId = eoList.get(i).getOrderedId();
+			Long approverId = eoList.get(i).getApproverId();
+			
+			SupplierVO supplierVO = purchaseEODAO.getEOSupplier(supplierId);
+			//CompanyVO companyVO = purchaseEODAO.getCompany(companyId);
+			EmployeeVO ordererVO = purchaseEODAO.getOrderer(ordererId);
+			EmployeeVO approverVO = purchaseEODAO.getApprover(approverId);
+
+			PersonVO suppPersonVO = purchaseEODAO.getPerson(supplierVO.getPersonId());
+			CorporateVO corporateVO = purchaseEODAO.getCorporate(suppPersonVO.getId());
+			
+			orderUsrVO = purchaseEODAO.getUser(ordererVO.getSecUser());
+			apprUsrVO = purchaseEODAO.getUser(approverVO.getSecUser());
+
+			eoList.get(i).setPersonId(suppPersonVO.getId());
+			eoList.get(i).setSupplierName(corporateVO.getCompanyName());
+			
+			eoList.get(i).setOrderBy(orderUsrVO.getName());
+			eoList.get(i).setApproveBy(apprUsrVO.getName());
+			
+			DateFormat dtformat = new SimpleDateFormat("dd-MMM-yyyy");
+			eoList.get(i).setStrEODt(dtformat.format(eoList.get(i).getEoDt()));
+			eoList.get(i).setStrDueDt(dtformat.format(eoList.get(i).getEoDt()));
+			eoList.get(i).setTourDepVO(tourPkgBO.getTourDepById( eoList.get(i).getTourId()));
+		}
+		return eoList;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getEOBillList(java.lang.Long)
+	 */
+	@Override
+	public List<ExOrderBillVO> getEOBillList(Long exOrderId) throws BusinessException{
+		return purchaseEODAO.getEOBillList(exOrderId);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getEODetailsList()
+	 */
+	@Override
+	public List<ExOrderDetailsVO> getEODetailsList(Long exOrderId) throws BusinessException {
+		return purchaseEODAO.getExOrderDetailsList(exOrderId);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getPaxNameList()
+	 */
+	@Override
+	public List<PaxNameVO> getPaxNameList(Long exOrderId) throws BusinessException {
+		return purchaseEODAO.getPaxNameList(exOrderId);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getAirLineList()
+	 */
+	@Override
+	public List<AirLineDetailsVO> getAirLineList(Long exOrderId) throws BusinessException {
+		return purchaseEODAO.getAirLineList(exOrderId);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getHotelTourList()
+	 */
+	@Override
+	public List<HotelTourVO> getHotelTourList(Long exOrderId) throws BusinessException {
+		return purchaseEODAO.getHotelTourList(exOrderId);
+	}
+	
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getEOInvList()
+	 */
+	@Override
+	public List<EOInvoiceVO> getEOInvList(Long exOrderId)  throws BusinessException {
+		return purchaseEODAO.getEOInvList(exOrderId);
+	}
+	
+	@Override
+	public List<ExOrderAttachmentVO> getEOAttachmentList(Long exOrderId) throws BusinessException {
+		return purchaseEODAO.getEOAttachmentList(exOrderId);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#getCompanyList()
+	 */
+	@Override
+	public List<CompanyVO> getCompanyList() throws BusinessException {
+		return purchaseEODAO.getCompanyList();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#getHotelTourById()
+	 */
+	@Override
+	public HotelTourVO getHotelTourById(Long id) throws BusinessException {
+		return purchaseEODAO.getHotelTourById(id);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#getEmployeeList()
+	 */
+	@Override
+	public EmployeeVO getEmployee(Long companyId, String user) throws BusinessException {
+		EmployeeVO employeeVO = purchaseEODAO.getEmployee(companyId, user);
+		UserVO userVO = new UserVO();
+		userVO = purchaseEODAO.getUser(user);
+		employeeVO.setEmployeeName(userVO.getName());
+		return employeeVO;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#getEmployeeList()
+	 */
+	@Override
+	public EmployeeVO getEmployee(Long ordererId) throws BusinessException {
+		EmployeeVO employeeVO = purchaseEODAO.getEmployee(ordererId);
+		UserVO userVO = new UserVO();
+		userVO = purchaseEODAO.getUser(employeeVO.getSecUser());
+		employeeVO.setEmployeeName(userVO.getName());
+		return employeeVO;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#getSupplier()
+	 */
+	@Override
+	public SupplierVO getSupplier(Long personId) throws BusinessException {
+		PersonVO personVO = new PersonVO();
+		SupplierVO supplierVO = new SupplierVO();
+		AddressVO addressVO = new AddressVO();
+		CorAddressVO corAddressVO = new CorAddressVO();
+		CorporateVO corporateVO = new CorporateVO();
+		CountryVO countryVO = new CountryVO();
+		List<ContactVO> contactList = new ArrayList <ContactVO>();
+		List<CorContactVO> corContactList = new ArrayList <CorContactVO>();
+		
+		String contactNo = null;
+		personVO = purchaseDAO.getPerson(personId);
+		supplierVO = purchaseEODAO.getSupplier(personId);
+		
+		if(supplierVO.getCode().equals("C")){
+			corporateVO = purchaseDAO.getCompany(personId);
+			Long corporateId = corporateVO.getId();
+			corAddressVO = purchaseDAO.getCorAddress(corporateVO.getId());
+			countryVO = purchaseEODAO.getCountry(corAddressVO.getCountryId());
+			corContactList = purchaseDAO.getCorContactList(corporateId);
+			
+			supplierVO.setGivenName(personVO.getGivenName());
+			supplierVO.setLastName(personVO.getLastName());
+			supplierVO.setCorAddressVO(corAddressVO);
+			
+			supplierVO.setAdd1(corAddressVO.getAddr1());
+			supplierVO.setAdd2(corAddressVO.getAddr2());
+			supplierVO.setAdd3(corAddressVO.getAddr3());
+			supplierVO.setCity(corAddressVO.getCity());
+			supplierVO.setState(corAddressVO.getState());
+			supplierVO.setPostcode(corAddressVO.getPostcode());
+			
+			for(int i = 0; i < corContactList.size(); i++){
+				if(corContactList.get(i).getContactType().equals("Mobile")){
+					contactNo = corContactList.get(i).getContactNo();
+				}else if(contactNo == null){
+					contactNo = corContactList.get(i).getContactNo();
+				}
+			}
+		} else {
+			addressVO = purchaseDAO.getAddress(personId);
+			contactList = purchaseDAO.getContactList(personId);
+			countryVO = purchaseEODAO.getCountry(addressVO.getCountryId());
+			
+			supplierVO.setGivenName(personVO.getGivenName());
+			supplierVO.setLastName(personVO.getLastName());
+			supplierVO.setAddressVO(addressVO);
+			
+			supplierVO.setAdd1(addressVO.getAddr1());
+			supplierVO.setAdd2(addressVO.getAddr2());
+			supplierVO.setAdd3(addressVO.getAddr3());
+			supplierVO.setCity(addressVO.getCity());
+			supplierVO.setState(addressVO.getState());
+			supplierVO.setPostcode(addressVO.getPostcode());
+			
+			for(int i = 0; i < contactList.size(); i++){
+				if(contactList.get(i).getContactType().equals("Mobile")){
+					contactNo = contactList.get(i).getContactNo();
+				}else if(contactNo == null){
+					contactNo = contactList.get(i).getContactNo();
+				}
+			}
+		}
+		
+		if (StringUtils.isBlank(supplierVO.getContactNo()))	supplierVO.setContactNo(contactNo);
+		supplierVO.setContactList(contactList);
+		supplierVO.setCorContactList(corContactList);
+		supplierVO.setCountry(countryVO.getCountry());
+		supplierVO.setCountryVO(countryVO);
+		return supplierVO;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#getSupplier()
+	 */
+	@Override
+	public ForeignExRateVO getExRate(Long currencyId) throws BusinessException {
+		ForeignExRateVO foreignExRateVO = purchaseEODAO.getExRate(currencyId);
+		return foreignExRateVO;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#insert(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void insertExOrder(SupplierVO supplierVO, ExOrderVO exOrderVO, AddUpdDelVO eoDetailsAUDVO, 
+			AddUpdDelVO paxNameAUDVO, AddUpdDelVO airLineAUDVO, AddUpdDelVO hotelTourAUDVO,  AddUpdDelVO eoInvAUDVO) throws BusinessException {
+
+		try {
+			/*SystemNumberGenerationVO systemNumberGenerationVO = new SystemNumberGenerationVO();
+			systemNumberGenerationVO.setCode(CommonConstant.SYS_NUM_CD_EXCH_ORDR);
+			systemNumberGenerationVO.setIdCompany(exOrderVO.getCompanyId());
+			systemNumberGenerationVO = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(systemNumberGenerationVO));*/
+			
+			//SystemNumberGenerationVO sngVO =  systemNumberGenerationDAO.getSystemNumberGeneration(sysCd, exOrderVO.getCompanyId());
+			String eoNo = FunctionUtils.getUUID(20, "");
+			
+			//exOrderVO.setCode(systemNumberGenerationVO.getNextnumber().toString());
+			exOrderVO.setCode(eoNo);
+			exOrderVO.setSupplierId(supplierVO.getId());
+			exOrderVO.setStatus(CommonConstant.STATUS_CD_PENDING);
+			purchaseDAO.insert(exOrderVO);
+			// eo items
+			if (CollectionUtils.isNotEmpty(exOrderVO.getEoDetailsList())) {
+				for (ExOrderDetailsVO vo : exOrderVO.getEoDetailsList()) {
+					vo.setExOrderId(exOrderVO.getId());
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					purchaseEODAO.insert(vo);
+				}
+			}
+			// eo pax
+			if (CollectionUtils.isNotEmpty(exOrderVO.getPaxNameList())) {
+				for (PaxNameVO vo : exOrderVO.getPaxNameList()) {
+					vo.setExOrderId(exOrderVO.getId());
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					purchaseEODAO.insert(vo);
+				}
+			}
+			// eo airline
+			if (CollectionUtils.isNotEmpty(exOrderVO.getAirlineList())) {
+				for (AirLineDetailsVO vo : exOrderVO.getAirlineList()) {
+					vo.setExOrderId(exOrderVO.getId());
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					purchaseEODAO.insert(vo);
+				}
+			}
+			// eo hotel tour
+			if (CollectionUtils.isNotEmpty(exOrderVO.getHotelTourList())) {
+				for (HotelTourVO vo : exOrderVO.getHotelTourList()) {
+					vo.setExOrderId(exOrderVO.getId());
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					purchaseEODAO.insert(vo);
+				}
+			}
+			// eo invoice
+			if (CollectionUtils.isNotEmpty(exOrderVO.getEoInvList())) {
+				for (EOInvoiceVO vo : exOrderVO.getEoInvList()) {
+					vo.setEoId(exOrderVO.getId());
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					purchaseEODAO.insert(vo);
+				}
+			}
+			
+			/*if (eoDetailsAUDVO.getAddList().size() > 0) {
+				for (Object vo : eoDetailsAUDVO.getAddList()) {
+					ExOrderDetailsVO exOrderDetailsVO = (ExOrderDetailsVO) vo;
+					exOrderDetailsVO.setExOrderId(exOrderVO.getId());
+					purchaseEODAO.insert(exOrderDetailsVO);
+				}
+			} 
+	 
+			if (eoDetailsAUDVO.getDelList().size() > 0) {
+				for (Object vo : eoDetailsAUDVO.getDelList()) {
+					ExOrderDetailsVO exOrderDetailsVO = (ExOrderDetailsVO) vo;
+					purchaseEODAO.delete(exOrderDetailsVO);
+				}
+			}
+	 
+			if (paxNameAUDVO.getAddList().size() > 0) {
+				for (Object vo : paxNameAUDVO.getAddList()) {
+					PaxNameVO paxNameVO = (PaxNameVO) vo;
+					paxNameVO.setExOrderId(exOrderVO.getId());
+					purchaseEODAO.insert(paxNameVO);
+				}
+			}
+	 
+	
+			if (paxNameAUDVO.getDelList().size() > 0) {
+				for (Object vo : paxNameAUDVO.getDelList()) {
+					PaxNameVO paxNameVO = (PaxNameVO) vo;
+					purchaseEODAO.delete(paxNameVO);
+				}
+			}
+	 
+			if (airLineAUDVO.getAddList().size() > 0) {
+				for (Object vo : airLineAUDVO.getAddList()) {
+					AirLineDetailsVO airLineDetailsVO = (AirLineDetailsVO) vo;
+					airLineDetailsVO.setExOrderId(exOrderVO.getId());
+					purchaseEODAO.insert(airLineDetailsVO);
+				}
+			}
+	  
+			if (airLineAUDVO.getDelList().size() > 0) {
+				for (Object vo : airLineAUDVO.getDelList()) {
+					AirLineDetailsVO airLineDetailsVO = (AirLineDetailsVO) vo;
+					purchaseEODAO.delete(airLineDetailsVO);
+				}
+			}
+	 
+			if (hotelTourAUDVO.getAddList().size() > 0) {
+				for (Object vo : hotelTourAUDVO.getAddList()) {
+					HotelTourVO hotelTourVO = (HotelTourVO) vo;
+					hotelTourVO.setExOrderId(exOrderVO.getId());
+					purchaseEODAO.insert(hotelTourVO);
+				}
+			} 
+	 
+			if (hotelTourAUDVO.getDelList().size() > 0) {
+				for (Object vo : hotelTourAUDVO.getDelList()) {
+					HotelTourVO hotelTourVO = (HotelTourVO) vo;
+					purchaseEODAO.delete(hotelTourVO);
+				}
+			}
+	
+	
+			if (eoInvAUDVO.getAddList().size() > 0) {
+				for (Object vo : eoInvAUDVO.getAddList()) {
+					EOInvoiceVO eoInvVO = (EOInvoiceVO) vo;
+					eoInvVO.setEoId(exOrderVO.getId()); 
+					purchaseEODAO.insert(eoInvVO); 
+				}
+			} 
+	
+			if (eoInvAUDVO.getDelList().size() > 0) {
+				for (Object vo : eoInvAUDVO.getDelList()) {
+					EOInvoiceVO eoInvVO = (EOInvoiceVO) vo;
+					purchaseEODAO.delete(eoInvVO);
+				}
+			}*/
+			
+			// Update UUID to auto generate number code
+			SystemNumberGenerationVO eoSNGVO = getSNGVO(CommonConstant.SYS_NUM_CD_EXCH_ORDR, exOrderVO.getCompanyId());
+			Long eoCode = eoSNGVO.getNextnumber();
+			purchaseEODAO.updateExOrderCode(exOrderVO.getCode(), Long.toString(eoCode));
+			
+		}  catch (Exception e) {
+			exOrderVO.setId(null);
+			e.printStackTrace();
+			throw new BusinessException(e);
+		}
+	}
+	
+	public SystemNumberGenerationVO getSNGVO(String sysCd, Long companyId) throws BusinessException, QueueException {
+		// example to get system next number
+		SystemNumberGenerationVO vo = new SystemNumberGenerationVO();
+		vo.setCode(sysCd);
+		vo.setIdCompany(companyId);
+		vo = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(vo));
+		
+		return vo;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#update(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void updateExOrder(SupplierVO supplierVO, ExOrderVO exOrderVO, AddUpdDelVO eoDetailsAUDVO, 
+			AddUpdDelVO paxNameAUDVO, AddUpdDelVO airLineAUDVO, AddUpdDelVO hotelTourAUDVO,AddUpdDelVO eoInvAUDVO) throws BusinessException {
+		
+		exOrderVO.setSupplierId(supplierVO.getId());
+		purchaseDAO.update(exOrderVO);
+		
+		// insert / update eo itmes
+		purchaseEODAO.terminateEOSubInfo("ex_order_item", exOrderVO.getId());
+		if (CollectionUtils.isNotEmpty(exOrderVO.getEoDetailsList())) {
+			for (ExOrderDetailsVO vo : exOrderVO.getEoDetailsList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				if (null == vo.getId()) {
+					vo.setExOrderId(exOrderVO.getId());
+					purchaseEODAO.insert(vo);
+				} else purchaseEODAO.update(vo);
+			}
+		}
+		// insert / update eo pax
+		purchaseEODAO.terminateEOSubInfo("ex_order_pax", exOrderVO.getId());
+		if (CollectionUtils.isNotEmpty(exOrderVO.getPaxNameList())) {
+			for (PaxNameVO vo : exOrderVO.getPaxNameList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				if (null == vo.getId()) {
+					vo.setExOrderId(exOrderVO.getId());
+					purchaseEODAO.insert(vo);
+				} else purchaseEODAO.update(vo);
+			}
+		}
+		// insert / update eo airline
+		purchaseEODAO.terminateEOSubInfo("ex_order_airline", exOrderVO.getId());
+		if (CollectionUtils.isNotEmpty(exOrderVO.getAirlineList())) {
+			for (AirLineDetailsVO vo : exOrderVO.getAirlineList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				if (null == vo.getId()) {
+					vo.setExOrderId(exOrderVO.getId());
+					purchaseEODAO.insert(vo);
+				} else purchaseEODAO.update(vo);
+			}
+		}
+		// insert / update eo hotel tours
+		purchaseEODAO.terminateEOSubInfo("ex_order_hotel", exOrderVO.getId());
+		if (CollectionUtils.isNotEmpty(exOrderVO.getHotelTourList())) {
+			for (HotelTourVO vo : exOrderVO.getHotelTourList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				if (null == vo.getId()) {
+					vo.setExOrderId(exOrderVO.getId());
+					purchaseEODAO.insert(vo);
+				} else purchaseEODAO.update(vo);
+			}
+		}
+		// insert / update eo invoice
+		//purchaseEODAO.terminateEOSubInfo("ex_order_inv", exOrderVO.getId());
+		invoiceDAO.deleteInvoiceEOLink(null, exOrderVO.getId());
+		if (CollectionUtils.isNotEmpty(exOrderVO.getEoInvList())) {
+			for (EOInvoiceVO vo : exOrderVO.getEoInvList()) {
+				//vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				//if (null == vo.getId()) {
+					vo.setEoId(exOrderVO.getId());
+					purchaseEODAO.insert(vo);
+				//} else purchaseEODAO.update(vo);
+			}
+		}
+		
+		/*if (eoDetailsAUDVO.getAddList().size() > 0) {
+			for (Object vo : eoDetailsAUDVO.getAddList()) {
+				ExOrderDetailsVO exOrderDetailsVO = (ExOrderDetailsVO) vo;
+				exOrderDetailsVO.setExOrderId(exOrderVO.getId());
+				purchaseEODAO.insert(exOrderDetailsVO);
+			}
+		}
+ 
+		if (eoDetailsAUDVO.getUpdList().size() > 0) {
+			for (Object vo : eoDetailsAUDVO.getUpdList()) {
+				ExOrderDetailsVO exOrderDetailsVO = (ExOrderDetailsVO) vo;
+				purchaseEODAO.update(exOrderDetailsVO);
+			}
+		}
+ 
+		if (eoDetailsAUDVO.getDelList().size() > 0) {
+			for (Object vo : eoDetailsAUDVO.getDelList()) {
+				ExOrderDetailsVO exOrderDetailsVO = (ExOrderDetailsVO) vo;
+				purchaseEODAO.delete(exOrderDetailsVO);
+			}
+		}
+ 
+		if (paxNameAUDVO.getAddList().size() > 0) {
+			for (Object vo : paxNameAUDVO.getAddList()) {
+				PaxNameVO paxNameVO = (PaxNameVO) vo;
+				paxNameVO.setExOrderId(exOrderVO.getId());
+				purchaseEODAO.insert(paxNameVO);
+			}
+		}
+
+		if (paxNameAUDVO.getUpdList().size() > 0) {
+			for (Object vo : paxNameAUDVO.getUpdList()) {
+				PaxNameVO paxNameVO = (PaxNameVO) vo;
+				purchaseEODAO.update(paxNameVO);
+			}
+		}
+
+
+		if (paxNameAUDVO.getDelList().size() > 0) {
+			for (Object vo : paxNameAUDVO.getDelList()) {
+				PaxNameVO paxNameVO = (PaxNameVO) vo;
+				purchaseEODAO.delete(paxNameVO);
+			}
+		}
+ 
+		if (airLineAUDVO.getAddList().size() > 0) {
+			for (Object vo : airLineAUDVO.getAddList()) {
+				AirLineDetailsVO airLineDetailsVO = (AirLineDetailsVO) vo;
+				airLineDetailsVO.setExOrderId(exOrderVO.getId());
+				purchaseEODAO.insert(airLineDetailsVO);
+			}
+		}
+ 
+		if (airLineAUDVO.getUpdList().size() > 0) {
+			for (Object vo : airLineAUDVO.getUpdList()) {
+				AirLineDetailsVO airLineDetailsVO = (AirLineDetailsVO) vo;
+				purchaseEODAO.update(airLineDetailsVO);
+			}
+		}
+ 
+		if (airLineAUDVO.getDelList().size() > 0) {
+			for (Object vo : airLineAUDVO.getDelList()) {
+				AirLineDetailsVO airLineDetailsVO = (AirLineDetailsVO) vo;
+				purchaseEODAO.delete(airLineDetailsVO);
+			}
+		}
+ 
+		if (hotelTourAUDVO.getAddList().size() > 0) {
+			for (Object vo : hotelTourAUDVO.getAddList()) {
+				HotelTourVO hotelTourVO = (HotelTourVO) vo;
+				hotelTourVO.setExOrderId(exOrderVO.getId());
+				purchaseEODAO.insert(hotelTourVO);
+			}
+		}
+ 
+		if (hotelTourAUDVO.getUpdList().size() > 0) {
+			for (Object vo : hotelTourAUDVO.getUpdList()) {
+				HotelTourVO hotelTourVO = (HotelTourVO) vo;
+				purchaseEODAO.update(hotelTourVO);
+			}
+		}
+ 
+		if (hotelTourAUDVO.getDelList().size() > 0) {
+			for (Object vo : hotelTourAUDVO.getDelList()) {
+				HotelTourVO hotelTourVO = (HotelTourVO) vo;
+				purchaseEODAO.delete(hotelTourVO);
+			}
+		}
+
+
+		if (eoInvAUDVO.getAddList().size() > 0) {
+			for (Object vo : eoInvAUDVO.getAddList()) {
+				EOInvoiceVO eoInvVO = (EOInvoiceVO) vo;
+				eoInvVO.setEoId(exOrderVO.getId()); 
+				purchaseEODAO.insert(eoInvVO); 
+			}
+		} 
+
+		if (eoInvAUDVO.getDelList().size() > 0) {
+			for (Object vo : eoInvAUDVO.getDelList()) {
+				EOInvoiceVO eoInvVO = (EOInvoiceVO) vo;
+				purchaseEODAO.delete(eoInvVO);
+			}
+		}*/
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#delete(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void delEO(SupplierVO supplierVO, ExOrderVO exOrderVO, List<ExOrderDetailsVO> eoDetailsList, List<PaxNameVO> paxNameList, List<AirLineDetailsVO> airLineList, List<HotelTourVO> hotelTourList) throws BusinessException {
+		exOrderVO.setSupplierId(supplierVO.getId());
+		exOrderVO.setStatus("CC");
+		purchaseEODAO.update(exOrderVO);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#edit(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void editEODetails(ExOrderDetailsVO exOrderDetailsVO) throws BusinessException {
+		purchaseEODAO.update(exOrderDetailsVO);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#edit(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void editPaxName(PaxNameVO paxNameVO) throws BusinessException {
+		purchaseEODAO.update(paxNameVO);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#edit(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void editAirLine(AirLineDetailsVO airLineVO) throws BusinessException {
+		purchaseEODAO.update(airLineVO);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#edit(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void editHotelTour(HotelTourVO hotelTourVO) throws BusinessException {
+		purchaseEODAO.update(hotelTourVO);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#delete(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void deleteEODetails(ExOrderDetailsVO exOrderDetailsVO) throws BusinessException {
+		purchaseEODAO.delete(exOrderDetailsVO);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#delete(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void deletePaxName(PaxNameVO paxNameVO) throws BusinessException {
+		purchaseEODAO.delete(paxNameVO);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#delete(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void deleteAirLine(AirLineDetailsVO airLineVO) throws BusinessException {
+		purchaseEODAO.delete(airLineVO);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseService#delete(com.bcs.zsg.purchase.vo.PurchaseVO)
+	 */
+	@Override
+	public void deleteHotelTour(HotelTourVO hotelTourVO) throws BusinessException {
+		purchaseEODAO.delete(hotelTourVO);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getEOStatus(java.lang.Long)
+	 */
+	@Override
+	public String getEOStatus(Long id) throws BusinessException {
+		return purchaseEODAO.getEOStatus(id);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getEOExOrderList(java.lang.Long)
+	 */
+	@Override
+	public List<ExOrderVO> getEOExOrderList(Long companyId) {
+		return purchaseEODAO.getEOExOrderList(companyId);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getExOrderById(java.lang.Long)
+	 */
+	@Override
+	public ExOrderVO getExOrderById(Long exOrderId) {
+		return purchaseEODAO.getExOrderById(exOrderId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getEOSupplier(java.lang.Long)
+	 */
+	@Override
+	public SupplierVO getEOSupplier(Long exOrderId) {
+		return purchaseEODAO.getEOSupplier(exOrderId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getEOListSize(java.util.Map)
+	 */
+	@Override
+	public int getEOListSize(Map<String, Object> params) throws BusinessException {
+		return purchaseEODAO.getEOListSize(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getEOList(java.util.Map)
+	 */
+	@Override
+	public List<ExOrderVO> getEOList(Map<String, Object> params) throws BusinessException {
+		return purchaseEODAO.getEOList(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.service.PurchaseEOService#getBillEOList(java.lang.Long, java.lang.String)
+	 */
+	@Override
+	public List<ExOrderVO> getBillEOList(Long idCompany, String statusCode) throws BusinessException {
+		return purchaseEODAO.getBillEOList(idCompany, statusCode);
+	}
+	
+	@Override
+	public List<ExOrderVO> getTourDepartureEOList(Long idCompany, String tourCode) throws BusinessException {
+		return purchaseEODAO.getTourDepartureEOList(idCompany, tourCode);
+	}
+	
+	@Override
+	public void addDeleteEOAttachment(ExOrderAttachmentVO exOrderAttachmentVO, boolean isDelete) throws BusinessException {
+		if (isDelete) purchaseEODAO.delete(exOrderAttachmentVO);
+		else {
+			if (exOrderAttachmentVO.getId() != null)
+				purchaseEODAO.update(exOrderAttachmentVO);
+			else
+				purchaseEODAO.insert(exOrderAttachmentVO);
+		}
+	}
+
+	@Override
+	public List<ExOrderVO> getExOrderHistoryList(Long id) throws BusinessException {
+		return purchaseEODAO.getExOrderHistoryList(id);
+	}
+	
+	@Override
+	public SupplierVO getPayeeAsSupplier(Long idPayee, String payeeType, Long idCompany) throws BusinessException {
+		if (StringUtils.equals(payeeType, CommonConstant.PAYEE_TYPE_EMPLOYEE)) {
+			EmployeeViewVO employeeViewVO = userDAO.getEmployeeView(idPayee);
+			validatePayeeAsSupplier(employeeViewVO);
+			
+			SupplierVO supplierVO = createSupplierFromEmployee(employeeViewVO);
+			return supplierVO;
+		} else if (StringUtils.equals(payeeType, CommonConstant.PAYEE_TYPE_SUPPLIER)) {
+			SupplierVO supplierVO = createSupplierFromSupplier(idPayee, idCompany);
+			return supplierVO;
+		} else if (StringUtils.equals(payeeType, CommonConstant.PAYEE_TYPE_CUST)) {
+			CustDetailsVO custDetailsVO = invoiceDAO.getCustDetails(idPayee);
+//			validatePayeeAsSupplier(employeeViewVO);
+			
+			SupplierVO supplierVO = createSupplierFromCustDetails(custDetailsVO);
+			return supplierVO;
+		}
+		return null;
+	}
+	
+	private void validatePayeeAsSupplier(EmployeeViewVO employeeViewVO) throws BusinessException {
+		if (StringUtils.isBlank(employeeViewVO.getIdNo())) throw new BusinessException(CommonErrConstant.ERR_SUPPLIER_PAYEE_NO_IC);
+		if (StringUtils.isBlank(employeeViewVO.getAddr1())) throw new BusinessException(CommonErrConstant.ERR_SUPPLIER_PAYEE_NO_ADDR1);
+		if (StringUtils.isBlank(employeeViewVO.getCity())) throw new BusinessException(CommonErrConstant.ERR_SUPPLIER_PAYEE_NO_CITY);
+		if (StringUtils.isBlank(employeeViewVO.getState())) throw new BusinessException(CommonErrConstant.ERR_SUPPLIER_PAYEE_NO_STATE);
+		if (employeeViewVO.getCountryId() == null) throw new BusinessException(CommonErrConstant.ERR_SUPPLIER_PAYEE_NO_COUNTRY);
+		if (employeeViewVO.getUserVO() == null)	throw new BusinessException(CommonErrConstant.ERR_E_INV_ERR_MSG, null, FunctionUtils.generateArrayFromStr("Employee not attached to user."));
+		if (StringUtils.isBlank(employeeViewVO.getUserVO().getMobileNumber())) throw new BusinessException(CommonErrConstant.ERR_SUPPLIER_PAYEE_NO_CONTACT);
+		
+	}
+	
+	private SupplierVO createSupplierFromEmployee(EmployeeViewVO employeeViewVO) {
+		SupplierVO supplierVO = new SupplierVO();
+		supplierVO.setId(-1L);
+		supplierVO.setFullName(employeeViewVO.getFullName());
+		supplierVO.setIdType(EInvoiceConstant.E_INV_IDENTITY_TYPE_NRIC);
+		supplierVO.setIdNo(employeeViewVO.getIdNo());
+		supplierVO.setTaxIdNo(EInvoiceConstant.E_INV_GNRL_TIN_PUBLIC);
+		if (StringUtils.isNotBlank(employeeViewVO.getMsicCode()))	supplierVO.setMsicCode(employeeViewVO.getMsicCode());
+		else														supplierVO.setMsicCode(EInvoiceConstant.MSIC_CODE_NA);
+		supplierVO.setAdd1(employeeViewVO.getAddr1());
+		supplierVO.setAdd2(employeeViewVO.getAddr2());
+		supplierVO.setAdd3(employeeViewVO.getAddr3());
+		supplierVO.setCity(employeeViewVO.getCity());
+		supplierVO.setPostcode(employeeViewVO.getPostcode());
+		supplierVO.setState(employeeViewVO.getState());
+		if (employeeViewVO.getCountryId() != null)	supplierVO.setCountryVO(purchaseEODAO.getCountry(employeeViewVO.getCountryId()));
+		if (employeeViewVO.getUserVO() != null)	{
+			supplierVO.setContactNo(employeeViewVO.getUserVO().getMobileNumber());
+			supplierVO.setEmail(employeeViewVO.getUserVO().getEmailAddress());
+		}
+	    
+		return supplierVO;
+	}
+	
+	private SupplierVO createSupplierFromCustDetails(CustDetailsVO custDetailsVO) throws BusinessException {
+		SupplierVO supplierVO = new SupplierVO();
+		supplierVO.setId(-1L);
+		
+		if (!StringUtils.isBlank(custDetailsVO.getCompanyName())) {
+			supplierVO.setFullName(custDetailsVO.getCompanyName());
+		} else if (!StringUtils.isBlank(custDetailsVO.getContPersonName())) {
+			supplierVO.setFullName(custDetailsVO.getContPersonName());
+		}
+		
+		PartyIdentificationType partyIdentificationType = EInvoiceUtils.generatePartyIdentificationType(custDetailsVO, true);
+		supplierVO.setIdNo(partyIdentificationType.getIDValue());
+		supplierVO.setIdType(partyIdentificationType.getID().getSchemeID());
+		
+		// TIN
+		// if no TIN, replace with general public TIN
+		// 2025.09.17 update: TIN required in corporate profile
+		if (SalesConstant.CUST_TYPE_CORPORATE.equals(custDetailsVO.getCustType()) && StringUtils.isBlank(custDetailsVO.getTaxIdNo())) {
+			throw new BusinessException(CommonErrConstant.ERR_CUST_CORP_NO_TIN);
+		}
+		else if (StringUtils.isBlank(custDetailsVO.getTaxIdNo())) {
+			custDetailsVO.setTaxIdNo(EInvoiceConstant.E_INV_GNRL_TIN_PUBLIC);
+		}
+		supplierVO.setTaxIdNo(custDetailsVO.getTaxIdNo());
+		
+		// TODO cust as supplier MSIC code
+		supplierVO.setMsicCode(EInvoiceConstant.MSIC_CODE_NA);
+		
+		// Address Line 1
+		if (custDetailsVO.getAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getAddressVO().getAddr1())) {
+			supplierVO.setAdd1(custDetailsVO.getAddressVO().getAddr1());
+		} else if (custDetailsVO.getCorAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getCorAddressVO().getAddr1())) {
+			supplierVO.setAdd1(custDetailsVO.getCorAddressVO().getAddr1());
+		} else {
+			throw new BusinessException(CommonErrConstant.ERR_CUST_NO_ADDR1);
+		}
+		
+		// Address Line 2
+		if (custDetailsVO.getAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getAddressVO().getAddr2())) {
+			supplierVO.setAdd2(custDetailsVO.getAddressVO().getAddr2());
+		} else if (custDetailsVO.getCorAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getCorAddressVO().getAddr2())) {
+			supplierVO.setAdd2(custDetailsVO.getCorAddressVO().getAddr2());
+		}
+		
+		// Address Line 3
+		if (custDetailsVO.getAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getAddressVO().getAddr3())) {
+			supplierVO.setAdd3(custDetailsVO.getAddressVO().getAddr3());
+		} else if (custDetailsVO.getCorAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getCorAddressVO().getAddr3())) {
+			supplierVO.setAdd3(custDetailsVO.getCorAddressVO().getAddr3());
+		}
+		
+		// Customer City
+		if (custDetailsVO.getAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getAddressVO().getCity())) {
+			supplierVO.setCity(custDetailsVO.getAddressVO().getCity());
+		} else if (custDetailsVO.getCorAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getCorAddressVO().getCity())) {
+			supplierVO.setCity(custDetailsVO.getCorAddressVO().getCity());
+		} else {
+			throw new BusinessException(CommonErrConstant.ERR_CUST_NO_CITY);
+		}
+		
+		// Customer Postcode
+		if (custDetailsVO.getAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getAddressVO().getPostcode())) {
+			supplierVO.setPostcode(custDetailsVO.getAddressVO().getPostcode());
+		} else if (custDetailsVO.getCorAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getCorAddressVO().getPostcode())) {
+			supplierVO.setPostcode(custDetailsVO.getCorAddressVO().getPostcode());
+		} 
+		
+		// Customer State
+		if (custDetailsVO.getAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getAddressVO().getState())) {
+			supplierVO.setState(custDetailsVO.getAddressVO().getState());
+			supplierVO.setCountryVO(purchaseEODAO.getCountry(custDetailsVO.getAddressVO().getCountryId()));
+		} else if (custDetailsVO.getCorAddressVO() != null && !StringUtils.isBlank(custDetailsVO.getCorAddressVO().getState())) {
+			supplierVO.setState(custDetailsVO.getCorAddressVO().getState());
+			supplierVO.setCountryVO(purchaseEODAO.getCountry(custDetailsVO.getCorAddressVO().getCountryId()));
+		} 
+		
+		if (custDetailsVO.getCustType().equals("P")) {
+			if (custDetailsVO.getContactList() != null && custDetailsVO.getContactList().size() > 0) {
+				boolean found = false;
+				for (PersonContactVO vo : custDetailsVO.getContactList()) {
+					if(vo.getNumber().length() >= 8) {
+						supplierVO.setContactNo(vo.getNumber().replaceAll("[^0-9]", ""));
+						found = true;
+					}
+				}
+				if (!found) {
+					throw new BusinessException(CommonErrConstant.ERR_CUST_NO_CONTACT);
+				}
+				
+			} else {
+				throw new BusinessException(CommonErrConstant.ERR_CUST_NO_CONTACT);
+			}
+		} else if (custDetailsVO.getCustType().equals("C")) {
+			if (custDetailsVO.getCorContactList() != null && custDetailsVO.getCorContactList().size() > 0) {
+//				contactType1.setTelephone(custDetailsVO.getCorContactList().get(0).getContactNo().replaceAll("[^0-9]", ""));
+				boolean found = false;
+				for (CorContactVO vo : custDetailsVO.getCorContactList()) {
+					if(vo.getContactNo().length() >= 8) {
+						supplierVO.setContactNo(vo.getContactNo().replaceAll("[^0-9]", ""));
+						found = true;
+					}
+				}
+				if (!found) {
+					throw new BusinessException(CommonErrConstant.ERR_CUST_NO_CONTACT);
+				}
+			} else {
+				throw new BusinessException(CommonErrConstant.ERR_CUST_NO_CONTACT);
+			}
+		}
+		
+		if (!StringUtils.isBlank(custDetailsVO.getEmail())) {
+			if (!FunctionUtils.isValidEmail(custDetailsVO.getEmail())) {
+				throw new BusinessException(CommonErrConstant.ERR_CUST_EMAIL_INVALID);
+			}
+			supplierVO.setEmail(custDetailsVO.getEmail());
+		}
+		
+		return supplierVO;
+	}
+	
+	private SupplierVO createSupplierFromSupplier(Long idPayee, Long idCompany) throws BusinessException {
+		SupplierVO supplierVO = supplierViewDAO.getSupplier(idPayee, idCompany);
+		supplierVO = getSupplier(supplierVO.getPersonId());
+		supplierVO.setIdType(EInvoiceConstant.E_INV_IDENTITY_TYPE_BRN);
+		supplierVO.setIdNo(supplierVO.getRegNo());
+		return supplierVO;
+	}
+}

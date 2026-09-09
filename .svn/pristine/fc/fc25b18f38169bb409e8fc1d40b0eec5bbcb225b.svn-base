@@ -1,0 +1,838 @@
+package com.bcs.zsg.sales.dao;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.primefaces.model.SortOrder;
+
+import com.bcs.zsg.cfg.sec.vo.EmployeeVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.history.vo.TourDepHistoryVO;
+import com.bcs.zsg.maintenance.helper.MaintConstant;
+import com.bcs.zsg.product.helper.ProductConstant;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.BookingChargeItemVO;
+import com.bcs.zsg.sales.vo.BookingVO;
+import com.bcs.zsg.sales.vo.BookingViewVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+public class BookingDAOImpl extends BaseHibernateDAO implements BookingDAO {
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getBooingList(java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<BookingVO> getBookingList(Long idTourDep) throws BusinessException {
+		Criteria criteria = createCriteria(BookingVO.class);
+		criteria.add(Restrictions.eq("idTourDep", idTourDep));
+		criteria.add(Restrictions.and(Restrictions.ne("pmntStatusCd", SalesConstant.BOOKING_PMNT_STATUS_KIVEXP), Restrictions.and(Restrictions.ne("statusCode", CommonConstant.STATUS_CD_CANCELLED), Restrictions.ne("statusCode", CommonConstant.STATUS_CD_VOID))));
+		criteria.addOrder(Order.asc("createdDate"));
+		return criteria.list();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getBookingViewList(com.bcs.zsg.common.vo.SearchParamVO, java.lang.String, java.lang.String)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<BookingViewVO> getBookingViewList(SearchParamVO searchParamVO, String searchBookingNumber) throws BusinessException {
+		Criteria criteria = createCriteria(BookingViewVO.class);
+		criteria.add(Restrictions.eq("idCompany", searchParamVO.getCompanyVO().getId()));
+		if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_ALL, searchParamVO.getObj1().toString())) {
+			criteria.add(Restrictions.eq("pmntStatusCd", searchParamVO.getObj1()));
+		}
+		if (StringUtils.isNotEmpty(searchBookingNumber)) {
+			criteria.add(Restrictions.eq("id", Long.parseLong(searchBookingNumber)));
+		}
+		criteria.add(Restrictions.and(Restrictions.ne("statusCode", CommonConstant.STATUS_CD_CANCELLED), Restrictions.ne("statusCode", CommonConstant.STATUS_CD_VOID)));
+		criteria.addOrder(Order.desc("createdDate"));
+		return criteria.list();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getBookingViewList(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<BookingViewVO> getBookingViewList(SearchParamVO searchParamVO, Boolean isPersonal, EmployeeVO employeeVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT b.id, b.id_company, b.pmnt_status_cd, b.dt_created, b.dt_exp, d.code, u.user_name AS 'staff', (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) as salutation_cd, p.last_name, p.first_name ").
+			append("from tour_booking b, tour_dep d, employee e, sec_user u, customer c, person p ").
+			append("where b.id_company = :idCompany AND ");
+		if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_ALL, searchParamVO.getObj1().toString())) {
+			if (SalesConstant.BOOKING_PMNT_STATUS_CC.equals(searchParamVO.getObj1())) sb.append("b.status_cd IN (:statusCC, :statusVD) AND ");
+			else sb.append("b.pmnt_status_cd = :pmntStatusCd AND b.status_cd NOT IN (:statusCC, :statusVD) AND ");
+		} else sb.append("b.status_cd NOT IN (:statusCC, :statusVD) AND ");
+		if (StringUtils.isNotEmpty(employeeVO.getDepartment()) && employeeVO.getDepartment().contains("sale")) sb.append("e.department LIKE 'sale%' AND ");
+		if (isPersonal) sb.append("b.id_employee = :employeeId AND ");
+		sb.append("b.id_tour_dep = d.id and b.id_cust = c.id and c.id_pc = p.id and b.id_employee = e.id and e.u_sec_user = u.uuid ").
+			append("ORDER BY b.dt_upd DESC");
+
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", searchParamVO.getCompanyVO().getId());
+		query.setParameter("statusCC", CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameter("statusVD", CommonConstant.STATUS_CD_VOID);
+		if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_ALL, searchParamVO.getObj1().toString())) {
+			if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_CC, searchParamVO.getObj1().toString())) query.setParameter("pmntStatusCd", searchParamVO.getObj1());
+		}
+		if (isPersonal) query.setParameter("employeeId", employeeVO.getId());
+		List<Object> objList = query.list();
+		List<BookingViewVO> list = new ArrayList<BookingViewVO>();
+
+		if (CollectionUtils.isNotEmpty(objList)) {
+			for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+				Object[] row = (Object[]) it.next();
+				BookingViewVO vo = new BookingViewVO();
+				vo.setId(((BigInteger) row[0]).longValue());
+				vo.setIdCompany(((BigInteger) row[1]).longValue());
+				vo.setPmntStatusCd((String) row[2]);
+				vo.setCreatedDate((Date) row[3]);
+				vo.setDtExp((Date) row[4]);
+				vo.setTourCode((String) row[5]);
+				vo.setStaff((String) row[6]);
+				vo.setSalutationCd((String) row[7]);
+				vo.setLastName((String) row[8]);
+				vo.setFirstName((String) row[9]);
+				list.add(vo);
+			}
+		}
+		return list;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#updateKIVExpired()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public void updateKIVExpired() throws BusinessException {
+		String kivExp = LookupItemUtils.getGlobalConfigValue(MaintConstant.GLOBAL_CD_GLOBAL, MaintConstant.GLOBAL_CD_KIV_EXP);
+
+		Query query = createSQLQuery("SELECT id_tour_dep FROM tour_booking WHERE pmnt_status_cd = ? AND DATE(DATE_ADD(dt_created, INTERVAL ? DAY)) < DATE(NOW()) GROUP BY id_tour_dep");
+		query.setParameter(0, SalesConstant.BOOKING_PMNT_STATUS_KIV);
+		query.setParameter(1, kivExp);
+		List<BigInteger> result = query.list();
+
+		if (CollectionUtils.isNotEmpty(result)) {
+			List<Long> idTourDepList = new ArrayList<Long>();
+			for (BigInteger id : result) idTourDepList.add(id.longValue());
+
+			query = createSQLQuery("UPDATE tour_booking SET pmnt_status_cd = ?, status_cd = ?, dt_upd = ?, upd_by = ? WHERE pmnt_status_cd = ? AND DATE(DATE_ADD(dt_created, INTERVAL ? DAY)) < DATE(NOW())");
+			query.setParameter(0, SalesConstant.BOOKING_PMNT_STATUS_KIVEXP);
+			query.setParameter(1, CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter(2, new Date());
+			query.setParameter(3, "SYSTEM");
+			query.setParameter(4, SalesConstant.BOOKING_PMNT_STATUS_KIV);
+			query.setParameter(5, kivExp);
+			query.executeUpdate();
+
+			query = createSQLQuery("UPDATE tour_dep SET tour_status_cd = ? WHERE id IN (?)");
+			query.setParameter(0, ProductConstant.TOUR_STATUS_CD_FULL);
+			query.setParameter(1, idTourDepList);
+			query.executeUpdate();
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#updBookingTourDepHistId(com.bcs.zsg.history.vo.TourDepHistoryVO)
+	 */
+	@Override
+	public void updBookingTourDepHistId(TourDepHistoryVO tourDepHistoryVO) throws BusinessException {
+		Query query = createSQLQuery("UPDATE tour_booking SET id_tour_dep_hist = ? WHERE id_tour_dep_hist IS NULL AND id_tour_dep = ?");
+		query.setParameter(0, tourDepHistoryVO.getId());
+		query.setParameter(1, tourDepHistoryVO.getIdHist());
+		query.executeUpdate();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getBooking(java.lang.Long)
+	 */
+	@Override
+	public BookingViewVO getBookingView(Long bookingId) throws BusinessException {
+		System.out.println("at getBookingView bookingId: " + bookingId);
+		Criteria criteria = createCriteria(BookingViewVO.class);
+		criteria.add(Restrictions.eq("id", bookingId));
+		return (BookingViewVO) criteria.uniqueResult();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<String> getSurveyList(Long bookingId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT id, id_booking, code FROM tour_booking_survey WHERE id_booking = :bookingId ");
+
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("bookingId", bookingId);
+
+		List<Object> results = query.list();
+		List<String> tagList = new ArrayList<String>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			tagList.add((String) row[2]);
+		}
+
+		return tagList;
+	}
+
+	@Override
+	public void deleteSurveyList(Long bookingId) throws BusinessException {
+		Query query = createSQLQuery("DELETE FROM tour_booking_survey WHERE id_booking = ?");
+		query.setParameter(0, bookingId);
+		query.executeUpdate();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getBooking(java.lang.Long)
+	 */
+	@Override
+	public BookingVO getBooking(Long bookingId) throws BusinessException {
+		Criteria criteria = createCriteria(BookingVO.class);
+		criteria.add(Restrictions.eq("id", bookingId));
+		return (BookingVO) criteria.uniqueResult();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getBookingViewList(com.bcs.zsg.common.vo.SearchParamVO, int, int, java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<BookingViewVO> getBookingViewList(SearchParamVO searchParamVO, Boolean isPersonal, EmployeeVO employeeVO, int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters, Map<String, Object> params) throws BusinessException {
+	    StringBuilder sb = new StringBuilder();
+	    sb.append("SELECT b.id AS 'id', b.id_company, b.pmnt_status_cd AS 'pmntStatusCd', b.dt_created AS 'createdDate', b.dt_exp AS 'dtExp', d.code AS 'tourCode', ").
+		append("u.user_name AS 'staff', (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) as salutation_cd, ").
+		append("p.last_name, p.first_name, b.status_cd AS 'statusCode', b.order_type_cd, b.id_saler_tfair, i.transferred_date ").
+		append(", i.status_cd AS 'invStatusCd', b.quantity, b.cabin_qty, b.dt_upd, b.amount, d.dt_dep AS 'dtDep', ").
+		append("(SELECT GROUP_CONCAT(ct.name ORDER BY ct.name ASC SEPARATOR ', ') FROM tour_theme_country ttc LEFT JOIN country ct ON ttc.id_country = ct.id WHERE ttc.id_tour_theme = t.id) AS countryName ").
+		append("from tour_booking b left join invoice i ON b.id = i.id_tour_booking and i.doc_type_cd = :docTypeCd ").
+		append(", tour_dep d left join tour_pkg tp on tp.id = d.id_tour_pkg ").
+		append("left join tour_theme t on t.id = tp.id_tour_theme ").
+		append(", employee e, sec_user u, customer c, person p ").	
+		append("where b.id_company = :idCompany AND b.id_tour_dep = d.id and b.id_cust = c.id and c.id_pc = p.id and b.id_employee = e.id and e.u_sec_user = u.uuid ");
+
+	    // Payment status condition
+	    if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_ALL, searchParamVO.getObj1().toString())) {
+	        if (SalesConstant.BOOKING_PMNT_STATUS_CC.equals(searchParamVO.getObj1())) {
+	            sb.append("AND b.status_cd IN (:statusCC, :statusVD) ");
+	        } else {
+	            sb.append("AND b.pmnt_status_cd = :pmntStatusCd AND b.status_cd NOT IN (:statusCC, :statusVD) ");
+	        }
+	    }
+
+	    // Order type condition
+	    if (searchParamVO.getObj2() != null) {
+	        sb.append("AND b.order_type_cd = :orderTypeCd ");
+	    }
+		if (params.get("tourType") != null) {
+			sb.append("AND b.type_cd = :typeCd ");
+		}
+	    // Personal condition
+	    if (isPersonal) {
+	        sb.append("AND b.id_employee = :employeeId ");
+	    }
+
+	    // Filters condition
+	    if (!filters.isEmpty()) {
+	        sb.append("AND (");
+	        for (Iterator<Entry<String, String>> it = filters.entrySet().iterator(); it.hasNext(); ) {
+	            Entry<String, String> entry = it.next();
+	            String key = entry.getKey();
+	            String value = entry.getValue();
+	            if ("id".equals(key)) {
+	                sb.append("b.id LIKE '%").append(value).append("%'");
+	            } else if ("staff".equals(key)) {
+	                sb.append("u.user_name LIKE '%").append(value).append("%'");
+	            } else if ("countryName".equals(key)){
+	            	sb.append("EXISTS (SELECT 1 FROM tour_theme_country ttc JOIN country ct ON ttc.id_country = ct.id WHERE ttc.id_tour_theme = t.id AND ct.name LIKE '%").append(entry.getValue()).append("%')");
+	            } else if ("tourCode".equals(key)) {
+	                sb.append("d.code LIKE '%").append(value).append("%'");
+	            } else if ("pmntStatusCd".equals(key)) {
+	                sb.append("b.pmnt_status_cd LIKE '").append(value).append("%'");
+	            } else if ("createdDate".equals(key)) {
+	                sb.append("DATE_FORMAT(b.dt_created, '%d-%b-%Y') LIKE '%").append(value).append("%'");
+	            } else if ("dtExp".equals(key)) {
+	                sb.append("DATE_FORMAT(b.dt_exp, '%d-%b-%Y') LIKE '%").append(value).append("%'");
+	            } else if ("dtDep".equals(key)) {
+	            	sb.append("DATE_FORMAT(d.dt_dep, '%d-%b-%Y') LIKE '%").append(value).append("%'");
+	            } else if ("statusCode".equals(key)) {
+	                sb.append("b.status_cd LIKE '").append(value).append("%'");
+	            } else if ("quantity".equals(key)) {
+	                sb.append("b.quantity LIKE '").append(value).append("%'");
+	            } else {
+	                sb.append("CONCAT(p.last_name, ' ', p.first_name) LIKE '%").append(value).append("%'");
+	            }
+	            if (it.hasNext()) {
+	                sb.append(" AND ");
+	            }
+	        }
+	        sb.append(") ");
+	    }
+
+	    // Sort condition
+	    if (sortField == null) sb.append("ORDER BY b.dt_upd DESC");
+		else {
+			sb.append("ORDER BY ");
+			if (sortField.contains("firstName")) {
+				if (CommonConstant.SORT_ASC.equals(sortOrder.toString())) sb.append("p.last_name, p.first_name");
+				else sb.append("p.last_name DESC, p.first_name DESC");
+			} else {
+				sb.append(sortField);
+				if (CommonConstant.SORT_ASC.equals(sortOrder.toString())) sb.append(" ASC");
+				else sb.append(" DESC");
+			}
+		}
+
+	    // Create query
+	    Query query = createSQLQuery(sb.toString());
+	    query.setParameter("idCompany", searchParamVO.getCompanyVO().getId());
+	    if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_ALL, searchParamVO.getObj1().toString())) {
+	        query.setParameter("statusCC", CommonConstant.STATUS_CD_CANCELLED);
+	        query.setParameter("statusVD", CommonConstant.STATUS_CD_VOID);
+	        if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_CC, searchParamVO.getObj1().toString())) {
+	        	query.setParameter("pmntStatusCd", searchParamVO.getObj1());
+	        }
+	    }
+	    if (searchParamVO.getObj2() != null) {
+	        query.setParameter("orderTypeCd", searchParamVO.getObj2().toString());
+	    }
+		if (params.get("tourType") != null) {
+			query.setParameter("typeCd", params.get("tourType").toString());
+		}
+	    if (isPersonal) {
+	        query.setParameter("employeeId", employeeVO.getId());
+	    }
+	    query.setParameter("docTypeCd", "I");
+	    query.setFirstResult(first);
+	    query.setMaxResults(pageSize);
+
+	    // Fetch results
+	    List<Object> objList = query.list();
+	    List<BookingViewVO> list = new ArrayList<>();
+	    if (CollectionUtils.isNotEmpty(objList)) {
+	        for (Object obj : objList) {
+	            Object[] row = (Object[]) obj;
+	            BookingViewVO vo = new BookingViewVO();
+	            vo.setId(((BigInteger) row[0]).longValue());
+	            vo.setIdCompany(((BigInteger) row[1]).longValue());
+	            vo.setPmntStatusCd((String) row[2]);
+	            vo.setCreatedDate((Date) row[3]);
+	            vo.setDtExp((Date) row[4]);
+	            vo.setTourCode((String) row[5]);
+	            vo.setStaff((String) row[6]);
+	            vo.setSalutationCd((String) row[7]);
+	            vo.setLastName((String) row[8]);
+	            vo.setFirstName((String) row[9]);
+	            vo.setStatusCode((String) row[10]);
+	            vo.setOrderTypeCd((String) row[11]);
+	            vo.setIdSalerTfair(row[12] == null ? null : ((BigInteger) row[12]).longValue());
+	            if (row[13] != null) vo.setTransferredDate((Date) row[13]);
+				vo.setInvStatusCd((String) row[14]);
+				vo.setQuantity(((Short) row[15]).intValue());
+				vo.setCabinQty(((Short) row[16]).intValue());
+				vo.setUpdatedDate((Date) row[17]);
+				vo.setAmount((Double) row[18]);
+				vo.setDtDep((Date) row[19]);
+				vo.setCountryName((String) row[20]);				
+	            list.add(vo);
+	        }
+	    }
+	    return list;
+	}
+
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getBookingIdList(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<Long> getBookingIdList(SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select 1 from tour_booking where ");
+		if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_ALL, searchParamVO.getObj1().toString())) {
+			sb.append("id_company = :idCompany and pmnt_status_cd = :pmntStatusCd and ");
+		}
+		sb.append("status_cd != :statusCd1 and status_cd != :statusCd2 order by dt_created");
+		Query query = createSQLQuery(sb.toString());
+		if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_ALL, searchParamVO.getObj1().toString())) {
+			query.setParameter("pmntStatusCd", searchParamVO.getObj1());
+			query.setParameter("idCompany", searchParamVO.getCompanyVO().getId());
+		}
+		query.setParameter("statusCd1", CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameter("statusCd2", CommonConstant.STATUS_CD_VOID);
+		return query.list();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getTotalBookByTourDep(java.lang.Long)
+	 */
+	@Override
+	public int getTotalBookByTourDep(Long idTourDep, Long idBooking) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT SUM(i.quantity) FROM BookingChargeItemVO i, BookingVO b ").
+			append("WHERE i.code IN (:ftSgl, :ftTwn, :ftCtw, :ftCwb, :ftCnb) AND i.idBooking = b.id AND ").
+			append("b.idTourDep = :idTourDep AND b.pmntStatusCd <> :kivExp AND b.statusCode NOT IN (:cancel, :void)");
+		if (idBooking != null) sb.append(" AND b.id <> :idBooking");
+
+		Query query = createQuery(sb.toString());
+		query.setParameter("idTourDep", idTourDep);
+		query.setParameter("ftSgl", ProductConstant.TOUR_DEP_ITM_CD_FT_SGL);
+		query.setParameter("ftTwn", ProductConstant.TOUR_DEP_ITM_CD_FT_TWN);
+		query.setParameter("ftCtw", ProductConstant.TOUR_DEP_ITM_CD_FT_CTW);
+		query.setParameter("ftCwb", ProductConstant.TOUR_DEP_ITM_CD_FT_CWB);
+		query.setParameter("ftCnb", ProductConstant.TOUR_DEP_ITM_CD_FT_CNB);
+		query.setParameter("kivExp", SalesConstant.BOOKING_PMNT_STATUS_KIVEXP);
+		query.setParameter("cancel", CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameter("void", CommonConstant.STATUS_CD_VOID);
+		if (idBooking != null) query.setParameter("idBooking", idBooking);
+		Object result = query.uniqueResult();
+		return (result != null) ? ((Long) result).intValue() : 0;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getBookingListSize(com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@Override
+	public int getBookingListSize(SearchParamVO searchParamVO, Boolean isPersonal, EmployeeVO employeeVO, Map<String, String> filters, Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT COUNT(b.id) ").
+			append("from tour_booking b, tour_dep d ").
+			append("left join tour_pkg tp on tp.id = d.id_tour_pkg ").
+			append("left join tour_theme t on t.id = tp.id_tour_theme ").
+			append("left join country ct on ct.id = t.id_country ").
+			append(", employee e, sec_user u, customer c, person p ").
+			append("where b.id_company = :idCompany ");
+		if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_ALL, searchParamVO.getObj1().toString())) {
+			if (SalesConstant.BOOKING_PMNT_STATUS_CC.equals(searchParamVO.getObj1()))
+				sb.append("AND b.status_cd IN (:statusCC, :statusVD) ");
+			else
+				sb.append("AND b.pmnt_status_cd = :pmntStatusCd AND b.status_cd NOT IN (:statusCC, :statusVD) ");
+		}
+		if (searchParamVO.getObj2() != null) {
+			sb.append("AND b.order_type_cd = :orderTypeCd ");
+		}
+		if (params.get("tourType") != null) {
+			sb.append("AND b.type_cd = :typeCd ");
+		}
+		if (isPersonal)
+			sb.append("AND b.id_employee = :employeeId ");
+		sb.append("AND b.id_tour_dep = d.id and b.id_cust = c.id and c.id_pc = p.id and b.id_employee = e.id and e.u_sec_user = u.uuid ");
+		if (!filters.isEmpty()) {
+			sb.append("AND (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("id".equals(entry.getKey())) sb.append("b.id LIKE '%").append(entry.getValue()).append("%'");
+				else if ("staff".equals(entry.getKey())) sb.append("u.user_name LIKE '%").append(entry.getValue()).append("%'");
+				else if ("tourCode".equals(entry.getKey())) sb.append("d.code LIKE '%").append(entry.getValue()).append("%'");
+				else if ("pmntStatusCd".equals(entry.getKey())) sb.append("b.pmnt_status_cd LIKE '").append(entry.getValue()).append("%'");
+				else if ("tourCode".equals(entry.getKey())) sb.append("d.code LIKE '%").append(entry.getValue()).append("%'");
+				else if ("createdDate".equals(entry.getKey())) sb.append("DATE_FORMAT(b.dt_created, '%d-%b-%Y') LIKE '%").append(entry.getValue()).append("%'");
+				else if ("dtExp".equals(entry.getKey())) sb.append("DATE_FORMAT(b.dt_exp, '%d-%b-%Y') LIKE '%").append(entry.getValue()).append("%'");
+				else if ("dtDep".equals(entry.getKey())) sb.append("DATE_FORMAT(d.dt_dep, '%d-%b-%Y') LIKE '%").append(entry.getValue()).append("%'");
+				else if ("statusCode".equals(entry.getKey())) sb.append("b.status_cd LIKE '").append(entry.getValue()).append("%'");
+				else if ("countryName".equals(entry.getKey())) sb.append("EXISTS (SELECT 1 FROM tour_theme_country ttc JOIN country ct ON ttc.id_country = ct.id WHERE ttc.id_tour_theme = t.id AND ct.name LIKE '%").append(entry.getValue()).append("%')");
+				else if ("quantity".equals(entry.getKey())) sb.append("b.quantity LIKE '%").append(entry.getValue()).append("%'");
+				else sb.append("CONCAT(p.last_name, ' ', p.first_name) LIKE '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(") ");
+		}
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", searchParamVO.getCompanyVO().getId());
+		if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_ALL, searchParamVO.getObj1().toString())) {
+			query.setParameter("statusCC", CommonConstant.STATUS_CD_CANCELLED);
+			query.setParameter("statusVD", CommonConstant.STATUS_CD_VOID);
+			if (!StringUtils.equals(SalesConstant.BOOKING_PMNT_STATUS_CC, searchParamVO.getObj1().toString())) query.setParameter("pmntStatusCd", searchParamVO.getObj1());
+		}
+		if (searchParamVO.getObj2() != null) {
+			query.setParameter("orderTypeCd", searchParamVO.getObj2().toString());
+		}
+		if (params.get("tourType") != null) {
+			query.setParameter("typeCd", params.get("tourType").toString());
+		}
+		if (isPersonal) query.setParameter("employeeId", employeeVO.getId());
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#updateTourStatusFull(java.lang.Long)
+	 */
+	@Override
+	public void updateTourStatusFull(Long idTourDep) throws BusinessException {
+			StringBuilder sb = new StringBuilder();
+
+			sb.append("UPDATE tour_dep d SET d.tour_status_cd = 'F'");
+			sb.append(" WHERE d.status_cd = 'AC' AND (d.tour_status_cd = 'A' or d.tour_status_cd = 'L') AND d.seat_allotment > 0 and d.id=? AND");
+			sb.append(" d.seat_allotment <= (d.reserved_seat + d.tour_mgr_pax +");
+			sb.append(" (SELECT case when SUM(c.quantity) is null then 0 else sum(c.quantity) end FROM tour_booking_charge_item c");
+			sb.append(" LEFT JOIN (");
+			sb.append(" SELECT id, id_tour_dep, pmnt_status_cd FROM tour_booking WHERE status_cd NOT IN ('CC', 'VD')");
+			sb.append(" ) b ON b.pmnt_status_cd <> 'KIVEXP'");
+			sb.append(" WHERE b.id_tour_dep = d.id AND c.id_tour_booking = b.id AND c.code LIKE 'FT%' AND c.code <> 'FT_INFT')");
+			sb.append(" )");
+
+			Query query = createSQLQuery(sb.toString());
+			query.setParameter(0, idTourDep);
+			query.executeUpdate();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#updateTourStatusAvailable(java.lang.Long)
+	 */
+	@Override
+	public void updateTourStatusAvailable(Long idTourDep) throws BusinessException {
+			StringBuilder sb = new StringBuilder();
+			sb = new StringBuilder();
+			sb.append("UPDATE TourDepartureVO d SET d.tourStatusCd = 'A'");
+			sb.append(" WHERE d.statusCode = 'AC' AND (d.tourStatusCd = 'F') AND d.seatAllot != 0 and d.id = :idTourDep AND");
+			sb.append(" d.seatAllot > (d.reservedSeat + d.tourManagerPax +");
+			sb.append(" (SELECT CASE WHEN SUM(c.quantity) IS NULL THEN 0 ELSE SUM(c.quantity) END FROM BookingChargeItemVO c");
+			sb.append(" LEFT JOIN (");
+			sb.append(" SELECT id, idTourDep, pmntStatusCd FROM BookingVO WHERE statusCode NOT IN ('CC', 'VD')");
+			sb.append(" ) b ON b.pmntStatusCd != 'KIVEXP'");
+			sb.append(" WHERE b.idTourDep = d.id AND c.idBooking = b.id AND c.code LIKE 'FT%' AND c.code != 'FT_INFT')");
+			sb.append(" )");
+
+			Query query = createQuery(sb.toString());
+			query = createSQLQuery(sb.toString());
+			query.setParameter("idTourDep", idTourDep);
+			query.executeUpdate();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.BookingDAO#getBookingInvNo(java.lang.Long)
+	 */
+	@Override
+	public String getBookingInvNo(Long id) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT code FROM invoice WHERE id_tour_booking = ").append(id);
+		Query query = createSQLQuery(sb.toString());
+		query.setMaxResults(1);
+		return (String) query.uniqueResult();
+	}
+
+	@Override
+	public InvoiceVO getInvoiceInfo(Long id) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+//		sb.append("SELECT code, internal_remarks FROM invoice WHERE id_tour_booking = ").append(id);
+		sb.append("SELECT iv.id, iv.code, iv.internal_remarks, ").
+			append("if(ifnull(iv.note_items, '') LIKE '%valid_passprt%', 1, 0) as validPass, ").
+			append("if(tdp.is_visa_required is null, 2, if(tdp.is_visa_required = 1, if(ifnull(iv.note_items, '') LIKE '%visa_copies%', 1, 0), 2)) as visaCopies, ").
+			append("iv.transferred_date, (SELECT IFNULL(SUM(amount), 0) FROM invoice_pmnt WHERE id_inv = iv.id AND status_cd = 'A') AS amt_paid, iv.status_cd, ").
+			append("iv.ps_no, iv.doc_type_cd, iv.doc_type_status ").
+			append(", ( ").
+			append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A') != 0 AND ").
+			append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A') = ").
+			append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A' ").
+				append("AND p.travel_ins_type IN (" + SalesConstant.SGL_TRVL_INS_TYPE_LIST + ") ").
+				append("AND TRIM(IFNULL(p.travel_ins_policy, '')) != '') ").
+			append(") AS has_insurance ").
+		append("FROM invoice iv ").
+		append("LEFT JOIN tour_dep tdp ON iv.id_tour_dep = tdp.id ").
+		append("WHERE id_tour_booking = ").append(id);
+		sb.append(" ORDER BY iv.doc_type_cd");
+
+		Query query = createSQLQuery(sb.toString());
+		query.setMaxResults(1);
+		Object result = query.uniqueResult();
+		InvoiceVO vo = new InvoiceVO();
+		Object[] row = (Object[]) result;
+
+		if (row != null) {
+			if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue());
+			if (row[1] != null) vo.setCode((String) row[1]);
+			if (row[2] != null) vo.setInternalRemarks((String) row[2]);
+			if (row[3] != null) vo.setValidPassportStatus(((BigInteger) row[3]).intValue());
+			if (row[4] != null) vo.setVisaCopiesStatus(((BigInteger) row[4]).intValue());
+			if (row[5] != null) vo.setTransferredDate((Date) row[5]);
+			vo.setAmtPaid(Double.parseDouble(row[6].toString()));
+			vo.setStatusCd((String) row[7]);
+			if (row[8] != null) vo.setPsNo((String) row[8]);
+			if (row[9] != null) vo.setDocTypeCd((String) row[9]);
+			if (row[10] != null) vo.setDocTypeStatus((String) row[10]);
+			if (row[11] != null) {
+				if (row[11] instanceof BigInteger) {
+					vo.setShowTrvlInsBadge(((BigInteger) row[11]).longValue() == 1);
+				} else if (row[11] instanceof Integer) {
+					vo.setShowTrvlInsBadge(((Integer) row[11]).longValue() == 1);
+				}
+			}
+		}
+
+		return vo;
+	}
+
+	@Override
+	public List<InvoiceVO> getSubDocInfo(Long bookingId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT iv.id, iv.code, iv.internal_remarks, ").
+			append("if(ifnull(iv.note_items, '') LIKE '%valid_passprt%', 1, 0) as validPass, ").
+			append("if(tdp.is_visa_required is null, 2, if(tdp.is_visa_required = 1, if(ifnull(iv.note_items, '') LIKE '%visa_copies%', 1, 0), 2)) as visaCopies, ").
+			append("iv.transferred_date, (SELECT IFNULL(SUM(amount), 0) FROM invoice_pmnt WHERE id_inv = iv.id AND status_cd = 'A') AS amt_paid, iv.status_cd, ").
+			append("iv.ps_no, iv.doc_type_cd, iv.doc_type_status ").
+			append(", ( ").
+			append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A') != 0 AND ").
+			append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A') = ").
+			append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A' ").
+				append("AND p.travel_ins_type IN (" + SalesConstant.SGL_TRVL_INS_TYPE_LIST + ") ").
+				append("AND TRIM(IFNULL(p.travel_ins_policy, '')) != '') ").
+			append(") AS has_insurance ").
+		append(" FROM invoice iv ").
+		append(" LEFT JOIN tour_dep tdp ON iv.id_tour_dep = tdp.id ").
+		append(" WHERE id_parent_inv_tour_booking = ").append(bookingId).
+		append(" AND iv.status_cd not in ('CC', 'VD') ");
+
+		Query query = createSQLQuery(sb.toString());
+		List<Object> results = query.list();
+		List<InvoiceVO> invList = new ArrayList<InvoiceVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue());
+			if (row[1] != null) vo.setCode((String) row[1]);
+			if (row[2] != null) vo.setInternalRemarks((String) row[2]);
+			if (row[3] != null) vo.setValidPassportStatus(((BigInteger) row[3]).intValue());
+			if (row[4] != null) vo.setVisaCopiesStatus(((BigInteger) row[4]).intValue());
+			if (row[5] != null) vo.setTransferredDate((Date) row[5]);
+			vo.setAmtPaid(Double.parseDouble(row[6].toString()));
+			vo.setStatusCd((String) row[7]);
+			if (row[8] != null) vo.setPsNo((String) row[8]);
+			if (row[9] != null) vo.setDocTypeCd((String) row[9]);
+			if (row[10] != null) vo.setDocTypeStatus((String) row[10]);
+			if (row[11] != null) {
+				if (row[11] instanceof BigInteger) {
+					vo.setShowTrvlInsBadge(((BigInteger) row[11]).longValue() == 1);
+				} else if (row[11] instanceof Integer) {
+					vo.setShowTrvlInsBadge(((Integer) row[11]).longValue() == 1);
+				}
+			}
+
+			invList.add(vo);
+		}
+
+		return invList;
+	}
+
+	@Override
+	public void updateBookingLockStatus(Long idTourDep, boolean isLock) throws BusinessException {
+		Query query = createSQLQuery("UPDATE tour_booking SET lock_status = ? WHERE id_tour_dep = ?");
+		query.setParameter(0, isLock);
+		query.setParameter(1, idTourDep);
+		query.executeUpdate();
+	}
+
+	@Override
+	public void updateIndividualBookingLockStatus(Long id, boolean isLock) throws BusinessException {
+		Query query = createSQLQuery("UPDATE tour_booking SET lock_status = ? WHERE id = ?");
+		query.setParameter(0, isLock);
+		query.setParameter(1, id);
+		query.executeUpdate();
+	}
+
+	@Override
+	public void insertBookingHistory(Long id, String actionCd, String reason) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		Session session = this.getSessionFactory().openSession();
+
+		try {
+			session.beginTransaction();
+
+			sb.append("INSERT INTO tour_booking_history (id_hist, id_company, id_tour_dep, id_employee, id_cust, id_tour_dep_hist, order_type_cd, id_saler_tfair, quantity, booked_itinerary, itinerary_upd_by, lock_status, pmnt_status_cd, status_cd, dt_exp, dt_created, created_by, dt_upd, upd_by, reason, action_cd) ");
+			sb.append("(SELECT id, id_company, id_tour_dep, id_employee, id_cust, id_tour_dep_hist, order_type_cd, id_saler_tfair, quantity, booked_itinerary, itinerary_upd_by, lock_status, pmnt_status_cd, status_cd, dt_exp, dt_created, created_by, dt_upd, upd_by, :reason, :actionCd ");
+			sb.append("FROM tour_booking WHERE id = :id) ");
+
+			Query query = session.createSQLQuery(sb.toString());
+			query.setLong("id", id);
+			query.setString("reason", reason);
+			query.setString("actionCd", actionCd);
+			query.executeUpdate();
+
+			BigInteger result = (BigInteger) session.createSQLQuery("SELECT LAST_INSERT_ID()").uniqueResult();
+
+			sb = new StringBuilder();
+			sb.append("INSERT INTO tour_booking_charge_item_history (id_ref, id_hist, id_tour_booking, id_acct, id_inv_eo_item, code, description, quantity, amount, type_cd, dt_created, created_by, dt_upd, upd_by) ");
+			sb.append("(SELECT :idRef, id, id_tour_booking, id_acct, id_inv_eo_item, code, description, quantity, amount, type_cd, dt_created, created_by, dt_upd, upd_by ");
+			sb.append("FROM tour_booking_charge_item WHERE id_tour_booking = :id) ");
+
+			Query query2 = session.createSQLQuery(sb.toString());
+			query2.setLong("idRef", result.longValue());
+			query2.setLong("id", id);
+			query2.executeUpdate();
+
+			sb = new StringBuilder();
+			sb.append("INSERT INTO tour_booking_survey_history (id_ref, id_hist, id_booking, code, dt_created, created_by, dt_update, updated_by) ");
+			sb.append("(SELECT :idRef, id, id_booking, code, dt_created, created_by, dt_update, updated_by ");
+			sb.append("FROM tour_booking_survey WHERE id_booking = :id) ");
+
+			Query query3 = session.createSQLQuery(sb.toString());
+			query3.setLong("idRef", result.longValue());
+			query3.setLong("id", id);
+			query3.executeUpdate();
+
+			sb = new StringBuilder();
+			sb.append("INSERT INTO tour_booking_sales_comm_history (id_ref, id_hist, id_tour_booking, id_sales_comm_conf_detail, tour_type, fare_range_type, fr_amt, to_amt, tour_fare, sp_comm, ref_sp_comm, ss_comm, hod_comm, op_comm, status_cd, dt_created, created_by, dt_upd, upd_by) ");
+			sb.append("(SELECT :idRef, id, id_tour_booking, id_sales_comm_conf_detail, tour_type, fare_range_type, fr_amt, to_amt, tour_fare, sp_comm, ref_sp_comm, ss_comm, hod_comm, op_comm, status_cd, dt_created, created_by, dt_upd, upd_by ");
+			sb.append("FROM tour_booking_sales_comm WHERE id_tour_booking = :id and status_cd = 'A') ");
+
+			Query query4 = session.createSQLQuery(sb.toString());
+			query4.setLong("idRef", result.longValue());
+			query4.setLong("id", id);
+			query4.executeUpdate();
+
+			session.getTransaction().commit();
+		} catch (Exception e) {
+			e.printStackTrace();
+			session.getTransaction().rollback();
+			throw e;
+		} finally {
+			session.close();
+		}
+	}
+
+	@Override
+	public void updateInvoiceOrderSource(Long bookingId, String orderTypeCd) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE InvoiceVO SET order_cd = :orderTypeCd ");
+		sb.append("WHERE id_tour_booking = :bookingId ");
+		Query query = createQuery(sb.toString());
+		if (StringUtils.isNotBlank(orderTypeCd)) query.setString("orderTypeCd", orderTypeCd);
+		query.setLong("bookingId", bookingId);
+		query.executeUpdate();
+	}
+
+	@Override
+	public int getTotalCabinByTourDep(Long idTourDep, Long idTourCruiseCabin, Long idBooking) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT SUM(i.cabinQty) FROM BookingChargeItemVO i, BookingVO b ").
+			append("WHERE i.idBooking = b.id AND ").
+			append("b.idTourDep = :idTourDep AND i.idTourCruiseCabin = :idTourCruiseCabin AND b.pmntStatusCd <> :kivExp AND b.statusCode NOT IN (:cancel, :void)");
+		if (idBooking != null) sb.append(" AND b.id <> :idBooking");
+
+		Query query = createQuery(sb.toString());
+		query.setParameter("idTourDep", idTourDep);
+		query.setParameter("idTourCruiseCabin", idTourCruiseCabin);
+		query.setParameter("kivExp", SalesConstant.BOOKING_PMNT_STATUS_KIVEXP);
+		query.setParameter("cancel", CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameter("void", CommonConstant.STATUS_CD_VOID);
+		if (idBooking != null) query.setParameter("idBooking", idBooking);
+		Object result = query.uniqueResult();
+		return (result != null) ? ((Long) result).intValue() : 0;
+	}
+
+	@Override
+	public int getTotalBookByTourDep(Long idTourDep, Long idBooking, String tourTypeCode) throws BusinessException {
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT SUM(i.quantity) FROM BookingChargeItemVO i, BookingVO b ").
+			append("WHERE i.idBooking = b.id AND b.idTourDep = :idTourDep").
+			append(" AND b.pmntStatusCd <> :kivExp AND b.statusCode NOT IN (:cancel, :void)");
+		sb.append(" AND i.code IN (:ftSgl, :ftTwn, :ftTrpl, :ftCtw, :ftCwb, :ftCnb)");
+		if (idBooking != null) sb.append(" AND b.id <> :idBooking");
+
+		Query query = createQuery(sb.toString());
+		query.setParameter("idTourDep", idTourDep);
+		query.setParameter("kivExp", SalesConstant.BOOKING_PMNT_STATUS_KIVEXP);
+		query.setParameter("cancel", CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameter("void", CommonConstant.STATUS_CD_VOID);
+		query.setParameter("ftSgl", ProductConstant.TOUR_DEP_ITM_CD_FT_SGL);
+		query.setParameter("ftTwn", ProductConstant.TOUR_DEP_ITM_CD_FT_TWN);
+		query.setParameter("ftTrpl", ProductConstant.TOUR_DEP_ITM_CD_FT_TRIPLE);
+		query.setParameter("ftCtw", ProductConstant.TOUR_DEP_ITM_CD_FT_CTW);
+		query.setParameter("ftCwb", ProductConstant.TOUR_DEP_ITM_CD_FT_CWB);
+		query.setParameter("ftCnb", ProductConstant.TOUR_DEP_ITM_CD_FT_CNB);
+
+		if (idBooking != null) query.setParameter("idBooking", idBooking);
+		Object result = query.uniqueResult();
+		return (result != null) ? ((Long) result).intValue() : 0;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<BookingVO> getPassengerListWithNricByidTourDep(Long idTourDep) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT i.id AS id_inv, ");
+		sb.append("c.id AS id_customer, ");
+		sb.append("COALESCE(p.last_name, 'N/A') AS last_name, ");
+		sb.append("COALESCE(p.first_name, 'N/A') AS first_name, ");
+		sb.append("COALESCE(pid_type_nric.number, 'N/A') AS nric_number, ");
+		sb.append("COALESCE(i.code, 'N/A') AS invoice_code ");
+		sb.append("FROM invoice i ");
+		sb.append("LEFT JOIN tour_booking tb ON i.id_tour_booking = tb.id AND i.id_company = tb.id_company AND tb.status_cd NOT IN (:cancel, :void) ");
+		sb.append("LEFT JOIN invoice_pax ip ON i.id = ip.id_inv AND ip.status_cd = 'A' ");
+		sb.append("LEFT JOIN customer c ON ip.id_cust = c.id AND c.status_cd = :active ");
+		sb.append("LEFT JOIN person p ON c.id_pc = p.id ");
+		sb.append("LEFT JOIN ( ");
+		sb.append("SELECT pid.id_person, pid.number ");
+		sb.append("FROM person_identity pid ");
+		sb.append("WHERE pid.type_cd = 'NRIC' AND pid.status_cd = 'A' ");
+		sb.append(") pid_type_nric ON p.id = pid_type_nric.id_person ");
+		sb.append("WHERE ");
+		sb.append("i.id_tour_dep = :idTourDep ");
+		sb.append("AND i.id_tour_booking IS NOT NULL ");
+		sb.append("AND i.id_tour_booking <> '' ");
+		sb.append("AND i.status_cd NOT IN (:cancel, :void) ");
+		sb.append("AND tb.id IS NOT NULL ");
+		sb.append("AND tb.id <> '' ");
+		sb.append("AND tb.status_cd IS NOT NULL ");
+		sb.append("AND tb.status_cd <> '' ");
+
+        Query query = createSQLQuery(sb.toString());
+		query.setParameter("idTourDep", idTourDep);
+		query.setParameter("cancel", CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameter("void", CommonConstant.STATUS_CD_VOID);
+		query.setParameter("active", CommonConstant.STATUS_CD_ACTIVE);
+		List<Object> results = query.list();
+		List<BookingVO> bookingList = new ArrayList<BookingVO>();
+
+		for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+			Object[] row = (Object[]) it.next();
+			BookingVO vo = new BookingVO();
+			if (row[0] != null) vo.setInvId(((BigInteger) row[0]).longValue());
+			if (row[1] != null) vo.setIdCust(((BigInteger) row[1]).longValue());
+			if (row[2] != null && row[3] != null) vo.setCustName(((String) row[2]) + " " + ((String) row[3]));
+			if (row[4] != null) vo.setNricNumber((String) row[4]);
+			if (row[5] != null) vo.setInvCode((String) row[5]);
+			bookingList.add(vo);
+		}
+		return bookingList;
+	}
+
+	public List<BookingChargeItemVO> getBookingChargeItemList(Long idBooking) throws BusinessException {
+		Criteria criteria = createCriteria(BookingChargeItemVO.class);
+		criteria.add(Restrictions.eq("idBooking", idBooking));
+		return criteria.list();
+	}
+
+	
+	
+}

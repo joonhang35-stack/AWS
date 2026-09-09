@@ -1,0 +1,141 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+<style>
+	.phone-row {
+	    display: flex;
+	    align-items: center;
+	    gap: 10px;
+	}		
+</style>
+<script type="text/javascript">
+	function onAddCustValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddCustDialog.hide();
+		}
+	}
+</script>
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:120px;"><h:outputLabel>Salutation</h:outputLabel></p:column>
+		<p:column style="width:220px;">
+			<h:selectOneMenu value="#{cruiseBookingBean.customerVO.personVO.salutation}" effect="fade">
+				<f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>Customer Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idLastName" label="Surname" value="#{cruiseBookingBean.customerVO.personVO.lastName}" required="true"/>
+			<p:watermark for="idLastName" value="Surname" />
+		</p:column>
+		<p:column>
+			<p:inputText id="idGivenName" label="Given Name" value="#{cruiseBookingBean.customerVO.personVO.givenName}" required="true"/>
+			<p:watermark for="idGivenName" value="Given Name" />
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>NickName</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idNickName" label="NickName" value="#{cruiseBookingBean.customerVO.personVO.nickName}"/>
+			<p:watermark for="idNickName" value="NickName" />
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:120px;"><h:outputLabel>Contact <span class="required">*</span></h:outputLabel></p:column>
+		<!--p:column>
+			<h:selectOneMenu id="idContactType" label="Contact Type" value="#{cruiseBookingBean.personContactVO.typeCd}" required="true" effect="fade" style="width:150px;">
+				<f:selectItems value="#{bterp:lookupItemList('cntc_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu>
+		</p:column-->
+		<p:column styleClass="phone-row">
+			<p:selectOneMenu id="idMobileCountry" value="#{cruiseBookingBean.personContactVO.perMobileCountryId}" style="width:120px" filter="true" filterMatchMode="contains">
+		        <f:selectItems value="#{custBean.countryList}"  var="c" itemValue="#{c.id}" itemLabel="#{c.countryCd} #{c.country}"/>
+		    </p:selectOneMenu>
+		    <h:outputLabel> - </h:outputLabel>
+<!-- 			<p:inputText id="idAreaCode" label="Area Code" value="#{cruiseBookingBean.personContactVO.areaCode}" required="true" maxlength="5" size="5" onkeypress="return rtnPhoneNo(event);"
+				validatorMessage="Contact number must contain only digits, +, or −.">
+				<p:watermark for="idAreaCode" value="Ext"/>
+				<f:validateLength maximum="5"/>
+				<f:validateRegex pattern="^[0-9+-]+$" />
+			</p:inputText>
+			<h:outputLabel> - </h:outputLabel> -->
+			<p:inputText id="idNumber" label="Mobile No." value="#{cruiseBookingBean.personContactVO.number}" required="true" maxlength="14" size="17" onkeypress="return rtnPhoneNo(event);"
+				validatorMessage="Contact number must contain only digits.">
+				<p:watermark for="idNumber" value="Mobile No. (required)"/>
+				<f:validateLength maximum="14"/>
+				<f:validateRegex pattern="^[0-9]+$" />
+				<!--pe:keyFilter regEx="/[\d]/"/-->
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column style="width:120px;"></p:column>
+		<p:column styleClass="phone-row">
+			<p:selectOneMenu id="idFaxCountry" value="#{cruiseBookingBean.personContactVO.perFaxCountryId}" style="width:120px" filter="true" filterMatchMode="contains">
+		        <f:selectItems value="#{custBean.countryList}"  var="c" itemValue="#{c.id}" itemLabel="#{c.countryCd} #{c.country}"/>
+		    </p:selectOneMenu>
+		    <h:outputLabel> - </h:outputLabel>
+<!-- 			<p:inputText id="idFaxAreaCode" label="Fax Area Code" value="#{cruiseBookingBean.personContactVO.faxAreaCd}" maxlength="5" size="5" onkeypress="return rtnPhoneNo(event);"
+				validatorMessage="Contact number must contain only digits, +, or −.">
+				<p:watermark for="idFaxAreaCode" value="Ext"/>
+				<f:validateLength maximum="5"/>
+				<f:validateRegex pattern="^[0-9+-]+$" />
+			</p:inputText>
+			<h:outputLabel> - </h:outputLabel> -->
+			<p:inputText id="idFaxNumber" label="Fax No." value="#{cruiseBookingBean.personContactVO.faxNum}" maxlength="14" size="17" onkeypress="return rtnPhoneNo(event);"
+				validatorMessage="Contact number must contain only digits.">
+				<p:watermark for="idFaxNumber" value="Fax No. (optional)"/>
+				<f:validateLength maximum="14"/>
+				<f:validateRegex pattern="^[0-9]+$" />
+				<!--pe:keyFilter regEx="/[\d]/"/-->
+			</p:inputText>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<p:panelGrid id="idIdDetail">
+	<p:row>
+		<p:column style="width:120px;"><h:outputLabel>Identity</h:outputLabel></p:column>
+		<p:column style="width:220px;">
+			<h:selectOneMenu id="idIdType" label="ID Type" value="#{cruiseBookingBean.identityVO.idType}" effect="fade" style="width:150px;">
+            	<f:selectItems value="#{bterp:lookupItemList('id_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+            	<p:ajax event="change" update="idIdDetail"/>
+        	</h:selectOneMenu>
+		</p:column>
+		<p:column>
+			<p:inputMask id="idID1" label="ID No." value="#{cruiseBookingBean.identityVO.idNo}" mask="999999-99-9999" rendered="#{cruiseBookingBean.identityVO.idType == 'nric' or cruiseBookingBean.identityVO.idType == null}"/>
+			<p:inputText id="idID2" label="ID No." value="#{cruiseBookingBean.identityVO.idNo}" onkeypress="return rtnAlphaNumeric(event);" rendered="#{cruiseBookingBean.identityVO.idType != 'nric' and cruiseBookingBean.identityVO.idType != null}"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:120px;"><h:outputLabel>Email</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idEmail" label="Email" value="#{cruiseBookingBean.customerVO.personVO.email}">
+				<pe:keyFilter regEx="/[a-z0-9_\.\-@]/i"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{cruiseBookingBean.addCustomer}" update="@form,:idAddInvoiceForm:idCustDetails" oncomplete="onAddCustValidation(xhr, status, args)"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBookingBean.resetForm}" update="@form" process="@this" oncomplete="varAddCustDialog.hide()">
+		<pe:resetEditableValues for="idAddCustForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

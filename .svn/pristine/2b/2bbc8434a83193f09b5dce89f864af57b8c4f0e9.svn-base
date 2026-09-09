@@ -1,0 +1,243 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+</script>
+<p:panel header="Invoice Item">
+   	<h:form id="idForm">
+   	
+		<p:growl id="msg"/>
+		<p:panelGrid style="margin-top:5px; width: auto;">
+			<p:row>
+				<p:column style="width: 50px;">
+					<p:commandButton id="idAddInvoiceAndExchangeOrderDetails" 
+						value="Add" 
+						oncomplete="varAddInvoiceAndExchangeOrderDialog.show()" actionListener="#{invoiceAndExchangeOrderBean.onAddInvEODetails}" update="@form,:idAddInvoiceAndExchangeOrderDialog"
+						immediate="true" />
+				</p:column>
+				<p:column style="width: 10px;">
+					<p:separator style="width:2px;height:20px" />
+				</p:column>
+				<p:column style="width: 85px;">
+					<h:outputText value="Item Category" />
+				</p:column>
+				<p:column style="width: 100px;">
+					<p:selectCheckboxMenu id="idCategory" value="#{invoiceAndExchangeOrderBean.searchFilter.itemCatList}" label="Category" style="width:100px; display:block;"
+						onHide="executeCategorySelectChangesOnhide();" >
+						<f:selectItems value="#{bterp:lookupItemList('inv_items_cat')}" var="catVO" itemLabel="#{catVO.description}" itemValue="#{catVO.code}" />
+					</p:selectCheckboxMenu>
+					<p:remoteCommand name="executeCategorySelectChangesOnhide" actionListener="#{invoiceAndExchangeOrderBean.reloadInvAndEO}"
+						update=":idForm:idInvoiceAndExchangeOrderDetailsTable" global="true" process="@this :idForm:idCategory"/>
+				</p:column>
+				<p:column style="width: 60px;">
+					<h:outputText value="Item Type" />
+				</p:column>
+				<p:column style="width: 100px;">
+					<p:selectCheckboxMenu id="idType" value="#{invoiceAndExchangeOrderBean.searchFilter.itemTypeList}" label="Type" style="width:100px; display:block;"
+						onHide="executeTypeSelectChangesOnhide();" >
+						<f:selectItems value="#{bterp:lookupItemList('inv_items_type')}" var="typeVO" itemLabel="#{typeVO.description}" itemValue="#{typeVO.code}" />
+					</p:selectCheckboxMenu>
+					<p:remoteCommand name="executeTypeSelectChangesOnhide" actionListener="#{invoiceAndExchangeOrderBean.reloadInvAndEO}"
+						update=":idForm:idInvoiceAndExchangeOrderDetailsTable" global="true" process="@this :idForm:idType"/>
+				</p:column>
+				<p:column>
+					<p:commandButton icon="ui-icon-print" actionListener="#{invoiceAndExchangeOrderBean.printInvoiceItem()}" value="Export" ajax="false"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<h:panelGrid columns="2" style="margin-bottom:5px;">  
+		<p:dataTable id="idInvoiceAndExchangeOrderDetailsTable" 
+			value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderList}" widgetVar="varInvoiceItemList"
+			var="invoiceAndExchangeOrderVO" filteredValue="#{invoiceAndExchangeOrderBean.filteredObjList}"
+			filterEvent="enter">
+			
+			 <p:column headerText="Edit" style="width:30px; text-align:center">
+				<p:commandButton icon="ui-icon-pencil" 
+					update="@form,:idEditInvoiceAndExchangeOrderDialog"
+					actionListener="#{invoiceAndExchangeOrderBean.onInvoiceAndExchangeOrderSelected(invoiceAndExchangeOrderVO)}"
+					oncomplete="varEditInvoiceAndExchangeOrderDialog.show()"/>
+			</p:column>
+			<p:column headerText="Delete" style="width:30px; text-align:center">
+				<p:commandButton icon="ui-icon-close" 
+					actionListener="#{invoiceAndExchangeOrderBean.onInvoiceAndExchangeOrderSelected(invoiceAndExchangeOrderVO)}"
+					oncomplete="varDelInvoiceAndExchangeOrderDialog.show()"/>
+			</p:column>
+		
+			<p:column headerText="Show" style="width:30px; text-align:center">
+				<p:commandLink actionListener="#{invoiceAndExchangeOrderBean.updateShowStatus(invoiceAndExchangeOrderVO)}" update="@this">
+					<i class="#{invoiceAndExchangeOrderVO.isShow ? 'ui-icon ui-icon-check' : 'ui-icon ui-icon-blank'}"/>
+				</p:commandLink>
+			</p:column>
+			
+			<p:column sortBy="#{bterp:lookupItemDesc('inv_items_cat', invoiceAndExchangeOrderVO.catCd)}" filterBy="#{bterp:lookupItemDesc('inv_items_cat', invoiceAndExchangeOrderVO.catCd)}" headerText="Item Category" filterMatchMode="contains">
+				  <h:outputText value="#{bterp:lookupItemDesc('inv_items_cat', invoiceAndExchangeOrderVO.catCd)}" />
+			</p:column>
+			
+			<p:column sortBy="#{bterp:lookupItemDesc('inv_items_type', invoiceAndExchangeOrderVO.typeCd)}" filterBy="#{bterp:lookupItemDesc('inv_items_type', invoiceAndExchangeOrderVO.typeCd)}" headerText="Item Type" filterMatchMode="contains">
+				  <h:outputText value="#{bterp:lookupItemDesc('inv_items_type', invoiceAndExchangeOrderVO.typeCd)}" />
+			</p:column>
+			
+			<p:column sortBy="#{invoiceAndExchangeOrderVO.code}" filterBy="#{invoiceAndExchangeOrderVO.code}" headerText="Item Code" filterMatchMode="contains">
+				  <h:outputText value="#{invoiceAndExchangeOrderVO.code}"/>
+			</p:column>
+			
+			<p:column sortBy="#{invoiceAndExchangeOrderVO.description}" filterBy="#{invoiceAndExchangeOrderVO.description}" headerText="Item Description" filterMatchMode="contains">
+				  <h:outputText value="#{invoiceAndExchangeOrderVO.description}"/>
+			</p:column>
+			<p:column sortBy="#{invoiceAndExchangeOrderVO.acctCode}" filterBy="#{invoiceAndExchangeOrderVO.acctCode}" headerText="Account Code" filterMatchMode="contains">
+				  <h:outputText value="#{invoiceAndExchangeOrderVO.acctCode}"/>
+			</p:column>
+			<p:column sortBy="#{invoiceAndExchangeOrderVO.acctDesc}" filterBy="#{invoiceAndExchangeOrderVO.acctDesc}" headerText="Account Description" filterMatchMode="contains">
+				<h:outputText value="#{invoiceAndExchangeOrderVO.acctDesc}"/>
+			</p:column>
+			<p:column sortBy="#{invoiceAndExchangeOrderVO.invCatDesc}" filterBy="#{invoiceAndExchangeOrderVO.invCatDesc}" headerText="Invoice Category" filterMatchMode="contains">
+				<h:outputText value="#{invoiceAndExchangeOrderVO.invCatDesc}"/>
+			</p:column>
+			<p:column headerText="Acct Manager Use Only" filterBy="#{invoiceAndExchangeOrderVO.acctMgrUse ? 'Yes' : 'No'}">
+				<h:outputText value="Yes" rendered="#{invoiceAndExchangeOrderVO.acctMgrUse}"/>
+				<h:outputText value="No" rendered="#{not invoiceAndExchangeOrderVO.acctMgrUse}"/>
+			</p:column>
+			<p:column sortBy="#{invoiceAndExchangeOrderVO.taxCode}" filterBy="#{invoiceAndExchangeOrderVO.taxCode}" headerText="GST Code" filterMatchMode="contains">
+				  <h:outputText value="#{invoiceAndExchangeOrderVO.taxCode}"/>
+			</p:column>
+			<p:column sortBy="#{invoiceAndExchangeOrderVO.taxRate}" filterBy="#{invoiceAndExchangeOrderVO.taxRate}" headerText="GST Rate (%)" filterMatchMode="contains">
+				  <h:outputText value="#{invoiceAndExchangeOrderVO.taxRate}"/>
+			</p:column>
+			
+			<p:column sortBy="#{invoiceAndExchangeOrderVO.amount}" filterBy="#{invoiceAndExchangeOrderVO.amount}" headerText="Unit Price" filterMatchMode="contains">
+				  <h:outputText value="#{invoiceAndExchangeOrderVO.amount}"><f:convertNumber pattern="#,###0.00"/></h:outputText>
+			</p:column>
+		</p:dataTable>
+		</h:panelGrid>
+			<h:panelGrid columns="2" style="margin-bottom:10px;width:200px">  
+			<p:commandButton id="idAddInvoiceAndExchangeOrderDetails1" 
+				value="Add" 
+				oncomplete="varAddInvoiceAndExchangeOrderDialog.show()" update=":idAddInvoiceAndExchangeOrderDialog" 
+				immediate="true"/>
+		</h:panelGrid>
+	</h:form>		
+</p:panel>
+	
+<!-- DIALOG - ADD BRANCH -->
+<p:dialog id="idAddInvoiceAndExchangeOrderDialog" header="Add Invoice Item" widgetVar="varAddInvoiceAndExchangeOrderDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idAddInvoiceAndExchangeOrderDetailsForm">
+		<ui:include src="add_InvAndExcOrder.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idEditInvoiceAndExchangeOrderDialog" header="Edit Invoice Item" widgetVar="varEditInvoiceAndExchangeOrderDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idEditInvoiceAndExchangeOrderDetailsForm">
+		<ui:include src="edit_InvAndExcOrder.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:confirmDialog widgetVar="varDelInvoiceAndExchangeOrderDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{invoiceAndExchangeOrderBean.deleteInvoiceAndExchangeOrder}" update="@form,:idForm:idInvoiceAndExchangeOrderDetailsTable" oncomplete="varDelInvoiceAndExchangeOrderDialog.hide()"/>
+		<p:commandButton value="Cancel" oncomplete="varDelInvoiceAndExchangeOrderDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<p:dialog id="idVarAcctListDialog" widgetVar="varAcctListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<h:form id="idAccount">
+		<p:dataTable id="idAcctTable" widgetVar="varAcctTable" value="#{invoiceAndExchangeOrderBean.acctViewList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+			<p:ajax event="rowSelect" listener="#{invoiceAndExchangeOrderBean.handleAcctSelect}" 
+				update=":idAddInvoiceAndExchangeOrderDetailsForm:idAddAcct,:idAddInvoiceAndExchangeOrderDetailsForm:idAddDescription,:idAccount:idAcctTable,:idAddInvoiceAndExchangeOrderDetailsForm:idAddGSTCode,:idAddInvoiceAndExchangeOrderDetailsForm:idAddGSTRate" 
+				oncomplete="varAcctListDialog.hide(),varAcctTable.clearFilters()"/>
+			
+			<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}-#{vo.subCode}"  filterMatchMode="contains">
+				<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+				<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+			</p:column>
+			<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}, #{vo.subDesc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+				<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idVarAcctEditListDialog" widgetVar="varAcctEditListDialog" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+  	<h:form id="idEditAccount">
+		<p:dataTable id="idAcctEditTable" widgetVar="varEditAcctTable" value="#{invoiceAndExchangeOrderBean.acctViewList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+			<p:ajax event="rowSelect" listener="#{invoiceAndExchangeOrderBean.handleAcctSelect}" 
+				update=":idEditInvoiceAndExchangeOrderDetailsForm:idAcct,:idEditInvoiceAndExchangeOrderDetailsForm:idDescription,:idEditAccount:idAcctEditTable,:idEditInvoiceAndExchangeOrderDetailsForm:idGSTCode,:idEditInvoiceAndExchangeOrderDetailsForm:idGSTRate" 
+				oncomplete="varAcctEditListDialog.hide(),varEditAcctTable.clearFilters()"/>
+			
+			<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}-#{vo.subCode}" filterMatchMode="contains">
+				<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+				<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}" />
+			</p:column>
+			<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}, #{vo.subDesc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+				<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:dialog>
+	
+<!-- <p:dialog id="idTmpMsgListDialog" widgetVar="varTmpMsgListDialog" modal="true" resizable="false" dynamic="true" closable="true">
+	<f:facet name="header">
+		<h:outputFormat value="Template Message"/>
+	</f:facet>
+	<h:form id="idTmpMsgListForm">
+		<p:dataTable id="idTmpMsgList" widgetVar="varTmpMsgList" value="#{salesBean.tmpMsgList}" var="vo" paginator="true" rows="10" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			filterEvent="enter" rowKey="#{vo.id}" selectionMode="single">
+			<p:ajax event="rowSelect" listener="#{salesBean.handleTmpMsgSelect}" update=":idAddInvoiceForm:idComments" 
+				oncomplete="varTmpMsgList.clearFilters();varTmpMsgListDialog.hide();"/>
+			
+			<p:column headerText="Code" filterBy="#{vo.code}" sortBy="#{vo.code}" filterMatchMode="contains">
+				<h:outputText value="#{vo.code}"/>
+			</p:column>
+			<p:column headerText="Description" filterBy="#{vo.desc}" sortBy="#{vo.desc}">
+				<h:outputText value="#{vo.desc}"/>
+			</p:column>
+			<p:column headerText="Remarks" filterBy="#{vo.remarks}" sortBy="#{vo.remarks}">
+				<h:outputText value="#{fn:replace(vo.remarks, '\\n', '&lt;br/&gt;')}" escape="false"/>
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:dialog> -->
+
+<p:dialog id="idGSTListDialog" widgetVar="varGSTListDialog" header="GST Output Tax" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<p:dataTable id="idOutputTaxCodeList" value="#{invoiceAndExchangeOrderBean.outputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+		<p:ajax event="rowSelect" listener="#{invoiceAndExchangeOrderBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" 
+			update=":idAddInvoiceAndExchangeOrderDetailsForm:idAddGSTCode,:idAddInvoiceAndExchangeOrderDetailsForm:idAddGSTRate,:idEditInvoiceAndExchangeOrderDetailsForm:idGSTCode,:idEditInvoiceAndExchangeOrderDetailsForm:idGSTRate"/>
+		<p:column headerText="No." width="25" style="text-align:right;">
+			<h:outputText value="#{vo.seqNo}"/>
+		</p:column>
+		<p:column headerText="Code" width="50">
+			<h:outputText value="#{vo.code}" />
+		</p:column>
+		<p:column headerText="Description" >
+			<h:outputText value="#{vo.description}" />
+		</p:column>
+		<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+			<h:outputText value="#{vo.rate}"/>
+		</p:column>
+	</p:dataTable>
+</p:dialog>
+</ui:define>
+</ui:composition>

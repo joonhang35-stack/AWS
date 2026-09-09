@@ -1,0 +1,73 @@
+/*$(document).ready(function() {
+	if (window.screen.availWidth <= 1200) document.body.style.zoom="80%";
+});*/
+
+function getScreenWidth() {
+	return (window.screen.availWidth - 50);
+}
+
+function clearDataTableSort(id) {
+	var a = $("#" + id + " thead tr:nth-child(2) th").siblings();
+	a.removeClass("ui-state-active");
+	a.find('.ui-sortable-column-icon').removeClass('ui-icon-triangle-1-s ui-icon-triangle-1-n');
+}
+function checkDrawDate(date){
+	
+	var invalidDates = document.getElementById('idForm:idDrawDateList').value;
+	var invalidDatesArray = invalidDates.split(",");
+    var day=date.getDate();
+    var month = date.getMonth()+1;
+    var year = date.getFullYear();
+    if(month < 10) {
+    	month = '0' + month;
+    }
+    if(day < 10){
+    	day = '0' + day;
+    }
+    var value =  year + '/' + month+ '/' + day;
+    
+    var result = false;
+    for (var i=0; i<invalidDatesArray.length; i++) {
+    	if (value == invalidDatesArray[i]) {
+    		result=true;
+    	}
+    }
+    	
+    return [result,''];
+};
+
+function rtnAlphaNumeric(evt) {
+	evt = evt || window.event;
+	var charCode = evt.which || evt.keyCode;
+	var charStr = String.fromCharCode(charCode);
+	if (/[a-z0-9]/i.test(charStr)) {
+		return true;
+	}
+	return false;
+};
+
+function rtnNumeric(evt) {
+	evt = evt || window.event;
+	var charCode = evt.which || evt.keyCode;
+	var charStr = String.fromCharCode(charCode);
+	if (/[0-9]/i.test(charStr)) {
+		return true;
+	}
+	return false;
+};
+
+function rtnPhoneNo(evt) {
+	evt = evt || window.event;
+	var charCode = evt.which || evt.keyCode;
+	var charStr = String.fromCharCode(charCode);
+	/*var currStr = evt.target.value;
+	if (charStr == '+' && currStr.includes('+')) return false;
+	if (charStr == '+' && currStr.length > 0) {
+		evt.target.value = '+' + evt.target.value;
+		return false;
+	}*/
+	if (/[\d\+\-]/i.test(charStr)) {
+		return true;
+	}
+	return false;
+};

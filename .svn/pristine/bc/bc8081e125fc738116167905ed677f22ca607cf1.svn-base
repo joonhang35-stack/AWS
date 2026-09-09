@@ -1,0 +1,180 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<f:view contentType="text/html" locale="#{localeBean.locale}">
+    <h:head>
+    	<link rel="shortcut icon" href="#{contextPath}/img/apple_logo_v2.ico" />
+    	<f:facet name="first">
+            <meta http-equiv="X-UA-Compatible" content="EmulateIE8" />
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+            <title><h:outputFormat value="#{msg['common.title']}"/></title>
+        </f:facet>
+    
+		<link type="text/css" rel="stylesheet" href="#{request.contextPath}/css/default.css" />
+        <link type="text/css" rel="stylesheet" href="#{request.contextPath}/css/syntaxhighlighter.css" />
+        <link type="text/css" rel="stylesheet" href="#{request.contextPath}/css/style.css" />
+        <script language="javascript" src="#{contextPath}/js/script.js"/>
+        <script type="text/javascript">
+	        $(function() {
+				var url = '#{request.requestURL}';
+				var servletPath = '#{request.servletPath}';
+				
+				url = url.substring(0, url.indexOf(servletPath));
+				$("#idTxtResponse").val(url + '/app/sales/emailPaymentResult');
+				$("#idTxtResponseBack").val(url + '/services/v1/emailPaymentResult');
+				
+				submitPayment();
+			});
+		
+			function submitPayment() {
+				if (document.getElementById('idForm:idHiddenTxtValidUrl').value === 'true')
+					document.getElementById('ipay88-form').submit();
+			}
+        
+	        function preventBackspace(e) {
+				var evt = e || window.event;
+				if (evt) {
+					var keyCode = evt.charCode || evt.keyCode;
+					if (keyCode === 8) {
+						if (evt.preventDefault) {
+							evt.preventDefault();
+						} else {
+							evt.returnValue = false;
+						}
+					}
+				}
+			}
+		</script>
+		<style>
+			.loader,
+			.loader:before,
+			.loader:after {
+				border-radius: 50%;
+				width: 2.5em;
+				height: 2.5em;
+				-webkit-animation-fill-mode: both;
+				animation-fill-mode: both;
+				-webkit-animation: load7 1.8s infinite ease-in-out;
+				animation: load7 1.8s infinite ease-in-out;
+			}
+			.loader {
+				color: #7c51a1;
+				font-size: 10px;
+				margin: 10px auto;
+				position: relative;
+				text-indent: -9999em;
+				-webkit-transform: translateZ(0);
+				-ms-transform: translateZ(0);
+				transform: translateZ(0);
+				-webkit-animation-delay: -0.16s;
+				animation-delay: -0.16s;
+			}
+			.loader:before,
+			.loader:after {
+				content: '';
+				position: absolute;
+				top: 0;
+			}
+			.loader:before {
+				left: -3.5em;
+				-webkit-animation-delay: -0.32s;
+				animation-delay: -0.32s;
+			}
+			.loader:after {
+				left: 3.5em;
+			}
+			@-webkit-keyframes load7 {
+				0%,
+				80%,
+				100% {
+					box-shadow: 0 2.5em 0 -1.3em;
+				}
+				40% {
+					box-shadow: 0 2.5em 0 0;
+				}
+			}
+			@keyframes load7 {
+				0%,
+				80%,
+				100% {
+					box-shadow: 0 2.5em 0 -1.3em;
+				}
+				40% {
+					box-shadow: 0 2.5em 0 0;
+				}
+			}
+		</style>
+    </h:head>
+    <h:body>
+		<!-- <table class="tbl_layout" cellpadding="0" cellspacing="0" style="width: 100%">
+			<tr class="ui-widget ui-widget-header">
+				<td style="padding:25px 0 25px 0; text-align: center">
+					<h:outputText value="Apple Vacations Sdn Bhd" style="font-size: 35px;font-weight: 700;"/>
+				</td>
+			</tr>
+		</table>
+		<br/> -->
+    	<table cellpadding="0" cellspacing="0">
+			<tr>
+				<td>&nbsp;</td>
+				<td style="padding-top:10px">
+					<h:form id="idForm">
+						<p:remoteCommand name="initLoad" actionListener="#{emailPaymentBean.init}" update=":idForm" 
+							oncomplete="submitPayment();"/>
+						<p:panelGrid style="text-align:center;">
+							<p:row>
+								<p:column style="padding-bottom: 10px;">
+									<p:outputLabel value="Apple Vacations Sdn Bhd" style="font-size: 30px;font-weight: 700;color: #7151a1"/>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+						<p:panelGrid style="text-align:center;" >
+							<p:row>
+								<p:column>
+									<h:inputHidden id="idHiddenTxtValidUrl" value="#{emailPaymentBean.isValidURL}"/>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<p:outputLabel value="Please wait while you are redirected to the payment." style="font-size: 18px;" rendered="#{emailPaymentBean.isValidURL}"/>
+									<p:outputLabel value="Invalid URL entered or URL given were expired." style="font-size: 18px;" rendered="#{!emailPaymentBean.isValidURL}"/>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column rendered="#{emailPaymentBean.isValidURL}">
+									<div class="loader" />
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</h:form>
+					
+					<FORM method="post" name="ePayment" action="https://payment.ipay88.com.my/ePayment/entry.asp" id="ipay88-form">
+						<INPUT type="hidden" name="MerchantCode" value="#{emailPaymentBean.invoiceEmailPaymentVO.merchantCode}"/>
+						<INPUT type="hidden" name="PaymentId" value=""/>
+						<INPUT type="hidden" name="RefNo" value="#{emailPaymentBean.invoiceEmailPaymentVO.prefix}#{emailPaymentBean.invoiceEmailPaymentVO.invoiceNo}_#{emailPaymentBean.invoiceEmailPaymentVO.id}"/>
+						<INPUT type="hidden" name="Amount" value="#{emailPaymentBean.totalPaymentAmt}"/>
+						<INPUT type="hidden" name="Currency" value="MYR"/>
+						<INPUT type="hidden" name="ProdDesc" value="#{emailPaymentBean.prodDesc}"/>
+						<INPUT type="hidden" name="UserName" value="#{emailPaymentBean.userName}"/>
+						<INPUT type="hidden" name="UserEmail" value="#{emailPaymentBean.userEmail}"/>
+						<INPUT type="hidden" name="UserContact" value="#{emailPaymentBean.userContact}"/>
+						<INPUT type="hidden" name="Remark" value="#{emailPaymentBean.merchantRemark}"/>
+						<INPUT type="hidden" name="Lang" value="UTF-8"/>
+						<INPUT type="hidden" name="SignatureType" value="HMACSHA512"/>
+						<INPUT type="hidden" name="Signature" value="#{emailPaymentBean.signature}"/>
+						<INPUT type="hidden" id="idTxtResponse" name="ResponseURL"/>
+						<INPUT type="hidden" id="idTxtResponseBack" name="BackendURL"/>
+					</FORM>
+				</td>
+			</tr>
+		</table> 
+    </h:body>
+</f:view>
+</html>

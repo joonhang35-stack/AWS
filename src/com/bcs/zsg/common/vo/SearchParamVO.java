@@ -1,0 +1,256 @@
+package com.bcs.zsg.common.vo;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+
+public class SearchParamVO implements Serializable {
+	private static final long serialVersionUID = 1L;
+
+	private Date fromDate;
+	private Date toDate;
+	
+	private Date invDateFrom;
+	private Date invDateTo;
+	private Date depDateFrom;
+	private Date depDateTo;
+	
+	private Object obj1;
+	private Object obj2;
+	private Object obj3;
+	private Object obj4;
+	private Object obj5;
+	private Object obj6;
+	private Object obj7;
+	
+	private Object obj8;
+	private Object obj9;
+	private Object obj10;
+	private Object obj11;
+	private Object obj12;
+	
+	private Object[] arrayObj1;
+	
+	private CompanyVO companyVO;
+
+	public Date getInvDateFrom() {
+		return invDateFrom;
+	}
+
+	public void setInvDateFrom(Date invDateFrom) {
+		this.invDateFrom = invDateFrom;
+	}
+
+	public Date getInvDateTo() {
+		return invDateTo;
+	}
+
+	public void setInvDateTo(Date invDateTo) {
+		this.invDateTo = invDateTo;
+	}
+
+	public Date getDepDateFrom() {
+		return depDateFrom;
+	}
+
+	public void setDepDateFrom(Date depDateFrom) {
+		this.depDateFrom = depDateFrom;
+	}
+
+	public Date getDepDateTo() {
+		return depDateTo;
+	}
+
+	public void setDepDateTo(Date depDateTo) {
+		this.depDateTo = depDateTo;
+	}
+
+	/**
+	 * @return the fromDate
+	 */
+	public Date getFromDate() {
+		return fromDate;
+	}
+
+	/**
+	 * @param fromDate the fromDate to set
+	 */
+	public void setFromDate(Date fromDate) {
+		this.fromDate = fromDate;
+	}
+
+	/**
+	 * @return the toDate
+	 */
+	public Date getToDate() {
+		return toDate;
+	}
+
+	/**
+	 * @param toDate the toDate to set
+	 */
+	public void setToDate(Date toDate) {
+		this.toDate = toDate;
+	}
+
+	/**
+	 * @return the obj1
+	 */
+	public Object getObj1() {
+		return obj1;
+	}
+
+	/**
+	 * @param obj1 the obj1 to set
+	 */
+	public void setObj1(Object obj1) {
+		this.obj1 = obj1;
+	}
+
+	/**
+	 * @return the obj2
+	 */
+	public Object getObj2() {
+		return obj2;
+	}
+
+	/**
+	 * @param obj2 the obj2 to set
+	 */
+	public void setObj2(Object obj2) {
+		this.obj2 = obj2;
+	}
+
+	/**
+	 * @return the obj3
+	 */
+	public Object getObj3() {
+		return obj3;
+	}
+
+	/**
+	 * @param obj3 the obj3 to set
+	 */
+	public void setObj3(Object obj3) {
+		this.obj3 = obj3;
+	}
+	
+	/**
+	 * @return the obj4
+	 */
+	public Object getObj4() {
+		return obj4;
+	}
+
+	/**
+	 * @param obj4 the obj4 to set
+	 */
+	public void setObj4(Object obj4) {
+		this.obj4 = obj4;
+	}
+
+	/**
+	 * @return the obj5
+	 */
+	public Object getObj5() {
+		return obj5;
+	}
+
+	/**
+	 * @param obj5 the obj5 to set
+	 */
+	public void setObj5(Object obj5) {
+		this.obj5 = obj5;
+	}
+	
+	/**
+	 * @return the obj6
+	 */
+	public Object getObj6() {
+		return obj6;
+	}
+
+	/**
+	 * @param obj6 the obj6 to set
+	 */
+	public void setObj6(Object obj6) {
+		this.obj6 = obj6;
+	}
+
+	/**
+	 * @return the obj7
+	 */
+	public Object getObj7() {
+		return obj7;
+	}
+
+	/**
+	 * @param obj7 the obj7 to set
+	 */
+	public void setObj7(Object obj7) {
+		this.obj7 = obj7;
+	}
+
+	/**
+	 * @return the companyVO
+	 */
+	public CompanyVO getCompanyVO() {
+		return companyVO;
+	}
+
+	/**
+	 * @param companyVO the companyVO to set
+	 */
+	public void setCompanyVO(CompanyVO companyVO) {
+		this.companyVO = companyVO;
+	}
+
+	public Object getObj8() {
+		return obj8;
+	}
+
+	public void setObj8(Object obj8) {
+		this.obj8 = obj8;
+	}
+
+	public Object getObj9() {
+		return obj9;
+	}
+
+	public void setObj9(Object obj9) {
+		this.obj9 = obj9;
+	}
+
+	public Object getObj10() {
+		return obj10;
+	}
+
+	public void setObj10(Object obj10) {
+		this.obj10 = obj10;
+	}
+
+	public Object[] getArrayObj1() {
+		return arrayObj1;
+	}
+
+	public void setArrayObj1(Object[] arrayObj1) {
+		this.arrayObj1 = arrayObj1;
+	}
+	
+	public Object getObj11() {
+		return obj11;
+	}
+
+	public void setObj11(Object obj11) {
+		this.obj11 = obj11;
+	}
+
+	public Object getObj12() {
+		return obj12;
+	}
+
+	public void setObj12(Object obj12) {
+		this.obj12 = obj12;
+	}
+}

@@ -1,0 +1,96 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<p:growl id="msg" />
+
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varMultipleEInvSubmitRespDialog.show();
+			} else {
+				varMultipleEInvSubmitRespDialog.hide();
+			}
+		}
+	</script>
+
+	<p:dataTable id="idResultListTable" value="#{salesBean.mulpInvSubmRespList}" var="vo" rows="20" rowKey="#{vo.id}"
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+		rowsPerPageTemplate="20, 30, 50" filterEvent="enter">
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Document No." />
+			</f:facet>
+			<h:outputText value="#{vo.code}"></h:outputText>
+		</p:column>
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Tour Code" />
+			</f:facet>
+			<h:outputText value="#{vo.tourCd}"></h:outputText>
+		</p:column>
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Departure Date" />
+			</f:facet>
+			<h:outputText value="#{vo.departureDt}">
+				<f:convertDateTime pattern="dd-MMM-yyyy" />
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Status">
+			<f:facet name="header">
+				<h:outputText value="Status" />
+			</f:facet>
+			<h:outputText value="#{vo.eInvoiceDocument.status}"></h:outputText>
+		</p:column>
+		<p:column headerText="Reason">
+			<f:facet name="header">
+				<h:outputText value="Reason" />
+			</f:facet>
+			<h:outputText value="#{vo.eInvoiceDocument.documentStatusReason}"></h:outputText>
+		</p:column>
+		<p:column headerText="Sales Person">
+			<f:facet name="header">
+				<h:outputText value="Sales Person" />
+			</f:facet>
+			<h:outputText value="#{vo.salerName}"></h:outputText>
+		</p:column>
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Action By" />
+			</f:facet>
+			<h:outputText value="#{vo.createdBy}"/>
+		</p:column>
+		<p:column>
+			<f:facet name="header">
+				<h:outputText value="Action Date" />
+			</f:facet>
+			<h:outputText value="#{vo.createdDate}">
+				<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+			</h:outputText>
+		</p:column>
+	</p:dataTable>
+	
+	<br/><br/>
+	<h:commandLink>
+		<p:graphicImage value="/img/excel.png" />
+		<p:dataExporter type="csv" target="idResultListTable" exportHeader="true"
+			fileName="#{salesBean.generateReportFileName(salesBean.mulpInvSubmRespListExportTitle)}"/>
+	</h:commandLink>
+
+	<!-- <h:panelGrid columns="2" style="width: 1px;">
+		<p:commandButton value="OK"
+			actionListener="#{salesBean.cancelEInvoiceAPI(salesBean.cancellationReason)}"
+			update="@form, :idEInvoiceForm"
+			oncomplete="if (args &amp;&amp; !args.validationFailed) {varCancelEInvoiceDialog.hide();}" />
+		<p:commandButton value="Close" process="@this"
+			oncomplete="varCancelEInvoiceDialog.hide();" />
+	</h:panelGrid> -->
+</ui:composition>

@@ -1,0 +1,58 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varEditlookupItemDialog.show();
+		} else {
+			varEditlookupItemDialog.hide();
+		}
+	}
+	</script>
+	
+
+
+<h:panelGrid columns="2" style="margin-bottom:10px; width:5px">
+	
+	<h:outputLabel for="idLookUpCategorySearch">Lookup Category</h:outputLabel>
+		<h:selectOneMenu id="idLookUpCategorySearch" label="Lookup Category" value="#{lookUpBean.lookupItemVO.lookupCatCd}" >
+			<f:selectItem itemLabel="All"/>
+				<f:selectItems value="#{lookUpBean.lookupCategoryAllList}" var="lookupCategoryVO" itemLabel="#{lookupCategoryVO.description}" itemValue="#{lookupCategoryVO.code}"/>
+		</h:selectOneMenu>	
+	<h:outputLabel for="idDescription">Item Code</h:outputLabel>
+	<h:outputText id="idDescription" label="Item Code" value="#{lookUpBean.lookupItemVO.code}" style="width:200px" required="true"/>
+	<h:outputLabel for="idCode">Item Description</h:outputLabel>
+	<p:inputText id="idCode" label="Item Description" value="#{lookUpBean.lookupItemVO.description}" style="width:200px" required="true"/>
+	<h:outputLabel for="idRemarks">Item Remarks</h:outputLabel>
+	<p:inputText id="idRemarks" label="Item Remarks" value="#{lookUpBean.lookupItemVO.remarks}" style="width:200px" required="true"/>
+	<h:outputLabel for="idEditable" rendered="#{lookUpBean.isSuperUser()}">Is Editable</h:outputLabel>
+	<p:selectBooleanButton label="isEditable" id="idEditable" value="#{lookUpBean.lookupItemVO.isEditable}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" rendered="#{lookUpBean.isSuperUser()}"/>
+	<h:outputLabel for="idSeqNo">Sequence Number</h:outputLabel>
+	<p:inputText id="idSeqNo" label="Sequence Number" value="#{lookUpBean.lookupItemVO.seqNo}" style="width:200px" required="true"/>
+
+	<h:outputText/>
+	<h:panelGrid id="idButtonGrid1" columns="3" style="width:1px;">
+		<p:commandButton id="idBtnEditSubmit" actionListener="#{lookUpBean.editLookUpItem}" value="#{msg['common.button.label.save']}" update="@form,:idForm:idLookUpListTable" oncomplete="onValidation(xhr, status, args)"/>
+		<p:commandButton id="idBtnEditCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{lookUpBean.resetForm}" update="@form" process="@this" oncomplete="varEditlookupItemDialog.hide()" global="false">
+			<pe:resetEditableValues for="idEditLookUpItemForm"/>
+		</p:commandButton>
+	</h:panelGrid>
+	<h:outputText/>
+	
+</h:panelGrid>
+
+
+<br/>
+<h:outputLabel><span class="required">*</span> - required field</h:outputLabel>
+
+</ui:composition>

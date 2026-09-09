@@ -1,0 +1,828 @@
+package com.bcs.zsg.feedback.dao;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Query;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.product.vo.FeedbackVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+
+public class FeedbackDAOImpl extends BaseHibernateDAO implements FeedbackDAO {
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.dao.FeedbackDAO#getInvoiceForFeedback()
+     */
+    @Override
+    public List<FeedbackVO> getInvoiceForFeedback() throws BusinessException {
+        return getInvoiceForFeedback(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<FeedbackVO> getInvoiceForFeedback(Long idTourBooking) throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT ")
+            // Invoice
+            .append("i.id AS inv_id, ")
+            .append("i.id_parent_inv, ")
+            .append("i.id_parent_inv_tour_booking, ")
+            .append("i.code AS inv_code, ")
+            .append("i.ps_no, ")
+            .append("i.doc_type_cd, ")
+            .append("i.doc_type_status, ")
+            .append("i.attn_to, ")
+            // Tour Departure
+            .append("td.id AS td_id, ")
+            .append("td.num_nights, ")
+            .append("td.dt_dep, ")
+            .append("td.code AS td_code, ")
+            .append("td.op_pic, ")
+            .append("CASE ")
+            .append("    WHEN i.doc_type_cd = 'I' THEN CONCAT('AV', i.code) ")
+            .append("    WHEN i.doc_type_cd = 'P' THEN CONCAT('PS', i.ps_no) ")
+            .append("    ELSE NULL ")
+            .append("END AS doc_id, ")
+            // Tour Package
+            .append("tp.id AS tp_id, ")
+            .append("tp.type_cd AS tp_type_cd, ")
+            .append("tp.code AS tp_code, ")
+            // Customer
+            .append("c.id AS c_id, ")
+            .append("c.id_pc, ")
+            .append("c.id_corporate, ")
+            .append("c.corporate_name, ")
+            .append("c.status_cd AS c_status_cd, ")
+            // Person
+            .append("p.id AS p_id, ")
+            .append("p.salutation_cd, ")
+            .append("p.title, ")
+            .append("p.first_name, ")
+            .append("p.middle_name, ")
+            .append("p.last_name, ")
+            .append("p.email, ")
+            // Tour Booking
+            .append("tb.id AS tb_id, ")
+            .append("tb.type_cd AS tb_type_cd, ")
+            .append("tb.pmnt_status_cd, ")
+            .append("tb.status_cd AS tb_status_cd, ")
+            // Op Pic Names
+            .append("GROUP_CONCAT( ")
+            .append("    DISTINCT su.user_name ")
+            .append("    ORDER BY FIND_IN_SET(e.id, td.op_pic) ")
+            .append("    SEPARATOR ', ' ")
+            .append(") AS op_pic_names ")
+
+            .append("FROM tour_booking tb ")
+            .append("LEFT JOIN tour_dep td ON tb.id_tour_dep = td.id ")
+            .append("LEFT JOIN tour_pkg tp ON td.id_tour_pkg = tp.id ")
+            .append("LEFT JOIN customer c ON tb.id_cust = c.id ")
+            .append("LEFT JOIN person p ON c.id_pc = p.id ")
+            .append("JOIN invoice i ON i.id_tour_booking = tb.id AND i.doc_type_cd IN ('I', 'P') ")
+            .append("LEFT JOIN JSON_TABLE( ")
+            .append("    CONCAT('[\"', REPLACE(td.op_pic, ',', '\",\"'), '\"]'), ")
+            .append("    '$[*]' COLUMNS (emp_id BIGINT PATH '$') ")
+            .append(") AS jt ON jt.emp_id > 0 ")
+            .append("LEFT JOIN employee e ON e.id = jt.emp_id ")
+            .append("LEFT JOIN sec_user su ON su.uuid = e.u_sec_user ")
+
+            .append("WHERE (jt.emp_id IS NULL OR jt.emp_id > 0) ")
+            .append("AND tb.status_cd NOT IN ('"+CommonConstant.STATUS_CD_CANCELLED+"','"+ CommonConstant.STATUS_CD_VOID +"') ")
+            .append("AND tb.pmnt_status_cd <> '"+SalesConstant.BOOKING_PMNT_STATUS_KIVEXP+"' ");
+
+        if (idTourBooking != null) {
+            sb.append("AND tb.id = :id_tour_booking ");
+        } else {
+            sb.append("AND DATE(DATE_ADD(td.dt_dep, INTERVAL td.num_nights DAY)) ")
+              .append("  = DATE(DATE_ADD(CURDATE(), INTERVAL 1 DAY)) ");
+        }
+
+        sb.append("GROUP BY tb.id ");
+
+        Query query = createSQLQuery(sb.toString());
+        if (idTourBooking != null) {
+            query.setParameter("id_tour_booking", idTourBooking);
+        }
+
+        List<Object> results = query.list();
+        List<FeedbackVO> feedbackList = new ArrayList<FeedbackVO>();
+        FeedbackVO vo;
+
+        for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+            Object[] row = (Object[]) it.next();
+            vo = new FeedbackVO();
+
+            // Invoice
+            if (row[0]  != null) vo.setInvId(((BigInteger) row[0]).longValue());
+            if (row[1]  != null) vo.setParentInvId(((BigInteger) row[1]).longValue());
+            if (row[2]  != null) vo.setParentInvTourBookingId(((BigInteger) row[2]).longValue());
+            if (row[3]  != null) vo.setInvCode((String) row[3]);
+            if (row[4]  != null) vo.setPsNo((String) row[4]);
+            if (row[5]  != null) vo.setDocTypeCd((String) row[5]);
+            if (row[6]  != null) vo.setDocTypeStatus((String) row[6]);
+            if (row[7]  != null) vo.setAttnTo((String) row[7]);
+
+            // Tour Departure
+            if (row[8]  != null) vo.setIdTourDeparture(((BigInteger) row[8]).longValue());
+            if (row[9]  != null) vo.setNumNights(((Short) row[9]).intValue());
+            if (row[10] != null) vo.setDepartureDate((Date) row[10]);
+            if (row[11] != null) vo.setTourDepCode((String) row[11]);
+            if (row[12] != null) vo.setOpPic((String) row[12]);
+            if (row[13] != null) vo.setDocId((String) row[13]);
+
+            // Tour Package
+            if (row[14] != null) vo.setIdTourPkg(((BigInteger) row[14]).longValue());
+            if (row[15] != null) vo.setTourPkgTypeCd((String) row[15]);
+            if (row[16] != null) vo.setTourPkgCode((String) row[16]);
+
+            // Customer
+            if (row[17] != null) vo.setCustomerId(((BigInteger) row[17]).longValue());
+            if (row[18] != null) vo.setCustomerPersonId(((BigInteger) row[18]).longValue());
+            if (row[19] != null) vo.setCustomerCorporateId(((BigInteger) row[19]).longValue());
+            if (row[20] != null) vo.setCorporateName((String) row[20]);
+            if (row[21] != null) vo.setCustomerStatusCode((String) row[21]);
+
+            // Person
+            if (row[22] != null) vo.setPersonId(((BigInteger) row[22]).longValue());
+            String salutation = row[23] != null ? row[23].toString() : "";
+            String title      = row[24] != null ? row[24].toString() : "";
+            String firstName  = row[25] != null ? row[25].toString() : "";
+            String middleName = row[26] != null ? row[26].toString() : "";
+            String lastName   = row[27] != null ? row[27].toString() : "";
+            if (row[28] != null) vo.setCustomerEmail((String) row[28]);
+
+            vo.setSalutationCd(salutation);
+            vo.setTitle(title);
+            vo.setFirstName(firstName);
+            vo.setMiddleName(middleName);
+            vo.setLastName(lastName);
+
+            String fullName = (StringUtils.isNotBlank(salutation) ? salutation + ". " : "")
+                            + firstName
+                            + (StringUtils.isNotBlank(middleName) ? " " + middleName : "")
+                            + (StringUtils.isNotBlank(lastName)   ? " " + lastName   : "");
+            vo.setCustomerName(fullName.trim());
+
+            // Tour Booking
+            if (row[29] != null) vo.setTourBookingId(((BigInteger) row[29]).longValue());
+            if (row[30] != null) vo.setTourBookingTypeCd((String) row[30]);
+            if (row[31] != null) vo.setPaymentStatusCode((String) row[31]);
+            if (row[32] != null) vo.setBookingStatusCode((String) row[32]);
+
+            // Op Pic Names
+            if (row[33] != null) vo.setOpPicNames((String) row[33]);
+
+            feedbackList.add(vo);
+        }
+
+        System.out.println("Invoice records for feedback email: " + feedbackList.size());
+
+        return feedbackList;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.dao.FeedbackDAO#insertFeedback(com.bcs.zsg.product.vo.FeedbackVO)
+     */
+    @Override
+    public void insertFeedback(FeedbackVO feedbackVO) throws BusinessException {
+        String sql = "INSERT INTO feedback "
+                   + "(id_tour_pkg, id_tour_dep, id_invoice,  id_customer, id_tour_booking, email, token_uuid, status, comments, dt_created, created_by, dt_upd, upd_by) "
+            + "VALUES (:id_tour_pkg, :id_tour_dep, :id_invoice, :id_customer, :id_tour_booking, :email, :token_uuid, :status, :comments, NOW(), :created_by, NOW(), :upd_by)";
+
+        String createdBy = "SYSTEM";
+        try {
+            if (BaseContext.getUserFullName() != null) {
+                createdBy = BaseContext.getUserFullName();
+            } else if (BaseContext.getLoginId() != null) {
+                createdBy = BaseContext.getLoginId();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        Query query = createSQLQuery(sql);
+        query.setParameter("id_tour_pkg",     feedbackVO.getIdTourPkg());
+        query.setParameter("id_tour_dep",     feedbackVO.getIdTourDeparture());
+        query.setParameter("id_invoice",      feedbackVO.getInvId());
+        query.setParameter("id_customer",     feedbackVO.getCustomerId());
+        query.setParameter("id_tour_booking", feedbackVO.getTourBookingId() != null ? String.valueOf(feedbackVO.getTourBookingId()) : null);
+        query.setParameter("email",           feedbackVO.getCustomerEmail());
+        query.setParameter("token_uuid",      feedbackVO.getTokenUuid());
+        query.setParameter("status",          feedbackVO.getFeedbackStatus());
+        query.setParameter("comments",        feedbackVO.getComments());
+        query.setParameter("created_by",      createdBy);
+        query.setParameter("upd_by",          createdBy);
+        query.executeUpdate();
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.dao.FeedbackDAO#getFeedbackListbyTourDepId(java.lang.Long)
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<FeedbackVO> getFeedbackListbyTourDepId(Long idTourDep) throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT ")
+          .append("f.id AS feedback_id, f.id_tour_pkg, f.id_tour_dep, f.id_customer, f.status, f.comments, ")
+          .append("(SELECT fa_cust.attachment_url FROM feedback_attachment fa_cust WHERE fa_cust.id_feedback = f.id AND fa_cust.type = 'cust' LIMIT 1) AS attachment, ")
+          .append("fq.id AS id_feedback_question, fq.seq_no, fq.section_type, fq.question_code, fq.question_text_en, ")
+          .append("fq.answer_type, fq.is_required, fq.has_remark, fq.placeholder_en, ")
+          .append("fa.id AS id_feedback_answer, fa.answer_label_en, fa.score_value, ")
+          .append("fca.remarks, fca.answer_text, ")
+          .append("td.num_nights, td.dt_dep, td.code AS tour_dep_code, td.op_pic, ")
+          .append("p.id AS person_id, p.salutation_cd, p.first_name, p.last_name, p.email, ")
+          .append("c.id AS customer_id, ")
+          .append("(SELECT fa_hos.attachment_url FROM feedback_attachment fa_hos WHERE fa_hos.id_feedback = f.id AND fa_hos.type = 'hos' LIMIT 1) AS attachment_hos, ")
+          .append("f.comments_hos ")
+          .append("FROM feedback f ")
+          .append("LEFT JOIN feedback_cust_answer fca ON fca.id_feedback = f.id ")
+          .append("LEFT JOIN feedback_question fq ON fq.id = fca.id_feedback_question ")
+          .append("LEFT JOIN feedback_answer fa ON fa.id = fca.id_feedback_answer ")
+          .append("JOIN tour_dep td ON td.id = f.id_tour_dep ")
+          .append("JOIN customer c ON c.id = f.id_customer ")
+          .append("JOIN person p ON p.id = c.id_pc ")
+          .append("WHERE f.id_tour_dep = :idTourDep ")
+          .append("ORDER BY f.id, fq.seq_no");
+
+        Query query = createSQLQuery(sb.toString());
+        query.setLong("idTourDep", idTourDep);
+
+        List<Object> results = query.list();
+        List<FeedbackVO> feedbackList = new ArrayList<FeedbackVO>();
+        FeedbackVO vo;
+
+        for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+            Object[] row = (Object[]) it.next();
+            vo = new FeedbackVO();
+            vo.setIdFeedback(row[0]  != null ? ((BigInteger) row[0]).longValue() : null);
+            vo.setIdTourPkg(row[1]   != null ? ((BigInteger) row[1]).longValue() : null);
+            vo.setIdTourDeparture(row[2] != null ? ((BigInteger) row[2]).longValue() : null);
+            vo.setCustomerId(row[3]  != null ? ((BigInteger) row[3]).longValue() : null);
+            vo.setFeedbackStatus(row[4]  != null ? row[4].toString() : null);
+            vo.setComments(row[5]  != null ? row[5].toString() : null);
+            vo.setAttachment(row[6]  != null ? row[6].toString() : null);
+            vo.setSectionType(row[9]     != null ? row[9].toString() : null);
+            vo.setQuestionCode(row[10]    != null ? row[10].toString() : null);
+            vo.setQuestionTextEn(row[11] != null ? row[11].toString() : null);
+            vo.setAnswerType(row[12]     != null ? row[12].toString() : null);
+            vo.setAnswerLabelEn(row[17]  != null ? row[17].toString() : null);
+            vo.setScoreValue(row[18]     != null ? Integer.parseInt(row[18].toString()) : 0);
+            vo.setRemarks(row[19]        != null ? row[19].toString() : null);
+            vo.setAnswerText(row[20]     != null ? row[20].toString() : null);
+            vo.setNumNights(row[21]      != null ? ((Short) row[21]).intValue() : 0);
+            vo.setTourCode(row[23]       != null ? row[23].toString() : null);
+            vo.setCustomerEmail(row[29]  != null ? row[29].toString() : null);
+            vo.setAttachmentHos(row[31]  != null ? row[31].toString() : null);
+            vo.setCommentsHos(row[32]    != null ? row[32].toString() : null);
+
+            String salutation = row[26] != null ? row[26].toString() : "";
+            String firstName  = row[27] != null ? row[27].toString() : "";
+            String lastName   = row[28] != null ? row[28].toString() : "";
+            vo.setCustomerName(
+                (StringUtils.isNotBlank(salutation) ? salutation + ". " : "")
+                + firstName
+                + (StringUtils.isNotBlank(lastName) ? " " + lastName : "")
+            );
+
+            feedbackList.add(vo);
+        }
+        return feedbackList;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.dao.FeedbackDAO#updateFeedbackStatus(java.lang.Long, java.lang.String)
+     */
+    @Override
+    public void updateFeedbackStatus(Long idInvoice, String status) throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("UPDATE feedback ")
+          .append("SET status = :status ")
+          .append("WHERE id_invoice = :id_invoice ");
+
+        System.out.println(
+            "UPDATE feedback SET status = '" + status +
+            "' WHERE id_invoice = " + idInvoice
+        );
+
+        Query query = createSQLQuery(sb.toString());
+        query.setString("status", status);
+        query.setLong("id_invoice", idInvoice);
+        query.executeUpdate();
+    }
+    
+    @Override
+    public Long getFeedbackIdByBookingId(Long idBooking) throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT id ")
+          .append("FROM feedback ")
+          .append("WHERE id_tour_booking = :id_tour_booking ")
+          .append("ORDER BY dt_created DESC ");
+
+        Query query = createSQLQuery(sb.toString());
+        query.setLong("id_tour_booking", idBooking);
+        query.setMaxResults(1);
+
+        Object result = query.uniqueResult();
+
+        return result != null ? ((java.math.BigInteger) result).longValue() : null;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.dao.FeedbackDAO#updateFeedbackStatusByBookingId(java.lang.Long, java.lang.String)
+     */
+    @Override
+    public void updateFeedbackStatusByBookingId(Long idBooking, String status) throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("UPDATE feedback ")
+          .append("SET status = :status ")
+          .append("WHERE id_tour_booking = :id_tour_booking ");
+
+        System.out.println(
+            "UPDATE feedback SET status = '" + status +
+            "' WHERE id_tour_booking = " + idBooking
+        );
+
+        Query query = createSQLQuery(sb.toString());
+        query.setString("status", status);
+        query.setLong("id_tour_booking", idBooking);
+        query.executeUpdate();
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.bcs.zsg.product.dao.FeedbackDAO#getFeedbackStatus(java.lang.Long)
+     */
+    @Override
+    public String getFeedbackStatus(Long idBooking) throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT status ");
+        sb.append("FROM feedback ");
+        sb.append("WHERE id_tour_booking = :id_tour_booking ");
+        sb.append("ORDER BY dt_created DESC ");
+
+        Query query = createSQLQuery(sb.toString());
+        query.setLong("id_tour_booking", idBooking);
+        query.setMaxResults(1);
+
+        Object result = query.uniqueResult();
+
+        return result != null ? result.toString() : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<FeedbackVO> getPendingFeedbackList() throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT ")
+          .append("f.id AS feedback_id, ")
+          .append("f.id_tour_pkg, ")
+          .append("f.id_tour_dep, ")
+          .append("f.id_invoice, ")
+          .append("f.id_customer, ")
+          .append("f.id_tour_booking, ")
+          .append("f.email, ")
+          .append("f.token_uuid, ")
+          .append("f.status, ")
+          .append("td.dt_dep, ")
+          .append("td.code AS td_code, ")
+          .append("p.salutation_cd, ")
+          .append("p.title, ")
+          .append("p.first_name, ")
+          .append("p.middle_name, ")
+          .append("p.last_name ")
+          .append("FROM feedback f ")
+          .append("LEFT JOIN tour_dep td ON f.id_tour_dep = td.id ")
+          .append("LEFT JOIN customer c ON f.id_customer = c.id ")
+          .append("LEFT JOIN person p ON c.id_pc = p.id ")
+          .append("WHERE f.status = 'P' ");
+
+        Query query = createSQLQuery(sb.toString());
+        List<Object> results = query.list();
+        List<FeedbackVO> feedbackList = new ArrayList<FeedbackVO>();
+        FeedbackVO vo;
+
+        for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+            Object[] row = (Object[]) it.next();
+            vo = new FeedbackVO();
+
+            if (row[0] != null) vo.setIdFeedback(((BigInteger) row[0]).longValue());
+            if (row[1] != null) vo.setIdTourPkg(((BigInteger) row[1]).longValue());
+            if (row[2] != null) vo.setIdTourDeparture(((BigInteger) row[2]).longValue());
+            if (row[3] != null) vo.setInvId(((BigInteger) row[3]).longValue());
+            if (row[4] != null) vo.setCustomerId(((BigInteger) row[4]).longValue());
+            if (row[5] != null) {
+                try {
+                    vo.setTourBookingId(Long.parseLong(row[5].toString()));
+                } catch (Exception e) {}
+            }
+            if (row[6] != null) vo.setCustomerEmail((String) row[6]);
+            if (row[7] != null) vo.setTokenUuid((String) row[7]);
+            if (row[8] != null) vo.setFeedbackStatus((String) row[8]);
+            if (row[9] != null) vo.setDepartureDate((Date) row[9]);
+            if (row[10] != null) vo.setTourCode((String) row[10]);
+
+            String salutation = row[11] != null ? row[11].toString() : "";
+            String title      = row[12] != null ? row[12].toString() : "";
+            String firstName  = row[13] != null ? row[13].toString() : "";
+            String middleName = row[14] != null ? row[14].toString() : "";
+            String lastName   = row[15] != null ? row[15].toString() : "";
+
+            String fullName = (StringUtils.isNotBlank(salutation) ? salutation + ". " : "")
+                            + firstName
+                            + (StringUtils.isNotBlank(middleName) ? " " + middleName : "")
+                            + (StringUtils.isNotBlank(lastName)   ? " " + lastName   : "");
+            vo.setCustomerName(fullName.trim());
+
+            feedbackList.add(vo);
+        }
+
+        return feedbackList;
+    }
+
+    @Override
+    public void updateFeedbackForEmailSent(Long idTourBooking, String tokenUuid, String status, String updBy) throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("UPDATE feedback ")
+          .append("SET status = :status, ")
+          .append("    token_uuid = :tokenUuid, ")
+          .append("    dt_upd = NOW(), ")
+          .append("    upd_by = :updBy ")
+          .append("WHERE id_tour_booking = :id_tour_booking ");
+
+        Query query = createSQLQuery(sb.toString());
+        query.setString("status", status);
+        query.setString("tokenUuid", tokenUuid);
+        query.setString("updBy", updBy);
+        query.setLong("id_tour_booking", idTourBooking);
+        query.executeUpdate();
+    }
+
+    @Override
+    public TourDepartureVO getFeedbackReportHeader(Long idTourDep) throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT td.id, td.code, td.dt_dep, tp.name_en, ")
+          .append("       el.full_name AS tour_leader, ")
+          .append("       eg.full_name AS tour_manager ")
+          .append("FROM tour_dep td ")
+          .append("JOIN tour_pkg tp ON tp.id = td.id_tour_pkg ")
+          .append("LEFT JOIN employee el ON el.id = td.id_tour_leader ")
+          .append("LEFT JOIN employee eg ON eg.id = td.id_tour_guide ")
+          .append("WHERE td.id = :idTourDep");
+
+        Query query = createSQLQuery(sb.toString());
+        query.setLong("idTourDep", idTourDep);
+        List<Object[]> list = query.list();
+        if (list != null && !list.isEmpty()) {
+            Object[] row = list.get(0);
+            com.bcs.zsg.product.vo.TourDepartureVO vo = new com.bcs.zsg.product.vo.TourDepartureVO();
+            if (row[0] != null) vo.setId(((BigInteger) row[0]).longValue());
+            if (row[1] != null) vo.setCode((String) row[1]);
+            if (row[2] != null) vo.setDtDep((Date) row[2]);
+            if (row[3] != null) vo.setPackageName((String) row[3]);
+            if (row[4] != null) vo.setTourLead((String) row[4]);
+            if (row[5] != null) vo.setTourManager((String) row[5]);
+            return vo;
+        }
+        return null;
+    }
+
+    @Override
+    public void insertFeedbackCustAnswer(Long idFeedback, Long idQuestion, Long idAnswer, String answerText, String remarks) throws BusinessException {
+        String sql = "INSERT INTO feedback_cust_answer (id_feedback, id_feedback_question, id_feedback_answer, answer_text, remarks, dt_created, created_by, dt_upd, upd_by) "
+                   + "VALUES (:idFeedback, :idQuestion, :idAnswer, :answerText, :remarks, NOW(), :createdBy, NOW(), :updBy)";
+        Query query = createSQLQuery(sql);
+        query.setParameter("idFeedback", idFeedback);
+        query.setParameter("idQuestion", idQuestion);
+        query.setParameter("idAnswer", idAnswer);
+        query.setParameter("answerText", answerText);
+        query.setParameter("remarks", remarks);
+        
+        String createdBy = "SYSTEM";
+        try {
+            if (BaseContext.getUserFullName() != null) {
+                createdBy = BaseContext.getUserFullName();
+            } else if (BaseContext.getLoginId() != null) {
+                createdBy = BaseContext.getLoginId();
+            }
+        } catch (Exception e) {}
+        
+        query.setParameter("createdBy", createdBy);
+        query.setParameter("updBy", createdBy);
+        query.executeUpdate();
+    }
+
+    @Override
+    public void updateFeedbackComments(Long idFeedback, String comments, String attachment) throws BusinessException {
+        String sql = "UPDATE feedback SET comments = :comments, dt_upd = NOW(), upd_by = :updBy WHERE id = :idFeedback";
+        
+        String updBy = "SYSTEM";
+        try {
+            if (BaseContext.getUserFullName() != null) {
+                updBy = BaseContext.getUserFullName();
+            } else if (BaseContext.getLoginId() != null) {
+                updBy = BaseContext.getLoginId();
+            }
+        } catch (Exception e) {}
+        
+        Query query = createSQLQuery(sql);
+        query.setParameter("comments", comments);
+        query.setParameter("idFeedback", idFeedback);
+        query.setParameter("updBy", updBy);
+        query.executeUpdate();
+
+        // Handle attachment in feedback_attachment table for HOS
+        String deleteSql = "DELETE FROM feedback_attachment WHERE id_feedback = :idFeedback AND type = 'hos'";
+        Query deleteQuery = createSQLQuery(deleteSql);
+        deleteQuery.setParameter("idFeedback", idFeedback);
+        deleteQuery.executeUpdate();
+
+        if (StringUtils.isNotBlank(attachment)) {
+            String insertSql = "INSERT INTO feedback_attachment (id_feedback, attachment_url, filename, type) "
+                             + "VALUES (:idFeedback, :attachment, :filename, 'hos')";
+            Query insertQuery = createSQLQuery(insertSql);
+            insertQuery.setParameter("idFeedback", idFeedback);
+            insertQuery.setParameter("attachment", attachment);
+            String fileName = attachment;
+            if (attachment.contains("/") || attachment.contains("\\")) {
+                fileName = attachment.substring(Math.max(attachment.lastIndexOf("/"), attachment.lastIndexOf("\\")) + 1);
+            }
+            insertQuery.setParameter("filename", fileName);
+            insertQuery.executeUpdate();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<Object[]> getActiveQuestionsAndAnswers() throws BusinessException {
+        String sql = "SELECT fq.id AS question_id, fq.seq_no, fq.section_type, fq.question_code, fq.question_text_en, fq.answer_type, "
+                   + "       fa.id AS answer_id, fa.answer_label_en, fa.score_value "
+                   + "FROM feedback_question fq "
+                   + "LEFT JOIN feedback_answer fa ON fa.id_feedback_question = fq.id AND fa.is_active = 1 "
+                   + "WHERE fq.is_active = 1 "
+                   + "ORDER BY fq.seq_no, fa.seq_no";
+        return createSQLQuery(sql).list();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Map<String, String> getFeedbackLookupMap() throws BusinessException {
+        String sql = "SELECT code, description FROM feedback_lookup";
+        List<Object[]> list = createSQLQuery(sql).list();
+        java.util.Map<String, String> map = new java.util.HashMap<String, String>();
+        for (Object[] row : list) {
+            if (row[0] != null && row[1] != null) {
+                map.put(row[0].toString(), row[1].toString());
+            }
+        }
+        return map;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<FeedbackVO> getAllFeedbacks() throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT ")
+          .append("f.id AS feedback_id, ")
+          .append("f.id_tour_pkg, ")
+          .append("f.id_tour_dep, ")
+          .append("f.id_invoice, ")
+          .append("f.id_customer, ")
+          .append("f.id_tour_booking, ")
+          .append("f.email, ")
+          .append("f.status, ")
+          .append("td.code AS td_code, ")
+          .append("i.code AS inv_code, ")
+          .append("p.salutation_cd, ")
+          .append("p.first_name, ")
+          .append("p.last_name, ")
+          .append("(SELECT SUM(fa.score_value) / (SELECT COUNT(*) FROM feedback_question WHERE answer_type = 'RATING') ")
+          .append(" FROM feedback_cust_answer fca ")
+          .append(" JOIN feedback_answer fa ON fa.id = fca.id_feedback_answer ")
+          .append(" WHERE fca.id_feedback = f.id) AS score_value ")
+          .append("FROM feedback f ")
+          .append("LEFT JOIN tour_dep td ON f.id_tour_dep = td.id ")
+          .append("LEFT JOIN invoice i ON f.id_invoice = i.id ")
+          .append("LEFT JOIN customer c ON f.id_customer = c.id ")
+          .append("LEFT JOIN person p ON c.id_pc = p.id ")
+          .append("ORDER BY f.id DESC");
+
+        Query query = createSQLQuery(sb.toString());
+        List<Object> results = query.list();
+        List<FeedbackVO> feedbackList = new ArrayList<FeedbackVO>();
+        FeedbackVO vo;
+
+        for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+            Object[] row = (Object[]) it.next();
+            vo = new FeedbackVO();
+
+            if (row[0] != null) vo.setIdFeedback(((BigInteger) row[0]).longValue());
+            if (row[1] != null) vo.setIdTourPkg(((BigInteger) row[1]).longValue());
+            if (row[2] != null) vo.setIdTourDeparture(((BigInteger) row[2]).longValue());
+            if (row[3] != null) vo.setInvId(((BigInteger) row[3]).longValue());
+            if (row[4] != null) vo.setCustomerId(((BigInteger) row[4]).longValue());
+            if (row[5] != null) {
+                try {
+                    vo.setTourBookingId(Long.parseLong(row[5].toString().trim()));
+                } catch (Exception e) {}
+            }
+            if (row[6] != null) vo.setCustomerEmail(row[6].toString());
+            if (row[7] != null) vo.setFeedbackStatus(row[7].toString());
+            if (row[8] != null) vo.setTourDepCode(row[8].toString());
+            if (row[9] != null) vo.setInvCode(row[9].toString());
+
+            String salutation = row[10] != null ? row[10].toString() : "";
+            String firstName  = row[11] != null ? row[11].toString() : "";
+            String lastName   = row[12] != null ? row[12].toString() : "";
+
+            String fullName = (StringUtils.isNotBlank(salutation) ? salutation + ". " : "")
+                            + firstName
+                            + (StringUtils.isNotBlank(lastName)   ? " " + lastName   : "");
+            vo.setCustomerName(fullName.trim());
+
+            if (row[13] != null) vo.setOverallScore(Double.parseDouble(row[13].toString()));
+
+            feedbackList.add(vo);
+        }
+        return feedbackList;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<FeedbackVO> getFeedbackDetails(Long idFeedback) throws BusinessException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT ")
+          .append("f.id AS feedback_id, f.id_tour_pkg, f.id_tour_dep, f.id_customer, f.status, f.comments, ")
+          .append("(SELECT fa_cust.attachment_url FROM feedback_attachment fa_cust WHERE fa_cust.id_feedback = f.id AND fa_cust.type = 'cust' LIMIT 1) AS attachment, ")
+          .append("fq.id AS id_feedback_question, fq.seq_no, fq.section_type, fq.question_code, fq.question_text_en, ")
+          .append("fq.answer_type, fq.is_required, fq.has_remark, fq.placeholder_en, ")
+          .append("fa.id AS id_feedback_answer, fa.answer_label_en, fa.score_value, ")
+          .append("fca.remarks, fca.answer_text, ")
+          .append("td.num_nights, td.dt_dep, td.code AS tour_dep_code, td.op_pic, ")
+          .append("p.id AS person_id, p.salutation_cd, p.first_name, p.last_name, p.email, ")
+          .append("c.id AS customer_id, ")
+          .append("(SELECT fa_hos.attachment_url FROM feedback_attachment fa_hos WHERE fa_hos.id_feedback = f.id AND fa_hos.type = 'hos' LIMIT 1) AS attachment_hos, ")
+          .append("f.comments_hos ")
+          .append("FROM feedback f ")
+          .append("LEFT JOIN feedback_cust_answer fca ON fca.id_feedback = f.id ")
+          .append("LEFT JOIN feedback_question fq ON fq.id = fca.id_feedback_question ")
+          .append("LEFT JOIN feedback_answer fa ON fa.id = fca.id_feedback_answer ")
+          .append("JOIN tour_dep td ON td.id = f.id_tour_dep ")
+          .append("JOIN customer c ON c.id = f.id_customer ")
+          .append("JOIN person p ON p.id = c.id_pc ")
+          .append("WHERE f.id = :idFeedback ")
+          .append("ORDER BY fq.seq_no");
+
+        Query query = createSQLQuery(sb.toString());
+        query.setLong("idFeedback", idFeedback);
+
+        List<Object> results = query.list();
+        List<FeedbackVO> feedbackList = new ArrayList<FeedbackVO>();
+        FeedbackVO vo;
+
+        for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+            Object[] row = (Object[]) it.next();
+            vo = new FeedbackVO();
+            vo.setIdFeedback(row[0]  != null ? ((BigInteger) row[0]).longValue() : null);
+            vo.setIdTourPkg(row[1]   != null ? ((BigInteger) row[1]).longValue() : null);
+            vo.setIdTourDeparture(row[2] != null ? ((BigInteger) row[2]).longValue() : null);
+            vo.setCustomerId(row[3]  != null ? ((BigInteger) row[3]).longValue() : null);
+            vo.setFeedbackStatus(row[4]  != null ? row[4].toString() : null);
+            vo.setComments(row[5]  != null ? row[5].toString() : null);
+            vo.setAttachment(row[6]  != null ? row[6].toString() : null);
+            vo.setSeqNo(row[8] != null ? row[8].toString() : null);
+            vo.setSectionType(row[9]     != null ? row[9].toString() : null);
+            vo.setQuestionCode(row[10]    != null ? row[10].toString() : null);
+            vo.setQuestionTextEn(row[11] != null ? row[11].toString() : null);
+            vo.setAnswerType(row[12]     != null ? row[12].toString() : null);
+            vo.setAnswerLabelEn(row[17]  != null ? row[17].toString() : null);
+            vo.setScoreValue(row[18]     != null ? Integer.parseInt(row[18].toString()) : 0);
+            vo.setRemarks(row[19]        != null ? row[19].toString() : null);
+            vo.setAnswerText(row[20]     != null ? row[20].toString() : null);
+            vo.setNumNights(row[21]      != null ? ((Short) row[21]).intValue() : 0);
+            vo.setTourCode(row[23]       != null ? row[23].toString() : null);
+            vo.setCustomerEmail(row[29]  != null ? row[29].toString() : null);
+            vo.setAttachmentHos(row[31]  != null ? row[31].toString() : null);
+            vo.setCommentsHos(row[32]    != null ? row[32].toString() : null);
+
+            String salutation = row[26] != null ? row[26].toString() : "";
+            String firstName  = row[27] != null ? row[27].toString() : "";
+            String lastName   = row[28] != null ? row[28].toString() : "";
+            vo.setCustomerName(
+                (StringUtils.isNotBlank(salutation) ? salutation + ". " : "")
+                + firstName
+                + (StringUtils.isNotBlank(lastName) ? " " + lastName : "")
+            );
+
+            feedbackList.add(vo);
+        }
+        return feedbackList;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<FeedbackVO> getAttachmentsByFeedbackId(Long idFeedback) throws BusinessException {
+        String sql = "SELECT id, id_feedback, attachment_url, filename, type FROM feedback_attachment WHERE id_feedback = :idFeedback";
+        Query query = createSQLQuery(sql);
+        query.setParameter("idFeedback", idFeedback);
+        List<Object[]> results = query.list();
+        List<FeedbackVO> list = new ArrayList<FeedbackVO>();
+        for (Object[] row : results) {
+            FeedbackVO att = new FeedbackVO();
+            if (row[0] != null) att.setIdAttachment(((BigInteger) row[0]).longValue());
+            if (row[1] != null) att.setIdFeedback(((BigInteger) row[1]).longValue());
+            if (row[2] != null) att.setAttachmentUrl((String) row[2]);
+            if (row[3] != null) att.setFilename((String) row[3]);
+            if (row[4] != null) att.setType((String) row[4]);
+            list.add(att);
+        }
+        return list;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void saveFeedbackEdits(Long idFeedback, String commentsHos, List<FeedbackVO> hosAttachments, List<Long> deletedAttachmentIds) throws BusinessException {
+        // 1. Update HOS comments in feedback table
+        String updateFeedbackSql = "UPDATE feedback SET comments_hos = :commentsHos, dt_upd = NOW(), upd_by = :updBy WHERE id = :idFeedback";
+        String updBy = "SYSTEM";
+        try {
+            if (BaseContext.getUserFullName() != null) {
+                updBy = BaseContext.getUserFullName();
+            } else if (BaseContext.getLoginId() != null) {
+                updBy = BaseContext.getLoginId();
+            }
+        } catch (Exception e) {}
+        
+        Query query = createSQLQuery(updateFeedbackSql);
+        query.setParameter("commentsHos", commentsHos);
+        query.setParameter("idFeedback", idFeedback);
+        query.setParameter("updBy", updBy);
+        query.executeUpdate();
+
+        // 2. Delete the deleted attachments from database and physical disk
+        if (deletedAttachmentIds != null && !deletedAttachmentIds.isEmpty()) {
+            String selectSql = "SELECT attachment_url, filename FROM feedback_attachment WHERE id IN (:deletedIds)";
+            Query selectQuery = createSQLQuery(selectSql);
+            selectQuery.setParameterList("deletedIds", deletedAttachmentIds);
+            List<Object[]> rows = selectQuery.list();
+
+            String deleteSql = "DELETE FROM feedback_attachment WHERE id IN (:deletedIds)";
+            Query deleteQuery = createSQLQuery(deleteSql);
+            deleteQuery.setParameterList("deletedIds", deletedAttachmentIds);
+            deleteQuery.executeUpdate();
+
+            if (rows != null) {
+                for (Object rowObj : rows) {
+                    if (rowObj instanceof Object[]) {
+                        Object[] row = (Object[]) rowObj;
+                        if (row[0] != null && row[1] != null) {
+                            String url = row[0].toString();
+                            String filename = row[1].toString();
+                            try {
+                                java.io.File file = new java.io.File(com.bcs.zsg.common.helper.AppConfigConstant.uploadPath + "/" + url + filename);
+                                System.out.println("FeedbackDAOImpl: Deleting HOS attachment file at path: " + file.getAbsolutePath());
+                                if (file.exists()) {
+                                    boolean deleted = file.delete();
+                                    System.out.println("FeedbackDAOImpl: File deletion result: " + deleted);
+                                } else {
+                                    System.out.println("FeedbackDAOImpl: File does not exist at path: " + file.getAbsolutePath());
+                                }
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Insert new attachments
+        if (hosAttachments != null) {
+            for (FeedbackVO att : hosAttachments) {
+                if (att.getIdAttachment() == null) {
+                    String insertSql = "INSERT INTO feedback_attachment (id_feedback, attachment_url, filename, type) "
+                                     + "VALUES (:idFeedback, :attachmentUrl, :filename, 'hos')";
+                    Query insertQuery = createSQLQuery(insertSql);
+                    insertQuery.setParameter("idFeedback", idFeedback);
+                    insertQuery.setParameter("attachmentUrl", att.getAttachmentUrl());
+                    insertQuery.setParameter("filename", att.getFilename());
+                    insertQuery.executeUpdate();
+                }
+            }
+        }
+    }
+}

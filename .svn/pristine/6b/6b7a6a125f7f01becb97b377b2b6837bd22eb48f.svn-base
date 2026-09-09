@@ -1,0 +1,158 @@
+package com.bcs.zsg.common.helper;
+
+import java.io.ByteArrayOutputStream;
+import java.lang.reflect.Type;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
+import org.primefaces.json.JSONException;
+import org.primefaces.json.JSONObject;
+
+import com.bcs.zsg.core.exception.BusinessException;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+
+public class FunctionUtils {
+
+	/**
+	 * 
+	 * @param len
+	 * @param startStr
+	 * @return
+	 */
+	public static String getUUID(int len, String startStr) throws BusinessException {
+		String rtn = startStr + RandomStringUtils.randomAlphanumeric(20);
+		return rtn.substring(0, len);
+	}
+	
+	public static String escapeSpecialCharacters(String data) {
+		if (data == null) data = "";
+		
+	    String escapedData = data.replaceAll("\\R", " ");
+	    if (data.contains(",") || data.contains("\"") || data.contains("'")) {
+	        data = data.replace("\"", "\"\"");
+	        escapedData = "\"" + data + "\"";
+	    }
+	    return escapedData;
+	}
+	
+	public static String getContPersonName(String contPersonName, String nickname, String title, String salutation) {
+		if (StringUtils.isNotEmpty(title) || StringUtils.isNotEmpty(nickname)) {
+			String custNameWithTitle = "";
+			if (StringUtils.isNotEmpty(title) && StringUtils.isNotEmpty(salutation) && !salutation.equals(title))
+				custNameWithTitle += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_SALUTATN, title);
+			if (StringUtils.isNotEmpty(nickname)) custNameWithTitle += " " + nickname;
+			
+			if (StringUtils.isNotEmpty(custNameWithTitle))
+				contPersonName = contPersonName + " (" + custNameWithTitle.trim() + ")";
+		}
+		return contPersonName;
+	}
+	
+	public static String hashBase64String(byte[] base64String) throws NoSuchAlgorithmException {
+        // Create a MessageDigest instance for SHA-256
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        
+        // Hash the Base64 string (convert to bytes first)
+        byte[] hashBytes = digest.digest(base64String);
+        
+        // Convert the hash bytes to a hexadecimal string
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hashBytes) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0'); // Append leading zero for single digit
+            }
+            hexString.append(hex);
+        }
+        
+        return hexString.toString(); // Return the SHA-256 hash as a hexadecimal string
+    }
+	
+	public static String hashBase64String(ByteArrayOutputStream base64String) throws NoSuchAlgorithmException {
+        return hashBase64String(base64String.toByteArray());
+    }
+	
+	public static JSONObject removeNull(Object object) throws JSONException {
+		JSONObject subJsonObject = new JSONObject(object);
+        
+        Iterator<String> keys = subJsonObject.keys();
+        while (keys.hasNext()) {
+			String key = (String) keys.next();
+			if (subJsonObject.isNull(key) || subJsonObject.get(key) == null) {
+				keys.remove();
+			}
+		}
+        
+        return subJsonObject;
+	}
+	
+	public static Gson getGsonDateConverter() {
+		return new GsonBuilder().registerTypeAdapter(Date.class, new JsonDeserializer<Date>() {
+			@Override
+			public Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+					throws JsonParseException {
+				try {
+					return Date.from(Instant.parse(json.getAsString()));
+				} catch (Exception e) {
+					return null;
+				}
+			}
+		}).create();
+	}
+	
+	public static <T> List<T> generateListFromObj(T... objs) {
+	    return (List<T>) (objs == null ? new ArrayList<>() : Arrays.asList(objs));
+	}
+
+	
+	public static String[] generateArrayFromStr(String str) {
+		return new String[] { str };
+	}
+	
+	public static String[] generateArrayFromStr(String ...arrStr) {
+		return arrStr;
+	}
+	
+	public static String[] append(String[] arr, String s) {
+		String[] newArray = new String[arr.length + 1];
+	    System.arraycopy(arr, 0, newArray, 0, arr.length);
+	    newArray[newArray.length - 1] = s;
+	    return newArray;
+	}
+	
+	public static boolean isValidEmail(String email) {
+		try {
+	        InternetAddress addr = new InternetAddress(email);
+	        addr.validate();
+	        return true;
+	    } catch (AddressException e) {
+	        return false;
+	    }
+	}
+	
+	public static String phoneNumber(String countryCd, String number) {
+		if (StringUtils.isBlank(number)) {
+	        return "";
+	    }
+	    if (StringUtils.isBlank(countryCd)) {
+	        return number;
+	    }
+		return countryCd+number;
+	}
+}

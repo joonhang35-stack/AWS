@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.springframework.org/schema/webflow http://www.springframework.org/schema/webflow/spring-webflow.xsd"
+      start-state="booking_list">
+	
+	<!-- backing bean, extends com.bcs.zsg.component.common.web.swf.bean.AppBackingBean -->
+	<var name="salesBean" class="com.bcs.zsg.sales.web.bean.CruiseBookingBean"/>
+	<var name="custBean" class="com.bcs.zsg.sales.web.bean.CustomerBean"/>
+	
+	<on-start>
+		<evaluate expression="salesBean.initAgent()"/>
+	</on-start>
+	
+	<view-state id="booking_list">
+		<on-entry>
+			<evaluate expression="salesBean.init(false)"/>
+			<evaluate expression="custBean.init(1)"/>
+		</on-entry>
+	</view-state>
+	
+	<end-state id="finish"/>
+	
+</flow>

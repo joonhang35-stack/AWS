@@ -1,0 +1,58 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	<p:growl id="msg"/>
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idAddBankName">Bank Name  </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddBankName" label="BankName" value="#{billPymtBean.billPaymentVO.bankName}" required="true" readonly="true" style="background:#ccc"/>&nbsp;
+				<p:commandButton icon="ui-icon-search" label="GL Account" oncomplete="varBankAcctListDialog.show()"/>
+			</p:column>
+			<p:column><h:outputLabel for="idAddBankAcc">GL Account </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddBankAcc" label="GL Account" value="#{billPymtBean.billPaymentVO.bankAcct}" required="true" readonly="true" style="background:#ccc"/>
+			</p:column>
+		</p:row>
+		<!-- Joon Hang - added * required sign to chequeNo and Pay to-->
+		<p:row>
+			<p:column><h:outputLabel for="idAddDate">Date </h:outputLabel></p:column>
+			<p:column><p:calendar pattern="dd-MMM-yyyy" id="idAddDate" label="Date" required="true" mindate="#{bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart}" 
+				maxdate="#{bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd}" value="#{billPymtBean.billPaymentVO.pymtDt}" readonlyInput="true" navigator="true" showButtonPanel="true"/>
+			</p:column>
+			<p:column><h:outputLabel for="idAddChequeNo">Cheque No <span class="required">*</span></h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddChequeNo" label="Cheque No" required="true" value="#{billPymtBean.billPaymentVO.refNum}" maxlength="25" converter="trimConverter"/></p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddPayTo">Pay to <span class="required">*</span> </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddPayTo" label="Pay to" required="true" value="#{billPymtBean.billPaymentVO.payee}" converter="trimConverter"/>  
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddAmtPaid">Amount Paid </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddAmtPaid" label="Amount Paid" value="#{billPymtBean.billPaymentVO.pmntAmount}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</p:inputText>
+			</p:column>
+			<p:column><h:outputLabel for="idAddMemoTextBox">Memo Text Box </h:outputLabel></p:column>
+			<p:column><p:inputTextarea id="idAddMemoTextBox" label="Memo Text Box" value="#{billPymtBean.billPaymentVO.remarks}" /></p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{billPymtBean.addPayment}" update="@form,:idAddFuncForm:tabView:idBillPmnt,,:idAddFuncForm:idEOAmt" process="@form"/>
+		<!--p:commandButton value="Cancel" actionListener="#{billPymtBean.resetGLAcctList}" update=":idAddPymtForm, :idBankAcctTable" oncomplete="varAddPymtDialog.hide()" process="@this"></p:commandButton-->
+		<p:commandButton value="Cancel" actionListener="#{billPymtBean.resetPymtForm}" oncomplete="varAddPymtDialog.hide()" update="@form" process="@this">
+			<pe:resetEditableValues for="idAddPymtForm"/>
+		</p:commandButton>
+	</p:panelGrid>
+</ui:composition>

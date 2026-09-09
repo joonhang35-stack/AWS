@@ -1,0 +1,334 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="headIncludes">
+<style>
+
+</style>	
+</ui:define>
+<ui:define name="content">
+	<p:panel header="Add Campaign Page">
+		<h:form id="idAddCampaignForm">
+			<p:growl id="msg"/>
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<!-- <p:commandButton id="idBtnStart" value="Start Campaign"
+					        oncomplete="varConfirmStartCampaignDialog.show();" process="@this"
+					        rendered="#{not empty campaignBean.campaignVO.id}" 
+					        style="color: #4CAF50;" />
+					    &nbsp;
+					    <p:commandButton id="idBtnStop" value="Stop Campaign"
+					        oncomplete="varConfirmStopCampaignDialog.show();" process="@this"
+					        rendered="#{not empty campaignBean.campaignVO.id}" 
+					        style="color: #FF5733;" /> -->	
+						<!-- <p:commandButton id="idBtnStart" value="Start Campaign"
+					        oncomplete="varConfirmStartCampaignDialog.show();" process="@this"
+					        rendered="#{not empty campaignBean.campaignVO.id}" 
+					        update=":idAddCampaignForm:idCampaignCountryTabView:idCampaignCountryPkgListTable"
+					        style="color: #4CAF50;" />
+					    &nbsp;
+					    <p:commandButton id="idBtnStop" value="Stop Campaign"
+					        oncomplete="varConfirmStopCampaignDialog.show();" process="@this"
+					        rendered="#{not empty campaignBean.campaignVO.id}" 
+					        update=":idAddCampaignForm:idCampaignCountryTabView:idCampaignCountryPkgListTable"
+					        style="color: #FF5733;" />	 -->
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			<p:panelGrid>
+				<p:row>
+					<p:column><!-- <h:outputLabel for="idStatus">#{msg['common.label.status']} </h:outputLabel> --></p:column>
+					<p:column>
+						<!-- <h:selectOneMenu id="idStatus" label="Status" value="#{campaignBean.campaignVO.campaignStatus}" effect="fade" required="true" disabled="true">
+							<f:selectItem itemLabel="Idle" itemValue="IDLE"/>
+							<f:selectItem itemLabel="Active" itemValue="ACTIVE"/>
+							<f:selectItem itemLabel="Running" itemValue="RUNNING"/>
+						</h:selectOneMenu> -->
+						<!-- <h:outputText id="idStatus" value="#{campaignBean.campaignVO.campaignStatus}" 
+			              style="font-weight: bold; color: #{campaignBean.campaignVO.campaignStatus eq 'IDLE' ? 'red' : campaignBean.campaignVO.campaignStatus eq 'RUNNING' ? 'green' : 'black'}"/> -->
+					</p:column>	
+				</p:row>
+				<p:row>
+					<p:column><h:outputLabel for="idName">#{msg['common.label.name']} <span class="required">*</span></h:outputLabel></p:column>
+					<p:column>
+						<p:inputText id="idName" label="Campaign Name" value="#{campaignBean.campaignVO.name}" size="50" required="true"/>
+					</p:column>	
+				</p:row>
+				<p:row>
+					<p:column><h:outputLabel for="idStartDt">Start #{msg['common.label.date']} <span class="required">*</span></h:outputLabel></p:column>
+					<p:column>
+						<p:calendar id="idStartDt" label="Start #{msg['common.label.date']}" value="#{campaignBean.campaignVO.startDt}" navigator="true" showButtonPanel="true" readonlyInput="true" pattern="dd-MMM-yyyy" required="true">
+	<!-- 						<p:ajax event="dateSelect" listener="#{salesBean.setInvoiceDueDate}" update=""/> -->
+						</p:calendar>
+					</p:column>	
+				</p:row>
+				<p:row>
+					<p:column><h:outputLabel for="idEndDt">End #{msg['common.label.date']} <span class="required">*</span></h:outputLabel></p:column>
+					<p:column>
+						<p:calendar id="idEndDt" label="End #{msg['common.label.date']}" value="#{campaignBean.campaignVO.endDt}" navigator="true" showButtonPanel="true" readonlyInput="true" pattern="dd-MMM-yyyy" required="true">
+	<!-- 						<p:ajax event="dateSelect" listener="#{salesBean.setInvoiceDueDate}" update=""/> -->
+						</p:calendar>
+					</p:column>	
+				</p:row>
+				<p:row>
+					<p:column colspan="2"><p:outputLabel rendered="#{empty campaignBean.campaignVO.id}"><span class="required">**</span> <i>Please save this campaign, return here again for additional configuration.</i></p:outputLabel></p:column>
+				</p:row>
+			</p:panelGrid>
+			
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<p:commandButton value="Add Country Tab" actionListener="#{campaignBean.onAddCampaignCountry}" oncomplete="varAddCampaignCountryTabDialog.show()" update=":idAddCampaignCountryTabDialog" disabled="#{empty campaignBean.campaignVO.id}"></p:commandButton>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<p:tabView id="idCampaignCountryTabView" style="min-height:400px" 
+							value="#{campaignBean.campaignVO.campaignCountryList}" var="child">
+						<!-- <c:forEach var="child" items="#{campaignBean.campaignVO.campaignCountryList}" varStatus="loop"> -->
+							
+							<!-- <p:ajax event="tabChange" listener="#{campaignBean.setCampaignCountryVO(child)}"/> -->
+							
+							<p:tab title="#{child.name}">
+								<p:panelGrid style="width: 1px">
+									<p:row>
+										<p:column>
+											<p:commandButton icon="ui-icon-close" value="Delete Country" actionListener="#{campaignBean.setCampaignCountryVO(child)}" update=":idDelCampaignCountryDialog" oncomplete="varDelCampaignCountryDialog.show()" />
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idName">Name <span class="required">*</span></h:outputLabel> 
+										</p:column>
+										<p:column>
+											<p:inputText id="idName" label="Name" value="#{child.name}" required="true"/>
+										</p:column>
+										<p:column></p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idSeq">Sequence <span class="required">*</span></h:outputLabel> 
+										</p:column>
+										<p:column>
+											<p:inputText id="idSeq" label="Sequence" value="#{child.seq}" required="true"></p:inputText>
+										</p:column>
+										<p:column styleClass="nowrap">
+											<i>(smaller sequence will appear first in order)</i>
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<p:commandButton icon="ui-icon-search" value="Select Tour Package" actionListener="#{campaignBean.loadTourPkgList(child)}" 
+												update=":idAssignTourPkgListDialog" oncomplete="varAssignTourPkgListDialog.show()" styleClass="nowrap" />
+										</p:column>
+										<p:column>
+											<p:commandButton value="#{campaignBean.editSeq ? 'Close Seq.' : 'Edit Seq.'}" actionListener="#{campaignBean.editInvoiceItemSeq}" update=":idAddCampaignForm:idCampaignCountryTabView:idCampaignCountryPkgListTable,@this" immediate="true" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								
+								<p:dataTable id="idCampaignCountryPkgListTable" value="#{child.campaignCountryPackageList}" var="countryPkgVO" paginator="true" rows="20"
+									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+									rowsPerPageTemplate="20, 30, 50">
+									
+									<p:column headerText="Delete" style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-close" actionListener="#{campaignBean.deleteCampaignCountryPkg(countryPkgVO, child)}" update="idCampaignCountryPkgListTable"/>
+									</p:column>
+									<!-- <p:column headerText="Package ID" sortBy="#{countryPkgVO.tourPkgVO.id}" filterBy="#{countryPkgVO.tourPkgVO.id}" filterStyle="width: 90%" filterMatchMode="contains">
+										<h:outputText value="#{countryPkgVO.tourPkgVO.id}" />
+									</p:column> -->
+									<p:column headerText="Seq." rendered="#{campaignBean.editSeq}" style="width:50px; text-align:center;">
+										<p:inputText label="Items Sequence" value="#{countryPkgVO.seq}" size="3" maxlength="3" onfocus="this.select();"/>
+									</p:column>
+									<p:column headerText="Tour Code" sortBy="#{countryPkgVO.tourPkgVO.code}" filterBy="#{countryPkgVO.tourPkgVO.code}" filterStyle="width: 90%" filterMatchMode="contains">
+										<h:outputText value="#{countryPkgVO.tourPkgVO.code}" />
+									</p:column>
+									<!-- <p:column headerText="Tour Name" sortBy="#{countryPkgVO.tourPkgVO.nameEn}" filterBy="#{countryPkgVO.tourPkgVO.nameEn}" filterStyle="width: 90%">
+										<h:outputText value="#{countryPkgVO.tourPkgVO.nameEn}" />
+									</p:column> -->
+										<p:column headerText="Description" sortBy="#{countryPkgVO.tourPkgVO.campaignPkgDesc}" filterBy="#{countryPkgVO.tourPkgVO.campaignPkgDesc}" filterStyle="width: 90%" filterMatchMode="contains">
+										<h:outputText value="#{countryPkgVO.tourPkgVO.campaignPkgDesc}" />
+									</p:column>
+									<p:column headerText="Year" sortBy="#{countryPkgVO.tourPkgVO.year}" filterBy="#{countryPkgVO.tourPkgVO.year}" filterStyle="width: 90%" filterMatchMode="contains">
+										<h:outputText value="#{countryPkgVO.tourPkgVO.year}" />
+									</p:column>
+									<!-- <p:column headerText="Departure" sortBy="#{countryPkgVO.tourPkgVO.dtDep}" filterBy="#{countryPkgVO.tourPkgVO.dtDep}" filterStyle="width: 90%">
+										<h:outputText value="#{countryPkgVO.tourPkgVO.dtDep}" >
+											<f:convertDateTime pattern="dd-MMM-yyyy"/>
+										</h:outputText>
+									</p:column> -->
+									<!-- <p:column headerText="Full Twn" filterStyle="width: 90%" style="text-align: center;">
+										<h:outputText value="#{selectedTourVO.fullTwn}" />
+										<br/>
+										<h:outputText value="#{selectedTourVO.fullTwnHist}" />
+									</p:column>
+									<p:column headerText="Full Sgl" filterStyle="width: 90%" style="text-align: center;">
+										<h:outputText value="#{selectedTourVO.fullSgl}" />
+										<br/>
+										<h:outputText value="#{selectedTourVO.fullSglHist}" />
+									</p:column>
+									<p:column headerText="Full Trpl" filterStyle="width: 90%">
+										<h:outputText value="#{selectedTourVO.fullTrpl}" />
+										<br/>
+										<h:outputText value="#{selectedTourVO.fullTrplHist}" />
+									</p:column>
+									<p:column headerText="Full Ctw" filterStyle="width: 90%">
+										<h:outputText value="#{selectedTourVO.fullCtw}" />
+										<br/>
+										<h:outputText value="#{selectedTourVO.fullCtwHist}" />
+									</p:column>
+									<p:column headerText="Full Ceb" filterStyle="width: 90%">
+										<h:outputText value="#{selectedTourVO.fullCeb}" />
+										<br/>
+										<h:outputText value="#{selectedTourVO.fullCebHist}" />
+									</p:column>
+									<p:column headerText="Full Cnb" filterStyle="width: 90%">
+										<h:outputText value="#{selectedTourVO.fullCnb}" />
+										<br/>
+										<h:outputText value="#{selectedTourVO.fullCnbHist}" />
+									</p:column>
+									<p:column headerText="Full Inft" filterStyle="width: 90%">
+										<h:outputText value="#{selectedTourVO.fullInft}" />
+										<br/>
+										<h:outputText value="#{selectedTourVO.fullInftHist}" />
+									</p:column> -->
+								</p:dataTable>
+							</p:tab>
+						<!-- </c:forEach> -->
+<!-- 							<p:tab id="idSelectTourTab" title="Select Tours"> -->
+<!-- 								<p:dataTable id="idSelectTourListTable" widgetVar="varSelectTourListTable" value="#{campaignBean.tourList}" var="tourVO" paginator="true" rows="50" rowKey="#{tourVO.id}"  -->
+<!-- 									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"  -->
+<!-- 									rowsPerPageTemplate="20, 40, 80" emptyMessage="#{msg['cust.tbl.empty.message']}" filteredValue="#{campaignBean.filteredObjList}" lazy="true" filterEvent="enter" -->
+<!-- 									selection="#{campaignBean.selectedTours}"> -->
+								
+<!-- 									<p:column selectionMode="multiple" style="width:16px;text-align:center" />		 -->
+								
+<!-- 									<p:column headerText="Tour Code" sortBy="#{tourVO.code}" filterBy="#{tourVO.code}" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.code}" /> -->
+<!-- 									</p:column> -->
+<!-- 									<p:column headerText="Tour Name" sortBy="#{tourVO.desc}" filterBy="#{tourVO.desc}" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.desc}" /> -->
+<!-- 									</p:column> -->
+<!-- 									<p:column headerText="Departure" sortBy="#{tourVO.dtDep}" filterBy="#{tourVO.dtDep}" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.dtDep}" > -->
+<!-- 											<f:convertDateTime pattern="dd-MMM-yyyy"/> -->
+<!-- 										</h:outputText> -->
+<!-- 									</p:column> -->
+<!-- 									<p:column headerText="Full Twn" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.fullTwn}" /> -->
+<!-- 									</p:column> -->
+<!-- 									<p:column headerText="Full Sgl" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.fullSgl}" /> -->
+<!-- 									</p:column> -->
+<!-- 									<p:column headerText="Full Trpl" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.fullTrpl}" /> -->
+<!-- 									</p:column> -->
+<!-- 									<p:column headerText="Full Ctw" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.fullCtw}" /> -->
+<!-- 									</p:column> -->
+<!-- 									<p:column headerText="Full Ceb" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.fullCeb}" /> -->
+<!-- 									</p:column> -->
+<!-- 									<p:column headerText="Full Cnb" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.fullCnb}" /> -->
+<!-- 									</p:column> -->
+<!-- 									<p:column headerText="Full Inft" filterStyle="width: 90%"> -->
+<!-- 										<h:outputText value="#{tourVO.fullInft}" /> -->
+<!-- 									</p:column> -->
+									
+<!-- 								</p:dataTable> -->
+<!-- 								<h:panelGrid columns="1"> -->
+<!-- 									<p:commandButton value="Add Selected Records"  -->
+<!-- 								    	oncomplete="varConfirmSelectTourDialog.show()"/> -->
+<!-- 								</h:panelGrid> -->
+<!-- 							</p:tab> -->
+						</p:tabView>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			<p:panelGrid>
+				<p:row>
+					<p:column><h:outputLabel for="idRemarks">#{msg['common.label.remarks']} </h:outputLabel></p:column>
+					<p:column>
+						<p:inputTextarea id="idRemarks" rows="10" cols="50"
+							value="#{campaignBean.campaignVO.remarks}"></p:inputTextarea>
+					</p:column>	
+				</p:row>
+			</p:panelGrid>
+			
+			<p:panelGrid columns="2" style="width:1px;">
+				<p:commandButton value="#{campaignBean.campaignVO.id == null ? msg['common.button.label.save'] : msg['common.button.label.update']}" 
+					actionListener="#{campaignBean.saveCampaign}" update="@form"/>
+				<p:commandButton value="#{msg['common.button.label.back']}" action="back" process="@this" global="false" />
+			</p:panelGrid>
+		</h:form>
+	</p:panel>
+	
+<p:confirmDialog id="idConfirmStartCampaignDialog" header="Start Campaign Confirmation" widgetVar="varConfirmStartCampaignDialog" message="Confirm to start the campaign?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{campaignBean.startSelectedCampaign}" update=":idAddCampaignForm" oncomplete="varConfirmStartCampaignDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" oncomplete="varConfirmStartCampaignDialog.hide()" global="false"/>
+	</h:form>
+</p:confirmDialog>
+
+<p:confirmDialog id="idConfirmStopCampaignDialog" header="Stop Campaign Confirmation" widgetVar="varConfirmStopCampaignDialog" message="Confirm to stop the campaign?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{campaignBean.stopSelectedCampaign}" update=":idAddCampaignForm" oncomplete="varConfirmStopCampaignDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" oncomplete="varConfirmStopCampaignDialog.hide()" global="false"/>
+	</h:form>
+</p:confirmDialog>
+
+<!-- DIALOG - SELECT TOUR PACKAGE -->
+<p:dialog id="idAssignTourPkgListDialog" header="Tour Package List" widgetVar="varAssignTourPkgListDialog" modal="true"
+    resizable="false" dynamic="true" draggable="true" 
+    hideEffect="fade" showEffect="fade" closable="false"
+    width="950" height="700">
+    
+    <h:form id="idAssignTourPkgListForm">
+        <ui:include src="select_assign_tour_pkg_list.xhtml" />
+    </h:form>
+</p:dialog>
+
+<p:confirmDialog id="idDelAssignedTourDialog" header="Delete Selected Tour" widgetVar="varDelAssignedTourDialog" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{campaignBean.deleteSelectedTour}" update=":idAddCampaignForm" oncomplete="varDelAssignedTourDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" oncomplete="varDelAssignedTourDialog.hide()" global="false"/>
+	</h:form>
+</p:confirmDialog>
+
+<!-- DIALOG - ADD COUNTRY TAB -->
+<p:dialog id="idAddCampaignCountryTabDialog" header="Add Country Tab"
+	widgetVar="varAddCampaignCountryTabDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="true" style="height: 80%">
+	<!-- <f:facet name="header">Confirmation</f:facet> -->
+	<h:form id="idAddCampaignCountryTabForm">
+		<ui:include src="add_campaign_country_tab.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - DELETE CAMPAIGN COUNTRY -->
+<p:confirmDialog id="idDelCampaignCountryDialog" header="Delete Country" widgetVar="varDelCampaignCountryDialog" message="Are you sure to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{campaignBean.deleteCampaignCountry}" update=":idAddCampaignForm" oncomplete="varDelCampaignCountryDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" oncomplete="varDelCampaignCountryDialog.hide()" global="false"/>
+	</h:form>
+</p:confirmDialog>
+
+</ui:define>
+</ui:composition>

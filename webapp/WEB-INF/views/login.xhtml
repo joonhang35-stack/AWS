@@ -1,0 +1,147 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="headIncludes">
+<style>
+#warningText {display:none;}
+</style>
+<script type="text/javascript">
+function nextCaptcha() {
+	var now = new Date();
+	var currentSrc = document.images.idCaptchaImg.src;
+	var startIdx = currentSrc.indexOf('#{request.contextPath}');
+	var endIdx = currentSrc.indexOf('?');
+	
+	var newSrc;
+	if (endIdx == -1)
+		newSrc = currentSrc.substring(startIdx);
+	else
+		newSrc = currentSrc.substring(startIdx, endIdx);
+	
+	newSrc = newSrc + '?' + now.getTime();
+	if (document.images) {
+		document.images.idCaptchaImg.src = newSrc;
+	}
+}
+
+function capsLockCheck(event) {
+	var text = document.getElementById("warningText");
+	
+	if (event.getModifierState("CapsLock")) {
+		text.style.display = "block";
+	} else {
+		text.style.display = "none";
+	}
+}
+</script>
+</ui:define>
+
+<ui:define name="content">
+	<form name="loginForm" action="doLogin" method="post">
+		<p:fieldset id="idLoginFieldSet" legend="#{msg['login.label.fieldset.secure.login']}" style="margin: auto; width: 300pt;">
+			<p:messages/>
+			<p:focus context="idLoginFieldSet"/>
+			
+			<c:if test="#{param.err != null or param.t != null}">
+			<div id="idSampleForm:idEntryMessages" class="ui-messages ui-widget">
+				<div class="ui-messages-error ui-corner-all">
+					<span class="ui-messages-error-icon"></span>
+					<ul><li><span class="ui-messages-error-summary">
+					
+						<c:choose>
+							<c:when test="#{param.err != null}">
+								<c:choose>
+									<c:when test="#{param.code eq 'ERR_SEC_INVALID_CREDENTIALS'}">
+										<h:outputFormat value="#{err['ERR_SEC_INVALID_CREDENTIALS']}"/>
+									</c:when>
+									<c:when test="#{param.code eq 'ERR_SEC_LOGIN_CREDENTIALS_REQUIRED'}">
+										<h:outputFormat value="#{err['ERR_SEC_LOGIN_CREDENTIALS_REQUIRED']}"/>
+									</c:when>
+									<c:when test="#{param.code eq 'ERR_SEC_LOGIN_CAPTCHA_FAILED'}">
+										<h:outputFormat value="#{err['ERR_SEC_LOGIN_CAPTCHA_FAILED']}"/>
+									</c:when>
+									<c:otherwise>
+										<h:outputFormat value="#{err['ERR_GENERAL_EXCEPTION']}"/>
+									</c:otherwise>
+								</c:choose>
+							</c:when>
+							<c:when test="#{param.t != null}">
+								<c:choose>
+									<c:when test="#{param.c != null}">
+										<h:outputFormat value="#{err['ERR_SEC_LOGIN_CONCURRENT']}"/>
+									</c:when>
+									<c:otherwise>
+										<h:outputFormat value="#{err['ERR_SEC_SESSION_TIMEOUT']}"/>
+									</c:otherwise>
+								</c:choose>
+							</c:when>
+						</c:choose>
+						
+					</span></li></ul>
+				</div>
+			</div>
+			</c:if>
+		
+			<p:panelGrid>
+				<p:row>
+					<p:column style="width: 90px;">
+						<h:outputText for="login_id" value="#{msg['login.label.field.login.id']}:"/>
+					</p:column>
+					<p:column>
+						<p:inputText id="login_id" value="" maxlength="16"/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputText for="login_pswd" value="#{msg['login.label.field.login.password']}:"/>
+					</p:column>
+					<p:column>
+						<p:password id="login_pswd" value="" maxlength="30" feedback="false" onkeyup="capsLockCheck(event);"/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:graphicImage id="idCaptchaImg" alt="Captcha Image" url="/img/captcha.jpg" onclick="nextCaptcha();" rendered="#{zsg:isLoginCaptcha()}"/>
+					</p:column>
+					<p:column>
+						<p:inputText id="login_captcha" value="" maxlength="5" rendered="#{zsg:isLoginCaptcha()}"/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column></p:column>
+					<p:column>
+						<button id="idBtnLogin" name="btnLogin" onclick="document.forms[0].submit();return false;" type="submit" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only">
+							<span class="ui-button-text">#{msg['login.button.label.login']}</span>
+						</button>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column></p:column>
+					<p:column>
+						<div class="ui-messages-warn" id="warningText" style="margin: 0px 0px;">
+							<h:outputFormat value="Caps Lock is on"/>
+						</div>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column></p:column>
+					<p:column>
+						<a href="${contextPath}/app/user/forgotpassword" > #{msg['login.link.label.forgotpass']} </a>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		
+			<p:tooltip for="idCaptchaImg" value="Click to get a new captcha challenge."/>
+			<p:tooltip for="login_captcha" value="Enter the text shown in the image on the left."/>
+		
+		</p:fieldset>
+	</form>
+</ui:define>
+</ui:composition>

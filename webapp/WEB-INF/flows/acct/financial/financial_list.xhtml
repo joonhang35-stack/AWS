@@ -1,0 +1,159 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+
+	<p:panel header="Financial Periods" toggleable="true" toggleSpeed="500">
+		<h:form id="idFinPeriodForm">
+			<p:growl id="msg"/>
+			
+			<h:panelGrid columns="2" style="width:250px">
+				<h:outputLabel for="idFiscalYear">Select Fiscal Year</h:outputLabel>
+				<h:selectOneMenu id="idFiscalYear" value="#{finPeriodBean.searchParamVO.obj1}" effect="fade" >
+		            <f:selectItems value="#{finPeriodBean.yearList}" var="#{year}" itemLabel="#{year}" itemValue="#{year}"/>
+		            <p:ajax listener="#{finPeriodBean.handleYearSelect}" event="change" update="idFinPeriodList"/>
+		        </h:selectOneMenu>
+		    </h:panelGrid>
+			<p:panelGrid>
+				<p:row>
+					<p:column style="width:155px;"><p:commandButton value="New Common Periods" oncomplete="varCommonPeriodDialog.show()" immediate="true" update=":idCommonPeriodDialog" process="@this"/></p:column>
+					<p:column style="width:100px;"><p:commandButton value="Close Period" actionListener="#{finPeriodBean.handleClosePeriod}"  oncomplete="varClosePeriodDialog.show()" update=":idClosePeriodDialog" process="@this"/></p:column>
+					<p:column style="width:10px;"><p:separator style="width:2px;height:20px"/></p:column>
+					<p:column style="width:70px;"><h:outputLabel>Lock Period</h:outputLabel></p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idLockPeriodStart" label="Lock Period From Date" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{finPeriodBean.finPeriodLockVO.dtStart}" required="true"/>
+						<p:watermark for="idLockPeriodStart" value="From Date" />
+					</p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idLockPeriodEnd" label="Lock Period To Date" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{finPeriodBean.finPeriodLockVO.dtEnd}" required="true"/>
+						<p:watermark for="idLockPeriodEnd" value="To Date" />
+					</p:column>
+					<p:column><p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{finPeriodBean.updLockPeriod}" update="@form"/></p:column>
+				</p:row>
+	        </p:panelGrid>
+	        
+			<p:dataTable id="idFinPeriodList" value="#{finPeriodBean.finPeriodList}" var="vo">
+				<p:column headerText="Sequence" sortBy="#{vo.seqNo}">
+					<h:outputText value="#{vo.seqNo}"/>
+				</p:column>
+				<p:column headerText="Period Name">
+					<h:outputText value="#{vo.desc}"/>
+				</p:column>
+				<p:column headerText="Start Date" style="text-align:center;">
+					<h:outputText value="#{vo.dtStart}">
+						<f:convertDateTime pattern="dd-MMM-yyyy"/>
+					</h:outputText>
+				</p:column>
+				<p:column headerText="End Date" style="text-align:center;">
+					<h:outputText value="#{vo.dtEnd}">
+						<f:convertDateTime pattern="dd-MMM-yyyy"/>
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Status" style="text-align:center;">
+					<h:outputText value="OPEN" rendered="#{vo.status eq 1}"/>
+					<h:outputText value="CLOSED" rendered="#{vo.status eq 0 or vo.status eq -1}"/>
+				</p:column>
+			</p:dataTable>
+			
+			<p:panelGrid style="margin-top:5px;">
+				<p:row>
+					<p:column style="width:155px;"><p:commandButton value="New Common Periods" oncomplete="varCommonPeriodDialog.show()" update=":idCommonPeriodDialog" immediate="true" process="@this"/></p:column>
+		        	<p:column><p:commandButton value="Close Period" actionListener="#{finPeriodBean.handleClosePeriod}" oncomplete="varClosePeriodDialog.show()" update=":idClosePeriodDialog" process="@this"/></p:column>
+		        </p:row>
+			</p:panelGrid>
+		</h:form>
+	</p:panel>
+	
+	<!--
+		DIALOG - GENERATE COMMON PERIOD
+	-->
+	<p:dialog id="idCommonPeriodDialog" widgetVar="varCommonPeriodDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="false">
+		<f:facet name="header">
+			<h:outputFormat value="Create a Common Financial Period" />
+		</f:facet>
+		
+		<h:form id="idAddCommonPeriodForm">
+			<p:growl id="msg"/>
+	 		<p:panel>
+		        <p:selectOneRadio id="idCommonPeriod" value="#{finPeriodBean.searchParamVO.obj2}" layout="pageDirection">  
+		            <f:selectItem itemLabel="Copy Previous Year's Period" itemValue="1" />  
+		            <f:selectItem itemLabel="12 Months" itemValue="2" />  
+		            <f:selectItem itemLabel="Quarterly" itemValue="3" />
+		            <p:ajax update="idStartMonthList"/>
+		        </p:selectOneRadio>
+			</p:panel>
+			
+			<p:panelGrid id="idStartMonthList" columns="2">
+				<h:outputLabel>Starting Month:</h:outputLabel>
+				<h:selectOneMenu value="#{finPeriodBean.searchParamVO.obj3}" effect="fade" style="width:100px" rendered="#{finPeriodBean.searchParamVO.obj2 ne 1}">
+					<f:selectItem itemLabel="January" itemValue="0"/>
+					<f:selectItem itemLabel="February" itemValue="1"/>
+					<f:selectItem itemLabel="March" itemValue="2"/>
+					<f:selectItem itemLabel="April" itemValue="3"/>
+					<f:selectItem itemLabel="May" itemValue="4"/>
+					<f:selectItem itemLabel="June" itemValue="5"/>
+					<f:selectItem itemLabel="July" itemValue="6"/>
+					<f:selectItem itemLabel="August" itemValue="7"/>
+					<f:selectItem itemLabel="September" itemValue="8"/>
+					<f:selectItem itemLabel="October" itemValue="9"/>
+					<f:selectItem itemLabel="November" itemValue="10"/>
+					<f:selectItem itemLabel="December" itemValue="11"/>
+		        </h:selectOneMenu>
+		        <h:selectOneMenu value="#{finPeriodBean.searchParamVO.obj3}" effect="fade" disabled="true" style="width:100px" rendered="#{finPeriodBean.searchParamVO.obj2 eq 1}">
+		        	<f:selectItem itemLabel="January" itemValue="0"/>
+		        </h:selectOneMenu>
+			</p:panelGrid>
+			
+			<h:panelGrid columns="2" style="width: 1px;">
+				<p:commandButton value="#{msg['common.button.label.save']}" onclick="varConfirmPeriodDialog.show()"/>
+				<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{finPeriodBean.resetForm}" onclick="varCommonPeriodDialog.hide()" process="@this" update="@form"/>
+			</h:panelGrid>
+		</h:form>
+	</p:dialog>
+	
+	<!--
+		DIALOG - CLOSE PERIOD
+	-->
+	<p:dialog id="idClosePeriodDialog" widgetVar="varClosePeriodDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="false">
+		<f:facet name="header">
+			<h:outputFormat value="General Ledger Close" />
+		</f:facet>
+		
+		<h:form id="idClosePeriodForm">
+			<p:growl id="msg"/>
+	 		<p:panelGrid columns="2">
+				<h:outputText value="Period to close:"/>
+				<h:outputText value="#{finPeriodBean.finPeriodVO.desc}"/>
+				<h:outputText value="Start date:"/>
+				<h:outputText value="#{finPeriodBean.finPeriodVO.dtStart}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText>
+				<h:outputText value="End date:"/>
+				<h:outputText value="#{finPeriodBean.finPeriodVO.dtEnd}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText>
+			</p:panelGrid>
+			
+			<h:panelGrid columns="2" style="width: 1px;">
+				<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{finPeriodBean.updFinPeriod}" update="@form,:idFinPeriodForm:idFinPeriodList" oncomplete="varClosePeriodDialog.hide()"/>
+				<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{finPeriodBean.resetForm}" onclick="varClosePeriodDialog.hide()" process="@this" update="@form"/>
+			</h:panelGrid>
+		</h:form>
+	</p:dialog>
+	
+	<!--
+		DIALOG - CONFIRM GENERATE COMMON PERIOD
+	-->
+	<p:confirmDialog widgetVar="varConfirmPeriodDialog" message="Select common periods replace all the current periods for the selected year. Continue?">
+		<h:form>
+			<p:growl id="msg"/>
+			<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{finPeriodBean.addFinPeriod}" update=":idAddCommonPeriodForm,:idFinPeriodForm:idFinPeriodList" oncomplete="varConfirmPeriodDialog.hide(),varCommonPeriodDialog.hide()"/>
+			<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{finPeriodBean.resetForm}" update=":idAddCommonPeriodForm" oncomplete="varConfirmPeriodDialog.hide()"/>
+		</h:form>
+	</p:confirmDialog>
+</ui:define>
+</ui:composition>

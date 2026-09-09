@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:sec="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+            http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd">
+
+	<!-- Business Objects -->
+	<bean id="securityBO" class="com.bcs.zsg.component.security.bo.impl.SecurityBOImpl">
+		<property name="defaultLoginPassword" value="${sec.login.default.password}"/>
+	</bean>
+	<bean id="userBO" class="com.bcs.zsg.cfg.sec.bo.UserBOImpl"/>
+	<bean id="homeBO" class="com.bcs.zsg.common.bo.HomeBOImpl"/>
+	<bean id="passwordResetBO" class="com.bcs.zsg.cfg.sec.bo.PasswordResetBOImpl"/>
+
+	<!-- Services -->
+	<bean id="securityService" class="com.bcs.zsg.component.security.service.impl.SecurityServiceImpl"/>
+	<bean id="userService" class="com.bcs.zsg.cfg.sec.service.UserServiceImpl"/>
+	<bean id="homeService" class="com.bcs.zsg.common.service.HomeServiceImpl"/>
+	<bean id="passwordResetService" class="com.bcs.zsg.cfg.sec.service.PasswordResetServiceImpl"/>
+    
+    <!-- DAO -->
+    <bean id="securityDAO" class="com.bcs.zsg.component.security.dao.impl.hibernate.SecurityDAOImpl" parent="baseHibernateDAO"/>
+    <bean id="userDAO" class="com.bcs.zsg.cfg.sec.dao.UserDAOImpl" parent="baseHibernateDAO"/>
+	<bean id="homeDAO" class="com.bcs.zsg.common.dao.HomeDAOImpl" parent="baseHibernateDAO"/>
+	<bean id="passwordResetDAO" class="com.bcs.zsg.cfg.sec.dao.PasswordResetDAOImpl" parent="baseHibernateDAO"/>
+
+	<!-- Authentication Exception Mapping -->
+	<util:map id="authenticationExceptionMap" map-class="java.util.LinkedHashMap">
+		<entry key="com.bcs.zsg.component.security.exception.AuthenticationBusinessException" value="${sec.login.failure.url}&amp;code={0}"/>
+        <entry key="org.springframework.security.authentication.InsufficientAuthenticationException" value="${sec.session.timeout.url}"/>
+    </util:map>
+
+	<!-- Authentication Success Handler -->
+	<bean id="authenticationSuccessHandler" parent="baseAuthenticationSuccessHandler"/>
+
+	<!-- Session Beans -->
+	<!-- Extend this class to set more information to the session. -->
+	<!--bean id="sessionInfoBean" class="com.bcs.zsg.component.security.web.BaseSessionInfoBean" scope="session"/-->
+	<bean id="sessionInfoBean" class="com.bcs.zsg.security.web.bean.BterpSessionInfoBean" scope="session"/>
+
+</beans>

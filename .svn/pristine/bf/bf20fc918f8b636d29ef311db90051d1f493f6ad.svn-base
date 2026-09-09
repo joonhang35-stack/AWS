@@ -1,0 +1,380 @@
+package com.bcs.zsg.sales.bo;
+
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderViewVO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.InvoiceAttachmentVO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+import com.bcs.zsg.sales.vo.InvoicePaxVO;
+import com.bcs.zsg.sales.vo.InvoicePaymentAttachmentVO;
+import com.bcs.zsg.sales.vo.InvoicePaymentVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.sales.vo.PersonEmailVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+
+public interface InvoiceBO {
+
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public List<InvoiceVO> getInvoiceList(Long companyId, String docTypeCd) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public InvoiceVO getInvoiceDetails(InvoiceVO invoiceVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public List<CustDetailsVO> getCustomerList(String searchType, String searchValueType, String searchValue, Long companyId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public List<CustDetailsVO> getPassangerList(String searchType, String searchValueType, String searchValuee, Long companyId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public List<ExOrderVO> getExOrderList() throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public List<InvoiceAndExchangeOrderViewVO> getInvEOItemViewList(Long companyId, boolean acctMgr, String invoiceCatCd) throws BusinessException;
+	public List<InvoiceAndExchangeOrderViewVO> getInvEOItemViewList(Long companyId, boolean acctMgr, String invoiceCatCd, String invItemCat) throws BusinessException;
+	public List<InvoiceAndExchangeOrderViewVO> getInvEOItemViewList(Long companyId, boolean acctMgr, String invoiceCatCd,
+			String invItemCat, List<String> excludeInvItemCatList) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param invoiceVO, tourDepartureVO
+	 * @throws BusinessException
+	 * @throws QueueException 
+	 */
+	public void insertInvoice(InvoiceVO invoiceVO, Long idTourDep) throws BusinessException, QueueException;
+	
+	public void insertInvoiceByEmailPayment(InvoiceVO invoiceVO, Long idTourDep)throws BusinessException, QueueException;
+	
+	/**
+	 * 
+	 * @param invoiceVO
+	 * @throws BusinessException
+	 * @throws QueueException 
+	 */
+	public void updInvCd(InvoiceVO invoiceVO) throws BusinessException, QueueException;
+	
+	/**
+	 * 
+	 * @param invId
+	 * @param actionCd
+	 * @param reason
+	 * @throws BusinessException
+	 * @throws QueueException 
+	 */
+	public void insertInvoiceHistory(Long invId, String actionCd, String reason) throws BusinessException, QueueException;
+	
+	/**
+	 * 
+	 * @param invoiceVO
+	 * @throws BusinessException
+	 */
+	public void updateInvoice(InvoiceVO invoiceVO, Long idTourDep) throws BusinessException, QueueException;
+	
+	public void updateInvoiceForEmailPayment(InvoiceVO invoiceVO, Long idTourDep) throws BusinessException, QueueException;
+	
+	/**
+	 * 
+	 * @param invoiceVO
+	 * @throws BusinessException
+	 */
+	public void deleteInvoice(InvoiceVO invoiceVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param invoiceVO
+	 * @param invoicePaxVO 
+	 * @throws BusinessException
+	 */
+	public void updateInvoicePax(InvoiceVO invoiceVO, InvoicePaxVO invoicePaxVO) throws BusinessException, QueueException;
+	
+	/**
+	 * 
+	 * @param invoiceVO
+	 * @throws BusinessException
+	 * @throws QueueException 
+	 */
+	//public void updObjList(InvoiceVO invoiceVO, AddUpdDelVO objectVO) throws BusinessException, QueueException;
+	
+	
+	/**
+	 * 
+	 * @param custId
+	 * @throws BusinessException
+	 */
+	public CustDetailsVO getCustDetails(Long custId) throws BusinessException;
+
+	/**
+	 * 
+	 * @param id
+	 * @param needDetail
+	 * @param needLangMeal
+	 * @return
+	 * @throws BusinessException
+	 */
+	public CustDetailsVO getCustDetails(Long id, boolean needDetail, boolean needLangMeal) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public boolean getBookingInvExist(Long bookingId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public InvoiceVO getInvoice(Long bookingId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public InvoiceVO getInvoiceById(Long id) throws BusinessException ;
+
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public List<InvoicePaxVO> getInvoicePaxListWithPkgId(Long pkgId) throws BusinessException ;
+
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void updInvoicePax(AddUpdDelVO invoicePaxAUDVO) throws BusinessException ;
+	
+	/**
+	 * 
+	 * @param CustDetailsVO
+	 * @throws BusinessException
+	 */
+	public void setPerSubInfo(CustDetailsVO custDetailsVO) throws BusinessException;
+
+	/**
+	 * 
+	 * @param id
+	 * @throws BusinessException
+	 */
+	public String getInvoiceStatus(Long id) throws BusinessException;
+
+	/**
+	 * 
+	 * @param companyId
+	 * @param docTypeCd
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoiceVO> getInvoiceDisplayList(Long companyId,String docTypeCd) throws BusinessException ;
+	
+	/**
+	 * 
+	 * @param companyId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoiceVO> getCreditNoteDisplayList(Long companyId) throws BusinessException ;
+
+	/**
+	 * 
+	 * @param companyId
+	 * @param docTypeCd
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoiceVO> getInvoiceListSelection(Long companyId, String docTypeCd) throws BusinessException ;
+
+	/**
+	 * 
+	 * @param params
+	 * @return
+	 * @throws BusinessException
+	 */
+	public int getInvoiceListSize(Map<String, Object> params) throws BusinessException;
+
+	/**
+	 * 
+	 * @param params
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoiceVO> getInvoiceList(Map<String, Object> params) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param params
+	 * @return
+	 * @throws BusinessException
+	 */
+	public int getInvoiceHistoryListSize(Map<String, Object> params) throws BusinessException;
+
+	/**
+	 * 
+	 * @param params
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoiceVO> getInvoiceHistoryList(Map<String, Object> params) throws BusinessException;
+	
+	public List<InvoiceVO> getInvoiceListForPOSUpload(Map<String, Object> params) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param invoiceVO
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoiceItemVO> getInvItemList(InvoiceVO invoiceVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param invoiceVO
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoicePaymentVO> getInvPmntList(InvoiceVO invoiceVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param invoiceVO
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<InvoiceVO> getInvoiceListNoCN(InvoiceVO invoiceVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param companyId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<EmployeeViewVO> getEmployeeViewList(Long companyId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param companyId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<EmployeeViewVO> getFullEmployeeViewList(Long companyId) throws BusinessException;
+
+	/**
+	 * 
+	 * @param invoiceVO
+	 * @throws BusinessException
+	 */
+	public void updateCashBookInvoices(InvoiceVO invoiceVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param creditNoteId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public InvoicePaymentVO getInvPmnt(InvoiceVO invoiceVO) throws BusinessException;
+
+	public void updateCustomerId(InvoiceVO invoiceVO) throws BusinessException;
+
+	public void saveInvoicePaymentVO(InvoicePaymentVO invoicePaymentVO) throws BusinessException;
+
+	public InvoicePaymentVO getInvPaymentById(Long id) throws BusinessException;
+	
+	public List<InvoiceAttachmentVO> getInvoiceAttachmentList(Long invId) throws BusinessException;
+
+	public void addDeleteInvoiceAttachment(InvoiceAttachmentVO invoiceAttachmentVO, boolean isDelete) throws BusinessException;
+	
+	public void addDeleteInvoicePaymentAttachment(InvoicePaymentAttachmentVO invoicePaymentAttachmentVO, boolean isDelete) throws BusinessException;
+
+	public List<InvoicePaymentAttachmentVO> getInvPmntAttachmentList(Long invId) throws BusinessException;
+	
+	public InvoiceVO getInvoiceByCode(String code) throws BusinessException;
+	
+	public void updateRemarks(InvoiceVO invoiceVO) throws BusinessException;
+	
+	public List<PersonEmailVO> getPersonEmailListByPersonId(Long personId) throws BusinessException;
+
+	public void updateInvoiceDocTypeStatus(Long idInv, String statusCd) throws BusinessException;
+
+	public void convertToInvoice(InvoiceVO invoiceVO) throws BusinessException, QueueException;
+
+	public void insertSubPaxStatement(InvoiceVO invoiceVO, Long idTourDep, boolean bySystem)
+			throws BusinessException, QueueException;
+
+	public void terminateAcctTrans(InvoiceVO invoiceVO) throws BusinessException;
+
+	public List<InvoiceVO> getInvoiceByParentInvoiceId(Long idParentInv) throws BusinessException;
+
+	public void updateInvoiceSubPsRunningNumber(Long idInv, Integer subPsRunningNumber) throws BusinessException;
+
+	public void terminateAcctTrans(InvoiceVO invoiceVO, String action) throws BusinessException;
+
+	public InvoiceVO getInvoice(Map<String, Object> params) throws BusinessException;
+
+	public List<InvoiceVO> getSubInvoiceList(Long idParentInv) throws BusinessException;
+
+	public List<InvoiceVO> getInvoiceListByParams(Map<String, Object> params) throws BusinessException;
+
+	public void updateInvoiceEInvoiceData(Long idInv, String docUuid, String submissionUid, String status)
+			throws BusinessException;
+
+	public void updRfndNoteCd(InvoiceVO invoiceVO) throws BusinessException, QueueException;
+
+	public InvoiceVO getInvoiceByBookingId(Long bookingId) throws BusinessException;
+
+	public Boolean isInvoiceBeforeEInvoice(Long idInv, LocalDateTime targetDateTime) throws BusinessException;
+	
+	public InvoiceVO getInvoiceByCode(String code, String docTypeCd) throws BusinessException;
+
+	public void updateInvoice(InvoiceVO invoiceVO, Long idTourDep, Boolean isUpdateCashBook)
+			throws BusinessException, QueueException;
+
+	/**
+	 * update invoice payments only for invoice converted from pax statement
+	 * @throws BusinessException 
+	 * @throws QueueException 
+	 */
+	public void updateInvoicePayments(InvoiceVO invoiceVO, Long idTourDep, Boolean isUpdateCashBook)
+			throws BusinessException, QueueException;
+
+	public List<InvoiceVO> getCreditNoteDisplayList(Map<String, Object> params) throws BusinessException;
+
+	public List<InvoicePaymentVO> getInvPmntListByIdCreditNote(Long idCreditNote) throws BusinessException;
+
+	public int getCreditNoteDisplayListSize(Map<String, Object> params) throws BusinessException;
+
+	public boolean validateConvert(InvoiceVO oriVO) throws BusinessException;
+
+	public List<InvoiceVO> getInvoiceList(Map<String, Object> params, Long idCompany) throws BusinessException;
+
+	public InvoiceVO processReversePsSales(InvoiceVO invoiceVO) throws BusinessException, QueueException;
+	
+	public List<InvoicePaxVO> getInvoicePaxListWithDepId(Map<String, Object> params) throws BusinessException;
+
+	public List<InvoiceVO> getInvoiceListToSubmitEInvoice(Map<String, Object> params, Date dateChecked)
+			throws BusinessException;
+}

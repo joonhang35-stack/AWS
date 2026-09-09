@@ -1,0 +1,48 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varPastInvDialog.show();
+			} else {
+				varPastInvDialog.hide();
+			}
+		}
+	</script>
+	<p:growl id="msg"/>
+	<p:panelGrid>
+		<p:row>
+			<p:column style="width:1px;"><h:outputLabel>From</h:outputLabel></p:column>
+			<p:column style="width:80px;">
+				<p:calendar id="idFrom" label="From Date" pattern="#{config['date.display.pattern']}" navigator="true" showButtonPanel="true" value="#{journalBean.dtFrom}" required="true"/>
+				<p:watermark for="idFrom" value="From Date" />
+			</p:column>
+			
+			<p:column style="width:1px;"><h:outputLabel>To</h:outputLabel></p:column>
+			<p:column style="width:80px;">
+				<p:calendar id="idTo" label="To Date" pattern="#{config['date.display.pattern']}" navigator="true" showButtonPanel="true" value="#{journalBean.dtTo}" required="true"/>
+				<p:watermark for="idTo" value="To Date" />
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width: 1px; margin-top: 5px">
+		<p:commandButton value="Process"
+			actionListener="#{journalBean.processReversePastInvoice}" 
+			update="@form" 
+			oncomplete="onValidation(xhr, status, args);" 
+		>
+		</p:commandButton>
+										
+		<p:commandButton value="#{msg['common.button.label.cancel']}" type="button" onclick="varPastInvDialog.hide()"/>
+	</p:panelGrid>
+	
+</ui:composition>

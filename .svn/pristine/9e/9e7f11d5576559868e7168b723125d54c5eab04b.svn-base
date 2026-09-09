@@ -1,0 +1,341 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<style>
+.tourDepListClass .ui-datatable th div.ui-dt-c,
+.tourDepListClass .ui-datatable .ui-datatable-data td div.ui-dt-c {
+	padding: 4px 0px;
+	font-size: 10px;
+	text-align: center;
+}
+
+.tourDepListClass .ui-state-highlight,
+.tourDepListClass .ui-widget-content .ui-state-highlight {
+	border: 2px solid #7c51a1;
+	background: #7ddbfe !important;
+}
+
+.tourDepSearchClass .ui-panelgrid td {
+    padding: 4px 4px;
+}
+	
+.ui-tooltip {
+	max-width: 600px;
+}
+</style>
+
+<p:growl id="msg" />
+<h:panelGrid columns="1" style="width:1px;" rendered="#{cruiseBookingBean.tourPkgDepFilter ne 'Y'}">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varTourDepListDialog.hide()" rendered="#{cruiseBookingBean.tourPkgDepFilter eq 'N'}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBookingBean.resetForm}" process="@this" update="idTourDepListForm"
+		oncomplete="varTourDepListDialog.hide()" rendered="#{cruiseBookingBean.tourPkgDepFilter eq 'Y'}">
+		<pe:resetEditableValues for="idTourDepListForm" />
+	</p:commandButton>
+</h:panelGrid>
+<div class="tourDepSearchClass">
+<p:panelGrid id="idTourDepSearch" rendered="#{cruiseBookingBean.tourPkgDepFilter eq 'Y'}" style="width: 1300px;">
+	<p:row>
+		<p:column style="width:70px;">
+			<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varTourDepListDialog.hide()" rendered="#{cruiseBookingBean.tourPkgDepFilter eq 'N'}"/>
+			<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBookingBean.resetForm}" process="@this" update="idTourDepListForm"
+				oncomplete="varTourDepListDialog.hide()" rendered="#{cruiseBookingBean.tourPkgDepFilter eq 'Y'}">
+				<pe:resetEditableValues for="idTourDepListForm" />
+			</p:commandButton>
+		</p:column>
+		<p:column style="width:65px;"><p:outputLabel style="display:block;">From Date</p:outputLabel></p:column>
+		<p:column style="width:130px;">
+			<p:calendar value="#{cruiseBookingBean.searchTourDep.fromDate}" pattern="#{config['date.display.pattern']}" readonlyInput="true"
+		    	navigator="true" display="inline" size="10" mindate="today" showOn="button">
+		    	<p:ajax event="dateSelect" listener="#{cruiseBookingBean.handleDepFromDateSelect}" process="@this" update="idSearchToDate" global="false" />
+		    </p:calendar>
+		</p:column>
+		<p:column style="width:50px;"><p:outputLabel style="display:block;">To Date</p:outputLabel></p:column>
+		<p:column style="width:130px;">
+		    <p:calendar id="idSearchToDate" value="#{cruiseBookingBean.searchTourDep.toDate}" pattern="#{config['date.display.pattern']}" readonlyInput="true"
+		    	navigator="true" display="inline" size="10" mindate="today" showOn="button">
+		    </p:calendar>
+		</p:column>
+		<p:column style="width:120px;">
+			<p:selectOneMenu id="idSearchTourPkgDailyCms" value="#{cruiseBookingBean.searchTourDep.tourPkgDailyCms}" style="width:120px;">
+				<f:selectItem itemLabel="Select Itinerary" />
+				<f:selectItems value="#{cruiseBookingBean.tourPkgVO.tourPkgDailyItineraryVOList}"
+					var="ivo" itemValue="#{ivo.id}" itemLabel="#{ivo.code} - #{ivo.title}" />
+			</p:selectOneMenu>
+		</p:column>
+		<p:column style="width:150px;">
+			<p:selectCheckboxMenu value="#{cruiseBookingBean.searchTourDep.departDateBadgeList}" label="Depart date badge" style="width:150px; display:block;" >
+				<f:selectItems value="#{bterp:lookupItemList('depart_date_badge')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+			</p:selectCheckboxMenu>
+		</p:column>
+		<p:column style="width:100px;">
+			<p:selectCheckboxMenu value="#{cruiseBookingBean.searchTourDep.selectedSeason}" label="Season" style="width:100px; display:block;" >
+				<f:selectItems value="#{cruiseBookingBean.refDataListSeason}" var="vo" itemLabel="#{vo.value}" itemValue="#{vo.code}" />
+			</p:selectCheckboxMenu>
+		</p:column>
+		<p:column style="width:120px;">
+			<p:selectOneMenu id="idSearchLangCode" value="#{cruiseBookingBean.searchTourDep.langCode}">
+				<f:selectItem itemLabel="Select Language" />
+				<f:selectItems value="#{bterp:lookupItemList('product_lang')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+			</p:selectOneMenu>
+		</p:column>
+		<p:column style="width:120px;">
+			<p:selectOneMenu id="idTourStatusCode" value="#{cruiseBookingBean.searchTourDep.tourStatusCd}">
+				<f:selectItem itemLabel="Select Status" />
+				<f:selectItems value="#{bterp:lookupItemList('tour_status')}" var="statusVO" itemValue="#{statusVO.code}" itemLabel="#{statusVO.description}"/>
+			</p:selectOneMenu>
+		</p:column>
+		<p:column>
+			<p:commandButton value="Search" actionListener="#{cruiseBookingBean.reloadTourDepListBySearch}" update="idTourDepList"/>
+			<p:commandButton value="Clear" actionListener="#{cruiseBookingBean.resetSearchTourDepForm}" process="@this" update="@form">
+				<pe:resetEditableValues for="idTourDepListForm" />
+			</p:commandButton>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+</div>
+<div class="tourDepListClass">
+<p:dataTable id="idTourDepList" value="#{cruiseBookingBean.tourDepList}" var="vo" rowStyleClass="#{vo.groupColor eq 0 ? 'group-color-one' : 'group-color-two'}"
+	rowKey="#{vo.id}" selectionMode="single">
+	<f:facet name="header">
+		<h:panelGrid columns="1">
+			<h:outputText value="#{cruiseBookingBean.tourPkgVO.nameEn}"/>
+			<h:outputText value="#{cruiseBookingBean.tourPkgVO.nameOther}" rendered="#{not empty cruiseBookingBean.tourPkgVO.nameOther}"/>
+			<h:outputText value="#{cruiseBookingBean.tourPkgVO.nameZh}" rendered="#{not empty cruiseBookingBean.tourPkgVO.nameZh}"/>
+			<h:outputText value="Sector Type: #{cruiseBookingBean.tourPkgVO.tourPkgCountryVO.regionName}" rendered="#{not empty cruiseBookingBean.tourPkgVO.tourPkgCountryVO.regionName}"/>
+			<h:outputText value="Sector: #{cruiseBookingBean.tourPkgVO.tourPkgCountryVO.countryName}" rendered="#{not empty cruiseBookingBean.tourPkgVO.tourPkgCountryVO.countryName}"/>
+			<h:outputText value="Location Tag: #{cruiseBookingBean.tourPkgVO.tourPkgCountryVO.cityName}" rendered="#{not empty cruiseBookingBean.tourPkgVO.tourPkgCountryVO.cityName}"/>
+		</h:panelGrid>
+	</f:facet>
+
+	<p:column style="width:30px;">
+		<p:rowToggler />
+	</p:column>
+	<p:column headerText="Dep Date" style="width:100px;">
+		<h:outputText value="#{vo.dtDep}"><f:convertDateTime pattern="#{config['date.display.pattern2']}"/></h:outputText>
+		<ui:repeat value="#{vo.departDateBadgeList}" var="badgeVO">
+			<h:outputText id="idTooltipBadge" value="#{badgeVO}"
+				style="display:inline-block; background:white; #{not empty vo.departDateBadgeList and (vo.departDateBadgeList.contains('DISCx2') or vo.departDateBadgeList.contains('EX-DIS')) ? 'color:red; border:1px solid red;' : 'color:green; border:1px solid green;'} border-radius: 5px; padding:2px; margin:2px;"
+				rendered="#{not empty vo.departDateBadgeList}"/>
+			<pe:tooltip for="idTooltipBadge" rendered="#{not empty badgeVO}">
+				<h:outputText value="#{bterp:lookupItemDesc('depart_date_badge', badgeVO)}"/>
+			</pe:tooltip>
+		</ui:repeat>
+		<h:outputText id="idTooltipLangCode" rendered="#{not empty vo.langCode}" style="display:inline-block; background:#{vo.langCode eq 'BM' ? 'green' : 'white'}; color:#{vo.langCode eq 'BM' ? 'white' : 'green'}; border:1px solid green; border-radius: 5px; padding:2px; margin:2px;"
+			value="#{vo.langCode}"/>
+		<pe:tooltip for="idTooltipLangCode" rendered="#{not empty vo.langCode}">
+			<h:outputText value="#{bterp:lookupItemDesc('product_lang', vo.langCode)}"/>
+		</pe:tooltip>
+	</p:column>
+	<p:column headerText="Status" style="width:60px;">
+		<p:commandLink id="idBookButton" actionListener="#{cruiseBookingBean.handleTourDepSelect(vo)}" update=":idAddBookingDialog" oncomplete="varAddBookingDialog.show()"
+			rendered="#{not cruiseBookingBean.isAgentViewOnly and (vo.accCodeStatusCd eq 'Y' and (vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L' or vo.tourStatusCd eq 'C1') and not vo.isPrivateBooking)}">
+			<p:graphicImage value="/img/book_button_a.png" rendered="#{vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'C1'}"/>
+			<p:graphicImage value="/img/book_button_l.png" rendered="#{vo.tourStatusCd eq 'L'}"/>
+<!-- 			<p:tooltip for="idBookButton"> -->
+<!-- 				<p:outputLabel value="#{cruiseBookingBean.getCalculatedAmount(vo)}" style="white-space: pre-wrap"/> -->
+<!-- 				TWN=#{cruiseBookingBean.getDoubleDecimalFormat(((vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))} -->
+<!-- 				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span> -->
+<!-- 				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
+<!-- 				SGL=#{cruiseBookingBean.getDoubleDecimalFormat(((vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))} -->
+<!-- 				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span> -->
+<!-- 				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
+<!-- 				CTW=#{cruiseBookingBean.getDoubleDecimalFormat(((vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))} -->
+<!-- 				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span> -->
+<!-- 				<br/> -->
+<!-- 				CWB=#{cruiseBookingBean.getDoubleDecimalFormat(((vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))} -->
+<!-- 				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span> -->
+<!-- 				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
+<!-- 				CNB=#{cruiseBookingBean.getDoubleDecimalFormat(((vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))} -->
+<!-- 				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span> -->
+<!-- 				<h:outputLabel style="font-size:10px; color:#F00;" rendered="#{(vo.discountPax1 gt 0 and vo.discount1 gt 0) or (vo.discountPax2 gt 0 and vo.discount2 gt 0)}"> -->
+<!-- 					<br/><br/> -->
+<!-- 					**Discount calculation already included -->
+<!-- 				</h:outputLabel> -->
+<!-- 			</p:tooltip> -->
+		</p:commandLink>
+		<!-- <h:outputText value="Not Ready" style="text-transform:uppercase; color:#F00;" rendered="#{vo.accCodeStatusCd eq 'N'}"/>
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd ne 'F' and vo.tourStatusCd ne 'A' and vo.tourStatusCd ne 'L' and vo.tourStatusCd ne 'C1'}"/>
+		<h:outputText value="Full" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd eq 'F'}"/> -->
+		<p:outputPanel id="idTooltipStatusReason" layout="block">
+			<h:outputText value="Not Ready" style="text-transform:uppercase; color:#F00;" rendered="#{vo.accCodeStatusCd eq 'N'}"/>
+			<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd ne 'F' and vo.tourStatusCd ne 'A' and vo.tourStatusCd ne 'L' and vo.tourStatusCd ne 'C1'}"/>
+			<!-- <h:outputText value="Private" style="text-transform:uppercase; color:#F00;" rendered="#{vo.isPrivateTour}"/> -->
+			<h:outputText value="Full" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd eq 'F'}"/>
+			<p:graphicImage value="/img/more.png" width="11" style="margin-left: 3px;" rendered="#{not empty vo.tourStatusReason}"/>
+		</p:outputPanel>
+		<pe:tooltip for="idTooltipStatusReason" shared="true" showDelay="0" myPosition="left center" atPosition="right center"
+			rendered="#{not empty vo.tourStatusReason}">
+			<h:outputText value="#{vo.tourStatusReason}" escape="true" style="white-space: pre-wrap"/>
+		</pe:tooltip>
+	</p:column>
+	<!-- <p:column headerText="Seq No" style="width:50px;">
+		<h:outputText value="#{vo.seqNo}"/>
+	</p:column> -->
+	<!-- <p:column headerText="Status" style="width:80px;">
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" rendered="#{vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L'}"/>
+		<h:outputText value="Full" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd eq 'F'}"/>
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" style="text-transform:uppercase; color:#F00;"
+			rendered="#{vo.tourStatusCd eq 'I' or vo.tourStatusCd eq 'C' or vo.tourStatusCd eq 'N' or vo.tourStatusCd eq 'R' or vo.tourStatusCd eq 'C1'}"/>
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}"
+		 	style="text-transform:uppercase; color:#F00;"
+			rendered="#{vo.tourStatusCd ne 'A' and vo.tourStatusCd ne 'L' and vo.tourStatusCd ne 'F'
+					and vo.tourStatusCd ne 'I' and vo.tourStatusCd ne 'C' and vo.tourStatusCd ne 'N'
+					and vo.tourStatusCd ne 'R' and vo.tourStatusCd ne 'C1'}"/>
+	</p:column> -->
+	<!-- <p:column headerText="Tour Status Reason" style="width:80px;">
+		<h:outputText value="#{vo.tourStatusReason}"/>
+	</p:column> -->
+	<p:column headerText="Tour Code" style="width:150px;">
+		<!-- <h:outputText value="#{vo.code}"/> -->
+		<!-- <p:commandLink id="idCopyButton" onclick="navigator.clipboard.writeText('#{vo.code}');" actionListener="#{cruiseBookingBean.onCopyClick(vo.code)}" update="@form" global="false" process="@this">
+			<h:outputText value="#{vo.code}"/>
+		</p:commandLink>
+		<p:tooltip for="idCopyButton">Click to Copy</p:tooltip> -->
+		<h:outputText value="#{vo.code}"/>
+		<h:outputText id="idTooltipPrivate" class="fa fa-user" rendered="#{vo.isPrivateTour}" style="margin-left: 3px;"/>
+		<pe:tooltip for="idTooltipPrivate" rendered="#{vo.isPrivateTour}">
+			<h:outputText value="Private Tour"/>
+		</pe:tooltip>
+	</p:column>
+	<p:column headerText="Tour Package Name">
+		<p:commandLink actionListener="#{cruiseBookingBean.handleShowBookingList(vo)}" oncomplete="varBookingListDialog.show()" update=":idBookingListDialog" style="color:#CC2EFA;">
+			<h:outputText value="#{vo.duration}" rendered="false"/>
+			<h:outputText value="PD " rendered="#{vo.isDepositPaid}"/><h:outputText value="#{vo.numDays}D/#{vo.numNights}N "/><h:outputText value="[#{vo.desc}]" style="color:#FF0000;" rendered="#{not empty vo.desc}"/>
+			<h:outputText value="[#{vo.prn}]" style="color:#0040FF;" rendered="#{not empty vo.prn}"/><h:outputText value="[S]" style="font-weight:bold; color:#{vo.isIssuedS ? '#FF0000' : '#638604'}" rendered="#{vo.travelInsS}"/><h:outputText value="[F]" style="font-weight:bold; color:#{vo.isIssuedF ? '#FF0000' : '#638604'}" rendered="#{vo.travelInsF}"/><h:outputText value="[#{vo.dailyCode}]" style="color:#000000;"  rendered="#{not empty vo.dailyCode}"/>
+			<p:graphicImage value="/img/push.gif" rendered="#{vo.isPush and (vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L')}"/>
+		</p:commandLink>
+	</p:column>
+	<p:column headerText="Cruise" style="width:60px;">
+		<p:commandLink actionListener="#{cruiseBookingBean.handleTourDepSelect(vo)}" oncomplete="varTourDepCruiseInfoDialog.show()" update=":idTourDepCruiseInfoDialog" style="color:#CC2EFA;" process="@this">
+			<h:outputText value="#{vo.cruiseCode}"/>
+		</p:commandLink>
+	</p:column>
+	<!-- <p:column headerText="Deposit Paid" style="width:80px;">
+		<h:outputText value="#{vo.isDepositPaid ? 'Yes' : 'No'}"/>
+	</p:column> -->
+	<p:column headerText="Misc." style="width:90px;">
+		<h:outputText value="#{vo.cruiseMiscAdt}" rendered="#{vo.cruiseMiscAdt % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/></h:outputText>
+		<h:outputText value="#{vo.cruiseMiscAdt}" rendered="#{vo.cruiseMiscAdt % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/></h:outputText>
+	</p:column>
+	<p:column headerText="Info" style="width:30px;">
+		<p:commandLink actionListener="#{cruiseBookingBean.handleTourDepSelect(vo)}" oncomplete="varTourDepMoreInfoDialog.show()" update=":idTourDepMoreInfoDialog">
+			<p:graphicImage value="/img/more.png"/>
+		</p:commandLink>
+	</p:column>
+
+	<p:rowExpansion>
+		<p:dataTable value="#{vo.tourCruiseCabinList}" var="cabinVO">
+			<p:columnGroup type="header">
+				<p:row>
+					<p:column rowspan="2" headerText="Cabin"/>
+					<p:column colspan="2" headerText="Discount"/>
+					<p:column colspan="4" headerText="Allotment"/>
+					<p:column colspan="4" headerText="Adult (RM)"/>
+					<p:column colspan="2" headerText="Child (RM)"/>
+					<p:column colspan="1" headerText="Infant (RM)"/>
+				</p:row>
+				<p:row>
+					<p:column headerText="Level 1"/>
+					<p:column headerText="Level 2"/>
+					<p:column headerText="Cabin" style="width:70px;"/>
+					<p:column headerText="Sold" style="width:70px;"/>
+					<p:column headerText="Reserved" style="width:70px;"/>
+					<p:column headerText="Available" style="width:70px;"/>
+					<p:column headerText="1ST/2ND"/>
+					<p:column headerText="3RD"/>
+					<p:column headerText="4TH"/>
+					<p:column headerText="SGL"/>
+					<p:column headerText="3RD"/>
+					<p:column headerText="4TH"/>
+					<p:column headerText="INF"/>
+				</p:row>
+			</p:columnGroup>
+
+			<p:column>
+				<h:outputText value="#{cabinVO.cruiseCabinCd}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.discountLvl1 gt 0 ? (cabinVO.discountLvl1 * -1) : 0}">
+					<f:convertNumber pattern="#,##0"/>
+				</h:outputText>
+				<h:outputText value=" (#{cabinVO.discountLvl1Pax})" style="color: red;"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.discountLvl2 gt 0 ? (cabinVO.discountLvl2 * -1) : 0}">
+					<f:convertNumber pattern="#,##0"/>
+				</h:outputText>
+				<h:outputText value=" (#{cabinVO.discountLvl2Pax})" style="color: red;"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.cabinAllotment}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.totalConfirmedCabin}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.totalKivCabin}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.cabinAllotment - cabinVO.totalConfirmedCabin - cabinVO.totalKivCabin}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.priceTwn}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price3}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price4}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.priceSgl}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price3Chd}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price4Chd}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.priceInf}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:columnGroup type="footer">
+				<p:row>
+					<p:column colspan="3" style="font-weight: bold;">Total</p:column>
+					<p:column style="font-weight: bold;">#{vo.totalCabinAllotment}</p:column>
+					<p:column style="font-weight: bold;">#{vo.totalConfirmedCabin}</p:column>
+					<p:column style="font-weight: bold;">#{vo.totalKivCabin}</p:column>
+					<p:column style="font-weight: bold;">#{vo.totalBalanceCabin}</p:column>
+					<p:column colspan="7" style="font-weight: bold;"/>
+				</p:row>
+			</p:columnGroup>
+		</p:dataTable>
+	</p:rowExpansion>
+</p:dataTable>
+</div>
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varTourDepListDialog.hide()"/>
+</h:panelGrid>
+</ui:composition>

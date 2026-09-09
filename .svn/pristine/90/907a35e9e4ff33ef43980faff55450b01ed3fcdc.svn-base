@@ -1,0 +1,117 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Generate Customer Statement" toggleable="true" toggleSpeed="500">
+<h:form id="idCustomerStmtForm">
+	<p:tabView>
+		<p:tab title="Customer Info">
+			<p:panelGrid>
+				<p:row>
+					<p:column><h:outputLabel>Aging Date:</h:outputLabel></p:column>
+					<p:column><p:calendar navigator="true" showButtonPanel="true"/></p:column>
+				</p:row>
+				<p:row>
+					<p:column style="width:100px"><h:outputLabel>Statement Type:</h:outputLabel></p:column>
+					<p:column style="width:300px">
+						<p:selectOneRadio value="1">
+							<f:selectItem itemLabel="Open Item" itemValue="0"/>
+							<f:selectItem itemLabel="Balance Forward" itemValue="1"/>
+						</p:selectOneRadio>
+					</p:column>
+					<p:column style="width:80px"><h:outputLabel>From Date:</h:outputLabel></p:column>
+					<p:column style="width:200px"><p:calendar navigator="true" showButtonPanel="true"/></p:column>
+					<p:column style="width:80px"><h:outputLabel>To Date:</h:outputLabel></p:column>
+					<p:column><p:calendar navigator="true" showButtonPanel="true"/></p:column>
+				</p:row>
+				<p:row>
+					<p:column><h:outputLabel>Customer Range:</h:outputLabel></p:column>
+					<p:column>
+						<p:selectOneRadio value="0">
+							<f:selectItem itemLabel="All Customers" itemValue="0"/>
+							<f:selectItem itemLabel="One Customers" itemValue="1"/>
+						</p:selectOneRadio>
+					</p:column>
+					<p:column colspan="3">
+						<h:selectOneMenu effect="fade" style="width:300px">
+							<f:selectItem itemLabel="Select One"/>
+						</h:selectOneMenu>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="2">
+						<p:selectOneRadio value="0" style="width:250px">
+							<f:selectItem itemLabel="Print Preview" itemValue="0"/>
+							<f:selectItem itemLabel="Print" itemValue="1"/>
+						</p:selectOneRadio>
+					</p:column>
+					<p:column><h:outputLabel>Copies:</h:outputLabel></p:column>
+					<p:column colspan="2"><p:spinner value="1"/></p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:tab>
+		<p:tab title="Peferences">
+			<p:panelGrid>
+				<p:row>
+					<p:column style="width:20px"><p:selectBooleanCheckbox value="true"/></p:column>
+					<p:column style="width:300px"><h:outputLabel>Print Dunning Messages on Statements</h:outputLabel></p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="2"><h:outputLabel>Minimum Past Due Amount for Dunning Messages:</h:outputLabel></p:column>
+					<p:column><p:inputText value="50.00"/></p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="2"><h:outputLabel>Minimum Invoice Age to Print Statement:</h:outputLabel></p:column>
+					<p:column><p:inputText value="20"/></p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="2"><h:outputLabel>Minimum Customer Balance to Print Statement:</h:outputLabel></p:column>
+					<p:column><p:inputText value="75.00"/></p:column>
+				</p:row>
+				<p:row>
+					<p:column style="width:20px"><p:selectBooleanCheckbox value="true"/></p:column>
+					<p:column style="width:300px"><h:outputLabel>Print Statements for Customer with Zero Balance</h:outputLabel></p:column>
+					<p:column rowspan="2">
+						<p:fieldset legend="Payment Display" style="width:500px">
+							<p:selectOneRadio value="0">
+								<f:selectItem itemLabel="Show Against Each Invoice" itemValue="0"/>
+								<f:selectItem itemLabel="Summarize Customer Payments" itemValue="1"/>
+							</p:selectOneRadio>
+						</p:fieldset>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column style="width:20px"><p:selectBooleanCheckbox value="true"/></p:column>
+					<p:column style="width:300px"><h:outputLabel>Print Statements for Customer with Credit Balance</h:outputLabel></p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:tab>
+		<p:tab title="Dunning Messages">
+			<h:panelGrid columns="2">
+				<h:outputLabel>Current:</h:outputLabel>
+				<p:inputTextarea value="Thank you for being current in all your invoices" rows="3" cols="100"/>
+				<h:outputLabel>Over 30 days:</h:outputLabel>
+				<p:inputTextarea value="Your account currently has invoices over 30 days. If you have already sent your payment, please disregard this message." rows="3" cols="100"/>
+				<h:outputLabel>Over 60 days:</h:outputLabel>
+				<p:inputTextarea value="Your account is now over 60 days old. Please pay your overdue balance immediately." rows="3" cols="100"/>
+				<h:outputLabel>Over 90 days:</h:outputLabel>
+				<p:inputTextarea value="Your account seriously overdue. If you do not pay us immediately, your account will be turned over to collections." rows="3" cols="100"/>
+				<h:outputLabel>Over 120 days:</h:outputLabel>
+				<p:inputTextarea value="Your account has been turned over to collections. You will be responsible for all collection charges. If you wish to pay your bill and re-establish credit please call us at (03)27058299." rows="3" cols="100"/>
+			</h:panelGrid>
+		</p:tab>
+	</p:tabView>
+	<h:panelGrid>
+		<p:commandButton value="Print"/>
+	</h:panelGrid>
+</h:form>
+</p:panel>
+
+</ui:define>
+</ui:composition>

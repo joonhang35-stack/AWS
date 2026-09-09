@@ -1,0 +1,32 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<p:dataTable value="#{refundBean.passangerDetailsList}" var="vo" paginator="true" rows="10" widgetVar="varCustEditFilterListTable"
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowKey="#{vo.custId}" selectionMode="single" filteredValue="#{refundBean.filteredObjList}">
+	<p:ajax event="rowSelect" listener="#{refundBean.handlePassangerSelect}" update=":idEditRefund:idPayee" oncomplete="varCustListEditDialog.hide()"/>
+	
+	<p:column headerText="Customer Id" sortBy="#{vo.codeLong}" filterBy="#{vo.codeLong}">
+		<h:outputText value="#{vo.codeLong}"/>
+	</p:column>
+	<p:column headerText="Name" sortBy="#{vo.lastName} #{vo.firstName}" filterBy="#{vo.lastName} #{vo.firstName}">
+		<h:outputText value="#{vo.contPersonName}"/>
+	</p:column>
+	<p:column headerText="Company Name" sortBy="#{vo.companyName}" filterBy="#{vo.companyName}">
+		<h:outputText value="#{vo.companyName}"/>
+	</p:column>
+</p:dataTable>
+
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varCustListEditDialog.hide()" filteredValue="#{varCustEditFilterListTable.filteredObjList}"/>
+</h:panelGrid>
+
+</ui:composition>

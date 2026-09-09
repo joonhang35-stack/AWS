@@ -1,0 +1,90 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<div style="width:1200px; height:500px; overflow:auto;">
+<p:dataTable id="idcustTourHistList" value="#{salesBean.custTourHistList}" var="vo" paginator="true" rows="10" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="5,10,15">
+	
+	<p:columnGroup type="header">
+		<p:row>
+			<p:column rowspan="2" headerText="Document No" style="width:100px; font-size:10px;"/>
+			<p:column rowspan="2" headerText="Attention TO" style="width:100px; font-size:10px;"/>
+			<p:column rowspan="2" headerText="Tour Code" style="width:100px; font-size:10px;"/>
+			<p:column rowspan="2" headerText="Departure Date" style="width:100px; font-size:10px;"/>
+			<p:column rowspan="2" headerText="Sales Person" style="width:100px; font-size:10px;"/>
+			<p:column rowspan="2" headerText="Passenger List" style="width:100px; font-size:10px;"/>
+			
+		</p:row>
+		
+	</p:columnGroup>
+	
+	<!-- <p:column style="font-size:10px;"><h:outputText value="#{vo.code}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+	<p:column style="font-size:10px;">
+		<p:commandLink actionListener="#{salesBean.handleShowBookingList(vo)}" oncomplete="varBookingListDialog.show()" update=":idBookingListForm" style="color:#CC2EFA;">
+			<h:outputText value="#{salesBean.tourPkgVO.numDays}D/#{salesBean.tourPkgVO.numNights}N "/><h:outputText value="#{salesBean.tourPkgVO.nameEn}"/> <h:outputText value=" [#{vo.desc}]" style="color:#FF0000;"/>
+		</p:commandLink>
+	</p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{salesBean.getAirlineInfo(vo.idAirline).code}"/></p:column>
+	<p:column style="font-size:10px;"><h:outputText value="#{vo.seatAllot}"/></p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{vo.tfairPax + vo.agentPax + vo.inHsePax}"/></p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{vo.kivPax}"/></p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{vo.seatAllot - 1 - (vo.tfairPax + vo.agentPax + vo.inHsePax + vo.kivPax)}"/></p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{vo.fullTwn}"><f:convertNumber pattern="#,##0"/></h:outputText></p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{vo.fullSgl}"><f:convertNumber pattern="#,##0"/></h:outputText></p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{vo.fullCtw}"><f:convertNumber pattern="#,##0"/></h:outputText></p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{vo.fullCeb}"><f:convertNumber pattern="#,##0"/></h:outputText></p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{vo.fullCnb}"><f:convertNumber pattern="#,##0"/></h:outputText></p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{vo.miscAdt}"><f:convertNumber pattern="#,##0"/></h:outputText>/<h:outputText value="#{vo.miscChd}"><f:convertNumber pattern="#,##0"/></h:outputText></p:column>
+	<p:column>
+		<ui:repeat value="#{vo.tourItineryList}" var="itineryVO">
+			<h:outputLink target="_blank" value="#{request.contextPath}#{itineryVO.path}/#{salesBean.urlEncoder(itineryVO.name)}" rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'EN'}"><p:graphicImage value="/img/pdf.gif"/></h:outputLink>
+		</ui:repeat>
+	</p:column>
+	<p:column>
+		<ui:repeat value="#{vo.tourItineryList}" var="itineryVO">
+			<h:outputLink target="_blank" value="#{request.contextPath}#{itineryVO.path}/#{salesBean.urlEncoder(itineryVO.name)}" rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'ZH'}"><p:graphicImage value="/img/pdf.gif"/></h:outputLink>
+		</ui:repeat>
+	</p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.statusCd)}"><f:convertNumber pattern="#,##0"/></h:outputText></p:column>
+	<p:column style="font-size:10px; text-align:center;"><p:commandLink actionListener="#{salesBean.handleTourDepSelect(vo)}" update=":idAddInvoiceForm" oncomplete="varAddBookingDialog.show()" style="padding:2px; border:1px solid #000000; background:#ffffff;">Book</p:commandLink></p:column> -->
+	<p:column style="font-size:10px;">
+	<p:commandLink actionListener="#{salesBean.handleInvCodeSelect(vo.idInv)}" style="color:#CC2EFA;">
+		<!-- <h:outputText value="#{salesBean.prefixValue} #{vo.code}"/> -->
+		<h:outputText rendered="#{vo.invVO.docTypeCd eq 'I'}" value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'invc').prefixid} #{vo.code}"  />
+		<h:outputText rendered="#{vo.invVO.docTypeCd eq 'P'}" value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'pax_statement').prefixid} #{vo.invVO.psNo}"  />		
+	</p:commandLink>
+	
+	</p:column>
+	<p:column style="font-size:10px;"><h:outputText value="#{vo.attnTo}"/></p:column>
+	<p:column style="font-size:10px;">
+		<p:commandLink actionListener="#{salesBean.handleTourDepSelect(vo.idTourDep)}" oncomplete="varTourDepMoreInfoDialog.show()" update=":idTourDepMoreInfoForm" style="color:#CC2EFA;" rendered="#{vo.tourPkgtypeCd eq 'TOUR'}">
+			<h:outputText value="#{vo.tourCode}"/>
+		</p:commandLink>
+		<h:outputText value="#{vo.tourCode}" rendered="#{vo.tourPkgtypeCd ne 'TOUR'}"/>
+	</p:column>
+	<!-- <p:column style="font-size:10px;"><h:outputText value="#{vo.tourCode}"/></p:column> -->
+	
+	<p:column style="font-size:10px;"><h:outputText value="#{vo.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+	<p:column style="font-size:10px;"><h:outputText value="#{vo.salesPerson}"/></p:column>
+	<p:column style="font-size:10px;">
+	 <ui:repeat value="#{vo.passengers.split(',')}" var="cntc" rendered="#{not empty vo.passengers}">
+			            <h:outputText value="#{cntc}"/><br/>
+			        </ui:repeat>
+	
+	</p:column>
+	
+
+</p:dataTable>
+</div>
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetTourHistForm}" onclick="varTourHistCustDialog.hide()"/>
+</h:panelGrid>
+</ui:composition>

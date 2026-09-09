@@ -1,0 +1,52 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddRoleDialog.show();
+		} else {
+			varAddRoleDialog.hide();
+		}
+	}
+</script>
+
+<h:panelGrid columns="2">
+
+	<h:outputLabel>Role Code <span class="required">*</span></h:outputLabel>
+	<p:inputText label="Role Code" value="#{roleBean.roleVO.roleCode}" required="true" rendered="#{empty roleBean.roleVO.uuid}"/>
+	<p:inputText label="Role Code" value="#{roleBean.roleVO.roleCode}" required="true" readonly="true" rendered="#{not empty roleBean.roleVO.uuid}"/>
+	
+	<h:outputLabel for="idRoleName">Role Name <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idRoleName" label="Role Name" value="#{roleBean.roleVO.roleName}" style="width:200px" required="true"/>
+	
+	<h:outputLabel for="idStatus">Status <span class="required">*</span></h:outputLabel>
+	<h:selectOneMenu id="idStatus" value="#{roleBean.roleVO.statusCode}" required="true">
+		<f:selectItems value="#{zsg:referenceDataList('STATUS')}" var="n" itemValue="#{n.code}" itemLabel="#{n.value}"/>
+	</h:selectOneMenu>
+	
+	<h:outputLabel for="idRemarks">Remarks</h:outputLabel>
+	<p:inputText id="idRemarks" label="Remarks" value="#{roleBean.roleVO.remarks}" style="width:200px"/>
+	
+	<h:outputText/>
+	<h:panelGrid columns="2" style="width: 1px;">
+		<p:commandButton value="Add" actionListener="#{roleBean.addNewRole}" update="@form,:idDataForm" rendered="#{empty roleBean.roleVO.uuid}"/>
+		<p:commandButton value="Edit" actionListener="#{roleBean.updateRole}" update="@form,:idDataForm" oncomplete="onValidation(xhr, status, args)" rendered="#{not empty roleBean.roleVO.uuid}"/>
+		<p:commandButton value="Cancel" actionListener="#{roleBean.resetForm}" update="@form" process="@this" oncomplete="varAddRoleDialog.hide()" global="false">
+			<pe:resetEditableValues for="idAddRoleForm"/>
+		</p:commandButton>
+	</h:panelGrid>
+	
+</h:panelGrid>
+<br/>
+<h:outputLabel><span class="required">*</span> - required field</h:outputLabel>
+
+</ui:composition>

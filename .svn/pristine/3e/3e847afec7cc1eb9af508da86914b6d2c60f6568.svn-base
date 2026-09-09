@@ -1,0 +1,353 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddInvoicePaymentsDialog.show();
+		} else {
+			varAddInvoicePaymentsDialog.hide();
+		}
+	}
+	
+	document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+	
+	function setEnterKeyHint() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    }
+</script>
+
+<p:panel header="Deposit">
+<h:form id="idForm">
+    <p:growl id="msg"/>
+    <h:panelGrid columns="9" cellpadding="0" cellspacing="8" style="margin-bottom:10px; width:900px">
+		<h:outputLabel>Date From</h:outputLabel>
+		<p:calendar value="#{depositMasterListBean.searchParamVO.fromDate}" id="idFromDate" showButtonPanel="true"
+			pattern="#{config['date.display.pattern']}" navigator="true" display="inline"></p:calendar>
+		<h:outputLabel>Date To</h:outputLabel>
+		<p:calendar value="#{depositMasterListBean.searchParamVO.toDate}" id="idToDate" showButtonPanel="true"
+			pattern="#{config['date.display.pattern']}" navigator="true" display="inline"></p:calendar>
+		<h:outputLabel>Payment Type</h:outputLabel>
+		<h:selectOneMenu id="idPaymentType" label="Payment Type" value="#{depositMasterListBean.searchParamVO.obj1}">
+			<f:selectItem itemLabel="All" itemValue=""/>
+	        <f:selectItems value="#{bterp:lookupItemList('pymt_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		</h:selectOneMenu>
+		<h:outputLabel>Show</h:outputLabel>
+		<h:selectOneMenu id="idShow" label="Show" value="#{depositMasterListBean.searchParamVO.obj2}">
+			<f:selectItem itemLabel="Unhide" itemValue="0"/>
+			<f:selectItem itemLabel="Hide" itemValue="1"/>
+		</h:selectOneMenu>
+		<p:commandButton icon="ui-icon-search" value="Search" actionListener="#{depositMasterListBean.loadInvoicePaymentList}" update="@form"
+			oncomplete="varInvListTable.clearFilters(); setEnterKeyHint();"/>
+	</h:panelGrid>
+	<p:panelGrid id="idButtonPanel" columns="4" cellpadding="0" cellspacing="2" style="float:left; margin-bottom:10px; width:550px">
+		<p:commandButton value="Post to Deposit" immediate="true" onclick="varPostPaymentDialog.show()" global="false"
+			icon="ui-icon-mail-open" process="idInvListTable" update="@form" />
+		<p:commandButton value="Hide from list" immediate="true" onclick="varHidePaymentDialog.show()" global="false"
+			icon="ui-icon-close" process="idInvListTable" style="background: red; border-color: red;" rendered="#{depositMasterListBean.searchParamVO.obj2 eq 0}" />
+		<p:commandButton value="Unhide from list" immediate="true" onclick="varUnhidePaymentDialog.show()" global="false"
+			icon="ui-icon-close" process="idInvListTable" style="background: red; border-color: red;" rendered="#{depositMasterListBean.searchParamVO.obj2 eq 1}" />
+		<p:commandButton value="#{msg['common.button.label.print']} [PDF]" icon="ui-icon-print"
+			actionListener="#{depositMasterListBean.printReceiptReport('PDF')}" ajax="false" rendered="#{not empty depositMasterListBean.invPaymentList}"/>
+		<p:commandButton value="#{msg['common.button.label.print']} [Excel]" icon="ui-icon-print"
+			actionListener="#{depositMasterListBean.printReceiptReport('XLS')}" ajax="false" rendered="#{not empty depositMasterListBean.invPaymentList}"/>
+	</p:panelGrid>
+	<p:panelGrid id="idButtonPanel2" columns="2" cellpadding="0" cellspacing="2" style="float:right; margin-bottom:10px; width:250px">
+		<p:commandButton value="Select All" actionListener="#{depositMasterListBean.selectAll}"
+			icon="ui-icon-check" update="idInvListTable" />
+		<p:commandButton value="Clear All" actionListener="#{depositMasterListBean.clearAll}"
+			icon="ui-icon-closethick" update="idInvListTable" />
+	</p:panelGrid>
+	
+	<!-- <p:dataTable id="idInvListTable" widgetVar="varInvListTable" value="#{depositMasterListBean.invPaymentList}" var="vo" paginator="true" rows="500" 
+		paginatorTemplate="#{bterp:pageTemplate()}" rowsPerPageTemplate="500, 1000, 1500" rowKey="#{vo.id}" 
+		selection="#{depositMasterListBean.selectedObjs}" filterEvent="enter" filteredValue="#{depositMasterListBean.filteredObjList}"> -->
+	
+	<p:dataTable id="idInvListTable" widgetVar="varInvListTable" value="#{depositMasterListBean.lazyInvPmntDataModel}" var="vo" paginator="true" rows="500" 
+		paginatorTemplate="#{bterp:pageTemplate()}" rowsPerPageTemplate="500, 1000, 1500" rowKey="#{vo.id}" lazy="true" filterEvent="enter">
+		
+		<p:column headerText="Edit" style="width:50px; text-align:center;">
+			<p:commandButton icon="ui-icon-pencil" actionListener="#{depositMasterListBean.onInvoicePaymentSelected(vo)}" oncomplete="varAddInvoicePaymentsDialog.show()" update=":idAddInvoicePaymentsDialog" process="@this"
+				disabled="#{not depositMasterListBean.invPmntAuthVO.pmntUpd}"
+				rendered="#{not bterp:finAndGSTPeriodClosedStatus(depositMasterListBean.sessionInfoBean.companyVO.id, vo.pmntDt, depositMasterListBean.invPmntAuthVO.accountManager)}" />
+		</p:column>
+		<p:column headerText="Date" style="width:100px;">
+			<h:outputText value="#{vo.pmntDt}">
+				<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Document No" filterBy="#{vo.invoiceNo}" style="width:75px;" width="75" filterStyle="width:90%">
+			<p:commandLink actionListener="#{salesInvBean.handleInvRefNoClick(vo.invId, false)}" style="color:#0040FF;"
+				update=":idAddInvoiceRefDialog" process="@this" oncomplete="varAddInvoiceRefDialog.show()" rendered="#{not empty vo.invoiceNo or not empty vo.psNo}">
+				<h:outputText rendered="#{vo.invoiceDocTypeCd eq 'I'}" value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'invc').prefixid}  #{vo.invoiceNo} " /> 
+				<h:outputText rendered="#{vo.invoiceDocTypeCd eq 'P'}" value="#{bterp:sysNumGenVO(sessionInfoBean.companyVO.id, 'pax_statement').prefixid} #{vo.psNo} " /> 
+			</p:commandLink>
+		</p:column>
+		<p:column headerText="Cust. No." sortBy="#{vo.code}">
+			<h:outputText value="#{vo.code}" /> 
+		</p:column>
+		<p:column headerText="Received From" filterBy="#{vo.recievedFr}">
+			<h:outputText value="#{vo.recievedFr}" /> 
+		</p:column>
+		<p:column headerText="Tour Code" filterBy="#{vo.tourCode}">
+			<h:outputText value="#{vo.tourCode}"/>  
+		</p:column>
+		<p:column headerText="Payment Type" sortBy="#{vo.pmntTypeName}" filterBy="#{vo.pmntTypeName}">
+			<h:outputText value="#{vo.pmntTypeName}"/>  
+		</p:column>
+		<p:column headerText="Reference No">
+			<h:outputText value="#{vo.refNo}" /> 
+		</p:column>
+		<p:column headerText="Atch" style="width:40px; text-align:center;">
+			<ui:repeat value="#{vo.invoicePaymentAttachmentList}" var="attVO">
+				<h:outputText value="["/>
+				<h:outputLink id="idTTAttachment" target="_blank" value="#{request.contextPath}#{depositMasterListBean.destinationPaymentAttachmentPath}/#{attVO.filePath}"
+					style="color: #db3333;text-decoration: underline;"
+					rendered="#{not empty attVO.scannedPath and not empty attVO.filePath}" >
+					<h:outputText value="#{vo.invoicePaymentAttachmentList.indexOf(attVO)+1}"/>
+				</h:outputLink>
+				<h:outputText value="] "/>
+				<pe:tooltip for="idTTAttachment" shared="true" showDelay="3000"  position="top right"
+					rendered="#{not empty attVO.scannedPath and not empty attVO.filePath}">
+					<h:outputText value="#{attVO.scannedPath}" escape="true" style="white-space: pre-wrap"/>
+				</pe:tooltip>
+			</ui:repeat>
+		</p:column>
+		<p:column headerText="Amount">
+			<h:outputText value="#{vo.amount}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</h:outputText> 
+		</p:column>
+		<p:column headerText="Issued Date" style="width:180px;">
+			<h:outputText value="#{vo.createdDate}">
+				<f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss a"/>
+			</h:outputText>
+			<h:outputText value=" by #{vo.updatedBy} "/>
+			<p:graphicImage id="idIssuedDate" value="/img/more.png" width="11" style="margin-left: 3px;" rendered="#{not empty vo.invPmntTooltip}"/>
+			<pe:tooltip for="idIssuedDate" shared="true" showDelay="3000"  position="top left"
+				rendered="#{not empty vo.invPmntTooltip}">
+				<h:outputText value="#{vo.invPmntTooltip}" escape="false" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+		</p:column>
+		<p:column headerText="Bank">
+			<h:selectOneMenu id="idBankAccount" label="Bank Account" value="#{vo.bankId}" style="width:170px;">
+				<f:selectItems value="#{depositMasterListBean.bankAcctViewList}" var="bankVO" itemLabel="#{bankVO.name}" itemValue="#{bankVO.id}"/>
+				<p:ajax event="change" process="@this" global="false"/>
+			</h:selectOneMenu>
+		</p:column>
+		<p:column>
+			<p:selectBooleanCheckbox value="#{vo.checked}"/>
+		</p:column>
+	</p:dataTable>
+</h:form>
+</p:panel>
+
+
+<p:confirmDialog widgetVar="varPostPaymentDialog" message="Are you sure want to POST these records?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{depositMasterListBean.postToDeposit}" update=":idForm:idInvListTable" oncomplete="varPostPaymentDialog.hide()"/>
+		<p:commandButton value="Cancel" oncomplete="varPostPaymentDialog.hide(); varInvListTable.clearFilters();" global="false"/>
+	</h:form>
+</p:confirmDialog>
+<p:confirmDialog widgetVar="varHidePaymentDialog" message="Are you sure want to HIDE these records?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{depositMasterListBean.hideUnhideInvoicePayment(1)}"
+			update=":idForm:idInvListTable" oncomplete="varHidePaymentDialog.hide(); varInvListTable.clearFilters();" style="background: red; color: white;"/>
+		<p:commandButton value="Cancel" oncomplete="varHidePaymentDialog.hide()" global="false"/>
+	</h:form>
+</p:confirmDialog>
+<p:confirmDialog widgetVar="varUnhidePaymentDialog" message="Are you sure want to UNHIDE these records?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{depositMasterListBean.hideUnhideInvoicePayment(0)}"
+			update=":idForm:idInvListTable" oncomplete="varUnhidePaymentDialog.hide(); varInvListTable.clearFilters();" style="background: red; color: white;"/>
+		<p:commandButton value="Cancel" oncomplete="varUnhidePaymentDialog.hide()" global="false"/>
+	</h:form>
+</p:confirmDialog>
+
+<p:dialog id="idAddInvoicePaymentsDialog" header="Invoice Payments" widgetVar="varAddInvoicePaymentsDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" closable="false">
+	
+	<h:form id="idAddInvoicePaymentsForm">
+		<p:growl id="msg"/>
+		<p:panelGrid id="idInvPaymentPenal">
+			<p:row>
+				<p:column style="width:150px;">
+					<h:outputLabel for="idPmntDt">Payment Date <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:calendar id="idPmntDt" label="Payment Date" value="#{depositMasterListBean.invoicePaymentVO.pmntDt}" readonlyInput="true" pattern="dd-MMM-yyyy" 
+						mindate="#{depositMasterListBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart, 'dd-MMM-yyyy')}" navigator="true" showButtonPanel="true"
+						maxdate="#{depositMasterListBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd, 'dd-MMM-yyyy')}" required="true"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idOrgRcptNo">Original Receipt No</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idOrgRcptNo" label="Original Receipt No" value="#{depositMasterListBean.invoicePaymentVO.code}" maxlength="100" readonly="true" style="background:#ccc"/>
+				</p:column>
+			</p:row> 
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idPmntType">Payment Type <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idPmntType" label="Payment Type" value="#{depositMasterListBean.invoicePaymentVO.pmntTypeCd}" required="true">  
+			        	<f:selectItem itemLabel="Select One" itemValue=""/>
+			        	<f:selectItems value="#{bterp:lookupItemList('pymt_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+			        	<p:ajax process="@this" update="idRefNo" global="false"/>
+				    </h:selectOneMenu>
+				</p:column>
+			</p:row> 
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idRefNo">Payment Reference No</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idRefNo" label="Payment Reference No" value="#{depositMasterListBean.invoicePaymentVO.refNo}" maxlength="#{(depositMasterListBean.invoicePaymentVO.pmntTypeCd eq 'crd_card') ? '10' : '20'}"/>
+				</p:column>
+			</p:row> 
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idPmntFor">Being Payment For <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idPmntFor" label="Being Payment For" value="#{depositMasterListBean.invoicePaymentVO.pmntFor}" required="true" maxlength="255"/>
+				</p:column>
+			</p:row>  
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAmtPaid">Amount Paid <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<!--p:inputText id="idAmtPaid" label="Amount Paid" value="#{depositMasterListBean.invoicePaymentVO.amount}" required="true"/-->
+					<p:inputText id="idAmtPaid" label="Amount Paid" value="#{depositMasterListBean.invoicePaymentVO.amount}" required="true" maxlength="10">
+						<f:convertNumber pattern="#,##0.00"/>
+					</p:inputText>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idIssuedBy">Issued By <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idIssuedBy" label="Issued By" value="#{(depositMasterListBean.invoicePaymentVO.pmntIssuedBy eq NULL or depositMasterListBean.invoicePaymentVO.pmntIssuedBy eq '') ? 'SYSTEM' : depositMasterListBean.invoicePaymentVO.pmntIssuedBy}" readonly="true" style="background:#ccc"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idReceivedFr">Received From</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idReceivedFr" label="Received From" value="#{depositMasterListBean.invoicePaymentVO.recievedFr}" required="true" maxlength="255"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column colspan="2" style="vertical-align: top;">
+					<p:fileUpload id="idAttachmentScannedCopy"
+						fileUploadListener="#{depositMasterListBean.handlePaymentFileUpload}"
+						mode="advanced" auto="true" sizeLimit="10000000" label="Choose a file or drag"
+						allowTypes="/(\.|\/)(pdf|jpg|jpeg|png)$/"
+						description="*.pdf;*.jpg;*.jpeg,*.png"
+						update="msg, :idAddInvoicePaymentsForm:idInvPmntAttachmentListPanel" oncomplete="varStatusDialog.hide()"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column colspan="2" style="vertical-align: top;">
+					<p:panel id="idInvPmntAttachmentListPanel" header="Payment Attacment" toggleable="true" toggleSpeed="500">
+						<p:dataTable id="idInvPmntAttachmentListTable" value="#{depositMasterListBean.invoicePaymentVO.invoicePaymentAttachmentList}" var="invAttachVO"
+							paginator="true" rows="5" 
+							paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+							rendered="#{not empty depositMasterListBean.invoicePaymentVO.invoicePaymentAttachmentList}">
+							<p:column headerText="Delete" style="width:50px; text-align:center;">
+								<p:commandButton icon="ui-icon-close" actionListener="#{depositMasterListBean.setInvoicePaymentAttachmentVO(invAttachVO)}" oncomplete="varDelPaymentAttachmentDialog.show()" process="@this"/>
+							</p:column>
+							
+							<p:column headerText="File Path">
+								<h:outputLink target="_blank" value="#{request.contextPath}#{depositMasterListBean.destinationPaymentAttachmentPath}/#{invAttachVO.filePath}"
+									style="color: #db3333;text-decoration: underline;margin-right: 10px;"
+									rendered="#{not empty invAttachVO.scannedPath and not empty invAttachVO.filePath}">
+									<h:outputText value="#{invAttachVO.scannedPath}"/>
+								</h:outputLink>
+							</p:column>
+							
+							<p:column headerText="Created Date">
+								<h:outputText value="#{invAttachVO.updatedDate}">
+									<f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss a"/>
+								</h:outputText>
+							</p:column>
+						</p:dataTable>
+					</p:panel>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<h:panelGrid columns="2" style="width: 1px;">
+			<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{depositMasterListBean.saveInvoicePayment}" update=":idForm" oncomplete="onValidation(xhr, status, args)"/>
+			<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{depositMasterListBean.resetForm}" update="@form" process="@this" oncomplete="varAddInvoicePaymentsDialog.hide()" global="false">
+				<pe:resetEditableValues for="idAddInvoicePaymentsForm"/>
+			</p:commandButton>
+		</h:panelGrid>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - DELETE ATTACHMENT CONFIRMATION -->
+<p:confirmDialog widgetVar="varDelPaymentAttachmentDialog" header="Confirmation" message="Are you sure want to delete this payment attachment permanently?"
+	closable="false">
+	<h:form>
+		<p:growl id="msg" />
+		<p:commandButton value="#{msg['common.button.label.yes']}"
+			actionListener="#{depositMasterListBean.deletePmntAttachment}"
+			update=":idAddInvoicePaymentsForm:idInvPmntAttachmentListPanel"
+			oncomplete="if (args &amp;&amp; !args.validationFailed) varDelPaymentAttachmentDialog.hide()" />
+		<p:commandButton value="#{msg['common.button.label.no']}"
+			onclick="varDelPaymentAttachmentDialog.hide()" />
+	</h:form>
+</p:confirmDialog>
+
+<p:dialog id="idAddInvoiceRefDialog" header="Invoice"
+	widgetVar="varAddInvoiceRefDialog" modal="true" resizable="false"
+	dynamic="true" closable="true" styleClass="invoiceRefDialog">
+	<h:form id="idAddInvoiceRefForm">
+		<div style="height:550px;">
+		<ui:include src="../../../sales/inv/add_ref_invoice.xhtml" />
+		</div>
+	</h:form>
+</p:dialog>
+
+<!-- <p:dialog id="idPassportImageDialog"
+			widgetVar="varPassportImageDialog" header="Passport Image"
+			modal="true" resizable="false" draggable="true" closable="true"
+			width="800" height="600">
+			<h:form style="height: 100%;">
+				<iframe
+					src="#{request.contextPath}#{salesBean.destinationPassportPath}/#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}"
+					style="width: 100%; height: 100%;" frameborder="0"></iframe>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						oncomplete="varPassportImageDialog.hide();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog> -->
+</ui:define>
+</ui:composition>

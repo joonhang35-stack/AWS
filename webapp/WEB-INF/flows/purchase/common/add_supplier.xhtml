@@ -1,0 +1,627 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	  			
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varSuppOptDialog.show();
+		} else {
+			varSuppOptDialog.hide()
+		}
+	}
+    function copyTxt() {
+   	 	var f1 = document.getElementById("idAddSupplierForm:idAddCompName");
+        var f2 = document.getElementById("idAddSupplierForm:idAddBenefiName");
+        
+        if (f2.value.length == 0) {
+            f2.value = f1.value;
+    	}
+   }
+</script>
+	  			
+<p:growl id="msg"/>
+<div style="height:500px;overflow:auto;">
+	<p:panelGrid id="idSupplierDetails">
+		<p:row>
+			<p:column style="width:180px;"><h:outputLabel for="idAddGroupSup">Supplier No </h:outputLabel></p:column>
+			<p:column style="width:180px;">
+				<h:outputLabel value="#{purchaseBean.supplierVO.sysNo}" style="font-weight:bold;"/>
+        	</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddGroupSup">Group of Supplier </h:outputLabel></p:column>
+			<p:column>
+				<h:selectOneMenu id="idAddGroupSup" value="#{purchaseBean.supplierVO.groupCd}">
+					<f:selectItem itemLabel="Select One" itemValue="" />  
+					<f:selectItems value="#{bterp:lookupItemList('supl_group_code')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+					<p:ajax event="change" global="false"></p:ajax>
+				</h:selectOneMenu> 
+        	</p:column>
+        	
+        	<p:column><h:outputLabel for="idAddTypeVen">Type of Supplier <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+	            <h:selectOneMenu id="idAddTypeVen" label="Type of Supplier" value="#{purchaseBean.supplierVO.accountId}" required="true">
+	       			<f:selectItems value="#{purchaseBean.liabilityList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}"/>
+	       			<p:ajax event="change" global="false"></p:ajax>
+	       		</h:selectOneMenu>
+	        </p:column>
+		</p:row>
+	
+		<p:row>
+	        <p:column><h:outputLabel for="idAddSupCat">Supplier Category <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<h:selectOneMenu id="idAddSupCat" label="Supplier Category" value="#{purchaseBean.supplierVO.supplierCat}" required="true">  
+		            <f:selectItem itemLabel="Select One" itemValue="" />  
+		            <f:selectItems value="#{bterp:lookupItemList('supl_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		        	<p:ajax event="change" global="false"></p:ajax>
+		        </h:selectOneMenu>
+	        </p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddCompName">Company Name <span class="required">*</span></h:outputLabel></p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAddCompName" label="Company Name" value="#{purchaseBean.supplierVO.corporateVO.companyName}" required="true" size="80" onblur="copyTxt()">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAddTourTaxRegNo">Tourism Tax Registration No.</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAddTourTaxRegNo" label="Tourism Tax Registration No." value="#{purchaseBean.supplierVO.tourismTaxRegNo}" maxlength="20">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idAddTaxIdNo">TIN</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAddTaxIdNo" label="TIN" value="#{purchaseBean.supplierVO.taxIdNo}" maxlength="20" validatorMessage="TIN cannot contains spaces.">
+					<p:ajax event="change" global="false"></p:ajax>
+					<f:validateRegex pattern="^\S+$" />
+				</p:inputText>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAddRegNo" rendered="#{purchaseBean.supplierVO.corAddressVO.countryId ne 129}">Registration No. (New)</h:outputLabel>
+				<h:outputLabel for="idAddRegNo" rendered="#{purchaseBean.supplierVO.corAddressVO.countryId eq 129}">Registration No. (New) <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAddRegNo" label="Registration No. (New)" value="#{purchaseBean.supplierVO.regNo}" maxlength="20" required="#{purchaseBean.supplierVO.corAddressVO.countryId eq 129}">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idAddRegNoOld">Registration No. (Old)</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAddRegNoOld" label="Registration No. (Old)" value="#{purchaseBean.supplierVO.regNoOld}" maxlength="20">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddSstRegNo">SST Registration No. </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddSstRegNo" label="Registration No." value="#{purchaseBean.supplierVO.sstRegNo}" maxlength="20">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+			<p:column><h:outputLabel for="idAddGstRegNO">GST Registration No. </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddGstRegNO" label="GST Registration No." value="#{purchaseBean.supplierVO.gstRegNo}" maxlength="20">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAddMsicCode">MSIC Code</h:outputLabel>
+			</p:column>
+			<p:column>
+				<h:selectOneMenu id="idAddMsicCode" label="MSIC Code" value="#{purchaseBean.supplierVO.msicCode}" style="width:180px;">  
+		            <f:selectItem itemLabel="Select One" itemValue="" />  
+		            <f:selectItems value="#{bterp:lookupItemList('e_inv_msic_code')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.code} : #{vo.description}"/>
+		            <p:ajax listener="#{purchaseBean.handleMSICCodeSelect}" event="change" update="idAddBzActDesc"/>
+		        </h:selectOneMenu>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idAddBzActDesc">Business Activity Desc.</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAddBzActDesc" label="Business Activity Desc." value="#{bterp:lookupItemDesc('e_inv_msic_code', purchaseBean.supplierVO.msicCode)}"
+					readonly="true" style="background:#ccc;" size="40"/>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAddContactNo">Company Contact No. <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAddContactNo" label="Company Contact No." value="#{purchaseBean.supplierVO.contactNo}" maxlength="14" size="20"
+					onkeypress="return rtnPhoneNo(event);" required="true">
+					<f:validateLength maximum="14" />
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idAddEmailAddress">Company Email Address <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAddEmailAddress" label="Company Email Address" value="#{purchaseBean.supplierVO.email}" maxlength="50" size="30"
+					validatorMessage="Invalid email format" required="true">
+					<p:ajax event="change" global="false"/>
+					<f:validateRegex pattern="#{config['email.format.pattern']}" />
+				</p:inputText>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddAdd1">Address Line 1 <span class="required">*</span></h:outputLabel></p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAddAdd1" label="Address Line 1" value="#{purchaseBean.supplierVO.corAddressVO.addr1}" size="50" required="true">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddAdd2">Address Line 2 </h:outputLabel></p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAddAdd2" label="Address Line 2" value="#{purchaseBean.supplierVO.corAddressVO.addr2}" size="50">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddAdd3">Address Line 3 </h:outputLabel></p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAddAdd3" label="Address Line 3" value="#{purchaseBean.supplierVO.corAddressVO.addr3}" size="50">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAddCity">City <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAddCity" label="City" value="#{purchaseBean.supplierVO.corAddressVO.city}" required="true">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+<!-- 			<p:column>
+				<h:outputLabel for="idAddState" rendered="#{purchaseBean.supplierVO.corAddressVO.countryId ne 129}">State/ Province1 </h:outputLabel>
+				<h:outputLabel for="idAddState" rendered="#{purchaseBean.supplierVO.corAddressVO.countryId eq 129}">State/ Province1 <span class="required">*</span></h:outputLabel>
+			</p:column> -->
+<!-- 			<p:column>
+				<p:inputText id="idAddState" label="State / Province" value="#{purchaseBean.supplierVO.corAddressVO.state}" required="#{purchaseBean.supplierVO.corAddressVO.countryId eq 129}">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column> -->
+		    <p:column>
+		        <h:outputLabel for="idAddState">
+		            State / Province <span class="required">*</span>
+		        </h:outputLabel>
+		    </p:column>
+		
+		    <p:column>
+		
+		        <!-- Non-Malaysia -->
+		        <p:inputText id="idAddState"
+		            label="State / Province"
+		            rendered="#{purchaseBean.supplierVO.corAddressVO.countryId ne 129}"
+		            value="NA">
+		
+		            <p:ajax event="change" global="false" />
+		
+		        </p:inputText>
+		
+		        <!-- Malaysia -->
+		        <h:selectOneMenu id="idAddStateMalaysia"
+		            label="State / Province"
+		            value="#{purchaseBean.supplierVO.corAddressVO.state}"
+		            rendered="#{purchaseBean.supplierVO.corAddressVO.countryId eq 129}"
+		            required="true">
+		
+		            <f:selectItem itemLabel="Select One" itemValue="" />
+		
+		            <f:selectItems
+		                value="#{purchaseBean.malaysiaStateList}"
+		                var="vo"
+		                itemLabel="#{vo.name}"
+		                itemValue="#{vo.name}" />
+		
+		        </h:selectOneMenu>
+		
+		    </p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAddPostcode" rendered="#{purchaseBean.supplierVO.corAddressVO.countryId ne 129}">Postcode </h:outputLabel>
+				<h:outputLabel for="idAddPostcode" rendered="#{purchaseBean.supplierVO.corAddressVO.countryId eq 129}">Postcode <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAddPostcode" label="Postcode" value="#{purchaseBean.supplierVO.corAddressVO.postcode}" required="#{purchaseBean.supplierVO.corAddressVO.countryId eq 129}">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+			</p:column>
+			<p:column><h:outputLabel for="idAddCountry">Country <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<h:selectOneMenu id="idAddCountry" label="Country" value="#{purchaseBean.supplierVO.corAddressVO.countryId}" style="width:180px;" required="true">  
+	                <p:ajax event="change" listener="#{purchaseBean.handleCountrySelected}" update="idSupplierDetails idAddMsicCode idAddBzActDesc" />
+	                <f:selectItem itemLabel="Select One" itemValue=""></f:selectItem>
+	                <f:selectItems value="#{purchaseBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}"/>
+	            </h:selectOneMenu>  
+	        </p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAddPassportNo">Passport No <!-- <span class="required">*</span> --></h:outputLabel>
+			</p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAddPassportNo" label="Passport No" value="#{purchaseBean.supplierVO.passportNo}" maxlength="20"
+					onkeypress="return rtnAlphaNumeric(event);">
+					<p:ajax event="change" global="false"></p:ajax>
+				</p:inputText>
+				<!-- <h:outputLabel><span class="required">* Required for Non-Malaysian Business Owner</span></h:outputLabel> -->
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="4">
+				<p:panel id="idPanelPic" header="Person in Charge" toggleable="true">
+					<p:panelGrid>
+						<p:row>
+							<p:column>
+								<p:commandButton value="Add" actionListener="#{purchaseBean.addPic}" update=":idAddSupplierForm:idPanelPic" process="@this" global="false"/>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column>
+								<p:fieldset id="idPicPrimary" legend="Primary PIC">
+									<p:panelGrid>
+										<p:row>
+											<p:column style="width:100px;"><h:outputLabel for="idAddDesignation">Designation </h:outputLabel></p:column>
+											<p:column colspan="3">
+												<p:inputText id="idAddDesignation" label="Designation" value="#{purchaseBean.supplierVO.personVO.designation}" size="50">
+													<p:ajax event="change" global="false"/>
+												</p:inputText>
+											</p:column>
+										</p:row>
+										<p:row>
+											<p:column><h:outputLabel for="idAddSalutate">Title </h:outputLabel></p:column>
+											<p:column>
+												<h:selectOneMenu id="idAddSalutate" value="#{purchaseBean.supplierVO.personVO.salutation}">
+													<p:ajax event="change" global="false"/>
+													<f:selectItem itemLabel="Select One" itemValue="" /> 
+										            <f:selectItems value="#{bterp:lookupItemList('salutatn2')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+										        </h:selectOneMenu>
+									        </p:column>
+									        
+									        <p:column>
+												<h:outputLabel for="idAddTitle">Honor</h:outputLabel>
+											</p:column>
+											<p:column>
+												<h:selectOneMenu id="idAddTitle" label="Honor" value="#{purchaseBean.supplierVO.personVO.title}">
+													<p:ajax event="change" global="false"/>
+													<f:selectItem itemLabel="Select One" itemValue="" />
+													<f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+												</h:selectOneMenu>
+											</p:column>
+										</p:row>
+										
+										<p:row>
+											<p:column><h:outputLabel for="idAddLastName">SurName  </h:outputLabel></p:column>
+											<p:column>
+												<p:inputText id="idAddLastName" label="SurName" value="#{purchaseBean.supplierVO.personVO.lastName}">
+													<p:ajax event="change" global="false"/>
+												</p:inputText>
+											</p:column>
+											<p:column>
+												<h:outputLabel for="idAddNickName">NickName</h:outputLabel>
+											</p:column>
+											<p:column>
+												<p:inputText id="idAddNickName" label="NickName" value="#{purchaseBean.supplierVO.personVO.nickName}">
+													<p:ajax event="change" global="false"/>
+												</p:inputText>
+											</p:column>
+										</p:row>
+										
+										<p:row>
+											<p:column><h:outputLabel for="idAddGivenName">Given Name </h:outputLabel></p:column>
+											<p:column>
+												<p:inputText id="idAddGivenName" label="Given Name" value="#{purchaseBean.supplierVO.personVO.givenName}">
+													<p:ajax event="change" global="false"/>
+												</p:inputText>
+											</p:column>
+										</p:row>
+										
+								 		<p:row>
+											<p:column>
+												<p:commandButton value="Add Contact" oncomplete="varContactDialog.show()" update=":idContactDialog"
+													actionListener="#{purchaseBean.setContactAdd(true)}" immediate="true"/>
+											</p:column>
+											<p:column colspan="3">
+											<p:panel id ="idShowContact" style="border:none">
+												<p:dataTable id="idShowContactList" value="#{purchaseBean.supplierVO.corContactList}" var="contactVO" rowKey="#{contactVO.contactNo}" selectionMode="single" style="width:400px;" rendered="#{not empty purchaseBean.supplierVO.corContactList}">
+												
+													<p:column headerText="Edit" style="width:50px; text-align:center;">
+													<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseBean.onCorContactSelected(contactVO)}" oncomplete="varContactDialog.show()" process="@this" update=":idContactDialog"/>
+													</p:column>
+													<p:column headerText="Delete" style="width:50px; text-align:center;">
+														<p:commandButton icon="ui-icon-close" actionListener="#{purchaseBean.delCorContactList(contactVO)}" update=":idAddSupplierForm:idShowContact" process="@this"/>
+													</p:column>
+													<p:column headerText="Contact Type" style="width:100px;">
+														<h:outputText value="#{bterp:lookupItemDesc('cntc_type', contactVO.contactType)}"/>
+													</p:column>
+													<p:column headerText="Contact No" style="width:200px;">
+														<h:outputText value="#{contactVO.contactNo}"/>
+													</p:column>
+													
+												</p:dataTable>
+											</p:panel>
+											</p:column>
+										</p:row>
+										<p:row>
+											<p:column><h:outputLabel for="idAddEmail">Email </h:outputLabel></p:column>
+											<p:column colspan="3">
+												<p:inputText id="idAddEmail" label="Email" value="#{purchaseBean.supplierVO.personVO.email}" maxlength="50" size="30"
+													validatorMessage="Invalid email format">
+													<p:ajax event="change" global="false"/>
+													<f:validateRegex pattern="#{config['email.format.pattern']}" />
+												</p:inputText>
+											</p:column>
+										</p:row>
+									</p:panelGrid>
+								</p:fieldset>
+							</p:column>
+						</p:row>
+						<c:forEach var="picVO" items="#{purchaseBean.supplierVO.suppPicList}" varStatus="loop">
+							<p:row>
+								<p:column>
+									<p:fieldset id="idPic#{loop.index}" legend="PIC #{loop.index + 1}">
+										<p:panelGrid>
+											<p:row>
+												<p:column style="width:100px;">
+													<h:outputLabel for="idSalutatePIC#{loop.index}">Salutation <span class="required">*</span></h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idSalutatePIC#{loop.index}" label="Salutation" value="#{picVO.salutation}" required="true">
+														<p:ajax event="change" global="false"/>
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{bterp:lookupItemList('salutatn2')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+													</h:selectOneMenu>
+													&nbsp;
+													<p:commandButton icon="ui-icon-close" value="Remove" styleClass="ui-state-error" actionListener="#{purchaseBean.deletePic(picVO)}" update=":idAddSupplierForm:idPanelPic" process="@this"/>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idTitlePIC#{loop.index}">Title</h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idTitlePIC#{loop.index}" label="Title" value="#{picVO.title}">
+														<p:ajax event="change" global="false"/>
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idLastNamePIC#{loop.index}">SurName <span class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idLastNamePIC#{loop.index}" label="SurName" value="#{picVO.lastName}" required="true">
+														<p:ajax event="change" global="false"/>
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idGenderPIC#{loop.index}">Gender</h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idGenderPIC#{loop.index}" label="Gender" value="#{picVO.sex}">
+														<p:ajax event="change" global="false"/>
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{bterp:lookupItemList('gender_type')}"
+															var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idGivenNamePIC#{loop.index}">Given Name <span class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idGivenNamePIC#{loop.index}" label="Given Name" value="#{picVO.givenName}" required="true">
+														<p:ajax event="change" global="false"/>
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idNickNamePIC#{loop.index}">NickName</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idNickNamePIC#{loop.index}" label="NickName" value="#{picVO.nickName}">
+														<p:ajax event="change" global="false"/>
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idOfficeNoPIC#{loop.index}">Office No</h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idOfficeNoPIC#{loop.index}" label="Office No" value="#{picVO.officeNo}" maxlength="14" onkeypress="return rtnPhoneNo(event);">
+														<p:ajax event="change" global="false"/>
+														<p:watermark for="idOfficeNoPIC#{loop.index}" value="Number"/>
+													</p:inputText>
+													<h:outputLabel for="idOfficeExtPIC#{loop.index}">Ext </h:outputLabel>
+													<p:inputText id="idOfficeExtPIC#{loop.index}" label="Office Extension" value="#{picVO.officeExt}" size="4" maxlength="4"
+														onkeypress="return rtnPhoneNo(event);">
+														<p:ajax event="change" global="false"/>
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idEmailPIC#{loop.index}">Email Address</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idEmailPIC#{loop.index}" label="Email Address" value="#{picVO.email}" maxlength="50" size="30"
+														validatorMessage="Invalid email format">
+														<p:ajax event="change" global="false"/>
+														<f:validateRegex pattern="#{config['email.format.pattern']}" />
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idMobileNoPIC#{loop.index}">Mobile No</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idMobileNoPIC#{loop.index}" label="Mobile No" value="#{picVO.mobileNo}" maxlength="14" onkeypress="return rtnPhoneNo(event);">
+														<p:ajax event="change" global="false"/>
+														<p:watermark for="idMobileNoPIC#{loop.index}" value="Number"/>
+													</p:inputText>
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:fieldset>
+								</p:column>
+							</p:row>
+						</c:forEach>
+					</p:panelGrid>
+				</p:panel>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column colspan="4">
+				<p:fieldset legend="Account Details">
+					<p:panelGrid>
+						<p:row>
+							<p:column><h:outputLabel for="idAddBenefiName">Beneficiary Name </h:outputLabel></p:column>
+							<p:column colspan="3">
+								<p:inputText id="idAddBenefiName" label="Beneficiary Name" value="#{purchaseBean.supplierVO.beneficiaryName}" size="80" >
+									<p:ajax event="change" global="false"></p:ajax>
+								</p:inputText>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column><h:outputLabel for="idAddAccName">Bank Name </h:outputLabel></p:column>
+							<p:column colspan="3">
+								<p:inputText id="idAddAccName" label="Bank Name" value="#{purchaseBean.supplierVO.bankName}"  size="100">
+									<p:ajax event="change" global="false"></p:ajax>
+								</p:inputText>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column><h:outputLabel for="idAddAccNo">Account Number </h:outputLabel></p:column>
+							<p:column>
+								<p:inputText id="idAddAccNo" label="Account Number" value="#{purchaseBean.supplierVO.accountNo}" style="width:100%">
+									<p:ajax event="change" global="false"></p:ajax>
+								</p:inputText>
+							</p:column>
+							<p:column><h:outputLabel for="idAddCrdtLmt">Credit Limit </h:outputLabel></p:column>
+							<p:column>
+								<p:inputText id="idAddCrdtLmt" label="Credit Limit" value="#{purchaseBean.supplierVO.creditLimit}">
+									<f:convertNumber pattern="#,##0.00"/>
+									<p:ajax event="change" global="false"></p:ajax>
+								</p:inputText>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column><h:outputLabel for="idAddPymtTerms">Payment Term </h:outputLabel></p:column>
+							<p:column>
+								<h:selectOneMenu id="idAddPymtTerms" value="#{purchaseBean.supplierVO.paymentTerm}">  
+						            <f:selectItems value="#{purchaseBean.pymtTermList}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />  
+						        </h:selectOneMenu>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+				</p:fieldset>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid>
+		<p:row>
+			<p:column style="width:100px;"><p:commandButton value="Add Remarks" oncomplete="varRemarksDialog.show()" update=":idRemarksDialog" immediate="true" style="white-space:nowrap;"/></p:column>
+			<p:column colspan="3">
+			<p:panel id ="idShowRemarks" style="border:none">
+				<p:dataTable id="idShowRemarksList" value="#{purchaseBean.supplierVO.remarksList}" var="remarksVO" style="width:100%" rendered="#{not empty purchaseBean.supplierVO.remarksList}">
+				
+					<p:column headerText="Edit" style="width:50px; text-align:center;">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseBean.onRemarksSelected(remarksVO)}" oncomplete="varEditRemarksDialog.show()" process="@this" update=":idEditRemarksDialog"/>
+					</p:column>
+					<p:column headerText="Delete" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-close" actionListener="#{purchaseBean.delRemarksList(remarksVO)}" update=":idRemarksDialog,:idEditRemarksDialog,:idAddSupplierForm:idShowRemarks" process="@this"/>
+					</p:column>
+					<p:column headerText="Remarks Details" style="width:150px;">
+						<h:outputText value="#{remarksVO.remarksDetails}"/>
+					</p:column>
+					<p:column headerText="Time Stamp" style="width:90px;text-align:center;white-space:nowrap;">
+						<h:outputText value="#{remarksVO.strTimestamp}"/>
+					</p:column>
+					
+				</p:dataTable>
+			</p:panel>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+</div>
+<!-- Supplier page -->
+	<p:panelGrid columns="3" style="width: 1px;" rendered="#{empty billPymtBean}">
+		<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{purchaseBean.addPersonalSuppl}"
+			update="@form,:idSuppListForm:idPurSupMainTable"
+			oncomplete="onValidation(xhr, status, args)" rendered="#{empty purchaseBean.supplierVO.id}" />
+		<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{purchaseBean.updatePersonalSuppl}"
+			update="@form,:idSuppListForm:idPurSupMainTable"
+			oncomplete="onValidation(xhr, status, args)" rendered="#{not empty purchaseBean.supplierVO.id}" />
+		<p:commandButton value="Email Update Profile" style="width: 150px;" immediate="true"
+			oncomplete="varConfirmSentSupplierProfileUpdateDialog.show()"
+			rendered="#{not empty purchaseBean.supplierVO.id}"/>
+		<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{purchaseBean.resetForm}" update="@form" process="@this"
+			oncomplete="varSuppOptDialog.hide()" global="false">
+			<pe:resetEditableValues for="idAddSupplierForm"/>
+		</p:commandButton>
+	</p:panelGrid>
+<!-- Bill page -->
+	<p:panelGrid columns="3" style="width: 1px;" rendered="#{not empty billPymtBean}">
+		<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{purchaseBean.addPersonalSuppl}" rendered="#{empty purchaseBean.supplierVO.id and billPymtBean.postSaveSuplAction eq billPymtBean.ACTION_SUPPLIER}"
+			update="@form,:idAddFuncForm" oncomplete="onValidation(xhr, status, args)" style="white-space: nowrap;"/>
+		<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{purchaseBean.updatePersonalSuppl}" rendered="#{not empty purchaseBean.supplierVO.id and billPymtBean.postSaveSuplAction eq billPymtBean.ACTION_SUPPLIER}"
+			update="@form,:idAddFuncForm" oncomplete="onValidation(xhr, status, args)" style="white-space: nowrap;"/>
+		<p:commandButton value="#{msg['common.button.label.save']} Payee Supplier" rendered="#{empty purchaseBean.supplierVO.id and billPymtBean.postSaveSuplAction eq billPymtBean.ACTION_PAYEE_SUPPLIER}"
+			update="@form,:idAddFuncForm" oncomplete="onValidation(xhr, status, args); varProfileListDialog.hide()" style="white-space: nowrap;">
+			<f:actionListener binding="#{purchaseBean.addPersonalSuppl()}"></f:actionListener>
+			<f:actionListener binding="#{billPymtBean.onPayeeAdded(purchaseBean.payeeSupplierVO)}"></f:actionListener>
+		</p:commandButton>
+		<p:commandButton value="#{msg['common.button.label.update']} Payee Supplier" actionListener="#{purchaseBean.updatePersonalSuppl}" rendered="#{not empty purchaseBean.supplierVO.id and billPymtBean.postSaveSuplAction eq billPymtBean.ACTION_PAYEE_SUPPLIER}"
+			update="@form,:idAddFuncForm" oncomplete="onValidation(xhr, status, args); varSuppOptDialog.hide()" style="white-space: nowrap;"/>
+		<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{purchaseBean.resetForm}" update="@form" process="@this"
+			oncomplete="varSuppOptDialog.hide()" global="false">
+			<pe:resetEditableValues for="idAddSupplierForm"/>
+		</p:commandButton>
+		<h:outputText value="Error" rendered="#{billPymtBean.postSaveSuplAction ne billPymtBean.ACTION_PAYEE_SUPPLIER and billPymtBean.postSaveSuplAction ne billPymtBean.ACTION_SUPPLIER}"/>
+	</p:panelGrid>
+</ui:composition>

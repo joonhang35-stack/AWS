@@ -1,0 +1,77 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	<p:growl id="msg"/>
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idEditDesc">Description <span class="required">*</span></h:outputLabel></p:column>
+			<p:column><p:inputText id="idEditDesc" colspan="3" label="Description" value="#{purchaseEOBean.exOrderDetailsViewVO.desc}" required="true"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idEditPrice">Price <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idEditPrice" label="Price" value="#{purchaseEOBean.exOrderDetailsViewVO.price}"  required="true">
+				<f:convertNumber pattern="#,##0.00"/>
+				<p:ajax listener="#{purchaseEOBean.calAmt}" update=":idEditEODtlsForm:idEditQty,:idEditEODtlsForm:idEditPrice,:idEditEODtlsForm:idEditAmt,:idEditEODtlsForm:idEditFCAmt" />
+			</p:inputText>
+		</p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idEditQty">Quantity <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idEditQty" colspan="3" label="Quantity" value="#{purchaseEOBean.exOrderDetailsViewVO.qty}" required="true">
+				<p:ajax listener="#{purchaseEOBean.calAmt}" update=":idEditEODtlsForm:idEditQty,:idEditEODtlsForm:idEditPrice,:idEditEODtlsForm:idEditAmt,:idEditEODtlsForm:idEditFCAmt" />
+			</p:inputText>
+		</p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idEditAmt">Amount </h:outputLabel></p:column>
+		<p:column>
+			<h:outputLabel id="idEditAmt" label="Amount" value="#{purchaseEOBean.exOrderDetailsVO.amount}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</h:outputLabel>
+		</p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idEditForeCur">Currency </h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idEditForeCur" value="#{purchaseEOBean.exOrderDetailsViewVO.currencyId}">  
+	            <f:selectItems value="#{purchaseEOBean.foreignExRateList}" var="vo" itemLabel="#{vo.code}" itemValue="#{vo.id}" />  
+	            <p:ajax update=":idEditEODtlsForm:idEditExRate,:idEditEODtlsForm:idEditPrice,:idEditEODtlsForm:idEditAmt,:idEditEODtlsForm:idEditFCAmt" listener="#{purchaseEOBean.calAmt}" />  
+	        </h:selectOneMenu>  
+        </p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idEditExRate">Exchange Rate </h:outputLabel></p:column>
+		<p:column>
+			<h:outputLabel id="idEditExRate" label="Exchange Rate" value="#{purchaseEOBean.exOrderDetailsViewVO.exRate}">
+				<f:convertNumber pattern="#,##0.000000"/>
+			</h:outputLabel>
+		</p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idEditFCAmt">Local Amount (RM) </h:outputLabel></p:column>
+		<p:column>
+			<h:outputLabel id="idEditFCAmt" label="Local Amount (RM) " value="#{purchaseEOBean.exOrderDetailsVO.foreCurAmt}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</h:outputLabel>
+		</p:column>
+		</p:row>
+		
+	</p:panelGrid>
+
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseEOBean.editEODetails}" update="@form,:idEditExOrderForm:idTabExOrder:idShowEODetails,:idAddExOrderForm:idTabExOrder:idShowEODetails,:idEditExOrderForm:msg,:idEditExOrderForm:idEOAmt,:idAddExOrderForm:idEOAmt" oncomplete="varEditEODtlsDialog.hide()"/>
+		<p:commandButton value="Cancel" actionListener="#{purchaseEOBean.resetEODetailsForm}" oncomplete="varEditEODtlsDialog.hide()" process="@this" />
+	</p:panelGrid>
+</ui:composition>

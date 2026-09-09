@@ -1,0 +1,216 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+</script>
+	<p:panel header="Chart of Accounts" toggleable="true" toggleSpeed="500">
+		<h:form id="idChartOfAcctForm">
+			<h:panelGrid columns="5" style="width:550px;" rendered="#{chartOfAcctBean.chartOfAcctAuth}">
+				<p:commandButton value="Add Group" onclick="varAddGroupAcctDialog.show()" immediate="true"/>
+				<p:commandButton value="Add Account" actionListener="#{chartOfAcctBean.handleAcctCatSelect}" update=":idAddAcctForm" oncomplete="varAddAcctDialog.show()"/>
+				<p:commandButton value="Begin Balance" actionListener="#{chartOfAcctBean.handleBeginBal}" update=":idBeginBalForm" oncomplete="varBeginBalDialog.show()"/>
+				<h:outputLabel>Select Fiscal Year <span class="required">*</span></h:outputLabel>
+				<h:selectOneMenu id="idFiscalYear" value="#{chartOfAcctBean.searchParamVO.obj1}" required="true">
+		            <p:ajax event="change" listener="#{chartOfAcctBean.handleSelectYear}" update="idChartOfAcctForm" />
+		            <f:selectItems value="#{chartOfAcctBean.yearList}" var="#{year}" itemLabel="#{year}" itemValue="#{year}"/>
+		        </h:selectOneMenu>
+			</h:panelGrid>
+			
+			<p:tabView id="idAcctTabView" var="acctCatVO" value="#{chartOfAcctBean.acctCatList}" style="margin-top:10px;">
+			    <p:tab title="#{acctCatVO.desc}">
+			    	<p:dataTable value="#{acctCatVO.acctSubCatList}" var="subCatVO">
+			    		<f:facet name="header">
+			    			<h:outputText value="Account Group"/>
+			    		</f:facet>
+			    		<p:column headerText="Edit" style="width:45px; text-align:center;" rendered="#{chartOfAcctBean.chartOfAcctAuth}">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{chartOfAcctBean.setAcctSubCatVO(subCatVO)}" update=":idEditGroupForm" oncomplete="varEditGroupAcctDialog.show()"/>
+						</p:column>
+						<p:column headerText="Delete" style="width:45px; text-align:center;" rendered="#{chartOfAcctBean.chartOfAcctAuth}">
+							<p:commandButton icon="ui-icon-close" actionListener="#{chartOfAcctBean.setAcctSubCatVO(subCatVO)}" oncomplete="varDelGroupAcctDialog.show()"/>
+						</p:column>
+			    		<p:column headerText="Code" style="width:200px;"><h:outputText value="#{subCatVO.code}"/></p:column>
+			    		<p:column headerText="Description"><h:outputText value="#{subCatVO.desc}"/></p:column>
+			    	</p:dataTable>
+			    	<br/>
+			  		<p:dataTable value="#{acctCatVO.acctViewList}" var="acctViewVO" paginator="true" rows="20" 
+						paginatorTemplate="#{bterp:pageTemplate()}" 
+						rowsPerPageTemplate="20, 30, 50" filterEvent="enter"
+						filteredValue="#{chartOfAcctBean.filteredAcctViewList}">
+						
+						<p:columnGroup type="header">
+							<p:row>
+								<p:column rowspan="2" headerText="Edit" style="width:45px" rendered="#{chartOfAcctBean.chartOfAcctAuth}"/>
+								<p:column rowspan="2" headerText="Delete" style="width:45px" rendered="#{chartOfAcctBean.chartOfAcctAuth}"/>
+								<p:column rowspan="2" headerText="Group" style="width:150px" sortBy="#{acctViewVO.group}" filterBy="#{acctViewVO.group}" filterMatchMode="contains"/>
+								<p:column rowspan="2" headerText="Account" style="width:80px" sortBy="#{acctViewVO.code}" filterBy="#{acctViewVO.code}" filterStyle="width:75px;" filterMatchMode="contains"/>
+								<p:column rowspan="2" headerText="Sub" style="width:80px" sortBy="#{acctViewVO.subCode}" filterBy="#{acctViewVO.subCode}" filterStyle="width:75px;" filterMatchMode="contains"/>
+								<p:column rowspan="2" headerText="Account Description" sortBy="#{acctViewVO.desc}" filterBy="#{acctViewVO.desc}" filterMatchMode="contains"/>
+								<p:column rowspan="2" headerText="Sub Acct Description" sortBy="#{acctViewVO.subDesc}" filterBy="#{acctViewVO.subDesc}" filterMatchMode="contains"/>
+								<p:column rowspan="2" headerText="GST Tax Code" style="width:120px" sortBy="#{acctViewVO.taxCode}" filterBy="#{acctViewVO.taxCode}" filterStyle="width:80px;" filterMatchMode="contains"/>
+								<p:column colspan="2" headerText="Current Balance"/>
+							</p:row>
+							<p:row>
+								<p:column styleClass="txt_center" style="width:150px" headerText="Debit" sortBy="#{acctViewVO.debitCurrBal}"/>
+								<p:column styleClass="txt_center" style="width:150px" headerText="Credit" sortBy="#{-acctViewVO.debitCurrBal}"/>
+							</p:row>
+						</p:columnGroup>
+						
+						<p:column styleClass="txt_center" rendered="#{chartOfAcctBean.chartOfAcctAuth}">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{chartOfAcctBean.handleAcctClicked(acctViewVO)}" update=":idEditAcctForm" oncomplete="varEditAcctDialog.show()"/>
+						</p:column>
+						<p:column styleClass="txt_center" rendered="#{chartOfAcctBean.chartOfAcctAuth}">
+							<p:commandButton icon="ui-icon-close" actionListener="#{chartOfAcctBean.handleAcctClicked(acctViewVO)}" oncomplete="varDelAcctDialog.show()"/>
+						</p:column>
+						<p:column styleClass="txt_center">
+							<h:outputText value="#{acctViewVO.group}" />
+						</p:column>
+				        <p:column styleClass="txt_left">
+				        	<h:outputText value="#{acctViewVO.code}" />
+				        </p:column>
+				        <p:column styleClass="txt_left">
+				        	<h:outputText value="#{acctViewVO.subCode}" />
+				        </p:column>
+				        <p:column>
+				        	<h:outputText value="#{acctViewVO.desc}" />
+				        </p:column>
+				        <p:column>
+				        	<h:outputText value="#{acctViewVO.subDesc}" />
+				        </p:column>
+				        <p:column>
+				        	<h:outputText value="#{acctViewVO.taxCode} #{chartOfAcctBean.getGSTRate(acctViewVO.taxCode)}" />
+				        </p:column>
+				        <p:column styleClass="txt_right">
+				        	<!--h:outputText value="#{acctViewVO.acctBalSet.iterator().next().getDebitCurrentBal()}"-->
+				        	<h:outputText value="#{acctViewVO.debitCurrBal}" rendered="#{acctViewVO.debitCurrBal ge 0}">
+				        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				        	</h:outputText>
+				        	<h:outputText value="0.00" rendered="#{acctViewVO.debitCurrBal lt 0}"/>
+				        </p:column>
+				        <p:column styleClass="txt_right">
+				        	<!--h:outputText value="#{acctViewVO.acctBalSet.iterator().next().getCreditCurrentBal()}"-->
+				        	<!--h:outputText value="#{acctViewVO.creditCurrBal}">
+				        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				        	</h:outputText-->
+				        	<h:outputText value="#{-acctViewVO.debitCurrBal}" rendered="#{acctViewVO.debitCurrBal lt 0}">
+				        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				        	</h:outputText>
+				        	<h:outputText value="0.00" rendered="#{acctViewVO.debitCurrBal ge 0}"/>
+				        </p:column>
+					</p:dataTable>
+			    </p:tab>
+			</p:tabView>
+			<h:panelGrid columns="3" style="width:320px;" rendered="#{chartOfAcctBean.chartOfAcctAuth}">
+				<p:commandButton value="Add Group" onclick="varAddGroupAcctDialog.show()" immediate="true"/>
+				<p:commandButton value="Add Account" onclick="varAddAcctDialog.show()" immediate="true"/>
+				<p:commandButton value="Begin Balance" actionListener="#{chartOfAcctBean.handleBeginBal}" update=":idBeginBalForm" oncomplete="varBeginBalDialog.show()"/>
+			</h:panelGrid>
+		</h:form>
+	</p:panel>
+	
+	<!--
+		DIALOG - ADD ACCOUNT GROUP/TYPE
+	-->
+	<p:dialog widgetVar="varAddGroupAcctDialog" header="Add Group" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idAddGroupForm">
+			<ui:include src="add_acct_sub_cat.xhtml" />
+		</h:form>
+	</p:dialog>
+	
+	<!--
+		DIALOG - EDIT ACCOUNT GROUP/TYPE
+	-->
+	<p:dialog widgetVar="varEditGroupAcctDialog" header="Add Group" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idEditGroupForm">
+			<ui:include src="add_acct_sub_cat.xhtml" />
+		</h:form>
+	</p:dialog>
+	
+	<!--
+		DIALOG - DELETE ACCOUNT GROUP/TYPE
+	-->
+	<p:confirmDialog header="Delete Account Group" widgetVar="varDelGroupAcctDialog" message="Are you sure want to delete this record?" closable="false">
+		<h:form>
+			<p:growl id="msg"/>
+			<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{chartOfAcctBean.delAcctSubCat}" update="@form,:idChartOfAcctForm" oncomplete="varDelGroupAcctDialog.hide()"/>
+			<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{chartOfAcctBean.resetForm}" oncomplete="varDelGroupAcctDialog.hide()"/>
+		</h:form>
+	</p:confirmDialog>
+	
+	<!--
+		DIALOG - ADD ACCOUNT
+	-->
+	<p:dialog widgetVar="varAddAcctDialog" header="Add Chart of Accounts" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idAddAcctForm">
+			<ui:include src="add_acct.xhtml" />
+		</h:form>
+	</p:dialog>
+	
+	<!--
+		DIALOG - EDIT ACCOUNT
+	-->
+	<p:dialog widgetVar="varEditAcctDialog" header="Edit Chart of Accounts" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idEditAcctForm">
+			<ui:include src="add_acct.xhtml" />
+		</h:form>
+	</p:dialog>
+	
+	<!--
+		DIALOG - DELETE ACCOUNT
+	-->
+	<p:confirmDialog header="Delete Account" widgetVar="varDelAcctDialog" message="Are you sure want to delete this record?" closable="false">
+		<h:form>
+			<p:growl id="msg"/>
+			<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{chartOfAcctBean.delAcct}" update="@form,:idChartOfAcctForm" oncomplete="varDelAcctDialog.hide()"/>
+			<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{chartOfAcctBean.resetForm}" oncomplete="varDelAcctDialog.hide()"/>
+		</h:form>
+	</p:confirmDialog>
+	
+	<!--
+		DIALOG - SHOW BEGINING BALANCE
+	-->
+	<p:dialog widgetVar="varBeginBalDialog" header="Begining Balances" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idBeginBalForm">
+			<ui:include src="beginbal_list.xhtml" />
+		</h:form>
+	</p:dialog>
+	
+	<!--
+		DIALOG - EDIT BEGINING BALANCE
+	-->
+	<p:dialog id="idEditBeginBalDialog" header="Edit Begining Balance" widgetVar="varEditBeginBalDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idEditBeginBalForm">
+			<ui:include src="edit_beginbal.xhtml" />
+		</h:form>
+	</p:dialog>
+	
+	<!--
+		DIALOG - ACCOUNT LIST
+	-->
+	<p:dialog id="idAcctListDialog" header="Account List" widgetVar="varAcctListDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idAcctListForm">
+			<ui:include src="acct_list.xhtml" />
+		</h:form>
+	</p:dialog>
+</ui:define>
+</ui:composition>

@@ -1,0 +1,33 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idCruiseCode">Cruise Code <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idCruiseCode" label="Cruise Code" value="#{cruiseBean.cruiseVO.code}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idCruiseDesc">Cruise Description <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idCruiseDesc" label="Cruise Description" value="#{cruiseBean.cruiseVO.desc}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idCruiseDescZh">Cruise Description (Chinese)</h:outputLabel></p:column>
+		<p:column><p:inputText id="idCruiseDescZh" label="Cruise Description (Chinese)" value="#{cruiseBean.cruiseVO.descZh}"/></p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{cruiseBean.addCruise}" update="@form,:idCruiseForm:idCruiseList" rendered="#{empty cruiseBean.cruiseVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{cruiseBean.updCruise}" oncomplete="varEditCruiseDialog.hide()" update="@form,:idCruiseForm:idCruiseList" rendered="#{not empty cruiseBean.cruiseVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBean.resetForm}" oncomplete="varAddCruiseDialog.hide(),varEditCruiseDialog.hide()" update="@form" process="@this">
+		<pe:resetEditableValues for="idAddCruiseForm,idEditCruiseForm"/>
+	</p:commandButton>
+</p:panelGrid>
+</ui:composition>

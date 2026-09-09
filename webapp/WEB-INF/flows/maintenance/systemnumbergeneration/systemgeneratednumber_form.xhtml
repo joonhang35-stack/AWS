@@ -1,0 +1,83 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+<p:panel header="System Generated Number">
+   	<h:form id="idForm">
+		<p:growl id="msg"/>
+			
+		<h:panelGrid columns="2" style="margin-bottom:10px;width:200px">  
+			<p:commandButton id="idAddTemplateMessage" 
+				value="Add System Generated Number " update=":idAddSystemNumberGenerationDialog"
+				oncomplete="varAddSystemNumberGenerationDialog.show()" 
+				immediate="true"/>
+			
+		</h:panelGrid>
+		<h:panelGrid columns="2" style="margin-bottom:10px;">  
+			<p:dataTable id="idSystemNumberGenerationTable" 
+				value="#{systemNumberGenerationBean.systemNumberGenerationList}" 
+				var="systemNumberGenerationVO" filterEvent="enter">
+				
+				 <p:column headerText="Edit" style="width:30px; text-align:center">
+					<p:commandButton icon="ui-icon-pencil" 
+						update="@form,:idEditSystemNumberGenerationDialog"
+						actionListener="#{systemNumberGenerationBean.onSystemNumberGenerationSelected(systemNumberGenerationVO)}"
+						oncomplete="varEditSystemNumberGenerationDialog.show()"/>
+				</p:column>
+				<p:column headerText="Delete" style="width:30px; text-align:center">
+					<p:commandButton icon="ui-icon-close" 
+						actionListener="#{systemNumberGenerationBean.onSystemNumberGenerationSelected(systemNumberGenerationVO)}"
+						oncomplete="varDelSystemNumberGenerationDialog.show()"/>
+				</p:column>
+				<p:column filterBy="#{systemNumberGenerationVO.description}" headerText="Description">
+					  <h:outputText value="#{systemNumberGenerationVO.description}"/>
+				</p:column>
+				<p:column filterBy="#{systemNumberGenerationVO.code}" headerText="Code">
+					  <h:outputText value="#{systemNumberGenerationVO.code}"/>
+				</p:column>
+				<p:column filterBy="#{systemNumberGenerationVO.prefixid}" headerText="Prifix ID">
+					  <h:outputText value="#{systemNumberGenerationVO.prefixid}"/>
+				</p:column>
+				<p:column filterBy="#{systemNumberGenerationVO.nextnumber}" headerText="Next Number">
+					  <h:outputText value="#{systemNumberGenerationVO.nextnumber}"/>
+				</p:column>
+			</p:dataTable>
+		</h:panelGrid>
+		<h:panelGrid columns="2" style="margin-bottom:10px;width:200px">  
+			<p:commandButton id="idAddTemplateMessageduplicate" 
+				value="Add System Generated Number " update=":idAddSystemNumberGenerationDialog"
+				oncomplete="varAddSystemNumberGenerationDialog.show()"/>
+		</h:panelGrid>
+	</h:form>		
+</p:panel>
+<!-- DIALOG - ADD BRANCH -->
+<p:dialog id="idAddSystemNumberGenerationDialog" header="Add System Generated Number " widgetVar="varAddSystemNumberGenerationDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddSystemNumberGeneration">
+		<ui:include src="add_sysnumgen.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idEditSystemNumberGenerationDialog" header="Edit System Generated Number" widgetVar="varEditSystemNumberGenerationDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idEditSystemNumberGenerationForm">
+		<ui:include src="edit_sysnumgen.xhtml"/>
+	</h:form>
+</p:dialog>
+
+ <p:confirmDialog widgetVar="varDelSystemNumberGenerationDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{systemNumberGenerationBean.deleteSystemNumberGeneration}" update="@form,:idForm:idSystemNumberGenerationTable" oncomplete="varDelSystemNumberGenerationDialog.hide()"/>
+		<p:commandButton value="Cancel" oncomplete="varDelSystemNumberGenerationDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+</ui:define>
+</ui:composition>

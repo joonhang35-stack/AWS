@@ -1,0 +1,53 @@
+package com.bcs.zsg.web.servlet;
+
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Properties;
+
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.servlet.http.HttpServlet;
+import javax.sql.DataSource;
+public class WebServiceServlet extends HttpServlet {
+
+	private static final long serialVersionUID = 1L;
+    public WebServiceServlet() {
+        super();
+        // TODO Auto-generated constructor stub
+    }
+
+	Connection conn = null; 
+
+	public void establishConnection()  
+	{
+	try{
+
+
+		  Properties prop=new Properties(); 
+
+		  ClassLoader loader = Thread.currentThread().getContextClassLoader();     
+		  InputStream stream = loader.getResourceAsStream("/jdbc.properties");
+
+		  prop.load(stream);
+
+
+		 String jndiName = prop.getProperty("jndi.datasource");
+		Context ctx = new InitialContext(); 
+		DataSource ds = (DataSource)ctx.lookup(jndiName); 
+	    //Class.forName("com.mysql.jdbc.Driver");
+	    conn =ds.getConnection();
+	  //  conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/awsdb","root","");
+	}
+	catch(Exception e)
+	{
+		e.printStackTrace();
+	}
+	
+	}
+	
+	public void closeConnection() throws SQLException
+	{
+		conn.close();
+	} 
+}

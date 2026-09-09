@@ -1,0 +1,128 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+	<p:panel header="Company Profile">
+    	<h:form id="idForm">
+    	
+			<p:growl id="msg"/>
+			<script type="text/javascript">
+				function onValidationCompany(xhr, status, args) { 
+					if (args.validateCompanyError) {
+						 varDelCompanyDialog.hide(); 
+							 
+					} else {
+						varDelCompanyDialog.hide(); 
+					}
+					
+				}
+			</script>
+				
+			<h:panelGrid columns="2" style="margin-bottom:10px;width:200px">  
+				<p:commandButton id="idAddCompany" 
+					value="Add Company Profile " 
+					oncomplete="varCompanyDialog.show();"  actionListener="#{corporateProfileBean.updateCompany(true)}"
+					update=":idCompanyDialog,:idAcctList" immediate="true"/>
+				
+			</h:panelGrid>
+			
+			<p:dataTable id="idCompanyListTable" value="#{corporateProfileBean.companyList}" 
+				var="CompanyVO" filterEvent="enter">
+				
+				 <p:column headerText="Edit" style="width:30px; text-align:center">
+					<p:commandButton icon="ui-icon-pencil" 
+						update="@form,:idCompanyForm,:idAcctList,:idCompanyDialog"
+						actionListener="#{corporateProfileBean.onCompanySelected(CompanyVO)}"
+						oncomplete="varCompanyDialog.show();"/>
+				</p:column>
+				<p:column headerText="Delete" style="width:30px; text-align:center">
+					<p:commandButton icon="ui-icon-close" actionListener="#{corporateProfileBean.onCompanySelected(CompanyVO)}"
+						oncomplete="varDelCompanyDialog.show()" />
+				</p:column>
+				
+				<p:column filterBy="#{CompanyVO.code}" headerText="Company Code">
+					  <h:outputText value="#{CompanyVO.code}"/>
+				</p:column>
+				<p:column filterBy="#{CompanyVO.name}" headerText="Company Name">
+					  <h:outputText value="#{CompanyVO.name}"/>
+				</p:column>
+				<p:column filterBy="#{CompanyVO.conumber}" headerText="Co No">
+					  <h:outputText value="#{CompanyVO.conumber}"/>
+				</p:column>
+				
+			</p:dataTable>
+			
+			<h:panelGrid columns="2" style="margin-top:10px;width:200px">  
+				<p:commandButton id="idAddCompanyBtm" 
+					value="Add Company Profile " 
+					oncomplete="varCompanyDialog.show()"  actionListener="#{corporateProfileBean.updateCompany(true)}"
+					update=":idCompanyDialog,:idAcctList" immediate="true"/>
+			</h:panelGrid>
+		</h:form>		
+	</p:panel>
+	
+	<!-- DIALOG -->
+	<p:dialog id="idCompanyDialog" header="#{corporateProfileBean.addCompany ? 'Add' : 'Edit' } Corporate Profile " widgetVar="varCompanyDialog" modal="true" 
+		resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idCompanyForm">
+			<ui:include src="edit_corporateprofile.xhtml"/>
+		</h:form>
+	</p:dialog>
+	
+	<p:dialog id="idCompanyContactDialog" header="#{corporateProfileBean.addCompanyContact ? 'Add' : 'Edit' }  Company Contact" widgetVar="varCompanyContactDialog" modal="true" 
+		resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idCompanyContact">
+			<ui:include src="company_contact.xhtml"/>
+		</h:form>
+	</p:dialog>
+	
+	<p:dialog id="idCompanyNameDialog" header="#{corporateProfileBean.addCompanyName ? 'Add' : 'Edit' }  Company Name" widgetVar="varCompanyNameDialog" modal="true" 
+		resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+		<h:form id="idCompanyName">
+			<ui:include src="company_name.xhtml"/>
+		</h:form>
+	</p:dialog>
+	
+	<p:confirmDialog widgetVar="varDelCompanyDialog" message="Are you sure want to delete this record?">
+		<h:form>
+		<p:growl id="msg3"/>
+			<p:commandButton value="Yes" actionListener="#{corporateProfileBean.deleteCompany}" 
+					update="@form,:idForm:idCompanyListTable" oncomplete="onValidationCompany(xhr, status, args)"/>
+			<p:commandButton value="Cancel" oncomplete="varDelCompanyDialog.hide()"/>
+		</h:form>
+	</p:confirmDialog>
+	
+	<p:dialog id="idAcctListDialog" widgetVar="varAcctListDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+		hideEffect="fade" showEffect="fade" closable="true">
+		<h:form id="idAcctList">
+			<p:dataTable id="idAcctListTable" widgetVar="varAcctListTable" value="#{corporateProfileBean.acctViewList}" var="vo" paginator="true" rows="20" 
+				paginatorTemplate="#{bterp:pageTemplate()}" 
+				rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filteredValue="#{corporateProfileBean.filteredObjList}" filterEvent="enter">
+				
+				<p:ajax event="rowSelect" listener="#{corporateProfileBean.handleAcctSelect}" 
+					update=":idCompanyForm:idDefaultAccount,:idAcctList:idAcctListTable" 
+					oncomplete="varAcctListDialog.hide();varAcctListTable.unselectAllRows();varAcctListTable.clearFilters()"/>
+				
+				
+				<p:column headerText="Account" sortBy="#{vo.code}-#{vo.subCode}" filterBy="#{vo.code}-#{vo.subCode}" filterMatchMode="contains">
+					<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+					<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+				</p:column>
+				<p:column headerText="Description" sortBy="#{vo.desc}, #{vo.subDesc}" filterBy="#{vo.desc}, #{vo.subDesc}" filterMatchMode="contains">
+					<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+					<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+				</p:column>
+			</p:dataTable>
+		</h:form>
+	</p:dialog>
+
+</ui:define>
+</ui:composition>

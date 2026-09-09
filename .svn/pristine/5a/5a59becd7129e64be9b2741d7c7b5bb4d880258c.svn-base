@@ -1,0 +1,225 @@
+package com.bcs.zsg.acct.service;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.primefaces.json.JSONException;
+import org.primefaces.json.JSONObject;
+
+import com.bcs.zsg.acct.vo.EInvoiceAccessTokenVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotTransVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotVO;
+import com.bcs.zsg.acct.vo.EInvoiceBuyerVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateNumGenVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentItemVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.acct.vo.EInvoiceSubmissionVO;
+import com.bcs.zsg.acct.vo.EInvoiceSupplierVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.vo.BaseVO;
+import com.bcs.zsg.einvoice.vo.ApiDocumentQueryResponseVO;
+import com.bcs.zsg.einvoice.vo.ApiGetSubmissionResponseVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.web.object.EInvoiceDocument;
+
+import oasis.names.specification.ubl.schema.xsd.invoice_21.InvoiceType;
+
+public interface EInvoiceService {
+	public void insertInvoice(EInvoiceDocumentVO eInvoiceVO, InvoiceVO invoiceVO, String eInvoiceDocType) throws BusinessException;
+
+	public EInvoiceDocumentVO insertInvoice(String docUuid, String submissionUid, String docStatus, InvoiceVO invoiceVO, String eInvoiceDocType) throws BusinessException;
+	
+	public List<EInvoiceDocumentVO> getEInvoiceList(Long idCompany);
+
+	public EInvoiceDocumentVO getEInvoiceByUuid(String uuid);
+
+	public void insertExOrderBill(EInvoiceDocumentVO eInvoiceVO, ExOrderBillVO exOrderBillVO, String eInvoiceDocType)
+			throws BusinessException;
+
+	public EInvoiceDocumentVO insertConsolidateInvoice(String docUuid, String submissionUid, String docStatus,
+			List<InvoiceVO> consolidateInvoiceList, String eInvoiceDocType, String sysDocType, String refNo, Long idCompany)
+			throws BusinessException;
+
+	public void insertVO(BaseVO vo);
+
+	public void updateVO(BaseVO vo);
+	
+	public EInvoiceAccessTokenVO getValidAccessToken(Long idCompany) throws BusinessException;
+
+	public void insertAccessToken(EInvoiceAccessTokenVO eInvoiceAccessTokenVO) throws BusinessException;
+
+	public void updEInvoiceDocumentVO(EInvoiceDocumentVO eInvoiceDocumentVO, EInvoiceDocument eInvoiceDocument) throws BusinessException, ParseException;
+
+	public EInvoiceDocumentVO insertExOrderBill(String docUuid, String submissionUid, String docStatus, ExOrderBillVO exOrderBillVO,
+			String eInvoiceDocType) throws BusinessException;
+
+	public void cancelEInvoiceDocument(String eInvoiceDocumentUuid) throws BusinessException;
+
+	public void updateEInvoiceStatus(String eInvoiceDocumentUuid, String eInvoiceStatus, String table)
+			throws BusinessException;
+
+	public EInvoiceConsolidateNumGenVO getEInvoiceConsolidateNumGenVO(Integer year, Integer month, String code,
+			Long idCompany);
+
+	/**
+	 * @param docUuid
+	 * @param submissionUid
+	 * @param docStatus
+	 * @param consolidateInvoiceList
+	 * @param eInvoiceDocType
+	 * @param sysDocType
+	 * @param refNo - e-Invoice Code / Number of consolidate invoice submitted to MyInvois
+	 * @param idCompany
+	 * @return 
+	 * @throws BusinessException
+	 */
+	public EInvoiceDocumentVO insertConsolidateExOrderBill(String docUuid, String submissionUid, String docStatus,
+			List<ExOrderBillVO> consolidateBillList, String eInvoiceDocType, String sysDocType, String refNo,
+			Long idCompany) throws BusinessException;
+
+	public List<EInvoiceConsolidateVO> getEInvConsolDetailsList(String documentUuid);
+
+	/**
+	 * @param docUuid
+	 * @param submissionUid
+	 * @param docStatus
+	 * @param refId
+	 * @param refNo
+	 * @param sysDocType - system document type code in CommonConstant
+	 * @param eInvoiceDocType
+	 * @param idCompany
+	 * @param submissionDocCnt - document count in the submission
+	 * @param isConsolEInv
+	 * @return
+	 * @throws BusinessException
+	 */
+	public EInvoiceDocumentVO insertDocument(String docUuid, String submissionUid, String docStatus, Long refId, String refNo,
+			String sysDocType, String eInvoiceDocType, Long idCompany, Integer submissionDocCnt, Boolean isConsolEInv)
+			throws BusinessException;
+
+	public void cancelEInvoiceRefundNote(String eInvoiceDocumentUuid) throws BusinessException;
+
+	public void insertSubmission(String submissionUid, Long idCompany, Integer submissionDocCnt);
+
+	public void insertDocumentDetails(InvoiceType invoiceType, EInvoiceDocumentVO eInvoiceDocumentVO) throws BusinessException;
+
+	public List<EInvoiceDocumentItemVO> getEInvoiceDocumentItemList(Long idEInvDoc);
+
+	public EInvoiceSupplierVO getEInvoiceSupplier(Long id);
+
+	public EInvoiceBuyerVO getEInvoiceBuyer(Long id);
+
+	public EInvoiceDocumentVO getEInvoiceDetails(EInvoiceDocumentVO eInvoiceDocumentVO) throws BusinessException;
+
+	public void updateEInvoiceParty(Long idEInvDoc, Long idCust, Long idSupplier, Long idEInvoiceBuyer,
+			Long idEInvoiceSupplier) throws BusinessException;
+
+	/**
+	 * <p>
+	 * Populate buyerVO with state and country information,
+	 * and constructs a full address string for display or submission.
+	 * </p>
+	 * 
+	 * This method:
+	 * <ul>
+	 *   <li>Resolves and sets the Malaysia state object based on the state code (if applicable).</li>
+	 *   <li>Resolves and sets the country object based on the 3-letter country code.</li>
+	 *   <li>Builds a formatted full address string from address fields and sets it into the buyer object.</li>
+	 * </ul>
+	 * 
+	 * If the state code is "17", "Not Applicable" will be used instead of the state name.
+	 * Assumes non-null buyerVO and valid address/country/state fields where required.
+	 * 
+	 * @param buyerVO
+	 * @return
+	 * @throws BusinessException
+	 */
+	public EInvoiceBuyerVO populateAddress(EInvoiceBuyerVO buyerVO) throws BusinessException;
+
+	public EInvoiceDocumentVO insertCreditNote(String docUuid, String submissionUid, String docStatus, InvoiceVO invoiceVO,
+			Integer submissionDocCnt) throws BusinessException;
+
+	public EInvoiceDocumentVO insertRefundNote(String docUuid, String submissionUid, String docStatus, InvoiceVO invoiceVO,
+			Integer submissionDocCnt) throws BusinessException;
+
+	public void insertApiDocumentQueryResponse(List<ApiDocumentQueryResponseVO> responseList, Date d, Long idCompany);
+
+	public void updateRecentDocumentsToApiDailySnapshot(List<ApiDocumentQueryResponseVO> responseList, Date dtTrans, CompanyVO companyVO) throws KeyManagementException, BusinessException, NoSuchAlgorithmException, IOException, JSONException, ParseException;
+
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Map<String, Object> params);
+
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Date dtTrans);
+
+	public void insertEInvoiceApiDailySnapshotTransactions(List<ApiDocumentQueryResponseVO> responseList, Date d,
+			Long idCompany);
+
+	public List<EInvoiceApiDailySnapshotTransVO> getApiDailySnapshotTransList(Long idCompany, Date dtTrans);
+
+	public List<ApiDocumentQueryResponseVO> getRecentDocuments(Date getRecentDocumentsDate, CompanyVO companyVO)
+			throws KeyManagementException, BusinessException, NoSuchAlgorithmException, IOException, JSONException,
+			ParseException;
+
+	public void updateApiDailySnapshotTransStatus(Long idTrans, String existsInLocalStatus, String processStatus,
+			String statusReason);
+
+	public JSONObject submitCreditNoteType(EInvoiceDocumentVO vo)
+			throws BusinessException, KeyManagementException, NoSuchAlgorithmException, IOException, JSONException;
+
+	public List<EInvoiceSubmissionVO> getEInvoiceSubmissionByStatus(String[] statusList, Long idCompany);
+
+	public List<EInvoiceSubmissionVO> getEInvoiceSubmissionByStatus(String statusCd, Long idCompany);
+
+	public ApiGetSubmissionResponseVO getSubmission(String submissionUid, Long idCompany)
+			throws BusinessException, KeyManagementException, NoSuchAlgorithmException, IOException, JSONException, ParseException;
+
+	/**
+	 * update document and related table details when user refresh E-Invoice status
+	 * 
+	 * @param docUuid
+	 * @param accessToken
+	 * @return
+	 * @throws KeyManagementException
+	 * @throws NoSuchAlgorithmException
+	 * @throws MalformedURLException
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws BusinessException
+	 * @throws ParseException
+	 */
+	public EInvoiceDocumentVO updDocumentDetails(String docUuid, String accessToken)
+			throws KeyManagementException, NoSuchAlgorithmException, MalformedURLException, IOException, JSONException,
+			BusinessException, ParseException;
+
+	/**
+	 * @param tin - company TIN
+	 * @param isOnBehalf
+	 * @param companyVO - to get myInvoisClientId, myInvoisClientSecret1, myInvoisClientSecret2
+	 * @return
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws BusinessException
+	 * @throws KeyManagementException 
+	 * @throws NoSuchAlgorithmException 
+	 */
+	public String getAuthAccessToken(CompanyVO companyVO, Boolean isOnBehalf)
+			throws IOException, JSONException, BusinessException, KeyManagementException, NoSuchAlgorithmException;
+
+	public String getAccessToken(CompanyVO companyVO, Boolean isOnBehalf)
+			throws BusinessException, IOException, JSONException, KeyManagementException, NoSuchAlgorithmException;
+	
+	public String getAccessToken(InvoiceVO invoiceVO, Boolean isOnBehalf, CompanyVO companyVO)
+			throws BusinessException, IOException, JSONException, KeyManagementException, NoSuchAlgorithmException;
+
+	public String getAccessToken(SupplierVO supplierVO, Boolean isOnBehalf, CompanyVO companyVO)
+			throws BusinessException, IOException, JSONException, KeyManagementException, NoSuchAlgorithmException;
+}

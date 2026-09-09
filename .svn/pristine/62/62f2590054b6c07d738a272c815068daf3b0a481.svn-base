@@ -1,0 +1,43 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+	<p:growl id="msg" />
+
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varVoucherCatalogDialog.hide();" />
+	</h:panelGrid>
+
+	<p:dataTable widgetVar="varVoucherListTable"
+		value="#{salesBean.voucherList}" var="voucherVO" paginator="true" rows="10"
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+		filterEvent="enter">
+
+		<p:column headerText="Code">
+			<h:outputText value="#{voucherVO.redemptionCode}" />
+		</p:column>
+		<p:column headerText="Category">
+			<h:outputText value="#{voucherVO.categoryName}" />
+		</p:column>
+		<p:column headerText="Points Required">
+			<h:outputText value="#{voucherVO.minPoints}" />
+		</p:column>
+		<p:column headerText="Claim">
+			<p:commandButton value="Claim"
+				actionListener="#{salesBean.onClaimVoucher(voucherVO)}"
+				oncomplete="if (args &amp;&amp; !args.validationFailed) varConfirmClaimVoucherDialog.show()"
+				process="@this" update=":idVoucherCatalogForm:msg" />
+		</p:column>
+	</p:dataTable>
+
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varVoucherCatalogDialog.hide();" />
+	</h:panelGrid>
+</ui:composition>

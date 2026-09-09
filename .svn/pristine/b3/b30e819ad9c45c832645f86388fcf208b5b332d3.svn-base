@@ -1,0 +1,405 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+<style>
+	.debit-background {
+		background-color:#FFF8DC;
+	}
+	.credit-background {
+		background-color:#E0FFFF;
+	}
+</style>
+<script type="text/javascript">
+	// When open the page, load all the input text box and set the keyboard next button to enter button
+	document.addEventListener('DOMContentLoaded', function() {
+		var filters = document.querySelectorAll('input.ui-inputtext');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+	
+	// When open the page, load all the filter input text box in the datatable and set the keybaord next button to enter button
+	document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+	
+	// When press search button, need to rerun again for the keyboard enter setting to prevent getting back next button
+	function setEnterKeyHint() {
+        var filters = document.querySelectorAll('input.ui-inputtext');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+        filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    }
+</script>
+<p:panel header="Bank Adjustment">
+   	<h:form id="idForm">
+    	<p:growl id="msg"/>
+    	<h:panelGrid columns="11" cellpadding="0" cellspacing="2" style="margin-bottom:10px; width:1250px">
+			<h:outputLabel>Date From</h:outputLabel>
+			<p:calendar value="#{bankAdjustmentBean.searchParamVO.fromDate}" id="idFromDate" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+			<h:outputLabel>Date To</h:outputLabel>
+			<p:calendar value="#{bankAdjustmentBean.searchParamVO.toDate}" id="idToDate" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+			<h:outputLabel for="idBankSearch">Bank Account</h:outputLabel>
+			<h:selectOneMenu id="idBankSearch" label="Bank Account" value="#{bankAdjustmentBean.searchParamVO.obj1}">
+				<f:selectItem itemLabel="All" itemValue="SEARCH_ALL_BANKS"/>
+				<f:selectItems value="#{bankAdjustmentBean.bankAcctViewList}" var="bankVO" itemLabel="#{bankVO.name}" itemValue="#{bankVO.id}"/>
+			</h:selectOneMenu>
+			<h:outputLabel>Adjustment Number</h:outputLabel><h:outputText value="#{bankAdjustmentBean.prefixValue}"/>
+			<p:inputText value="#{bankAdjustmentBean.searchParamVO.obj3}"/>
+			<p:commandButton value="Search" actionListener="#{bankAdjustmentBean.search}" oncomplete="varAdjustList.clearFilters(); setEnterKeyHint();" update="@form"/>
+			<p:commandButton value="All Dates" actionListener="#{bankAdjustmentBean.searchAll}" oncomplete="varAdjustList.clearFilters(); setEnterKeyHint();" update="@form"/>
+		</h:panelGrid>
+		<h:panelGrid columns="3" style="margin-bottom:10px;width:400px">  
+			<p:commandButton id="idBankAdjustment" 
+				value="Add Bank Adjustment"  update=":idAddBankAdjustmentDialog,:idAddBankAdjustement:idBankAcct"
+				oncomplete="varAddBankAdjustmentDialog.show()"
+				actionListener="#{bankAdjustmentBean.onAddBankAdjustSelected()}"/>
+				<p:commandButton value="#{msg['common.button.label.print']} [PDF]" icon="ui-icon-print"
+						actionListener="#{bankAdjustmentBean.printBankAdjustmentReport('PDF')}" ajax="false" rendered="#{not empty bankAdjustmentBean.cashBookBankAdjustList}"/>
+				<p:commandButton value="#{msg['common.button.label.print']} [Excel]" icon="ui-icon-print"
+						actionListener="#{bankAdjustmentBean.printBankAdjustmentReport('XLS')}" ajax="false" rendered="#{not empty bankAdjustmentBean.cashBookBankAdjustList}"/>
+		</h:panelGrid>
+		
+		<p:dataTable id="idPaymentTable" 
+			value="#{bankAdjustmentBean.cashBookBankAdjustList}" widgetVar="varAdjustList"
+			var="cashBookVO" filteredValue="#{bankAdjustmentBean.filteredObjList}"
+			scrollRows="20" scrollable="true" liveScroll="true" scrollHeight="500" filterEvent="enter">
+			
+			<p:column headerText="Print" width="60" style="text-align:center; " rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(1)}">
+				<p:commandButton icon="ui-icon-print" value="PA" actionListener="#{bankAdjustmentBean.printPV(cashBookVO)}" process="@this" ajax="false" />
+			</p:column>
+			 <p:column headerText="Edit" width="30" style="text-align:center" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(2)}">
+				<p:commandButton icon="ui-icon-pencil" 
+					update="@form,:idAddBankAdjustmentDialog"
+					actionListener="#{bankAdjustmentBean.onBankAdjustSelected(cashBookVO)}"
+					oncomplete="varAddBankAdjustmentDialog.show()"/>
+			</p:column>
+			<p:column headerText="Delete" width="30" style="text-align:center" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(3)}">
+				<p:commandButton icon="ui-icon-close" 
+					actionListener="#{bankAdjustmentBean.onBankAdjustSelected(cashBookVO)}"
+					oncomplete="varDelAdjustDialog.show()" disabled="#{not bankAdjustmentBean.invPmntAuthVO.pmntDel}"/>
+			</p:column>
+			<p:column sortBy="#{cashBookVO.bankName}" filterBy="#{cashBookVO.bankName}" filterMatchMode="contains" headerText="Bank Account" width="180" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(4)}">
+				<h:outputText value="#{cashBookVO.bankName}"/>
+			</p:column>
+			<p:column  sortBy="#{cashBookVO.longSysNo}" filterBy="#{cashBookVO.longSysNo}" filterMatchMode="contains" headerText="Adjustment Number" width="120" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(5)}">
+				  <h:outputText value="#{bankAdjustmentBean.prefixValue}-#{cashBookVO.longSysNo}"/>
+			</p:column>
+				  
+			<p:column filterBy="#{bankAdjustmentBean.dateFormat(cashBookVO.dtTrans, 'dd-MMM-yyyy')}"  filterMatchMode="contains" headerText="Adjustment Date" width="120" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(6)}">
+				  <h:outputText value="#{cashBookVO.dtTrans}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText>
+			</p:column>
+			<!-- <p:column filterBy="#{cashBookVO.taxAmount}" filterMatchMode="contains" headerText="GST Amount" width="120">
+				<h:outputText value="#{cashBookVO.taxAmount}">
+				<f:convertNumber pattern="#,##0.00"/></h:outputText>
+			</p:column> -->
+			<p:column sortBy="#{cashBookVO.taxCodeGroup}" filterBy="#{cashBookVO.taxCodeGroup}" filterMatchMode="contains" headerText="Tax Code Applied" width="120" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(7)}">
+				<h:outputText value="#{cashBookVO.taxCodeGroup}"/>
+			</p:column>
+			<p:column filterBy="#{cashBookVO.debit}" filterMatchMode="contains" headerText="Amount Deposited" width="120" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(8)}">
+				  <h:outputText value="#{cashBookVO.debit}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+			</p:column>
+			<p:column filterBy="#{cashBookVO.credit}" filterMatchMode="contains" headerText="Amount WithDrawn" width="120" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(9)}">
+				  <h:outputText value="#{cashBookVO.credit}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+			</p:column>
+			<p:column filterBy="#{cashBookVO.refNo}" filterMatchMode="contains" headerText="Cheque No" width="200" filterStyle="width:90%" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(10)}">
+				  <h:outputText value="#{cashBookVO.refNo}"/>
+			</p:column>
+			<p:column filterBy="#{cashBookVO.remarks}" filterMatchMode="contains" headerText="Memo" width="250" filterStyle="width:90%" style="word-wrap:break-word;" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(11)}">
+				  <h:outputText value="#{cashBookVO.remarks}"/>
+			</p:column>
+			<p:column filterBy="#{cashBookVO.tourCd}" filterMatchMode="contains" headerText="Tour Code" width="200" filterStyle="width:90%" rendered="#{bankAdjustmentBean.listingTableViewVO.verifyVisibility(12)}">
+				  <h:outputText value="#{cashBookVO.tourCd}"/>
+			</p:column>
+		</p:dataTable>
+		<h:panelGrid columns="2" style="margin-bottom:10px;width:200px">  
+			<p:commandButton id="idBankAdjustmentDuplicate" 
+				value="Add Bank Adjustment"  update=":idAddBankAdjustmentDialog,:idAddBankAdjustement:idBankAcct"
+				oncomplete="varAddBankAdjustmentDialog.show()"
+				actionListener="#{bankAdjustmentBean.onAddBankAdjustSelected()}"
+				immediate="true"/>
+		</h:panelGrid>
+	</h:form>		
+</p:panel>
+	
+<p:dialog id="idAddBankAdjustmentDialog" header="Add Bank Adjustment" widgetVar="varAddBankAdjustmentDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddBankAdjustement">
+		<ui:include src="add_bankAdjust.xhtml"/>
+	</h:form>
+</p:dialog>
+	 
+<p:dialog id="idEditAdjustDialog" header="Edit Bank Adjustment" widgetVar="varEditAdjustDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idEditAdjustForm">
+		<ui:include src="edit_bankAdjust.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<p:confirmDialog widgetVar="varDelAdjustDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{bankAdjustmentBean.deleteAdjustRecord}" update="@form,:idForm" oncomplete="varDelAdjustDialog.hide()"/>
+		<p:commandButton value="Cancel" oncomplete="varDelAdjustDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+	
+<p:dialog id="idAcctListDebitDialog" widgetVar="varAcctListDebitDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idAcctListDebit">
+	<p:dataTable id="idAcctListDebitTable" widgetVar="varAcctListDebitTable" value="#{bankAdjustmentBean.acctViewList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+		<p:ajax event="rowSelect" listener="#{bankAdjustmentBean.handleAcctSelectDebit}" 
+			update=":idAddBankAdjustement:idAcctDebit,:idAddBankAdjustement:idAddDescriptionDebit,:idAcctListDebit:idAcctListDebitTable" 
+			oncomplete="varAcctListDebitDialog.hide(),varAcctListDebitTable.clearFilters()"/>
+		
+		<p:column headerText="Account" sortBy="#{vo.code}-#{vo.subCode}" filterBy="#{vo.code}-#{vo.subCode}" filterMatchMode="contains">
+			<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+			<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+		</p:column>
+		<p:column headerText="Description" sortBy="#{vo.desc}, #{vo.subDesc}" filterBy="#{vo.desc}, #{vo.subDesc}" filterMatchMode="contains">
+			<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+			<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+		</p:column>
+	</p:dataTable>
+	</h:form>
+	<!-- <p:ajax event="close" update=":idAcctListDebit:idAcctListDebitTable" oncomplete="varAcctListDebitTable.clearFilters();"/> -->
+</p:dialog>
+
+<p:dialog id="idEditAcctListDebitDialog" widgetVar="varEditAcctListDebitDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idEditAcctListDebit">
+	<p:dataTable id="idEditAcctListDebitTable" widgetVar="varEditAcctListDebitTable" value="#{bankAdjustmentBean.acctViewList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+		<p:ajax event="rowSelect" listener="#{bankAdjustmentBean.handleAcctSelectDebit}" 
+			update=":idEditAdjustForm:idAcctDebit,:idEditAdjustForm:idAddDescriptionDebit,:idEditAcctListDebit:idEditAcctListDebitTable" 
+			oncomplete="varEditAcctListDebitDialog.hide(),varEditAcctListDebitTable.clearFilters()"/>
+		
+		<p:column headerText="Account" sortBy="#{vo.code}-#{vo.subCode}" filterBy="#{vo.code}-#{vo.subCode}" filterMatchMode="contains">
+			<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+			<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+		</p:column>
+		<p:column headerText="Description" sortBy="#{vo.desc}, #{vo.subDesc}" filterBy="#{vo.desc}, #{vo.subDesc}" filterMatchMode="contains">
+			<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+			<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+		</p:column>
+	</p:dataTable>
+	</h:form>
+	<!-- <p:ajax event="close" update=":idEditAcctListDebit:idEditAcctListDebitTable" oncomplete="varEditAcctListDebitTable.clearFilters();"/> -->
+</p:dialog>
+
+<p:dialog id="idAcctListCreditDialog" widgetVar="varAcctListCreditDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idAcctListCredit">
+	<p:dataTable id="idAcctListCreditTable" widgetVar="varAcctListCreditTable" value="#{bankAdjustmentBean.acctViewList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+		<p:ajax event="rowSelect" listener="#{bankAdjustmentBean.handleAcctSelectCredit}" 
+			update=":idAddBankAdjustement:idAcctCredit,:idAddBankAdjustement:idAddDescriptionCredit,:idAcctListCredit:idAcctListCreditTable" 
+			oncomplete="varAcctListCreditDialog.hide(),varAcctListCreditTable.clearFilters()"/>
+		
+		<p:column headerText="Account" sortBy="#{vo.code}-#{vo.subCode}" filterBy="#{vo.code}-#{vo.subCode}" filterMatchMode="contains">
+			<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+			<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+		</p:column>
+		<p:column headerText="Description" sortBy="#{vo.desc}, #{vo.subDesc}" filterBy="#{vo.desc}, #{vo.subDesc}" filterMatchMode="contains">
+			<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+			<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+		</p:column>
+	</p:dataTable>
+	</h:form>
+	<!-- <p:ajax event="close" update=":idAcctListCredit:idAcctListCreditTable" oncomplete="varAcctListCreditTable.clearFilters();"/> -->
+</p:dialog>
+
+<p:dialog id="idListingTableViewDialog" header="Listing Table View"
+			widgetVar="varListingTableViewDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idListingTableViewForm">
+				<p:growl id="msg"/>
+
+<p:dataTable widgetVar="varTableListingTableView" value="#{bankAdjustmentBean.listingTableViewVO.listingTableViewColumnsVOList}" var="vo" paginator="true" rows="10"  rowIndexVar="rowIndex"
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="10, 20, 30" style="width: 450px;">
+
+	<p:column headerText="No" style="width: 60px;text-align:center;">
+		<h:outputText value="#{rowIndex + 1}"/>
+	</p:column>
+	<p:column headerText="Columns Name">
+		<h:outputText value="#{vo.columnsName}"/>
+	</p:column>
+	<p:column headerText="Visibility" style="width:70px;text-align:center;">
+		<p:selectBooleanCheckbox value="#{vo.visible}"/>
+	</p:column>
+</p:dataTable>
+
+<p:panelGrid>
+	<p:row>
+		<p:column>
+			<p:commandButton value="Confirm" actionListener="#{bankAdjustmentBean.updateListingTableView}" style="margin-right: 5px;" update=":idListingTableViewForm:msg"/>
+			<p:commandButton value="Cancel" process="@this" oncomplete="varListingTableViewDialog.hide();" update=":idForm"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+			</h:form>
+		</p:dialog>
+
+<p:dialog id="idEditAcctListCreditDialog" widgetVar="varEditAcctListCreditDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<h:form id="idEditAcctListCredit">
+	<p:dataTable id="idEditAcctListCreditTable" widgetVar="varEditAcctListCreditTable" value="#{bankAdjustmentBean.acctViewList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+		<p:ajax event="rowSelect" listener="#{bankAdjustmentBean.handleAcctSelectCredit}" 
+			update=":idEditAdjustForm:idAcctCredit,:idEditAdjustForm:idAddDescriptionCredit,:idEditAcctListCredit:idEditAcctListCreditTable" 
+			oncomplete="varEditAcctListCreditDialog.hide(),varEditAcctListCreditTable.clearFilters()"/>
+		
+		<p:column headerText="Account" sortBy="#{vo.code}-#{vo.subCode}" filterBy="#{vo.code}-#{vo.subCode}" filterMatchMode="contains">
+			<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+			<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+		</p:column>
+		<p:column headerText="Description" sortBy="#{vo.desc}, #{vo.subDesc}" filterBy="#{vo.desc}, #{vo.subDesc}" filterMatchMode="contains">
+			<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+			<h:outputText value="#{vo.desc}, #{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+		</p:column>
+	</p:dataTable>
+	</h:form>
+	<!-- <p:ajax event="close" update=":idEditAcctListCredit:idEditAcctListCreditTable" oncomplete="varEditAcctListCreditTable.clearFilters();"/> -->
+</p:dialog>
+
+<p:dialog id="idAcctTransDialog" header="Account Transaction" widgetVar="varAccountTransactionDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddAcctTrans">
+		<ui:include src="add_acctTransInadd.xhtml"/>
+	</h:form>
+</p:dialog>
+
+
+<p:dialog id="idAcctListDialog" widgetVar="varAcctListDialog" header="Account List" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	
+	<h:form id="idAddAccount">
+		<p:dataTable id="idAddAcctTable" widgetVar="varAddAcctTable" value="#{acctBean.lazyAcctDataModel}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			filterEvent="enter" lazy="true" rowKey="#{vo.id}" selectionMode="single">
+			
+			<p:ajax event="rowSelect" listener="#{bankAdjustmentBean.handleAcctSelect}" update=":idAddAcctTrans:idAcct,:idAddAcctTrans:idAcctTransSection" oncomplete="varAcctListDialog.hide();varAddAcctTable.clearFilters();"/>
+			
+			<p:column headerText="Account" sortBy="#{vo.code}" filterBy="#{vo.code}">
+				<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}"/>
+				<h:outputText value="#{vo.code}-#{vo.subCode}" rendered="#{not empty vo.subCode}"/>
+			</p:column>
+			<p:column headerText="Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}">
+				<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}"/>
+				<h:outputText value="#{vo.desc}-#{vo.subDesc}" rendered="#{not empty vo.subDesc}"/>
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idGSTListDialog" widgetVar="varGSTListDialog" header="GST Input/Output Tax" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<p:tabView id="idTaxTab">
+		<p:tab id="idInputTaxTab" title="Input Tax">
+			<p:dataTable id="idInputTaxCodeList" value="#{bankAdjustmentBean.inputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{bankAdjustmentBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" update=":idAddAcctTrans:idAcct,:idAddAcctTrans:idAcctTransSection"/>
+				<p:column headerText="No." width="25" style="text-align:right;">
+					<h:outputText value="#{vo.seqNo}"/>
+				</p:column>
+				<p:column headerText="Code" width="50">
+					<h:outputText value="#{vo.code}" />
+				</p:column>
+				<p:column headerText="Description" >
+					<h:outputText value="#{vo.description}" />
+				</p:column>
+				<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+					<h:outputText value="#{vo.rate}"/>
+				</p:column>
+			</p:dataTable>
+		</p:tab>
+		<p:tab id="idOutputTaxTab" title="Out Tax">
+			<p:dataTable id="idOutputTaxCodeList" value="#{bankAdjustmentBean.outputTaxCodeVOList}" var="vo" rowKey="#{vo.id}" selectionMode="single">
+				<p:ajax event="rowSelect" listener="#{bankAdjustmentBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" update=":idAddAcctTrans:idAcct,:idAddAcctTrans:idAcctTransSection"/>
+				<p:column headerText="No." width="25" style="text-align:right;">
+					<h:outputText value="#{vo.seqNo}"/>
+				</p:column>
+				<p:column headerText="Code" width="50">
+					<h:outputText value="#{vo.code}" />
+				</p:column>
+				<p:column headerText="Description" >
+					<h:outputText value="#{vo.description}" />
+				</p:column>
+				<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+					<h:outputText value="#{vo.rate}"/>
+				</p:column>
+			</p:dataTable>
+		</p:tab>
+	</p:tabView>
+</p:dialog>
+   
+<!--  <p:dialog widgetVar="varBankAcctListDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<p:dataTable value="#{bankAdjustmentBean.bankAcctViewList}" var="vo" paginator="true" rows="20" 
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+		rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single">
+		<p:ajax event="rowSelect" listener="#{bankAdjustmentBean.handleBankSelect}" update=":idAddBankAdjustement:idBankAcct" oncomplete="varBankAcctListDialog.hide()"/>
+		
+		<p:column headerText="Bank Name" sortBy="#{vo.name}" filterBy="#{vo.name}">
+			<h:outputText value="#{vo.name}"/>
+		</p:column>
+		<p:column headerText="Type" sortBy="#{vo.typeCd}" filterBy="#{vo.typeCd}">
+			<h:outputText value="#{vo.typeCd}"/>
+		</p:column>
+		<p:column headerText="Bank Account" sortBy="#{vo.acctNo}" filterBy="#{vo.acctNo}">
+			<h:outputText value="#{vo.acctNo}"/>
+		</p:column>
+	</p:dataTable>
+</p:dialog>
+-->
+
+<!--
+	DIALOG - TOUR DEPARTURE LIST
+-->
+<p:dialog id="idTourCodeList" widgetVar="varTourCodeList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<div style="overflow:auto; width:800px !important; height:500px !important;">
+	<h:form id="idTourDepListForm">
+		<p:dataTable id="idTourDepList" value="#{bankAdjustmentBean.lazyDataModelTourDep}" var="vo" paginator="true" rows="20" lazy="true" 
+			paginatorTemplate="#{bterp:pageTemplate()}"
+			rowsPerPageTemplate="20, 30, 40" rowKey="#{vo.id}" selectionMode="single"
+			filterEvent="enter">
+			
+			<p:ajax event="rowSelect" listener="#{bankAdjustmentBean.handleTourCodeSelect}" oncomplete="varTourCodeList.hide()"  update=":idAddBankAdjustement:idTourCd" />
+			<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:200px;">
+				<h:outputText value="#{vo.code}" />   
+			</p:column>
+			<p:column headerText="Departure Date" sortBy="#{vo.dtDep}" filterBy="#{vo.dtDep}" filterMatchMode="contains" style="width:60px;">
+				<h:outputText value="#{vo.dtDep}" >
+					<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+				</h:outputText> 
+			</p:column>
+			<p:column headerText="Package" sortBy="#{vo.packageDesc}" filterBy="#{vo.packageDesc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.packageDesc}" />   
+			</p:column>
+		</p:dataTable> 
+	</h:form>
+	</div>
+</p:dialog>
+ 
+</ui:define>
+</ui:composition>

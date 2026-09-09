@@ -1,0 +1,305 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<style type="text/css">
+	.addPageWidth {
+		width:1200px;
+	}
+	
+	.TblWidth {
+		width:1200px;
+	}
+	
+	.TblScrollWidth {
+		width:1100px;
+	}
+	
+	.amount {
+		width:110px !important;
+		text-align:right;
+	}
+	
+	.dtColWidth {
+		width:250px !important;
+	}
+	
+	.table-no-select-all .ui-chkbox-all {
+		display: none !important;
+	}
+</style>
+<!--p:scrollPanel mode="native" style="width:1100px; height:550px; padding:0px; margin:0px;" easing="easeOutElastic"--> 
+<p:growl id="msg"/>
+
+<p:panelGrid >
+	<p:row>
+		<p:column>
+			<p:panelGrid>
+				<p:row>
+					<p:column><h:outputLabel for="idBankAcc">Bank Account <span class="required">*</span></h:outputLabel></p:column>
+					<p:column>
+						<h:selectOneMenu id="idBankAcc" label="Bank Account" value="#{bterpBean.searchParamVO.obj1}" effect="fade" required="true">  
+							<f:selectItem itemLabel="Select One" />  
+							<f:selectItems value="#{bterpBean.bankAcctList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.id}"/>
+		            		<p:ajax event="valueChange" listener="#{bterpBean.searchBankRecon(true)}" update="@form" process="@this,idBankAcc,idFrDt,idToDt"/>
+		            	</h:selectOneMenu>
+	      	</p:column>
+				</p:row>
+				<p:row>
+					<p:column><h:outputLabel for="idFrDt">From<span class="required">*</span></h:outputLabel></p:column>
+					<p:column><p:calendar id="idFrDt" label="Date From" pattern="#{config['date.display.pattern']}" navigator="true" showButtonPanel="true" 
+												value="#{bterpBean.searchParamVO.fromDate}" required="true" maxlength="12" size="12"/></p:column>
+					<p:column><h:outputLabel for="idToDt">To <span class="required">*</span></h:outputLabel></p:column>
+					<p:column><p:calendar id="idToDt" label="Date To" pattern="#{config['date.display.pattern']}" navigator="true" showButtonPanel="true" 
+												value="#{bterpBean.searchParamVO.toDate}" required="true" maxlength="12" size="12"/></p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="4">
+						<p:selectOneRadio label="Type of Transaction" id="idCustomRadio" value="#{bterpBean.searchParamVO.obj2}" layout="custom" required="true">
+							<f:selectItem itemLabel="All Outstanding" itemValue="1"/>  
+							<f:selectItem itemLabel="All Debit" itemValue="2" />  
+							<f:selectItem itemLabel="All Transactions" itemValue="3" />  
+							<f:selectItem itemLabel="All Credit" itemValue="4" />  
+							<f:selectItem itemLabel="All Cleared" itemValue="5" />
+							<p:ajax event="valueChange" listener="#{bterpBean.searchBankRecon(true)}" update="@form" process="@this,idBankAcc,idFrDt,idToDt"/>
+						</p:selectOneRadio>
+						
+						<h:panelGrid columns="4">
+							<p:radioButton id="idOpt1" for="idCustomRadio" itemIndex="0"/>
+							<h:outputLabel for="idOpt1" value="All Outstanding" />
+							<p:radioButton id="idOpt2" for="idCustomRadio" itemIndex="1"/>
+							<h:outputLabel for="idOpt2" value="All Debit" />
+							<p:radioButton id="idOpt3" for="idCustomRadio" itemIndex="2"/>
+							<h:outputLabel for="idOpt3" value="All Transactions" />
+							<p:radioButton id="idOpt4" for="idCustomRadio" itemIndex="3"/>
+							<h:outputLabel for="idOpt4" value="All Credit" />
+							<p:radioButton id="idOpt5" for="idCustomRadio" itemIndex="4"/>
+							<h:outputLabel for="idOpt5" value="All Cleared" />
+						</h:panelGrid>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="3">
+						<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{bterpBean.addRecon}" update="@form" rendered="#{empty bterpBean.bankReconVO.id}"/>
+						<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{bterpBean.updRecon}" update="@form" disabled="#{not empty bterpBean.bankReconVO.id and bterpBean.bankReconVO.dateInFinPeriodClosed}" rendered="#{not empty bterpBean.bankReconVO.id}"/>
+						<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{bterpBean.cancelRecon}" process="@this" update="@form">
+							<pe:resetEditableValues for="@form"/>
+						</p:commandButton>
+						
+						<p:commandButton icon="ui-icon-print" value="#{msg['common.button.label.print']} [PDF]" actionListener="#{bterpBean.printBankReconciliation('PDF')}" ajax="false" onclick="monitorExporting(start,stop)" style="margin-left:40px"/>
+						<p:commandButton icon="ui-icon-print" value="#{msg['common.button.label.print']} [Excel]" actionListener="#{bterpBean.printBankReconciliation('XLS')}" ajax="false" onclick="monitorExporting(start,stop)"/>
+						<!--p:commandButton value="Restart" actionListener="#{bterpBean.searchBankRecon(true)}" update="@form"/-->
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+		<p:column>
+			<p:panelGrid>
+				<p:row>
+					<p:column style="width:90px;">
+						<h:outputLabel value="Month/Year"/>
+					</p:column>
+					<p:column style="width:120px;">
+						<h:selectOneMenu value="#{bterpBean.bankReconVO.month}" effect="fade">
+							<f:selectItem itemLabel="Jan" itemValue="Jan"/>
+							<f:selectItem itemLabel="Feb" itemValue="Feb"/>
+							<f:selectItem itemLabel="Mar" itemValue="Mar"/>
+							<f:selectItem itemLabel="Apr" itemValue="Apr"/>
+							<f:selectItem itemLabel="May" itemValue="May"/>
+							<f:selectItem itemLabel="Jun" itemValue="Jun"/>
+							<f:selectItem itemLabel="Jul" itemValue="Jul"/>
+							<f:selectItem itemLabel="Aug" itemValue="Aug"/>
+							<f:selectItem itemLabel="Sep" itemValue="Sep"/>
+							<f:selectItem itemLabel="Oct" itemValue="Oct"/>
+							<f:selectItem itemLabel="Nov" itemValue="Nov"/>
+							<f:selectItem itemLabel="Dec" itemValue="Dec"/>
+						</h:selectOneMenu> / 
+						<p:inputText value="#{bterpBean.bankReconVO.year}" size="4" maxlength="4"/>
+					</p:column>
+					<p:column>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			<p:panelGrid id="idShowStatement">
+				<p:row>
+					<p:column style="width:120px;"/>
+					<p:column style="width:100px;"><h:outputLabel for="idTotCr">Total Cr</h:outputLabel></p:column>
+					<p:column style="width:100px;"><h:outputLabel for="idTotDr">Total Dr</h:outputLabel></p:column>
+					<p:column style="width:100px;"><h:outputLabel for="idLastBal">Last Bal</h:outputLabel></p:column>
+					<p:column style="width:120px;"><h:outputLabel for="idLastBal">Adjusted Statement Balance</h:outputLabel></p:column>
+					<p:column style="width:120px;"><h:outputLabel for="idLastBal">Adjusted Cash Book Balance</h:outputLabel></p:column>
+				</p:row>
+				<p:row>
+					<p:column>From Statement</p:column>
+					<p:column>
+						<p:inputText id="idTotCr" value="#{bterpBean.bankReconVO.statementCr}" style="width:100px;">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							<p:ajax event="blur" update="idShowStatement"/>
+						</p:inputText>
+					</p:column>
+					<p:column>
+						<p:inputText id="idTotDr" value="#{bterpBean.bankReconVO.statementDr}" style="width:100px;">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							<p:ajax event="blur" update="idShowStatement"/>
+						</p:inputText>
+					</p:column>
+					<p:column>
+						<p:inputText id="idLastBal" value="#{bterpBean.bankReconVO.statementBal}" style="width:100px;">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							<p:ajax event="blur" update="idShowStatement"/>
+						</p:inputText>
+					</p:column>
+					<p:column style="text-align:right;">
+						<h:outputText value="#{bterpBean.roundDoubleValue(bterpBean.bankReconVO.statementBal + bterpBean.bankReconVO.obDr - bterpBean.bankReconVO.obCr)}" style="width:100px; font-weight:bold;">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column style="text-align:right;">
+						<h:outputText value="#{bterpBean.bankReconVO.statementBal}" style="width:100px;">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>Cash Book Bal</p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.bankReconVO.cbCr}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.bankReconVO.cbDr}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+					<p:column style="text-align:right;">
+						<h:outputText value="#{bterpBean.bankReconVO.cbBal}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column style="text-align:right;">
+						<h:outputText value="#{bterpBean.bankReconVO.cbBal}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column style="text-align:right;">
+						<h:outputText value="#{bterpBean.roundDoubleValue(bterpBean.bankReconVO.cbBal + bterpBean.bankReconVO.obCr - bterpBean.bankReconVO.obDr)}" style="font-weight:bold;">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column/>
+				</p:row>
+				<p:row>
+					<p:column>CB-Statement Diff</p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.roundDoubleValue(bterpBean.bankReconVO.cbCr - bterpBean.bankReconVO.statementCr)}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.roundDoubleValue(bterpBean.bankReconVO.cbDr - bterpBean.bankReconVO.statementDr)}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+					<p:column style="text-align:right;">
+						<h:outputText id="idCBDiffBal" value="#{bterpBean.roundDoubleValue(bterpBean.bankReconVO.cbBal - bterpBean.bankReconVO.statementBal)}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column style="text-align:right;">
+						<h:outputText value="#{bterpBean.roundDoubleValue(bterpBean.bankReconVO.cbBal - (bterpBean.bankReconVO.statementBal + bterpBean.bankReconVO.obDr - bterpBean.bankReconVO.obCr))}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column style="text-align:right;">
+						<h:outputText value="#{bterpBean.roundDoubleValue((bterpBean.bankReconVO.cbBal + bterpBean.bankReconVO.obCr - bterpBean.bankReconVO.obDr) - bterpBean.bankReconVO.statementBal)}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>Outstanding Bal</p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.bankReconVO.obCr}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.bankReconVO.obDr}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.roundDoubleValue(bterpBean.bankReconVO.obDr - bterpBean.bankReconVO.obCr)}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.roundDoubleValue(bterpBean.bankReconVO.obDr - bterpBean.bankReconVO.obCr)}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.roundDoubleValue(bterpBean.bankReconVO.obDr - bterpBean.bankReconVO.obCr)}"><f:convertNumber pattern="#{config['amount.format.pattern']}"/></h:outputText></p:column>
+				</p:row>
+				<p:row>
+					<p:column>No. of Outs Rec</p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.bankReconVO.noOutsCr}"/></p:column>
+					<p:column style="text-align:right;"><h:outputText value="#{bterpBean.bankReconVO.noOutsDr}"/></p:column>
+					<p:column></p:column>
+				</p:row>
+				<p:row>
+					<p:column>Unresolved Diff</p:column>
+					<p:column></p:column>
+					<p:column></p:column>
+					<p:column style="text-align:right;">
+						<h:outputText id="idURDiffBal" value="#{bterpBean.roundDoubleValue((bterpBean.bankReconVO.cbBal - bterpBean.bankReconVO.statementBal) + (bterpBean.bankReconVO.obDr - bterpBean.bankReconVO.obCr))}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column style="text-align:right;">
+						<h:outputText value="#{bterpBean.roundDoubleValue((bterpBean.bankReconVO.obDr - bterpBean.bankReconVO.obCr) + (bterpBean.bankReconVO.cbBal - (bterpBean.bankReconVO.statementBal + bterpBean.bankReconVO.obDr - bterpBean.bankReconVO.obCr)))}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+					<p:column style="text-align:right;">
+						<h:outputText value="#{bterpBean.roundDoubleValue((bterpBean.bankReconVO.obDr - bterpBean.bankReconVO.obCr) + ((bterpBean.bankReconVO.cbBal + bterpBean.bankReconVO.obCr - bterpBean.bankReconVO.obDr) - bterpBean.bankReconVO.statementBal))}">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:dataTable id="idBankReconList" value="#{bterpBean.cashBookList}" var="vo" style="border:1px;" styleClass="table-no-select-all"
+				scrollable="true" scrollHeight="600">
+				
+				<p:column headerText="Date" style="width:110px;"><h:outputText value="#{vo.dtTrans}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+				<p:column headerText="Group No." style="width:100px;"><h:outputText value="#{vo.groupNo}"/></p:column>
+				<p:column headerText="Cheque No." style="width:120px;"><h:outputText value="#{vo.refNo}"/></p:column>
+				<p:column headerText="Credit" styleClass="amount"><h:outputText value="#{vo.credit}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+				<p:column headerText="Debit" styleClass="amount"><h:outputText value="#{vo.debit}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+				<p:column headerText="Debit Sum" styleClass="amount"><h:outputText value="#{vo.debitSum}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+				<p:column headerText="Clr" style="width:40px; text-align:center;">
+					<p:selectBooleanCheckbox value="#{vo.isClear}">
+						<p:ajax event="valueChange" listener="#{bterpBean.rowSelectCheckBox(vo)}" update=":idReconForm:idShowStatement"/>
+					</p:selectBooleanCheckbox>
+				</p:column>
+				<p:column headerText="Doc No." style="width:80px;"><h:outputText value="#{vo.sysPrefix}#{vo.sysNo}"/></p:column>
+				<p:column headerText="Memo" style="width:200px;"><h:outputText value="#{vo.remarks}"/></p:column>
+				<p:column headerText="Payee Display" style="width:220px;"><h:outputText value="#{vo.payee}"/></p:column>
+			</p:dataTable>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2"><h3>Previous outstandings</h3></p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:dataTable id="idPrevBankReconList" value="#{bterpBean.prevCashBookList}" var="vo" style="border:1px;" styleClass="table-no-select-all"
+				scrollable="true" scrollHeight="200">
+				
+				<p:column headerText="Date" style="width:110px;"><h:outputText value="#{vo.dtTrans}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+				<p:column headerText="Group No." style="width:100px;"><h:outputText value="#{vo.groupNo}"/></p:column>
+				<p:column headerText="Cheque No." style="width:120px;"><h:outputText value="#{vo.refNo}"/></p:column>
+				<p:column headerText="Credit" styleClass="amount"><h:outputText value="#{vo.credit}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+				<p:column headerText="Debit" styleClass="amount"><h:outputText value="#{vo.debit}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+				<p:column headerText="Debit Sum" styleClass="amount"><h:outputText value="#{vo.debitSum}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+				<p:column headerText="Clr" style="width:40px; text-align:center;">
+					<p:selectBooleanCheckbox value="#{vo.isClear}">
+						<p:ajax event="valueChange" listener="#{bterpBean.rowSelectCheckBox(vo)}" update=":idReconForm:idShowStatement"/>
+					</p:selectBooleanCheckbox>
+				</p:column>
+				<p:column headerText="Doc No." style="width:80px;"><h:outputText value="#{vo.sysPrefix}#{vo.sysNo}"/></p:column>
+				<p:column headerText="Memo" style="width:200px;"><h:outputText value="#{vo.remarks}"/></p:column>
+				<p:column headerText="Payee Display" style="width:220px;"><h:outputText value="#{vo.payee}"/></p:column>
+			</p:dataTable>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="3" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{bterpBean.addRecon}" update="@form" rendered="#{empty bterpBean.bankReconVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{bterpBean.updRecon}" update="@form" disabled="#{not empty bterpBean.bankReconVO.id and bterpBean.bankReconVO.dateInFinPeriodClosed}" rendered="#{not empty bterpBean.bankReconVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{bterpBean.cancelRecon}" process="@this" update="@form">
+		<pe:resetEditableValues for="@form"/>
+	</p:commandButton>
+	
+	<p:commandButton icon="ui-icon-print" value="#{msg['common.button.label.print']}" actionListener="#{bterpBean.printBankReconciliation}" ajax="false" style="margin-left:40px"/>
+</h:panelGrid>
+</ui:composition>

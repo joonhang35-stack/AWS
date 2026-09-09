@@ -1,0 +1,136 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+function onValidation(xhr, status, args) {
+	if (args.validationFailed) {
+		varEditInvoiceAndExchangeOrderDialog.show();
+	} else {
+		varEditInvoiceAndExchangeOrderDialog.hide();
+	}
+}
+</script>
+
+<p:panelGrid style="margin-bottom:10px; width:700px">
+	<p:row>
+		<p:column style="width:150px">
+			<h:outputLabel for="idAddCatCd" >Category <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idAddCatCd" label="Category" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.catCd}" required="true">
+				<f:selectItem itemLabel="Select One" itemValue="" />
+				<f:selectItems value="#{bterp:lookupItemList('inv_items_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAddTypeCd">Type <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idAddTypeCd" label="Type" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.typeCd}" required="true">
+				<f:selectItem itemLabel="Select One" itemValue="" />
+				<f:selectItems value="#{bterp:lookupItemList('inv_items_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idCode">Code<span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idCode" label="Code" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.code}" style="width:100px" required="true"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>description<span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText label="Description" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.description}" style="width:200px" required="true"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAcct">Account <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:autoComplete id="idAcct"  value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.acctCode}" completeMethod="#{invoiceAndExchangeOrderBean.complete}"> 
+	         	<p:ajax event="itemSelect" listener="#{invoiceAndExchangeOrderBean.changeDesc}" update=":idEditInvoiceAndExchangeOrderDetailsForm:idDescription" process="@this"/>
+			</p:autoComplete> &nbsp;
+			<p:commandButton icon="ui-icon-search" actionListener="#{invoiceAndExchangeOrderBean.changeAcct}" oncomplete="varAcctEditListDialog.show()" update=":idVarAcctEditListDialog" process="@this"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idDescription">Account Description</h:outputLabel></p:column>
+		<p:column>
+			<h:outputText id="idDescription" label="Description" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.acctDesc}" required="true"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idGSTCode">GST Code <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idGSTCode" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.taxCode}" readonly="true"/>
+			&nbsp;<p:commandButton icon="ui-icon-search" oncomplete="varGSTListDialog.show()" update=":idGSTListDialog" process="@this"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idGSTRate">GST Rate <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idGSTRate" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.taxRate}" readonly="true"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAmount">Amount</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idAmount" label="Remarks" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.amount}" style="width:200px">
+				<f:convertNumber pattern="#,###0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idAcctMgrUse">Acct Manager Use Only</h:outputLabel></p:column>
+		<p:column>
+			<p:selectBooleanButton id="idAcctMgrUse" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.acctMgrUse}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idIsEditable">Is Editable</h:outputLabel></p:column>
+		<p:column>
+			<p:selectBooleanButton id="idIsEditable" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.isEditable}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idIsDefAcct">Is Default Account Use</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:selectBooleanButton id="idIsDefAcct" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.isDefAcct}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"/>
+			<p:graphicImage id="idIsDefAcctImg" value="/img/more.png" width="11" style="margin-left: 3px;"/>
+			<pe:tooltip for="idIsDefAcctImg" shared="true" showDelay="3000"  position="top left">
+				<h:outputText value="Use default account code if do not exist in account code setup" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idInvCat">Invoice Category</h:outputLabel></p:column>
+		<p:column>
+			<p:selectCheckboxMenu id="idInvCat" label="Invoice Category" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.invCatList}"
+				filterMatchMode="contains" onHide="executeInvCatOnhide();" style="display: flex;width: fit-content;">
+				<f:selectItems value="#{bterp:lookupItemList('inv_cat')}" var="catVO" itemValue="#{catVO.code}" itemLabel="#{catVO.description}"/>
+			</p:selectCheckboxMenu>
+			<p:remoteCommand name="executeInvCatOnhide" actionListener="#{invoiceAndExchangeOrderBean.handleInvCatChange}" update="idInvCatDesc" global="false"
+				process="@this, idInvCat"/>
+			<p:outputLabel id="idInvCatDesc" value="#{invoiceAndExchangeOrderBean.invoiceAndExchangeOrderVO.invCatDesc}" />
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid id="idButtonGrid" columns="2" style="width:1px;">
+	<p:commandButton id="idBtnEditSubmit" actionListener="#{invoiceAndExchangeOrderBean.editInvoiceAndExchangeOrder}" value="#{msg['common.button.label.save']}" update="@form,:idForm:idInvoiceAndExchangeOrderDetailsTable" oncomplete="onValidation(xhr, status, args)"/>
+	<p:commandButton id="idBtnEditCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{invoiceAndExchangeOrderBean.resetForm}" update="@form" process="@this" oncomplete="varEditInvoiceAndExchangeOrderDialog.hide()" global="false">
+		<pe:resetEditableValues for="idEditInvoiceAndExchangeOrderDetailsForm"/>
+	</p:commandButton>
+</h:panelGrid>
+<h:outputLabel><span class="required">*</span> - required field</h:outputLabel>
+</ui:composition>

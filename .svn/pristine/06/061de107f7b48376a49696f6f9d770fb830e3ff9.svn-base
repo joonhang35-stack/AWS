@@ -1,0 +1,1646 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<c:set var="contextPath" value="${request.contextPath}" />
+<f:view contentType="text/html" locale="#{localeBean.locale}">
+	<h:head>
+		<f:facet name="first">
+			<meta http-equiv="X-UA-Compatible" content="EmulateIE8" />
+			<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+			<title>Enquiry</title>
+		</f:facet>
+		<script type="text/javascript">
+			/* window.onload = function(){
+				var template = document.getElementById("body").innerHTML;
+				document.getElementById("contentForm:hidContent").value = template;
+				templateCommand();
+				sendMessage();
+			} */
+		</script>
+	</h:head>
+
+<h:form id="contentForm">
+	<p:outputPanel>
+		<h:inputHidden value="#{bterpBean.template}" id="hidContent"></h:inputHidden>
+		<p:remoteCommand name="templateCommand" process="contentForm:hidContent"></p:remoteCommand>
+		<p:remoteCommand name="sendMessage" actionListener="#{bterpBean.sendMessage}"></p:remoteCommand>
+	</p:outputPanel>
+	</h:form>
+<body id="body">
+	<style type="text/css">
+	body, tr, td {
+		font-family: Arial, Helvetica, sans-serif;
+		font-size: 14px;
+		margin-left: 0px;
+		margin-top: 0px;
+		margin-right: 0px;
+		margin-bottom: 0px;
+	}
+	
+	.font {
+		/*font-family:"Times New Roman", Times, serif;
+		font-style:italic;*/
+		
+	}
+	
+	.font-2 {
+		font-weight: bold;
+	}
+	
+	.font-corporate {
+		font-weight: bold;
+		color: #7c51a1
+	}
+	</style>
+	
+	<div id="template">
+			<c:if test="#{empty bterpBean.bookingViewVO}">
+				<table width="100%" height="100%" border="0" cellspacing="0"
+					cellpadding="0">
+					<tr>
+						<td align="left" valign="top">Dear Sir / Madam,<br />Thank
+							you for giving us an opportunity to serve you.<br />
+						<br /> Attach here with the details of your requested tour for
+							your kind reference:
+							<table width="95%" border="0" cellspacing="10" cellpadding="0">
+								<tbody>
+									<tr>
+										<td>
+											<table width="100%" border="0" cellspacing="0"
+												cellpadding="0">
+												<tr>
+													<td height="33" align="left" valign="top" class="font">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top" class="font-2">&nbsp;</td>
+												</tr>
+												<tr>
+													<td width="15%" align="left" valign="top" class="font">Tour
+														Name</td>
+													<td width="2%" align="left" valign="top">:</td>
+													<td width="83%" align="left" valign="top" class="font-2"><h:outputText
+															value="#{bterpBean.tourDepVO.numDays}D#{bterpBean.tourDepVO.numNights}N  #{bterpBean.tourPkgVO.nameEn} #{bterpBean.tourPkgVO.nameZh} #{bterpBean.tourPkgVO.nameOther}" /></td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td width="15%" align="left" valign="top" class="font">Tour
+														Code</td>
+													<td width="2%" align="left" valign="top">:</td>
+													<td width="83%" align="left" valign="top" class="font-2"><h:outputText
+															value="#{bterpBean.tourDepVO.code}" /></td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top" class="font">Tour
+														Itinerary</td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top"><c:set var="idx"
+															value="0" /> <c:forEach
+															items="#{bterpBean.tourDepVO.tourItineryList}"
+															var="itineryVO">
+															<c:if test="#{idx eq '1'}">
+																<h:outputText value=" or " />
+																<c:set var="idx" value="2" />
+															</c:if>
+															<c:if
+																test="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'EN'}">
+																<a target="_blank"
+																	href="https://aws.applevacations.my:2022/aws#{itineryVO.path}/#{bterpBean.urlEncoder(itineryVO.name)}"
+																	style="color: #0040FF;">Find out more</a>
+																<c:if test="#{idx eq '0'}">
+																	<c:set var="idx" value="1" />
+																</c:if>
+															</c:if>
+															<c:if
+																test="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'ZH'}">
+																<a target="_blank"
+																	href="https://aws.applevacations.my:2022/aws#{itineryVO.path}/#{bterpBean.urlEncoder(itineryVO.name)}"
+																	style="color: #0040FF;">Find out more</a>
+																<c:if test="#{idx eq '0'}">
+																	<c:set var="idx" value="1" />
+																</c:if>
+															</c:if>
+														</c:forEach></td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top" class="font">Check-in
+														Date</td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top" class="font-2"><h:outputText
+															value="#{bterpBean.tourDepVO.dtDep}">
+															<f:convertDateTime pattern="dd-MMM-yyyy" />
+														</h:outputText></td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td colspan="3" align="left" valign="top"><hr /></td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top" class="font">Full tour
+														fare/Per traveler</td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top">
+														<table width="95%" border="1" cellspacing="0"
+															cellpadding="2">
+															<tr class="font-2">
+																<td height="28" colspan="2" align="center"
+																	valign="middle">ADULT</td>
+																<td colspan="3" align="center" valign="middle">CHILD</td>
+															</tr>
+															<tr>
+																<td width="20%" align="center" valign="middle">TWIN</td>
+																<td width="20%" align="center" valign="middle">SINGLE</td>
+																<td width="20%" align="center" valign="middle">CHILD
+																	TWIN</td>
+																<td width="20%" align="center" valign="middle">CHILD
+																	WITH BED</td>
+																<td width="20%" align="center" valign="middle">CHILD
+																	NO BED</td>
+															</tr>
+															<tr class="font-2">
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.fullTwn}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.fullSgl}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.fullCtw}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.fullCeb}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.fullCnb}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+															</tr>
+														</table>
+													</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top" class="font">Ground
+														fare/Per traveler</td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top">
+														<table width="95%" border="1" cellspacing="0"
+															cellpadding="2">
+															<tr class="font-2">
+																<td height="28" colspan="2" align="center"
+																	valign="middle">ADULT</td>
+																<td colspan="3" align="center" valign="middle">CHILD</td>
+															</tr>
+															<tr>
+																<td width="20%" align="center" valign="middle">TWIN</td>
+																<td width="20%" align="center" valign="middle">SINGLE</td>
+																<td width="20%" align="center" valign="middle">CHILD
+																	TWIN</td>
+																<td width="20%" align="center" valign="middle">CHILD
+																	WITH BED</td>
+																<td width="20%" align="center" valign="middle">CHILD
+																	NO BED</td>
+															</tr>
+															<tr class="font-2">
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.grndTwn}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.grndSgl}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.grndCtw}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.grndCeb}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle">RM <h:outputText
+																		value="#{bterpBean.tourDepVO.grndCnb}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+															</tr>
+														</table>
+													</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top"><span class="font">Miscellaneous
+															Charges/Per traveler</span></td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top">
+														<table width="95%" border="1" cellspacing="0"
+															cellpadding="2">
+															<tr class="font-2">
+																<td width="5%" height="25" align="center"
+																	valign="middle">VISA</td>
+																<td width="5%" align="center" valign="middle">A/C</td>
+																<td width="5%" align="center" valign="middle">TIPPING</td>
+																<td width="9%" align="center" valign="middle">AIRPORT TAX<br />(ADULT / CHILD)</td>
+																<td width="9%" align="center" valign="middle">YQ
+																	&amp; FUEL<br />(ADULT / CHILD)
+																</td>
+																<td width="5%" align="center" valign="middle">TRAVEL
+																	INSURANCE</td>
+																<td width="5%" align="center" valign="middle">OTHERS</td>
+																<td width="9%" align="center" valign="middle">TOTAL<br />(ADULT / CHILD)
+																</td>
+																<c:choose>
+																	<c:when test="#{bterpBean.department eq 'wholesale'}">
+																		<td width="3%" align="center" valign="middle">AC/SI</td>
+																	</c:when>
+																	<c:otherwise>
+																		<td width="1%" align="center" valign="middle" rowspan="2"></td>
+																		<td width="1%" align="center" valign="middle" rowspan="2"></td>
+																		<td width="1%" align="center" valign="middle" rowspan="2"></td>
+																	</c:otherwise>
+																</c:choose>
+																<td width="5%" align="center" valign="middle">DEVIATION</td>
+																<td width="15%" align="center" valign="middle">REMARK</td>
+															</tr>
+															<tr>
+																<td align="center" valign="middle"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineVisa}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineAC}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineTipping}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineAptAdt}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText> / <h:outputText
+																		value="#{bterpBean.tourDepVO.airlineAptChd}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineYqAdt}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText> / <h:outputText
+																		value="#{bterpBean.tourDepVO.airlineYqChd}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineTrvlIns}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineExtra}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle" class="font-2"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineTotAdt}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText> / <h:outputText
+																		value="#{bterpBean.tourDepVO.airlineTotChd}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<c:if test="#{bterpBean.department eq 'wholesale'}">
+																	<td align="center" valign="middle">
+																		<h:outputText value="#{bterpBean.tourDepVO.cnaAdt}" rendered="#{bterpBean.tourDepVO.cnaAdt % 1 &gt; 0}">
+																			<f:convertNumber pattern="#,##0.00" />
+																		</h:outputText>
+																		<h:outputText value="#{bterpBean.tourDepVO.cnaAdt}" rendered="#{bterpBean.tourDepVO.cnaAdt % 1 &lt;= 0}">
+																			<f:convertNumber pattern="#,##0" />
+																		</h:outputText>
+																		<h:outputText value="/" />
+																		<h:outputText value="#{bterpBean.tourDepVO.csiAdt}" rendered="#{bterpBean.tourDepVO.csiAdt % 1 &gt; 0}">
+																			<f:convertNumber pattern="#,##0.00" />
+																		</h:outputText>
+																		<h:outputText value="#{bterpBean.tourDepVO.csiAdt}" rendered="#{bterpBean.tourDepVO.csiAdt % 1 &lt;= 0}">
+																			<f:convertNumber pattern="#,##0" />
+																		</h:outputText>
+																	</td>
+																</c:if>
+																<td align="center" valign="middle"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineDeviation}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText></td>
+																<td align="center" valign="middle"><h:outputText
+																		value="#{bterpBean.tourDepVO.airlineScheduleVO.remarks}" /></td>
+															</tr>
+														</table>
+													</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top"><span class="font">Total
+															Full tour fare (Adult/per traveler)</span></td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top" class="font-2"><h:outputText
+															value="#{bterpBean.tourDepVO.fullTwn + bterpBean.tourDepVO.airlineTotAdt}">
+															<f:convertNumber pattern="RM #,##0.00" />
+														</h:outputText> (ADULT TWIN + Miscellaneous TOTAL only)</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">- <span class="font-2">Taxes
+															and price are subjected to change</span>.
+													</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top"><span class="font">Airline</span></td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top" class="font-2"><h:outputText
+															value="#{bterpBean.tourDepVO.airlineVO.desc} " /></td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<c:if test="#{bterpBean.tourDepVO.isShowAirline}">
+													<tr>
+														<td align="left" valign="top"><span class="font">Flight Schedule</span></td>
+														<td align="left" valign="top">:</td>
+														<td align="left" valign="top">
+															<table width="95%" border="1" cellspacing="0"
+																cellpadding="2">
+																<tr class="font-2">
+																	<td width="10%" height="25" align="center" valign="middle">TYPE</td>
+																	<td width="10%" align="center" valign="middle">DEPT DT</td>
+																	<td width="10%" align="center" valign="middle">ARR DT</td>
+																	<td width="10%" align="center" valign="middle">CODE</td>
+																	<td width="10%" align="center" valign="middle">FROM</td>
+																	<td width="10%" align="center" valign="middle">TO</td>
+																	<td width="10%" align="center" valign="middle">ETD</td>
+																	<td width="10%" align="center" valign="middle">ETA</td>
+																	<td width="30%" align="center" valign="middle">REMARK</td>
+																</tr>
+																<c:forEach
+																	items="#{bterpBean.tourDepVO.airlineScheduleVO.airlineScheduleItemList}"
+																	var="vo">
+																	<tr>
+																		<td align="center" valign="middle"><h:outputText
+																				value="#{vo.typeCd}" /></td>
+																		<td align="center" valign="middle"><h:outputText
+																				value="#{vo.departureDate}" >
+																				<f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></td>
+																		<td align="center" valign="middle"><h:outputText
+																				value="#{vo.arrivalDate}" >
+																				<f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></td>
+																		<td align="center" valign="middle"><h:outputText
+																				value="#{vo.flightCd}" /></td>
+																		<td align="center" valign="middle"><h:outputText
+																				value="#{vo.fromAirportCd}" /></td>
+																		<td align="center" valign="middle"><h:outputText
+																				value="#{vo.toAirportCd}" /></td>
+																		<td align="center" valign="middle"><h:outputText
+																				value="#{vo.etd}" /></td>
+																		<td align="center" valign="middle"><h:outputText
+																				value="#{vo.eta}" /></td>
+																		<td align="center" valign="middle"><h:outputText
+																				value="#{vo.remarks}" /></td>
+																	</tr>
+																</c:forEach>
+															</table>
+														</td>
+													</tr>
+													<tr>
+														<td align="left" valign="top">&nbsp;</td>
+														<td align="left" valign="top">&nbsp;</td>
+														<td align="left" valign="top">&nbsp;</td>
+													</tr>
+												</c:if>
+												<tr>
+													<td align="left" valign="top"><span class="font">Deposit/Per
+															traveler</span></td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top" class="font-2"><h:outputText
+															value="#{bterpBean.tourPkgVO.deposit}">
+															<f:convertNumber pattern="RM #,##0.00" />
+														</h:outputText></td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top"><span class="font">Document
+															needed</span></td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top" class="font-2">Compulsory
+														Passport Copy upon booking</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td colspan="3" align="left" valign="top"><hr /></td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top"><span class="font">Payment
+															Methods</span></td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top">
+														<!--<table width="95%" border="0" cellspacing="0" cellpadding="0">
+											<tr>
+												<td width="3%" align="left" valign="top">1.</td>
+												<td width="97%" align="left" valign="top"><b>CASH</b> – In Ringgit Malaysia (RM) only</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">2.</td>
+												<td align="left" valign="top"><b>DIRECT BANK-IN CASH or INTERBANK TRANSFER (GIRO)</b> - In Ringgit Malaysia (RM) only</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">
+													Bank : <span class="font-corporate"><h:outputText value="CIMB BANK"/></span><br />
+													Account Number : <span class="font-corporate"><h:outputText value="8000 - 605470"/></span><br />
+													Account Name : <span class="font-corporate"><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}"/></span>
+												</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">Please email / fax us your bank-in slip together with <strong>booking ID or invoice number with departure date.</strong></td>
+											</tr>
+											<tr>
+											  <td align="left" valign="top">&nbsp;</td>
+											  <td align="left" valign="top">Email : <a href="mailto:asia@applevacations.my">asia@applevacations.my</a></td>
+											  </tr>
+											<tr>
+											  <td align="left" valign="top">&nbsp;</td>
+											  <td align="left" valign="top">Fax : (+6)03 2142 8029</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">3.</td>
+												<td align="left" valign="top"><b>CHEQUE / BANK CHEQUE</b> (Please allow 3 working days for cheque clearance)</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">Please make you cheque payable to <span class="font-corporate"><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}"/></span></td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top"><em>Please read and understand the&nbsp;<a href="https://applevacations.my/web/terms.php">Tour Terms &amp; Conditions</a>&nbsp;before  booking</em></td>
+											</tr>
+										</table>-->
+														<table width="95%" border="0" cellspacing="0"
+															cellpadding="0">
+															<tr>
+																<td width="3%" align="left" valign="top">1.</td>
+																<td width="97%" align="left" valign="top"><b>CASH</b></td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">&nbsp;</td>
+																<td align="left" valign="top">&nbsp;</td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">2.</td>
+																<td align="left" valign="top"><b>DIRECT
+																		BANK-IN CASH or INTERBANK TRANSFER (GIRO) or CHEQUE</b></td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">a.</td>
+																<td align="left" valign="top"><b>CASH MACHINE
+																		BANK IN / INTERBANK TRANSFER</b></td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">&nbsp;</td>
+																<td align="left" valign="top">Bank : <span
+																	class="font-corporate"><h:outputText
+																			value="CIMB BANK" /></span><br /> Account Number : <span
+																	class="font-corporate"><h:outputText
+																			value="8000 - 605470" /></span><br /> Account Name : <span
+																	class="font-corporate"><h:outputText
+																			value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}" /></span>
+																</td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">&nbsp;</td>
+																<td align="left" valign="top">&nbsp;</td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">b.</td>
+																<td align="left" valign="top"><b>CHEQUE / BANK
+																		CHEQUE</b></td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">&nbsp;</td>
+																<td align="left" valign="top">Please make you
+																	cheque payable to <span class="font-corporate"><h:outputText
+																			value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}" /></span>
+																</td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">&nbsp;</td>
+																<td align="left" valign="top">&nbsp;</td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">&nbsp;</td>
+																<td align="left" valign="top">Kindly please email
+																	your bank in slip or e-receipt attach with <strong>Booking
+																		ID or Invoice Number with Departure Date</strong> to<br /> <b>Asia
+																		Packages: </b><a href="mailto:asia@applevacations.my">asia@applevacations.my</a><br />
+																	<b>West Packages: </b><a
+																	href="mailto:asia@applevacations.my">west@applevacations.my</a>
+																</td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">&nbsp;</td>
+																<td align="left" valign="top">&nbsp;</td>
+															</tr>
+															<tr>
+																<td align="left" valign="top">&nbsp;</td>
+																<td align="left" valign="top"><em>* Please
+																		take the time to read and understand the&nbsp;<a
+																		href="https://applevacations.my/web/terms.php">Terms
+																			&amp; Conditions</a>.
+																</em><br /> <em>* Transaction in Ringgit Malaysia (RM)
+																		only.</em><br /> <em>* T&amp;C apply.</em></td>
+															</tr>
+														</table>
+													</td>
+												</tr>
+												<tr>
+													<td height="33" align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<!--<tr>
+									<td align="left" valign="top"><span class="font">For WESTERN Tours only</span></td>
+									<td align="left" valign="top">:</td>
+									<td align="left" valign="top">
+										<table width="95%" border="0" cellspacing="0" cellpadding="0">
+											<tr>
+												<td width="3%" align="left" valign="top">1.</td>
+												<td width="97%" align="left" valign="top"><b>CASH</b> – In Ringgit Malaysia (RM) only</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">2.</td>
+												<td align="left" valign="top"><b>DIRECT BANK-IN CASH or INTERBANK TRANSFER (GIRO)</b> - In Ringgit Malaysia (RM) only</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">
+													Bank : <span class="font-corporate"><h:outputText value="MALAYAN BANKING BHD (MAYBANK)"/></span><br />
+													Account Number : <span class="font-corporate"><h:outputText value="5140-8457-6317"/></span><br />
+													Account Name : <span class="font-corporate"><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}"/></span>
+												</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">Please email / fax us your bank-in slip together with <strong>booking ID or invoice number with departure date.</strong></td>
+											</tr>
+											<tr>
+											  <td align="left" valign="top">&nbsp;</td>
+											  <td align="left" valign="top">Email : <a href="mailto:west@applevacations.my">west@applevacations.my</a></td>
+											  </tr>
+											<tr>
+											  <td align="left" valign="top">&nbsp;</td>
+											  <td align="left" valign="top">Fax : (+6)03 2143 3936</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">3.</td>
+												<td align="left" valign="top"><b>CHEQUE / BANK CHEQUE</b> (Please allow 3 working days for cheque clearance)</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">Please make you cheque payable to <span class="font-corporate"><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}"/></span></td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top"><em>Please read and understand the&nbsp;<a href="https://applevacations.my/web/terms.php">Tour Terms &amp; Conditions</a>&nbsp;before  booking</em></td>
+											</tr>
+										</table>
+									</td>
+								</tr>-->
+											</table>
+										</td>
+									</tr>
+								</tbody>
+							</table> <br /> Please do not hesitate to contact us should you require
+							further information and we assure you of our good services and
+							attention at all times.<br /> <br />
+						<br />
+						</td>
+					</tr>
+				</table>
+			</c:if>
+			<c:if test="#{not empty bterpBean.bookingViewVO}">
+				<table width="100%" height="100%" border="0" cellspacing="0"
+					cellpadding="0">
+					<tr>
+						<td align="left" valign="top">Dear Sir / Madam,<br /> Thank
+							you for giving us an opportunity to serve you.<br /> <br />
+							Attach here with the details of your requested tour for your
+							kind reference:
+							<table width="95%" border="0" cellspacing="10" cellpadding="0">
+								<tr>
+									<td>
+										<table width="100%" border="0" cellspacing="0"
+											cellpadding="0">
+											<tr>
+												<td height="82" align="left" valign="top">
+													<table width="100%" border="0" cellspacing="0"
+														cellpadding="0">
+														<tr>
+															<td width="17%">Booking ID</td>
+															<td width="28%"><h:outputText
+																	value="#{bterpBean.bookingViewVO.id}" /></td>
+															<td width="10%">&nbsp;</td>
+															<td width="17%">Sales Person</td>
+															<td width="28%"><h:outputText
+																	value="#{bterpBean.bookingViewVO.employeeViewVO.userVO.name}" /></td>
+														</tr>
+														<tr>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+														</tr>
+														<tr>
+															<td>Bill To:</td>
+															<td><h:outputText
+																	value="#{bterp:lookupItemDesc('salutatn', bterpBean.bookingViewVO.customerVO.personVO.salutation)} #{bterpBean.bookingViewVO.customerVO.personVO.lastName} #{bterpBean.bookingViewVO.customerVO.personVO.givenName}" /></td>
+															<td>&nbsp;</td>
+															<td>Payment Status:</td>
+															<td><h:outputText value="Enquiry"
+																	rendered="#{bterpBean.bookingViewVO.pmntStatusCd eq 'KIV'}" />
+																<h:outputText value="Deposit Paid"
+																	rendered="#{bterpBean.bookingViewVO.pmntStatusCd eq 'DEP'}" />
+																<h:outputText value="Full Paid"
+																	rendered="#{bterpBean.bookingViewVO.pmntStatusCd eq 'FULL'}" />
+															</td>
+														</tr>
+														<tr>
+															<td>Mobile No.:</td>
+															<td><ui:repeat
+																	value="#{bterpBean.bookingViewVO.customerVO.personContactList}"
+																	var="tel">
+																	<h:outputText value="#{tel.number}"
+																		rendered="#{tel.typeCd eq 'mobile'}" />
+																</ui:repeat> <ui:repeat
+																	value="#{bterpBean.bookingViewVO.customerVO.corContactList}"
+																	var="tel">
+																	<h:outputText value="#{tel.contactNo}"
+																		rendered="#{tel.contactType eq 'mobile'}" />
+																</ui:repeat></td>
+															<td>&nbsp;</td>
+															<td>Booking Date:</td>
+															<td><h:outputText
+																	value="#{bterpBean.bookingViewVO.createdDate}">
+																	<f:convertDateTime pattern="dd-MMM-yyyy" />
+																</h:outputText></td>
+														</tr>
+														<tr>
+															<td>Email:</td>
+															<td><h:outputText
+																	value="#{bterpBean.bookingViewVO.customerVO.personVO.email}" /></td>
+															<td>&nbsp;</td>
+															<td>Expiry Date:</td>
+															<td>
+																<!--h:outputText value="#{bterpBean.getExpiryDate(bterpBean.bookingViewVO.createdDate, bterpBean.bookingViewVO.pmntStatusCd)}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText-->
+																<h:outputText value="#{bterpBean.bookingViewVO.dtExp}"
+																	rendered="#{bterpBean.bookingViewVO.pmntStatusCd eq 'KIV'}">
+																	<f:convertDateTime pattern="dd-MMM-yyyy" />
+																</h:outputText>
+															</td>
+														</tr>
+														<tr>
+															<td>Fax No.:</td>
+															<td><ui:repeat
+																	value="#{bterpBean.bookingViewVO.customerVO.personContactList}"
+																	var="tel">
+																	<h:outputText value="#{tel.number}"
+																		rendered="#{tel.typeCd eq 'fax'}" />
+																</ui:repeat> <ui:repeat
+																	value="#{bterpBean.bookingViewVO.customerVO.corContactList}"
+																	var="tel">
+																	<h:outputText value="#{tel.contactNo}"
+																		rendered="#{tel.contactType eq 'mobile'}" />
+																</ui:repeat></td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+														</tr>
+														<tr>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+														</tr>
+														<tr>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+															<td>&nbsp;</td>
+														</tr>
+													</table>
+												</td>
+											</tr>
+										</table>
+										<table width="100%" border="0" cellspacing="0"
+											cellpadding="0">
+											<tr>
+												<td align="left" valign="top" class="font">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top" class="font-2">&nbsp;</td>
+											</tr>
+											<tr>
+												<td width="15%" align="left" valign="top" class="font">Tour
+													Name</td>
+												<td width="2%" align="left" valign="top">:</td>
+												<td width="83%" align="left" valign="top" class="font-2"><h:outputText
+														value="#{bterpBean.bookingViewVO.tourDepViewVO.numDays}D#{bterpBean.bookingViewVO.tourDepViewVO.numNights}N #{bterpBean.bookingViewVO.tourDepViewVO.tourPkgVO.nameEn} #{bterpBean.bookingViewVO.tourDepViewVO.tourPkgVO.nameZh} #{bterpBean.bookingViewVO.tourDepViewVO.tourPkgVO.nameOther}" /></td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td width="15%" align="left" valign="top" class="font">Tour
+													Code</td>
+												<td width="2%" align="left" valign="top">:</td>
+												<td width="83%" align="left" valign="top" class="font-2"><h:outputText
+														value="#{bterpBean.bookingViewVO.tourDepViewVO.code}" /></td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td width="15%" align="left" valign="top" class="font">Tour
+													Itinerary</td>
+												<td width="2%" align="left" valign="top">:</td>
+												<td width="83%" align="left" valign="top"><c:set
+														var="idx" value="0" /> <c:forEach
+														items="#{bterpBean.bookingViewVO.tourDepViewVO.tourItineryList}"
+														var="itineryVO">
+														<c:if test="#{idx eq '1'}">
+															<h:outputText value=" or " />
+															<c:set var="idx" value="2" />
+														</c:if>
+														<c:if
+															test="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'EN'}">
+															<a target="_blank"
+																href="https://aws.applevacations.my:2022/aws#{itineryVO.path}/#{bterpBean.urlEncoder(itineryVO.name)}"
+																style="color: #0040FF;">Find out more</a>
+															<c:if test="#{idx eq '0'}">
+																<c:set var="idx" value="1" />
+															</c:if>
+														</c:if>
+														<c:if
+															test="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'ZH'}">
+															<a target="_blank"
+																href="https://aws.applevacations.my:2022/aws#{itineryVO.path}/#{bterpBean.urlEncoder(itineryVO.name)}"
+																style="color: #0040FF;">Find out more</a>
+															<c:if test="#{idx eq '0'}">
+																<c:set var="idx" value="1" />
+															</c:if>
+														</c:if>
+													</c:forEach></td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top" class="font">Check-in
+													Date</td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top" class="font-2"><h:outputText
+														value="#{bterpBean.bookingViewVO.tourDepViewVO.dtDep}">
+														<f:convertDateTime pattern="dd-MMM-yyyy" />
+													</h:outputText></td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td colspan="3" align="left" valign="top"><hr /></td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top" class="font">Full tour
+													fare/Per traveler</td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top">
+													<table width="95%" border="1" cellspacing="0"
+														cellpadding="2">
+														<tr class="font-2">
+															<td height="28" colspan="2" align="center"
+																valign="middle">ADULT</td>
+															<td colspan="3" align="center" valign="middle">CHILD</td>
+														</tr>
+														<tr>
+															<td width="20%" align="center" valign="middle">TWIN</td>
+															<td width="20%" align="center" valign="middle">SINGLE</td>
+															<td width="20%" align="center" valign="middle">CHILD
+																TWIN</td>
+															<td width="20%" align="center" valign="middle">CHILD
+																WITH BED</td>
+															<td width="20%" align="center" valign="middle">CHILD
+																NO BED</td>
+														</tr>
+														<tr class="font-2">
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtFullTwn}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtFullSgl}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtFullCtw}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtFullCeb}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtFullCnb}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+														</tr>
+													</table>
+												</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top"><span class="font">Number
+														of Person</span></td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top">
+													<table width="95%" border="1" cellspacing="0"
+														cellpadding="2">
+														<tr>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxFullTwn}"
+																	rendered="#{bterpBean.bookingViewVO.paxFullTwn gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxFullTwn eq 0}" />
+															</td>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxFullSgl}"
+																	rendered="#{bterpBean.bookingViewVO.paxFullSgl gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxFullSgl eq 0}" />
+															</td>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxFullCtw}"
+																	rendered="#{bterpBean.bookingViewVO.paxFullCtw gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxFullCtw eq 0}" />
+															</td>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxFullCeb}"
+																	rendered="#{bterpBean.bookingViewVO.paxFullCeb gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxFullCeb eq 0}" />
+															</td>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxFullCnb}"
+																	rendered="#{bterpBean.bookingViewVO.paxFullCnb gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxFullCnb eq 0}" />
+															</td>
+														</tr>
+													</table>
+												</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top" class="font">Ground
+													fare/Per traveler</td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top">
+													<table width="95%" border="1" cellspacing="0"
+														cellpadding="2">
+														<tr class="font-2">
+															<td height="28" colspan="2" align="center"
+																valign="middle">ADULT</td>
+															<td colspan="3" align="center" valign="middle">CHILD</td>
+														</tr>
+														<tr>
+															<td width="20%" align="center" valign="middle">TWIN</td>
+															<td width="20%" align="center" valign="middle">SINGLE</td>
+															<td width="20%" align="center" valign="middle">CHILD
+																TWIN</td>
+															<td width="20%" align="center" valign="middle">CHILD
+																WITH BED</td>
+															<td width="20%" align="center" valign="middle">CHILD
+																NO BED</td>
+														</tr>
+														<tr class="font-2">
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtGrndTwn}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtGrndSgl}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtGrndCtw}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtGrndCeb}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle">RM <h:outputText
+																	value="#{bterpBean.bookingViewVO.amtGrndCnb}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+														</tr>
+													</table>
+												</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top"><span class="font">Number
+														of Person</span></td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top">
+													<table width="95%" border="1" cellspacing="0"
+														cellpadding="2">
+														<tr>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxGrndTwn}"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndTwn gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndTwn eq 0}" />
+															</td>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxGrndSgl}"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndSgl gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndSgl eq 0}" />
+															</td>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxGrndCtw}"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndCtw gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndCtw eq 0}" />
+															</td>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxGrndCeb}"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndCeb gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndCeb eq 0}" />
+															</td>
+															<td width="20%" align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.paxGrndCnb}"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndCnb gt 0}" />
+																<h:outputText value="&nbsp;"
+																	rendered="#{bterpBean.bookingViewVO.paxGrndCnb eq 0}" />
+															</td>
+														</tr>
+													</table>
+												</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top"><span class="font">Miscellaneous
+														Charges/Per traveler</span></td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top">
+													<table width="95%" border="1" cellspacing="0"
+														cellpadding="2">
+														<tr class="font-2">
+															<td width="5%" height="25" align="center"
+																valign="middle">VISA</td>
+															<td width="5%" align="center" valign="middle">A/C</td>
+															<td width="5%" align="center" valign="middle">TIPPING</td>
+															<td width="9%" align="center" valign="middle">AIRPORT
+																TAX<br />(ADULT / CHILD)
+															</td>
+															<td width="9%" align="center" valign="middle">YQ
+																&amp; FUEL<br />(ADULT / CHILD)
+															</td>
+															<td width="5%" align="center" valign="middle">TRAVEL
+																INSURANCE</td>
+															<td width="5%" align="center" valign="middle">OTHERS</td>
+															<td width="9%" align="center" valign="middle">TOTAL<br />(ADULT
+																/ CHILD)
+															</td>
+															<c:choose>
+																<c:when test="#{bterpBean.department eq 'wholesale'}">
+																	<td width="3%" align="center" valign="middle">AC/SI</td>
+																</c:when>
+																<c:otherwise>
+																	<td width="1%" align="center" valign="middle" rowspan="2"></td>
+																	<td width="1%" align="center" valign="middle" rowspan="2"></td>
+																	<td width="1%" align="center" valign="middle" rowspan="2"></td>
+																</c:otherwise>
+															</c:choose>
+															<td width="5%" align="center" valign="middle">DEVIATION</td>
+															<td width="15%" align="center" valign="middle">REMARK</td>
+														</tr>
+														<tr>
+															<td align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineVisa}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineAC}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineTipping}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineAptAdt}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText> / <h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineAptChd}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineYqAdt}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText> / <h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineYqChd}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineTrvlIns}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineExtra}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle" class="font-2"><h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineTotAdt}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText> / <h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineTotChd}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<c:if test="#{bterpBean.department eq 'wholesale'}">
+																<td align="center" valign="middle">
+																	<h:outputText value="#{bterpBean.bookingViewVO.tourDepViewVO.cnaAdt}" rendered="#{bterpBean.bookingViewVO.tourDepViewVO.cnaAdt % 1 &gt; 0}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText>
+																	<h:outputText value="#{bterpBean.bookingViewVO.tourDepViewVO.cnaAdt}" rendered="#{bterpBean.bookingViewVO.tourDepViewVO.cnaAdt % 1 &lt;= 0}">
+																		<f:convertNumber pattern="#,##0" />
+																	</h:outputText>
+																	<h:outputText value="/" />
+																	<h:outputText value="#{bterpBean.bookingViewVO.tourDepViewVO.csiAdt}" rendered="#{bterpBean.bookingViewVO.tourDepViewVO.csiAdt % 1 &gt; 0}">
+																		<f:convertNumber pattern="#,##0.00" />
+																	</h:outputText>
+																	<h:outputText value="#{bterpBean.bookingViewVO.tourDepViewVO.csiAdt}" rendered="#{bterpBean.bookingViewVO.tourDepViewVO.csiAdt % 1 &lt;= 0}">
+																		<f:convertNumber pattern="#,##0" />
+																	</h:outputText>
+																</td>
+															</c:if>
+															<td align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.airlineDeviation}">
+																	<f:convertNumber pattern="#,##0.00" />
+																</h:outputText></td>
+															<td align="center" valign="middle"><h:outputText
+																	value="#{bterpBean.bookingViewVO.tourDepViewVO.airlineScheduleVO.remarks}" /></td>
+														</tr>
+													</table>
+												</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top"><span class="font">Total
+														Full tour fare (Adult/per traveler)</span></td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top" class="font-2"><h:outputText
+														value="#{bterpBean.bookingViewVO.amtFullTwn + bterpBean.bookingViewVO.airlineTotAdt}">
+														<f:convertNumber pattern="RM #,##0.00" />
+													</h:outputText> (ADULT TWIN + Miscellaneous TOTAL only)</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">- <span class="font-2">Taxes
+														and price are subjected to change</span>.
+												</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top"><span class="font">Airline</span></td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top" class="font-2"><h:outputText
+														value="#{bterpBean.bookingViewVO.tourDepViewVO.airlineVO.desc} " />
+												</td>
+											</tr>
+											<c:if
+												test="#{bterpBean.bookingViewVO.tourDepViewVO.isShowAirline}">
+												<tr>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+													<td align="left" valign="top">&nbsp;</td>
+												</tr>
+												<tr>
+													<td align="left" valign="top"><span class="font">Flight
+															Schedule </span></td>
+													<td align="left" valign="top">:</td>
+													<td align="left" valign="top">
+														<table width="95%" border="1" cellspacing="0"
+															cellpadding="2">
+															<tr class="font-2">
+																<td width="10%" height="25" align="center"
+																	valign="middle">TYPE</td>
+																<td width="10%" align="center" valign="middle">
+																	CODE</td>
+																<td width="10%" align="center" valign="middle">FROM</td>
+																<td width="10%" align="center" valign="middle">TO</td>
+																<td width="10%" align="center" valign="middle">ETD</td>
+																<td width="10%" align="center" valign="middle">ETA</td>
+																<td width="30%" align="center" valign="middle">REMARK</td>
+															</tr>
+															<c:forEach
+																items="#{bterpBean.bookingViewVO.tourDepViewVO.airlineScheduleVO.airlineScheduleItemList}"
+																var="vo">
+																<tr>
+																	<td align="center" valign="middle"><h:outputText
+																			value="#{vo.typeCd}" /></td>
+																	<td align="center" valign="middle"><h:outputText
+																			value="#{vo.flightCd}" /></td>
+																	<td align="center" valign="middle"><h:outputText
+																			value="#{vo.fromAirportCd}" /></td>
+																	<td align="center" valign="middle"><h:outputText
+																			value="#{vo.toAirportCd}" /></td>
+																	<td align="center" valign="middle"><h:outputText
+																			value="#{vo.etd}" /></td>
+																	<td align="center" valign="middle"><h:outputText
+																			value="#{vo.eta}" /></td>
+																	<td align="center" valign="middle"><h:outputText
+																			value="#{vo.remarks}" /></td>
+																</tr>
+															</c:forEach>
+														</table>
+													</td>
+												</tr>
+											</c:if>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top"><span class="font">Deposit/Per
+														traveler</span></td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top" class="font-2"><h:outputText
+														value="#{bterpBean.bookingViewVO.tourDepViewVO.tourPkgVO.deposit}">
+														<f:convertNumber pattern="RM #,##0.00" />
+													</h:outputText></td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top"><span class="font">Document
+														needed</span></td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top" class="font-2">Compulsory
+													Passport Copy upon booking</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td colspan="3" align="left" valign="top"><hr /></td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<tr>
+												<td align="left" valign="top"><span class="font">Payment
+														Methods</span></td>
+												<td align="left" valign="top">:</td>
+												<td align="left" valign="top">
+													<!--<table width="95%" border="0" cellspacing="0" cellpadding="0">
+										<tr>
+											<td width="3%" align="left" valign="top">1.</td>
+											<td width="97%" align="left" valign="top"><b>CASH</b> – In Ringgit Malaysia (RM) only</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">2.</td>
+											<td align="left" valign="top"><b>DIRECT BANK-IN CASH or INTERBANK TRANSFER (GIRO)</b> - In Ringgit Malaysia (RM) only</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">
+												Bank : <span class="font-corporate"><h:outputText value="CIMB BANK"/></span><br />
+												Account Number : <span class="font-corporate"><h:outputText value="8000 - 605470"/></span><br />
+												Account Name : <span class="font-corporate"><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}"/></span>
+											</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">Please email / fax us your bank-in slip together with <strong>booking ID or invoice number with departure date.</strong></td>
+										</tr>
+										<tr>
+										  <td align="left" valign="top">&nbsp;</td>
+										  <td align="left" valign="top">Email : <a href="mailto:asia@applevacations.my">asia@applevacations.my</a></td>
+										  </tr>
+										<tr>
+										  <td align="left" valign="top">&nbsp;</td>
+										  <td align="left" valign="top">Fax : (+6)03 2142 8029</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">3.</td>
+											<td align="left" valign="top"><b>CHEQUE / BANK CHEQUE</b> (Please allow 3 working days for cheque clearance)</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">Please make you cheque payable to <span class="font-corporate"><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}"/></span></td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top"><em>Please read and understand the&nbsp;<a href="https://applevacations.my/web/terms.php">Tour Terms &amp; Conditions</a>&nbsp;before  booking</em></td>
+										</tr>
+									</table>-->
+													<table width="95%" border="0" cellspacing="0"
+														cellpadding="0">
+														<tr>
+															<td width="3%" align="left" valign="top">1.</td>
+															<td width="97%" align="left" valign="top"><b>CASH</b></td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">&nbsp;</td>
+															<td align="left" valign="top">&nbsp;</td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">2.</td>
+															<td align="left" valign="top"><b>DIRECT BANK-IN
+																	CASH or INTERBANK TRANSFER (GIRO) or CHEQUE</b></td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">a.</td>
+															<td align="left" valign="top"><b>CASH MACHINE
+																	BANK IN / INTERBANK TRANSFER</b></td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">&nbsp;</td>
+															<td align="left" valign="top">Bank : <span
+																class="font-corporate"><h:outputText
+																		value="CIMB BANK" /></span><br /> Account Number : <span
+																class="font-corporate"><h:outputText
+																		value="8000 - 605470" /></span><br /> Account Name : <span
+																class="font-corporate"><h:outputText
+																		value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}" /></span>
+															</td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">&nbsp;</td>
+															<td align="left" valign="top">&nbsp;</td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">b.</td>
+															<td align="left" valign="top"><b>CHEQUE / BANK
+																	CHEQUE</b></td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">&nbsp;</td>
+															<td align="left" valign="top">Please make you
+																cheque payable to <span class="font-corporate"><h:outputText
+																		value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}" /></span>
+															</td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">&nbsp;</td>
+															<td align="left" valign="top">&nbsp;</td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">&nbsp;</td>
+															<td align="left" valign="top">Kindly please email
+																your bank in slip or e-receipt attach with <strong>Booking
+																	ID or Invoice Number with Departure Date</strong> to<br /> <b>Asia
+																	Packages: </b><a href="mailto:asia@applevacations.my">asia@applevacations.my</a><br />
+																<b>West Packages: </b><a
+																href="mailto:asia@applevacations.my">west@applevacations.my</a>
+															</td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">&nbsp;</td>
+															<td align="left" valign="top">&nbsp;</td>
+														</tr>
+														<tr>
+															<td align="left" valign="top">&nbsp;</td>
+															<td align="left" valign="top"><em>* Please
+																	take the time to read and understand the&nbsp;<a
+																	href="https://applevacations.my/web/terms.php">Terms
+																		&amp; Conditions</a>.
+															</em><br /> <em>* Transaction in Ringgit Malaysia (RM)
+																	only.</em><br /> <em>* T&amp;C apply.</em></td>
+														</tr>
+													</table>
+												</td>
+											</tr>
+											<tr>
+												<td height="33" align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+												<td align="left" valign="top">&nbsp;</td>
+											</tr>
+											<!--<tr>
+								<td align="left" valign="top"><span class="font">For WESTERN Tours only</span></td>
+								<td align="left" valign="top">:</td>
+								<td align="left" valign="top">
+									<table width="95%" border="0" cellspacing="0" cellpadding="0">
+										<tr>
+											<td width="3%" align="left" valign="top">1.</td>
+											<td width="97%" align="left" valign="top"><b>CASH</b> – In Ringgit Malaysia (RM) only</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">2.</td>
+											<td align="left" valign="top"><b>DIRECT BANK-IN CASH or INTERBANK TRANSFER (GIRO)</b> - In Ringgit Malaysia (RM) only</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">
+												Bank : <span class="font-corporate"><h:outputText value="MALAYAN BANKING BHD (MAYBANK)"/></span><br />
+												Account Number : <span class="font-corporate"><h:outputText value="5140-8457-6317"/></span><br />
+												Account Name : <span class="font-corporate"><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}"/></span>
+											</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">Please email / fax us your bank-in slip together with <strong>booking ID or invoice number with departure date.</strong></td>
+										</tr>
+										<tr>
+										  <td align="left" valign="top">&nbsp;</td>
+										  <td align="left" valign="top">Email : <a href="mailto:west@applevacations.my">west@applevacations.my</a></td>
+										  </tr>
+										<tr>
+										  <td align="left" valign="top">&nbsp;</td>
+										  <td align="left" valign="top">Fax : (+6)03 2143 3936</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">3.</td>
+											<td align="left" valign="top"><b>CHEQUE / BANK CHEQUE</b> (Please allow 3 working days for cheque clearance)</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">Please make you cheque payable to <span class="font-corporate"><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}"/></span></td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top">&nbsp;</td>
+										</tr>
+										<tr>
+											<td align="left" valign="top">&nbsp;</td>
+											<td align="left" valign="top"><em>Please read and understand the&nbsp;<a href="https://applevacations.my/web/terms.php">Tour Terms &amp; Conditions</a>&nbsp;before  booking</em></td>
+										</tr>
+									</table>
+								</td>
+							</tr>-->
+
+
+										</table>
+									</td>
+								</tr>
+							</table> <br /> Please do not hesitate to contact us should you require
+							further information and we assure you of our good services and
+							attention at all times.<br /> <br />
+						<br />
+						</td>
+					</tr>
+				</table>
+			</c:if>
+		</div>
+</body>
+</f:view>
+</html>

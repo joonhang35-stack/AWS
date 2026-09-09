@@ -1,0 +1,1934 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	template="/WEB-INF/views/layouts/main.xhtml"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<ui:define name="content">
+
+		<style>
+			.invoiceRefDialog {
+				height: 100% !important;
+				overflow: auto;
+			}
+			.badge-transferred {
+    			background-color: #ffa500; /* Orange color similar to the screenshot */
+			    color: white;
+			    padding: 1px 4px; /* Adjusted padding to make the badge smaller */
+			    margin-left: 5px;
+			    border-radius: 3px;
+			    font-size: 0.75em; /* Adjusted font size to make the badge text smaller */
+			}
+			#idAddInvoicePaxDialog.ui-dialog .ui-dialog-content {
+				overflow: visible !important;
+			}
+		</style>
+
+		<script type="text/javascript">
+		    function fncLoad() {
+		        document.getElementById('idInvListForm:idAddBtn').onclick();
+		    }
+		    
+		    function onValidationReason(xhr, status, args) {
+				if (args.validationFailed) {
+					varReasonDialog.show();
+				} else {
+					varReasonDialog.hide();
+					//varAddInvoiceDialog.hide();
+					//varInvoiceListTable.clearFilters();
+				}
+			}
+		    
+		    function onTransferValidation(xhr, status, args) {
+				if (!args.validationFailed) {
+					varAvailableTourDepListDialog.hide();
+					varTransferConfirmationDialog.hide();
+				}
+			}
+		    
+		    document.addEventListener('DOMContentLoaded', function() {
+		        var filters = document.querySelectorAll('input.ui-column-filter');
+		        filters.forEach(function(filter) {
+		            filter.setAttribute('enterkeyhint', 'enter');
+		        });
+		    });
+		</script>
+		
+		<p:panel header="Pax Statement Issuance" toggleable="true" toggleSpeed="500">
+			<h:body onload="#{salesBean.strOnLoad}">
+				<link rel="stylesheet"
+					href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+					<h:form id="idInvListForm">
+						<p:tabView id="idTabView">
+							<p:tab title="Pax Statement List">
+								<p:panelGrid style="margin-top:5px;">
+									<p:row>
+										<p:column style="width: 50px;">
+											<p:commandButton id="idAddBtn" value="Add"
+												actionListener="#{salesBean.initAddInvoice}"
+												oncomplete="varAddInvoiceDialog.show()" process="@this"
+												update=":idAddInvoiceDialog">
+			 									<pe:resetEditableValues for="idAddInvoiceForm" />
+											</p:commandButton>
+										</p:column>
+										<p:column style="width: 10px;">
+											<p:separator style="width:2px;height:20px" />
+										</p:column>
+										<p:column style="width: 80px;">
+											<p:commandButton id="toggler" value="Columns" style="float:left"
+												icon="ui-icon-calculator"
+												actionListener="#{salesBean.handleChangeColumnsViewClick}"
+												oncomplete="varListingTableViewDialog.show();" process="@this"
+												update=":idListingTableViewDialog" />
+										</p:column>
+										<p:column style="width: 10px;">
+											<p:separator style="width:2px;height:20px" />
+										</p:column>
+										<p:column style="width: 80px;">
+											<h:outputText value="Order Source" />
+										</p:column>
+										<p:column style="width: 100px;">
+											<h:selectOneMenu id="idSelOrderSource" label="Order Source"
+												value="#{salesBean.orderSourceCode}" effect="fade">
+												<f:selectItem itemLabel="All" itemValue="" />
+												<f:selectItems value="#{bterp:lookupItemList('ordr_sorc')}"
+													var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+												<p:ajax event="change"
+													listener="#{salesBean.handleOrderSourceSelect}"
+													oncomplete="varInvoiceListTable.clearFilters()" update="@form" />
+											</h:selectOneMenu>
+										</p:column>
+										<p:column style="width: 120px;">
+											<h:outputText value="Statement Category" />
+										</p:column>
+										<p:column style="width: 120px;">
+											<h:selectOneMenu id="idSelInvoiceCategory" label="Statement Category"
+												value="#{salesBean.invoiceCategoryCode}" effect="fade">
+												<f:selectItem itemLabel="All" itemValue="" />
+												<f:selectItems value="#{bterp:lookupItemList('inv_cat')}"
+													var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+												<p:ajax event="change"
+													listener="#{salesBean.handleInvoiceCategorySelect}"
+													oncomplete="varInvoiceListTable.clearFilters()" update="@form" />
+											</h:selectOneMenu>
+										</p:column>
+										<p:column>
+											<p:commandButton id="idSendReviewBtn" value="Send To Review 2"
+												actionListener="#{salesBean.onSendToReview}"
+												oncomplete="varSendReviewDialog.show()" process="@this"
+												update=":idSendReviewDialog">
+											</p:commandButton>
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								<p:panelGrid id="idSearchPanel" style="display: none;">
+									<p:row>
+										<p:column style="width: 66px;">
+											<p:outputLabel for="idValidFrom" value="Date From" />
+										</p:column>
+										<p:column style="width: 80px;">
+											<p:calendar id="idValidFrom" size="12" navigator="true" showButtonPanel="true"
+												pattern="dd-MMM-yyyy" value="#{salesBean.fromDate}">
+											</p:calendar>
+			
+										</p:column>
+										<p:column style="width: 52px;">
+											<p:outputLabel value="Date To" for="idValidTo" />
+										</p:column>
+										<p:column style="width: 66px;">
+											<p:calendar id="idValidTo" size="12" navigator="true" showButtonPanel="true"
+												pattern="dd-MMM-yyyy" value="#{salesBean.toDate}">
+											</p:calendar>
+										</p:column>
+										<p:column style="width: 10px;">
+											<p:separator style="width:2px;height:20px" />
+										</p:column>
+										<p:column style="width: 94px;">
+											<p:outputLabel value="Invoice From"
+												for="idInvoiceFrom" />
+										</p:column>
+										<p:column style="width: 180px;">
+											<h:outputText value="#{salesBean.prefixValue}"/>&nbsp;
+											<p:inputText id="idInvoiceFrom" maxlength="8" value="#{salesBean.invFrom}" />
+											<pe:keyFilter for="idInvoiceFrom" mask="num" /> 
+										</p:column>
+										<p:column style="width: 70px;">
+											<p:outputLabel value="Invoice To"
+												for="idInvoiceTo" />
+										</p:column>
+										<p:column style="width: 180px;">
+											<h:outputText value="#{salesBean.prefixValue}"/>&nbsp;
+											<p:inputText id="idInvoiceTo" maxlength="8" value="#{salesBean.invTo}" />
+											<pe:keyFilter for="idInvoiceTo" mask="num" /> 
+										</p:column>
+										<p:column style="width: 10px;">
+											<p:separator style="width:2px;height:20px" />
+										</p:column>
+										<p:column>
+											<p:commandButton value="Search" actionListener="#{salesBean.handleFilterSource}" id="invSearch" oncomplete="varInvoiceListTable.clearFilters()" update="@form">
+												</p:commandButton>
+											<p:defaultCommand target="invSearch" scope="idSearchPanel" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+			
+								<p:dataTable id="idInvListTable" widgetVar="varInvoiceListTable"
+									value="#{salesBean.lazyDataModel}" var="vo" paginator="true"
+									rows="20" rowIndexVar="rowIndex"
+									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+									rowsPerPageTemplate="3, 20, 30, 50"
+									filteredValue="#{salesBean.filteredObjList}" lazy="true"
+									selection="#{salesBean.selectedInvoiceList}"
+									filterEvent="enter" rowKey="#{vo.id}">
+									<p:ajax event="rowSelectCheckbox"/>
+									<p:ajax event="toggleSelect"/>
+									<p:column selectionMode="multiple" style="width:16px;text-align:center" />
+									<p:column headerText="Edit" width="40" style="text-align:center;"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(1)}">
+										<p:commandButton icon="ui-icon-pencil"
+											actionListener="#{salesBean.onInvoiceSelected(vo)}"
+											oncomplete="varAddInvoiceDialog.show()"
+											update=":idAddInvoiceDialog" process="@this" />
+									</p:column>
+			
+									<p:column headerText="Cancel" width="40"
+										style="text-align:center;"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(2)}">
+										<p:commandButton icon="ui-icon-close"
+											actionListener="#{salesBean.onInvoiceSelected(vo)}"
+											oncomplete="varDelInvDialog.show()"
+											rendered="#{(vo.statusCd eq 'IN' and salesBean.invPmntAuthVO.invVoidInvoiced) or ((vo.statusCd eq 'DP' or vo.statusCd eq 'FP') and salesBean.invPmntAuthVO.invCancelFPorDP)}" process="@this" />
+									</p:column>
+			
+									<p:column id="invoiceNo" width="128" headerText="Pax Statement No." sortBy="#{vo.psNo}"
+										filterBy="#{vo.psNo}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(3)}">
+			        					<h:outputText value="#{salesBean.prefixValue} #{vo.psNo}" />
+			            				<h:outputText value="Transferred" styleClass="badge-transferred" rendered="#{not empty vo.transferredDate}" />
+									</p:column>
+			
+									<p:column headerText="Statement Date" sortBy="#{vo.invoiceDt}"
+										filterBy="#{vo.invoiceDt}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(4)}">
+										<h:outputText value="#{vo.invoiceDt}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Departure Date" sortBy="#{vo.departureDt}"
+										filterBy="#{vo.departureDt}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(5)}">
+										<h:outputText value="#{vo.departureDt}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Sales person" sortBy="#{vo.salerName}"
+										filterBy="#{vo.salerName}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(6)}">
+										<h:outputText value="#{vo.salerName}" />
+									</p:column>
+									<p:column headerText="Customer No." sortBy="#{vo.custCd}"
+										filterBy="#{vo.custCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(7)}">
+										<h:outputText value="#{vo.custCd}" />
+									</p:column>
+			
+									<p:column headerText="Customer Name" sortBy="#{vo.custName}"
+										filterBy="#{vo.custName}" filterMatchMode="contains"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(8)}">
+										<h:outputText
+											value="#{bterp:lookupItemDesc('salutatn', vo.custSalutation)} #{vo.custName}"
+											style="text-transform:uppercase;" />
+									</p:column>
+			
+									<p:column headerText="Company Name" sortBy="#{vo.coName}"
+										filterBy="#{vo.coName}" filterMatchMode="contains"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(9)}">
+										<h:outputText value="#{vo.coName}" />
+									</p:column>
+			
+									<p:column headerText="Tour Code" sortBy="#{vo.tourCd}"
+										filterBy="#{vo.tourCd}" filterMatchMode="contains"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(10)}">
+										<h:outputText value="#{vo.tourCd}" />
+									</p:column>
+			
+									<p:column headerText="Booking No" sortBy="#{vo.bookingId}"
+										filterBy="#{vo.bookingId}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(11)}">
+										<h:outputText value="#{vo.bookingId}" />
+									</p:column>
+			
+									<p:column headerText="Order Source" sortBy="#{vo.orderCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(12)}">
+										<h:outputText value="#{bterp:lookupItemDesc('ordr_sorc', vo.orderCd)}" />
+									</p:column>
+									
+									<p:column headerText="Statement Category" sortBy="#{vo.catCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(13)}">
+										<h:outputText value="#{bterp:lookupItemDesc('inv_cat', vo.catCd)}" />
+									</p:column>
+			
+									<p:column headerText="Ticket No(s)" sortBy="#{vo.tickets}"
+										filterBy="#{vo.tickets}" width="200"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(14)}">
+										<h:outputText value="#{vo.tickets}" />
+									</p:column>
+			
+									<p:column headerText="Total Amt" sortBy="#{vo.amount}"
+										filterBy="#{vo.amount}" styleClass="txt_center"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(15)}">
+										<h:outputText value="#{vo.amount}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Amt Due" sortBy="#{vo.balance}"
+										filterBy="#{vo.balance}" styleClass="txt_center"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(16)}">
+										<h:outputText value="#{vo.balance}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Statement Due" sortBy="#{vo.invoiceDue}"
+										filterBy="#{vo.invoiceDue}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(17)}">
+										<h:outputText value="#{vo.invoiceDue}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</p:column>
+									
+									<p:column headerText="Pax Statement Status" sortBy="#{vo.docTypeStatus}"
+										style="width: 80px;" styleClass="txt_center"
+										filterBy="#{vo.docTypeStatus}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(18)}">
+										<h:outputText
+											value="#{vo.docTypeStatus}" />
+									</p:column>
+			
+									<p:column headerText="Payment Status" sortBy="#{vo.statusCd}"
+										style="width: 80px;" styleClass="txt_center"
+										filterBy="#{vo.statusCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(18)}">
+										<h:outputText
+											value="#{zsg:referenceDataValue('INV_STATUS', vo.statusCd)}" />
+									</p:column>
+			
+									<p:column headerText="Booking Status"
+										sortBy="#{vo.bookingStatusCd}" style="width: 80px;"
+										styleClass="txt_center" filterBy="#{vo.bookingStatusCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(19)}">
+										<h:outputText
+											value="#{zsg:referenceDataValue('BOOK_STATUS', vo.bookingStatusCd)}" />
+									</p:column>
+			
+									<p:column headerText="Internal Remarks" style="width: 80px;"
+										styleClass="txt_center" filterBy="#{vo.internalRemarks}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(20)}">
+										<p:outputLabel id="idInternalRemarks" value="View"
+											rendered="#{vo.internalRemarks ne null and vo.internalRemarks ne ''}">
+											<i class="fa fa-info-circle" aria-hidden="true" />
+										</p:outputLabel>
+			
+										<!-- <p:tooltip id="idToolTipInternalRemarks" for="idInternalRemarks"
+											showEffect="fade" hideEffect="fade" position="bottom"
+											style="width:600px;">
+											<h:outputText escape="true" value="#{vo.internalRemarks}"
+												style="white-space: pre-wrap" />
+										</p:tooltip> -->
+										<pe:tooltip for="idInternalRemarks" shared="true" showDelay="300" targetPosition="top left" position="bottom right"
+											rendered="#{not empty vo.internalRemarks}">
+											<h:outputText value="#{vo.internalRemarks}" escape="true" style="white-space: pre-wrap"/>
+										</pe:tooltip>
+									</p:column>
+			
+									<p:column headerText="Updated By" sortBy="#{vo.updatedBy}"
+										style="width: 80px;" styleClass="txt_center"
+										filterBy="#{vo.updatedBy}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(21)}">
+										<h:outputText value="#{vo.updatedBy}" />
+									</p:column>
+			
+									<p:column headerText="Updated Date" sortBy="#{vo.updatedDate}"
+										filterBy="#{vo.updatedDate}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(22)}">
+										<h:outputText value="#{vo.updatedDate}">
+											<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+										</h:outputText>
+									</p:column>
+								</p:dataTable>
+			
+								<p:panelGrid style="margin-top:5px; width:1px">
+									<p:row>
+										<p:column>
+											<p:commandButton value="Add"
+												actionListener="#{salesBean.initAddInvoice}"
+												oncomplete="varAddInvoiceDialog.show()" process="@this"
+												update=":idAddInvoiceDialog">
+												<pe:resetEditableValues for="idAddInvoiceForm" />
+											</p:commandButton>
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+				
+							</p:tab>
+							<p:tab title="In-Review Statements">
+								<p:panelGrid style="margin-top:5px;">
+									<p:row>
+										<p:column>
+											<p:commandButton id="idConvertBtn" value="Convert To Invoice"
+												actionListener="#{salesBean.onConvert}">
+<!-- 												oncomplete="varSendReviewDialog.show()" process="@this"
+												update=":idSendReviewDialog"> -->
+											</p:commandButton>
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								
+								<p:dataTable id="idPaxStmtReviewListTable" widgetVar="varPaxStmtReviewListTable"
+									value="#{salesBean.lazyReviewingPaxStmtDataModel}" var="vo" paginator="true"
+									rows="20" rowIndexVar="rowIndex"
+									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+									rowsPerPageTemplate="3, 20, 30, 50"
+									filteredValue="#{salesBean.filteredObjList}" lazy="true"
+									selection="#{salesBean.selectedInvoiceList}"
+									filterEvent="enter" rowKey="#{vo.id}">
+									<p:ajax event="rowSelectCheckbox"/>
+									<p:ajax event="rowUnselectCheckbox"/>
+									<p:ajax event="toggleSelect"/>
+									<p:column selectionMode="multiple" style="width:16px;text-align:center" />
+									<p:column headerText="Edit" width="40" style="text-align:center;"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(1)}">
+										<p:commandButton icon="ui-icon-pencil"
+											actionListener="#{salesBean.onInvoiceSelected(vo)}"
+											oncomplete="varAddInvoiceDialog.show()"
+											update=":idAddInvoiceDialog" process="@this" />
+									</p:column>
+			
+									<p:column headerText="Cancel" width="40"
+										style="text-align:center;"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(2)}">
+										<p:commandButton icon="ui-icon-close"
+											actionListener="#{salesBean.onInvoiceSelected(vo)}"
+											oncomplete="varDelInvDialog.show()"
+											rendered="#{(vo.statusCd eq 'IN' and salesBean.invPmntAuthVO.invVoidInvoiced) or ((vo.statusCd eq 'DP' or vo.statusCd eq 'FP') and salesBean.invPmntAuthVO.invCancelFPorDP)}" process="@this" />
+									</p:column>
+			
+									<p:column id="invoiceNo" width="128" headerText="Pax Statement No." sortBy="#{vo.psNo}"
+										filterBy="#{vo.psNo}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(3)}">
+			        					<h:outputText value="#{salesBean.prefixValue} #{vo.psNo}" />
+			            				<h:outputText value="Transferred" styleClass="badge-transferred" rendered="#{not empty vo.transferredDate}" />
+									</p:column>
+			
+									<p:column headerText="Statement Date" sortBy="#{vo.invoiceDt}"
+										filterBy="#{vo.invoiceDt}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(4)}">
+										<h:outputText value="#{vo.invoiceDt}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Departure Date" sortBy="#{vo.departureDt}"
+										filterBy="#{vo.departureDt}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(5)}">
+										<h:outputText value="#{vo.departureDt}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Sales person" sortBy="#{vo.salerName}"
+										filterBy="#{vo.salerName}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(6)}">
+										<h:outputText value="#{vo.salerName}" />
+									</p:column>
+									<p:column headerText="Customer No." sortBy="#{vo.custCd}"
+										filterBy="#{vo.custCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(7)}">
+										<h:outputText value="#{vo.custCd}" />
+									</p:column>
+			
+									<p:column headerText="Customer Name" sortBy="#{vo.custName}"
+										filterBy="#{vo.custName}" filterMatchMode="contains"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(8)}">
+										<h:outputText
+											value="#{bterp:lookupItemDesc('salutatn', vo.custSalutation)} #{vo.custName}"
+											style="text-transform:uppercase;" />
+									</p:column>
+			
+									<p:column headerText="Company Name" sortBy="#{vo.coName}"
+										filterBy="#{vo.coName}" filterMatchMode="contains"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(9)}">
+										<h:outputText value="#{vo.coName}" />
+									</p:column>
+			
+									<p:column headerText="Tour Code" sortBy="#{vo.tourCd}"
+										filterBy="#{vo.tourCd}" filterMatchMode="contains"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(10)}">
+										<h:outputText value="#{vo.tourCd}" />
+									</p:column>
+			
+									<p:column headerText="Booking No" sortBy="#{vo.bookingId}"
+										filterBy="#{vo.bookingId}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(11)}">
+										<h:outputText value="#{vo.bookingId}" />
+									</p:column>
+			
+									<p:column headerText="Order Source" sortBy="#{vo.orderCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(12)}">
+										<h:outputText value="#{bterp:lookupItemDesc('ordr_sorc', vo.orderCd)}" />
+									</p:column>
+									
+									<p:column headerText="Statement Category" sortBy="#{vo.catCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(13)}">
+										<h:outputText value="#{bterp:lookupItemDesc('inv_cat', vo.catCd)}" />
+									</p:column>
+			
+									<p:column headerText="Ticket No(s)" sortBy="#{vo.tickets}"
+										filterBy="#{vo.tickets}" width="200"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(14)}">
+										<h:outputText value="#{vo.tickets}" />
+									</p:column>
+			
+									<p:column headerText="Total Amt" sortBy="#{vo.amount}"
+										filterBy="#{vo.amount}" styleClass="txt_center"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(15)}">
+										<h:outputText value="#{vo.amount}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Amt Due" sortBy="#{vo.balance}"
+										filterBy="#{vo.balance}" styleClass="txt_center"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(16)}">
+										<h:outputText value="#{vo.balance}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Statement Due" sortBy="#{vo.invoiceDue}"
+										filterBy="#{vo.invoiceDue}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(17)}">
+										<h:outputText value="#{vo.invoiceDue}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</p:column>
+									
+									<p:column headerText="Pax Statement Status" sortBy="#{vo.docTypeStatus}"
+										style="width: 80px;" styleClass="txt_center"
+										filterBy="#{vo.docTypeStatus}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(18)}">
+										<h:outputText
+											value="#{vo.docTypeStatus}" />
+									</p:column>
+			
+									<p:column headerText="Payment Status" sortBy="#{vo.statusCd}"
+										style="width: 80px;" styleClass="txt_center"
+										filterBy="#{vo.statusCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(18)}">
+										<h:outputText
+											value="#{zsg:referenceDataValue('INV_STATUS', vo.statusCd)}" />
+									</p:column>
+			
+									<p:column headerText="Booking Status"
+										sortBy="#{vo.bookingStatusCd}" style="width: 80px;"
+										styleClass="txt_center" filterBy="#{vo.bookingStatusCd}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(19)}">
+										<h:outputText
+											value="#{zsg:referenceDataValue('BOOK_STATUS', vo.bookingStatusCd)}" />
+									</p:column>
+			
+									<p:column headerText="Internal Remarks" style="width: 80px;"
+										styleClass="txt_center" filterBy="#{vo.internalRemarks}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(20)}">
+										<p:outputLabel id="idInternalRemarks" value="View"
+											rendered="#{vo.internalRemarks ne null and vo.internalRemarks ne ''}">
+											<i class="fa fa-info-circle" aria-hidden="true" />
+										</p:outputLabel>
+			
+										<!-- <p:tooltip id="idToolTipInternalRemarks" for="idInternalRemarks"
+											showEffect="fade" hideEffect="fade" position="bottom"
+											style="width:600px;">
+											<h:outputText escape="true" value="#{vo.internalRemarks}"
+												style="white-space: pre-wrap" />
+										</p:tooltip> -->
+										<pe:tooltip for="idInternalRemarks" shared="true" showDelay="300" targetPosition="top left" position="bottom right"
+											rendered="#{not empty vo.internalRemarks}">
+											<h:outputText value="#{vo.internalRemarks}" escape="true" style="white-space: pre-wrap"/>
+										</pe:tooltip>
+									</p:column>
+			
+									<p:column headerText="Updated By" sortBy="#{vo.updatedBy}"
+										style="width: 80px;" styleClass="txt_center"
+										filterBy="#{vo.updatedBy}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(21)}">
+										<h:outputText value="#{vo.updatedBy}" />
+									</p:column>
+			
+									<p:column headerText="Updated Date" sortBy="#{vo.updatedDate}"
+										filterBy="#{vo.updatedDate}"
+										rendered="#{salesBean.listingTableViewVO.verifyVisibility(22)}">
+										<h:outputText value="#{vo.updatedDate}">
+											<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+										</h:outputText>
+									</p:column>
+								</p:dataTable>
+			
+							</p:tab>
+						</p:tabView>
+					</h:form>
+			</h:body>
+		</p:panel>
+
+		<p:dialog id="idAddInvoiceDialog" header="Pax Statement"
+			widgetVar="varAddInvoiceDialog" modal="true" resizable="false"
+			dynamic="true" closable="false">
+			<h:form id="idAddInvoiceForm">
+				<ui:include src="../inv/add_invoice.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idAddInvoiceRefDialog" header="Invoice"
+			widgetVar="varAddInvoiceRefDialog" modal="true" resizable="false"
+			dynamic="true" closable="false" styleClass="invoiceRefDialog">
+			<h:form id="idAddInvoiceRefForm">
+				<ui:include src="../inv/add_ref_invoice.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idAddInvoiceAttachmentDialog" header="Invoice"
+			widgetVar="varAddInvoiceAttachmentDialog" modal="true"
+			resizable="false" dynamic="true" closable="false" width="600">
+			<h:form id="idAddInvoiceAttachmentForm" enctype="multipart/form-data">
+				<ui:include src="../inv/add_invoice_attachment.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idListingTableViewDialog" header="Listing Table View"
+			widgetVar="varListingTableViewDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idListingTableViewForm">
+				<ui:include
+					src="../../maintenance/listingtableview/listing_table_view.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:confirmDialog widgetVar="varDelInvDialog"
+			message="Are you sure want to delete this record?">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="Yes"
+					actionListener="#{salesBean.deleteInvoice}"
+					update="@form,:idInvListForm" oncomplete="varDelInvDialog.hide();" />
+				<p:commandButton value="Cancel" oncomplete="varDelInvDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+
+		<p:dialog id="idCustListDialogDialog" header="Customer List"
+			widgetVar="varCustListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idCustListForm">
+				<ui:include src="../common/customer_list.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idPassangerListDialog" header="Passanger List"
+			widgetVar="varPassangerListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idPassangerListForm">
+				<ui:include src="../common/passanger_list.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!-- DIALOG - ADD INVOICE DETAILS -->
+		<p:dialog id="idAddInvoiceDetailsDialog" header="Invoice Details"
+			widgetVar="varAddInvoiceDetailsDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idAddInvoiceDetailsForm">
+				<ui:include src="../common/add_invoice_details.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!-- DIALOG - ADD INVOICE PAYMENTS -->
+		<p:dialog id="idAddInvoicePaymentsDialog" header="Invoice Payments"
+			widgetVar="varAddInvoicePaymentsDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<h:form id="idAddInvoicePaymentsForm">
+				<ui:include src="../common/add_invoice_payments.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!-- DIALOG - ADD INVOICE PAX -->
+		<p:dialog id="idAddInvoicePaxDialog" header="Passangers"
+			widgetVar="varAddInvoicePaxDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false"
+			height="600" width="900">
+			<h:form id="idAddInvoicePaxForm">
+				<ui:include src="../common/add_invoice_pax.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idPassLangDialog" widgetVar="varPassLangDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Language" />
+			</f:facet>
+			<h:form id="idPassLangForm">
+				<ui:include src="../common/add_passanger_language.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idPassMealDialog" widgetVar="varPassMealDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Meal" />
+			</f:facet>
+			<h:form id="idPassMealForm">
+				<ui:include src="../common/add_passanger_meal.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idPassContactDialog" widgetVar="varPassContactDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Contact" />
+			</f:facet>
+			<h:form id="idPassContactForm">
+				<ui:include src="../common/add_passanger_contact.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idPassIDDialog" widgetVar="varPassIDDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Identity" />
+			</f:facet>
+			<h:form id="idPassIDForm" enctype="multipart/form-data">
+				<ui:include src="../common/add_passanger_identity.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idPassEmailDialog" widgetVar="varPassEmailDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Email" />
+			</f:facet>
+			<h:form id="idPassEmailForm">
+				<ui:include src="../common/add_passanger_email.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog widgetVar="varAddPassIDScannedCopyDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Scanned Copy" />
+			</f:facet>
+
+			<h:form if="idAddPassIDScannedCopyForm">
+				<p:growl id="msg" />
+				<p:panelGrid style="width:400px;">
+					<p:row>
+						<p:column>
+							<p:fileUpload id="idScannedCopy"
+								fileUploadListener="#{salesBean.handleFileUpload}"
+								mode="advanced" auto="true" sizeLimit="10000000"
+								allowTypes="/(\.|\/)(pdf|jpg|jpeg|png)$/" description="*.pdf;*.jpg;*.jpeg;*.png"
+								update="msg,:idPassIDForm:idPassportScannedCopyPanel,:idPassIDForm:idVisaScannedCopyPanel"
+								oncomplete="varAddPassIDScannedCopyDialog.hide()" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+
+				<h:panelGrid columns="2" style="width:1px;">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						oncomplete="varAddPassIDScannedCopyDialog.hide()" process="@this"
+						update="@form">
+						<pe:resetEditableValues for="idAddPassIDScannedCopyForm" />
+					</p:commandButton>
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:confirmDialog widgetVar="varDelPassScannedCopyDialog"
+			message="Are you sure want to delete this scanned copy?">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="Yes"
+					actionListener="#{salesBean.delScannedCopy}"
+					update="@form,:idPassIDForm:idPassportScannedCopyPanel,:idPassIDForm:idVisaScannedCopyPanel"
+					oncomplete="varDelPassScannedCopyDialog.hide()" />
+				<p:commandButton value="Cancel"
+					onclick="varDelPassScannedCopyDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+
+		<p:dialog id="idTourListDialog" header="Tour List"
+			widgetVar="varTourListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idTourListForm">
+				<p:dataTable id="idTourListTable" widgetVar="varTourListTable"
+					value="#{salesBean.lazyDataModelTourDep}" var="vo" paginator="true" lazy="true" 
+					rows="10"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{salesBean.handleTourDepSelect}"
+						update=":idAddInvoiceForm:idSubjLine,:idAddInvoiceForm:idTour,:idAddInvoiceForm:idDepartureDt"
+						oncomplete="varTourListTable.clearFilters();varTourListDialog.hide();"
+						process="@this" />
+
+					<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains">
+						<h:outputText value="#{vo.code}" />
+					</p:column>
+					<p:column headerText="Departure Date" sortBy="#{vo.dtDep}" filterBy="#{vo.dtDep}" filterMatchMode="contains" style="text-align:center;">
+						<h:outputText value="#{vo.dtDep}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Description" sortBy="#{vo.packageDesc}" filterBy="#{vo.packageDesc}" filterMatchMode="contains"
+						style="font-size:10px; width:650px;">
+						<h:outputText value="#{vo.numDays}Days "
+							rendered="#{vo.numDays != 0}" />
+						<h:outputText value="#{vo.numNights}Nights "
+							rendered="#{vo.numNights != 0}" />
+						<h:outputText
+							value="#{vo.nameEn} #{vo.nameOther} #{vo.nameZh}" />
+						<h:outputText value=" [#{vo.desc}]" style="color:#FF0000;"
+							rendered="#{not empty vo.desc}" />
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="2" style="width: 1px;">
+					<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varTourListDialog.hide();"/><!-- varTourListTable.clearFilters(); -->
+					<p:selectBooleanCheckbox
+						value="#{salesBean.tourDepListInactiveRecords}" itemLabel="Inactive Records"
+						style="width:150px; margin-left:10px;"
+						rendered="#{salesBean.invPmntAuthVO.operationsRoles or salesBean.invPmntAuthVO.salesManager or salesBean.invPmntAuthVO.asstSalesManager}">
+						<p:ajax event="change" listener="#{salesBean.loadTourDepartureList}" update=":idTourListForm:idTourListTable" process="@this"/>	
+					</p:selectBooleanCheckbox>
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idEmployeeListDialog" header="Employee List"
+			widgetVar="varEmployeeListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idEmployeeListForm">
+				<p:dataTable widgetVar="varEmployeeListTable"
+					value="#{salesBean.employeeList}" var="vo" paginator="true"
+					rows="10"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{salesBean.handleEmployeeSelect}"
+						update=":idAddInvoiceForm:idSalesPerson"
+						oncomplete="varEmployeeListTable.clearFilters();varEmployeeListDialog.hide();"
+						process="@this" />
+
+					<p:column headerText="Employee Id" sortBy="#{vo.id}"
+						filterBy="#{vo.id}">
+						<h:outputText value="#{vo.id}" />
+					</p:column>
+					<p:column headerText="Name" sortBy="#{vo.userVO.name}"
+						filterBy="#{vo.userVO.name}"
+						style="font-size:10px; width:650px;">
+						<h:outputText value="#{vo.userVO.name}" />
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varEmployeeListDialog.hide();varEmployeeListTable.clearFilters();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idTFairSalerListDialog" header="Refferal SP"
+			widgetVar="varTFairSalerListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idTFairSalerListForm">
+				<p:dataTable widgetVar="varTFairSalerListTable"
+					value="#{salesBean.employeeList}" var="vo" paginator="true"
+					rows="10"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{salesBean.handleTFairSalerSelect}"
+						update=":idAddInvoiceForm:idTFairSalesPerson"
+						oncomplete="varTFairSalerListTable.clearFilters();varTFairSalerListDialog.hide();"
+						process="@this" />
+
+					<p:column headerText="Saler Id" sortBy="#{vo.id}"
+						filterBy="#{vo.id}">
+						<h:outputText value="#{vo.id}" />
+					</p:column>
+					<p:column headerText="Name" sortBy="#{vo.userVO.name}"
+						filterBy="#{vo.userVO.name}"
+						style="font-size:10px; width:650px;">
+						<h:outputText value="#{vo.userVO.name}" />
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varTFairSalerListDialog.hide();varTFairSalerListTable.clearFilters();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idBookingListDialog" header="Booking List"
+			widgetVar="varBookingListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idBookingListForm">
+				<p:dataTable widgetVar="varBookingListTable"
+					value="#{salesBean.bookingList}" var="vo2" paginator="true"
+					rows="10"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo2.id}"
+					selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{salesBean.handleBookingSelect}"
+						update=":idAddInvoiceForm:idBookingNo"
+						oncomplete="varBookingListTable.clearFilters();varBookingListDialog.hide();" />
+
+					<p:column headerText="Booking No" sortBy="#{vo2.id}"
+						filterBy="#{vo2.id}">
+						<h:outputText value="#{vo2.id}" />
+					</p:column>
+
+					<p:column headerText="Customer Name"
+						sortBy="#{bterp:lookupItemDesc('salutatn', vo2.customerVO.personVO.salutation)} #{vo2.customerVO.personVO.lastName} #{vo2.customerVO.personVO.givenName}"
+						filterBy="#{vo2.customerVO.personVO.lastName} #{vo2.customerVO.personVO.givenName}"
+						filterMatchMode="contains">
+						<h:outputText
+							value="#{bterp:lookupItemDesc('salutatn', vo2.customerVO.personVO.salutation)} #{vo2.customerVO.personVO.lastName} #{vo2.customerVO.personVO.givenName}" />
+					</p:column>
+
+					<p:column headerText="Identity">
+						<ui:repeat value="#{vo2.customerVO.identityList}" var="idVO">
+							<h:outputText value="#{tel.number}" />
+							<h:outputText
+								value="#{bterp:lookupItemDesc('id_type', idVO.idType)}: #{idVO.idNo}" />
+							<br />
+						</ui:repeat>
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varBookingListDialog.hide();varBookingListTable.clearFilters();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idEOListDialog" header="Exchange Order List"
+			widgetVar="varEOListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+				<h:form id="idEOListForm">
+					<p:dataTable widgetVar="varEOListTable"
+						value="#{salesBean.lazyDataModelExOrder}" var="vo" paginator="true" lazy="true" rows="10"
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+						rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+						
+						<p:ajax event="rowSelect"
+							listener="#{salesBean.handleEOSelect}"
+							update=":idAddInvoiceForm:idEOListPanel"
+							oncomplete="varEOListDialog.hide();"/><!-- varEOListTable.clearFilters(); -->
+							
+						<p:column headerText="Exchange Order No" sortBy="#{vo.code}"
+							filterBy="#{vo.code}" filterMatchMode="contains">
+							<h:outputText value="#{vo.code}" />
+						</p:column>
+						<p:column headerText="Exchange Order Date" sortBy="#{vo.eoDt}"
+							filterBy="#{vo.eoDt}">
+							<h:outputText value="#{vo.eoDt}">
+								<f:convertDateTime pattern="dd-MMM-yyyy" />
+							</h:outputText>
+						</p:column>
+						<!-- <p:column headerText="Supplier ID" sortBy="#{vo.supplierId}" filterBy="#{vo.supplierId}">
+							<h:outputText value="#{vo.supplierId}" />
+						</p:column> -->
+								<p:column headerText="Supplier Name" sortBy="#{vo.supplierName}"
+									filterBy="#{vo.supplierName}" filterMatchMode="contains">
+									<h:outputText value="#{vo.supplierName}" />
+								</p:column>
+								<!-- <p:column headerText="Updated By" sortBy="#{vo.updatedBy}" filterBy="#{vo.updatedBy}">
+							<h:outputText value="#{vo.updatedBy}" />
+						</p:column> -->
+					</p:dataTable>
+					<h:panelGrid columns="1">
+						<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varEOListDialog.hide();" /><!-- varEOListTable.clearFilters(); -->
+					</h:panelGrid>
+				</h:form>
+		</p:dialog>
+
+		<p:dialog header="Account List" widgetVar="varAcctListDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<h:form id="idAcctListForm">
+				<p:dataTable widgetVar="varAcctListTable"
+					value="#{salesBean.acctViewList}" var="vo" paginator="true"
+					rows="20"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect" listener="#{salesBean.handleAcctSelect}"
+						update=":idAddInvoiceDetailsForm:idSalesAcct, :idAddInvoiceDetailsForm:idAcctDesc"
+						oncomplete="varAcctListTable.clearFilters();varAcctListDialog.hide();" />
+
+					<p:column headerText="Account" sortBy="#{vo.code}"
+						filterBy="#{vo.code}" filterMatchMode="contains">
+						<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}" />
+						<h:outputText value="#{vo.code}-#{vo.subCode}"
+							rendered="#{not empty vo.subCode}" />
+					</p:column>
+					<p:column headerText="Description" sortBy="#{vo.desc}"
+						filterBy="#{vo.desc}" filterMatchMode="contains">
+						<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}" />
+						<h:outputText value="#{vo.desc}, #{vo.subDesc}"
+							rendered="#{not empty vo.subDesc}" />
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varAcctListDialog.hide();varAcctListTable.clearFilters();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idInvEOItemListDialog" header="Invoice Item List"
+			widgetVar="varInvEOItemListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idInvEOItemListForm">
+				<p:dataTable widgetVar="varInvEOItemListTable"
+					value="#{salesBean.invEOItemViewList}" var="vo" paginator="true"
+					rows="20"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{salesBean.handleInvEOItemSelect}"
+						update=":idAddInvoiceDetailsForm"
+						oncomplete="varInvEOItemListTable.clearFilters();varInvEOItemListDialog.hide();" />
+
+					<p:column headerText="Code" sortBy="#{vo.code}"
+						filterBy="#{vo.code}" filterMatchMode="contains">
+						<h:outputText value="#{vo.code}" />
+					</p:column>
+					<!-- <p:column headerText="Description" sortBy="#{vo.description}" filterBy="#{vo.description}" filterMatchMode="contains">
+				<h:outputText value="#{vo.description}"/>
+			</p:column> -->
+					<!-- <p:column headerText="Amount" sortBy="#{vo.amount}" filterBy="#{vo.amount}">
+				<h:outputText value="#{vo.amount}">
+					<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+			</p:column> -->
+
+					<p:column headerText="Item Description" sortBy="#{vo.description}"
+						filterBy="#{vo.description}" filterMatchMode="contains">
+						<h:outputText value="#{vo.description}" />
+					</p:column>
+
+					<p:column headerText="Account" sortBy="#{vo.acctVO.code}"
+						filterBy="#{vo.acctVO.code}" filterMatchMode="contains">
+						<h:outputText value="#{vo.acctVO.code}"
+							rendered="#{empty vo.acctVO.subCode}" />
+						<h:outputText value="#{vo.acctVO.code}-#{vo.acctVO.subCode}"
+							rendered="#{not empty vo.acctVO.subCode}" />
+					</p:column>
+					<p:column headerText="Account Description"
+						sortBy="#{vo.acctVO.desc}" filterBy="#{vo.acctVO.desc}"
+						filterMatchMode="contains">
+						<h:outputText value="#{vo.acctVO.desc}"
+							rendered="#{empty vo.acctVO.subDesc}" />
+						<h:outputText value="#{vo.acctVO.desc}, #{vo.acctVO.subDesc}"
+							rendered="#{not empty vo.acctVO.subDesc}" />
+					</p:column>
+					<p:column headerText="Tax Code" sortBy="#{vo.taxCode}"
+						filterBy="#{vo.taxCode}" filterMatchMode="contains">
+						<h:outputText value="#{vo.taxCode}" />
+					</p:column>
+					<p:column headerText="Tax Rate" sortBy="#{vo.taxRate}"
+						filterBy="#{vo.taxRate}">
+						<h:outputText value="#{vo.taxRate}" />
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varInvEOItemListDialog.hide();varInvEOItemListTable.clearFilters();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idInvNoDialog" header="Invoice List"
+			widgetVar="varInvNoDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="true">
+			<p:ajax event="close" update=":idInvNoDialog"
+				oncomplete="varInvNoDialog.hide()" />
+
+			<h:form id="idInvNoListForm">
+				<p:dataTable widgetVar="varInvNoTable"
+					value="#{salesBean.lazyInvRefDataModel}" var="vo" paginator="true"
+					rows="20"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					filterEvent="enter" lazy="true" rowKey="#{vo.id}"
+					selectionMode="single">
+					<p:ajax event="rowSelect" listener="#{salesBean.handleInvNoSelect}"
+						update=":idInvNoDialog, :idAddInvoiceForm:idInvRefListPanel, :idAddInvoiceForm:idInvDetailsTab,
+							:idAddInvoiceForm:msg, :idAddInvoiceForm:idComments, :idAddInvoiceForm:idTotalUPoint,
+							:idAddInvoiceForm:idTotalVoucher, :idAddInvoiceForm:idInvAttachmentListPanel"
+						oncomplete="varInvNoTable.clearFilters();varInvNoDialog.hide()" />
+
+					<p:column headerText="Invoice No." sortBy="#{vo.code}"
+						filterBy="#{vo.code}" filterMatchMode="contains">
+						<h:outputText value="#{salesBean.prefixValue} #{vo.code}" />
+					</p:column>
+					<p:column headerText="Invoice Date" sortBy="#{vo.invoiceDt}"
+						filterBy="#{vo.invoiceDt}">
+						<h:outputText value="#{vo.invoiceDt}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Customer No." sortBy="#{vo.custCd}"
+						filterBy="#{vo.custCd}">
+						<h:outputText value="#{vo.custCd}" />
+					</p:column>
+					<p:column headerText="Customer Name" sortBy="#{vo.custName}"
+						filterBy="#{vo.custName}" filterMatchMode="contains">
+						<h:outputText value="#{vo.custName}" />
+					</p:column>
+					<p:column headerText="Sales Amount" sortBy="#{vo.amount}"
+						filterBy="#{vo.amount}">
+						<h:outputText value="#{vo.amount}">
+							<f:convertNumber pattern="#,##0.00" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Issued By" sortBy="#{vo.issuedBy}"
+						filterBy="#{vo.issuedBy}" filterMatchMode="contains">
+						<h:outputText value="#{vo.issuedBy}" />
+					</p:column>
+				</p:dataTable>
+
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						update=":idInvNoDialog" oncomplete="varInvNoDialog.hide()" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idInvLogDialog" header="Remark List"
+			widgetVar="varInvLogDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="true" height="600">
+			<p:ajax event="close" update=":idInvLogDialog"
+				oncomplete="varInvLogDialog.hide()" />
+			<h:form id="idInvLogListForm">
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						update=":idInvLogDialog" oncomplete="varInvLogDialog.hide()" />
+				</h:panelGrid>
+
+				<p:dataTable widgetVar="varInvLogTable"
+					value="#{salesBean.lazyInvLogDataModel}" var="vo" paginator="true"
+					rows="10"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					filterEvent="enter" lazy="true" rowKey="#{vo.id}"
+					style="width: 1200px;">
+
+					<p:column headerText="Remarks" style="width:500px;">
+						<h:outputText value="#{vo.remarks}" escape="true"
+							style="white-space: pre-wrap" />
+					</p:column>
+					<p:column headerText="Internal Remarks" style="width:500px;">
+						<h:outputText value="#{vo.internalRemarks}" escape="true"
+							style="white-space: pre-wrap" />
+					</p:column>
+					<p:column headerText="Updated Date" sortBy="#{vo.updatedDate}"
+						filterBy="#{vo.updatedDate}" style="width:150px;">
+						<h:outputText value="#{vo.updatedDate}">
+							<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Updated By" sortBy="#{vo.updatedBy}"
+						filterBy="#{vo.updatedBy}" style="width:150px;">
+						<h:outputText value="#{vo.updatedBy}" />
+					</p:column>
+				</p:dataTable>
+
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						update=":idInvLogDialog" oncomplete="varInvLogDialog.hide()" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idEditRemarks" widgetVar="varEditRemarksDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Edit Remarks" />
+			</f:facet>
+			<h:form id="idEditRemarksForm">
+				<p:growl id="msg" />
+				<p:column>
+				<p:panelGrid id="idPanelRemarks">
+					<p:row>
+						<p:column>
+							<h:outputLabel>Additional Remarks</h:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column><p:inputTextarea id="idAdditionalRemarks" label="Additional Remarks" value="#{salesBean.invoiceVO.remarks}" rows="10" cols="70" style="width:510px;"/></p:column>
+					</p:row>
+				</p:panelGrid>
+				</p:column>
+				<p:column>
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<h:outputLabel>Internal Remarks</h:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column><p:inputTextarea id="idInternalRemarks" label="Internal Remarks" value="#{salesBean.invoiceVO.internalRemarks}" rows="10" cols="70" style="width:510px"/></p:column>
+					</p:row>
+				</p:panelGrid>
+				</p:column>
+				
+				<h:panelGrid columns="2" style="width: 10px;">
+					<p:commandButton value="Edit"
+						actionListener="#{salesBean.editRemarks}"
+						oncomplete="varEditRemarksDialog.hide()"
+						update="@form,:idAddInvoiceForm" />
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						update="@form" process="@this" oncomplete="varEditRemarksDialog.hide()"
+						global="false">
+						<pe:resetEditableValues for="idEditRemarksForm" />
+					</p:commandButton>
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<!--
+	DIALOG - REASON FOR UPDATE/DELETE
+-->
+		<p:dialog widgetVar="varReasonDialog" header="Reason" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<h:form id="idReasonDialog">
+				<p:growl id="msg" />
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idReason">Reason <span
+									class="required">*</span>
+							</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputTextarea label="Reason" id="idReason"
+								value="#{salesBean.invoiceVO.reason}" rows="5"
+								style="width:300px" required="true" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				<h:panelGrid columns="2" style="width:1px;">
+					<!--p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{salesBean.updateInvoice}" oncomplete="onValidationReason(xhr, status, args),varInvoiceListTable.clearFilters()" update="@form,:idInvListForm:idInvListTable"/-->
+					<p:commandButton value="#{msg['common.button.label.update']}"
+						actionListener="#{salesBean.updateInvoice}"
+						oncomplete="onValidationReason(xhr, status, args)"
+						update="@form,:idAddInvoiceForm" />
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						actionListener="#{salesBean.resetReasonForm}"
+						oncomplete="varReasonDialog.hide()" process="@this" update="@form"
+						global="false">
+						<pe:resetEditableValues for="idReasonDialog" />
+					</p:commandButton>
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<!--
+	PARK OF TOUR DEPARTURE TRANSFER
+-->
+		<!-- DIALOG - AVAILABLE TOUR DEPARTURE LIST -->
+		<p:dialog header="Select Tour Departure"
+			widgetVar="varAvailableTourDepListDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<h:form id="idAvailableTourDepList">
+				<ui:include src="../booking/reserve/available_tour_dep_list.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!-- DIALOG - TRANSFER CONFIRMATION -->
+		<p:confirmDialog widgetVar="varTransferConfirmationDialog"
+			header="Confirmation" message="Are you sure want to do transfer?"
+			closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="#{msg['common.button.label.yes']}"
+					actionListener="#{salesBean.handleTransfer(true)}"
+					update=":idAddInvoiceForm,:idInvListForm:idTabView:idInvListTable"
+					oncomplete="onTransferValidation(xhr, status, args)" />
+				<p:commandButton value="#{msg['common.button.label.no']}"
+					onclick="varTransferConfirmationDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+
+		<!--
+	PARK OF EDIT INVOICE CUSTOMER INFO
+-->
+		<!-- DIALOG - EDIT CUSTOMER -->
+		<p:dialog id="idEditCustDialog" widgetVar="varEditCustDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false" height="600" width="900">
+			<f:facet name="header">
+				<h:outputFormat value="Customer" />
+			</f:facet>
+			<h:form id="idEditCustForm">
+				<ui:include src="../inv/cust/add_customer.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idOnlineBookingCustDialog" widgetVar="varOnlineBookingCustDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false" width="900">
+			<f:facet name="header">
+				<h:outputFormat value="Online Booking Customer" />
+			</f:facet>
+			<h:form id="idOnlineBookingCustForm">
+				<ui:include src="../inv/cust/add_online_booking_customer.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idIDDialog" widgetVar="varIDDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Identity" />
+			</f:facet>
+			<h:form id="idIDForm">
+				<ui:include src="../inv/cust/add_identity.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idLangDialog" widgetVar="varLangDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Language" />
+			</f:facet>
+			<h:form id="idLangForm">
+				<ui:include src="../inv/cust/add_language.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idMealDialog" widgetVar="varMealDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Meal" />
+			</f:facet>
+			<h:form id="idMealForm">
+				<ui:include src="../inv/cust/add_meal.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idContactDialog" widgetVar="varContactDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Contact" />
+			</f:facet>
+			<h:form id="idContactForm">
+				<ui:include src="../inv/cust/add_contact.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idClassDialog" widgetVar="varClassDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Class" />
+			</f:facet>
+			<h:form id="idClassForm">
+				<ui:include src="../inv/cust/add_class.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idComplicationDialog" widgetVar="varComplicationDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Complication" />
+			</f:facet>
+			<h:form id="idComplicationForm">
+				<ui:include src="../inv/cust/add_complication.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idRemarksDialog" widgetVar="varRemarksDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Remark" />
+			</f:facet>
+			<h:form id="idRemarksForm">
+				<ui:include src="../inv/cust/add_remarks.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idEmailDialog" widgetVar="varEmailDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Email" />
+			</f:facet>
+			<h:form id="idEmailForm">
+				<ui:include src="../inv/cust/add_email.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!--
+	DIALOG - ADD ID SCANNED COPY
+-->
+		<p:dialog widgetVar="varAddIDScannedCopyDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Scanned Copy" />
+			</f:facet>
+
+			<h:form if="idAddIDScannedCopyForm">
+				<ui:include src="../inv/cust/add_scanned_copy.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:confirmDialog widgetVar="varDelScannedCopyDialog"
+			message="Are you sure want to delete this scanned copy?">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="Yes"
+					actionListener="#{custBean.delScannedCopy}"
+					update="@form,:idIDForm:idVisaScannedCopy,:idIDForm:idPassportScannedCopy,:idPassIDForm:idPassportScannedCopyPanel,:idPassIDForm:idVisaScannedCopyPanel"
+					oncomplete="varDelScannedCopyDialog.hide()" />
+				<p:commandButton value="Cancel"
+					onclick="varDelScannedCopyDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+		
+		<p:confirmDialog widgetVar="varDelScannedPassportDialog" message="Are you sure want to delete this passport scanned copy?">
+			<h:form>
+				<p:growl id="msg"/>
+				<p:commandButton value="Yes" actionListener="#{custBean.delScannedPassport}" update="@form,:idEditCustForm:idPassportScannedCopy" oncomplete="varDelScannedPassportDialog.hide()"/>
+				<p:commandButton value="Cancel" onclick="varDelScannedPassportDialog.hide()"/>
+			</h:form>
+		</p:confirmDialog>
+		
+		<p:confirmDialog widgetVar="varDelPaxScannedPassportDialog" message="Are you sure want to delete this passport scanned copy?">
+			<h:form>
+				<p:growl id="msg"/>
+				<p:commandButton value="Yes" actionListener="#{salesBean.delPaxScannedPassport}" update="@form,:idAddInvoicePaxForm:idPassportScannedCopy" oncomplete="varDelPaxScannedPassportDialog.hide()"/>
+				<p:commandButton value="Cancel" onclick="varDelPaxScannedPassportDialog.hide()"/>
+			</h:form>
+		</p:confirmDialog>
+
+		<p:dialog widgetVar="varAddAttachmentScannedCopyDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Scanned Copy" />
+			</f:facet>
+
+			<h:form if="idAddAttachmentScannedCopyDialog">
+				<ui:include src="../inv/add_attachment_scanned_copy.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:confirmDialog widgetVar="varDelAttachmentScannedCopyDialog"
+			message="Are you sure want to delete this scanned copy?">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="Yes"
+					actionListener="#{salesBean.delAttachmentScannedCopy}"
+					update=":idAddInvoiceAttachmentForm:idPanelAttachmentScannedCopy"
+					oncomplete="varDelAttachmentScannedCopyDialog.hide()" />
+				<p:commandButton value="Cancel"
+					onclick="varDelAttachmentScannedCopyDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+
+		<p:dialog id="idTmpMsgListDialog" widgetVar="varTmpMsgListDialog"
+			modal="true" resizable="false" dynamic="true" closable="true">
+			<f:facet name="header">
+				<h:outputFormat value="Template Message" />
+			</f:facet>
+			<h:form id="idTmpMsgListForm">
+				<div style="height: 500px; overflow: auto;">
+					<p:dataTable id="idTmpMsgList" widgetVar="varTmpMsgList"
+						value="#{salesBean.tmpMsgList}" var="vo" paginator="true"
+						rows="10"
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+						filterEvent="enter" rowKey="#{vo.id}" selectionMode="single">
+						<p:ajax event="rowSelect"
+							listener="#{salesBean.handleTmpMsgSelect}"
+							update=":idAddInvoiceForm:idComments"
+							oncomplete="varTmpMsgList.clearFilters();varTmpMsgListDialog.hide();" />
+
+						<p:column headerText="Code" filterBy="#{vo.code}"
+							sortBy="#{vo.code}" filterMatchMode="contains">
+							<h:outputText value="#{vo.code}" />
+						</p:column>
+						<p:column headerText="Description" filterBy="#{vo.desc}"
+							sortBy="#{vo.desc}" width="200">
+							<h:outputText value="#{vo.desc}" />
+						</p:column>
+						<p:column headerText="Remarks" filterBy="#{vo.remarks}"
+							sortBy="#{vo.remarks}" width="400">
+							<h:outputText
+								value="#{fn:replace(vo.remarks, '\\n', '&lt;br/&gt;')}"
+								escape="false" />
+						</p:column>
+					</p:dataTable>
+				</div>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idAcctARListDialog" widgetVar="varAcctARListDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			hideEffect="fade" showEffect="fade" closable="true">
+			<h:form id="idAddAccountAR">
+				<p:dataTable id="idAddAcctARTable" widgetVar="varAddAcctARTable"
+					value="#{salesBean.acctARViewList}" var="vo" paginator="true"
+					rows="20" paginatorTemplate="#{bterp:pageTemplate()}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{salesBean.handleAcctARSelect}"
+						update=":idAddInvoiceForm:idInvIssStatus"
+						oncomplete="varAcctARListDialog.hide();varAddAcctARTable.clearFilters();" />
+
+					<p:column headerText="Account" sortBy="#{vo.code}"
+						filterBy="#{vo.code}-#{vo.subCode}" filterMatchMode="contains">
+						<h:outputText value="#{vo.code}" rendered="#{empty vo.subCode}" />
+						<h:outputText value="#{vo.code}-#{vo.subCode}"
+							rendered="#{not empty vo.subCode}" />
+					</p:column>
+					<p:column headerText="Description" sortBy="#{vo.desc}"
+						filterBy="#{vo.desc}, #{vo.subDesc}" filterMatchMode="contains">
+						<h:outputText value="#{vo.desc}" rendered="#{empty vo.subDesc}" />
+						<h:outputText value="#{vo.desc}, #{vo.subDesc}"
+							rendered="#{not empty vo.subDesc}" />
+					</p:column>
+				</p:dataTable>
+			</h:form>
+		</p:dialog>
+
+		<!--
+			DIALOG - SEND EMAIL
+		-->
+		<p:dialog id="idSendEmailDialog" widgetVar="varSendEmailDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Send Email" />
+			</f:facet>
+			<h:form id="idSendEmailForm">
+				<div style="height: 270px; width:500px; overflow: auto;">
+				<p:growl id="msg" />
+				<p:panelGrid id="idTypeDetails">
+					<!-- <p:row>
+						<p:column>
+							<h:outputLabel for="idEmailType">Choose Category<span
+									class="required">*</span>
+							</h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idEmailType" label="Choose Category"
+								value="#{salesBean.emailType}" required="true">
+								<f:selectItem itemLabel="Individual" itemValue="IDV" />
+								<f:selectItem itemLabel="Department" itemValue="DPT" />
+								<p:ajax event="change" update=":idSendEmailForm:idTypeDetails" />
+							</h:selectOneMenu>
+						</p:column>
+					</p:row> -->
+					<p:row>
+						<p:column style="width:120px; text-align: left; vertical-align: top;">
+							<h:outputLabel for="idIndividualList">Specific Person</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:selectCheckboxMenu id="idIndividualList" value="#{salesBean.fullEmployeeList}" label="Specific Person" filter="true" filterMatchMode="contains"
+								onHide="executeSelectEmployeeOnhide();" style="display: flex;width: fit-content;">
+								<f:selectItems value="#{salesBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}" />
+							</p:selectCheckboxMenu>
+							<p:remoteCommand name="executeSelectEmployeeOnhide" actionListener="#{salesBean.handleNtfctItemChange(1)}"
+								update="idTxtSelectedEmployee" global="false" process="@this idSendEmailForm:idIndividualList"/>
+							<p:outputLabel id="idTxtSelectedEmployee" value="#{salesBean.selectedEmployee}" style="float:left;"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width:120px; text-align: left; vertical-align: top;">
+							<h:outputLabel for="idDepartmentList">Department</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:selectCheckboxMenu id="idDepartmentList" value="#{salesBean.departmentList}" label="Department" filter="true" filterMatchMode="contains"
+								onHide="executeSelectDepartmentOnhide();" style="display: flex;width: fit-content;">
+								<f:selectItems value="#{bterp:lookupItemList('dept_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description} - #{vo.remarks}" />
+							</p:selectCheckboxMenu>
+							<p:remoteCommand name="executeSelectDepartmentOnhide" actionListener="#{salesBean.handleNtfctItemChange(2)}"
+								update="idTxtSelectedDepartment" global="false" process="@this idSendEmailForm:idDepartmentList"/>
+							<p:outputLabel id="idTxtSelectedDepartment" value="#{salesBean.selectedDepartment}" style="float:left;"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width:120px; text-align: left; vertical-align: top;">
+							<h:outputLabel for="idInvoiceChangesList">Invoice Changes <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:selectCheckboxMenu id="idInvoiceChangesList" value="#{salesBean.invoiceChangesList}" label="Invoice Changes"
+								filter="true" filterMatchMode="contains" required="true"
+								onHide="executeSelectChangesOnhide();" style="display: flex;width: fit-content;">
+								<f:selectItems value="#{bterp:lookupItemList('inv_changes')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+							</p:selectCheckboxMenu>
+							<p:remoteCommand name="executeSelectChangesOnhide" actionListener="#{salesBean.handleNtfctItemChange(3)}"
+								update="idTxtSelectedChanges" global="false" process="@this idSendEmailForm:idInvoiceChangesList"/>
+							<p:outputLabel id="idTxtSelectedChanges" value="#{salesBean.selectedChanges}" style="float:left;"/>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				<p:panelGrid>
+					<p:row>
+						<p:column style="width:120px; text-align: left; vertical-align: top;">
+							<h:outputLabel for="idRemarksType">Remarks</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputTextarea id="idRemarksType" rows="10" cols="50"
+								value="#{salesBean.otherTypeRemark}"></p:inputTextarea>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				</div>
+
+				<h:panelGrid columns="2" style="width: 10px;">
+					<p:commandButton value="#{msg['common.button.label.send']}"
+						actionListener="#{salesBean.processSendEmail}" update="@form"
+						oncomplete="if (args &amp;&amp; !args.validationFailed) varSendEmailDialog.hide()" />
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						actionListener="#{salesBean.resetEmailForm}" update="@form"
+						process="@this" oncomplete="varSendEmailDialog.hide()"
+						global="false">
+						<pe:resetEditableValues for="idSendEmailForm" />
+					</p:commandButton>
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+		<!--
+			DIALOG - EMAIL PAYMENT
+		-->
+		<p:dialog id="idEmailPaymentDialog" widgetVar="varEmailPaymentDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Email Payment" />
+			</f:facet>
+			<h:form id="idEmailPaymentForm">
+				<p:growl id="msg" />
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Merchant" for="idHiddenMerchant"/>
+						</p:column>
+						<p:column>
+							<h:inputHidden id="idHiddenMerchant" value="#{salesBean.invoiceEmailPaymentVO.ipayConfigComment}" required="true"/>
+							<p:inputText id="idMerchant" value="#{salesBean.invoiceEmailPaymentVO.ipayConfigComment}" required="true" readonly="true" style="background:#ccc"/>
+							<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.loadIpayConfigList}" oncomplete="varIpayConfigListDialog.show()" 
+								update=":idIpayConfigListDialog" process="@this" style="margin-left: 5px;"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Administrative Fee (%)" for="idAdminChargesPercent"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idAdminChargesPercent" value="#{salesBean.invoiceEmailPaymentVO.adminChargesPercentage}" maxlength="5" required="true"
+								readonly="true" style="background:#ccc">
+								<p:ajax event="change" listener="#{salesBean.handleAdminChargesPercentageChange}" 
+									process="@this, idPaymentAmt" update="idAdminCharges, idTotalPayment"/>
+								<f:convertNumber pattern="0.00"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width:140px">
+							<p:outputLabel value="Payment Amount" for="idPaymentAmt"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idPaymentAmt" value="#{salesBean.invoiceEmailPaymentVO.paymentAmt}" required="true">
+								<p:ajax event="change" listener="#{salesBean.handleAdminChargesPercentageChange}" 
+									process="@this, idAdminCharges" update="idAdminCharges, idTotalPayment"/>
+								<f:convertNumber pattern="#,##0.00"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Administrative Fee" for="idAdminCharges"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idAdminCharges" value="#{salesBean.invoiceEmailPaymentVO.adminCharges}" required="true"
+								readonly="true" style="background:#ccc">
+								<p:ajax event="change" listener="#{salesBean.calculateTotalPaymentAmt}" 
+									process="@this, idPaymentAmt" update="idTotalPayment"/>
+								<f:convertNumber pattern="#,##0.00"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Total Payment" for="idTotalPayment"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idTotalPayment" value="#{salesBean.invoiceEmailPaymentVO.totalPaymentAmt}" readonly="true" style="background:#ccc">
+								<f:convertNumber pattern="#,##0.00"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Customer Email" for="idEmail"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idEmail" value="#{salesBean.invoiceEmailPaymentVO.email}" required="true" maxlength="50" style="width: 250px;" 
+								validatorMessage="Invalid email format">
+								<f:validateRegex pattern="#{config['email.format.pattern']}" />
+							</p:inputText>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<h:panelGrid columns="2" style="width: 10px;">
+					<p:commandButton value="#{msg['common.button.label.send']}"
+						actionListener="#{salesBean.processEmailPayment}" update="@form"
+						oncomplete="if (args &amp;&amp; !args.validationFailed) varEmailPaymentDialog.hide()" />
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						update="@form" process="@this" oncomplete="varEmailPaymentDialog.hide()"
+						global="false">
+						<pe:resetEditableValues for="idEmailPaymentForm" />
+					</p:commandButton>
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+		<!--
+			DIALOG - EMAIL INVOICE
+		-->
+		<p:dialog id="idEmailInvoiceDialog" widgetVar="varEmailInvoiceDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Email Invoice" />
+			</f:facet>
+			<h:form id="idEmailInvoiceForm">
+				<p:growl id="msg" />
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Customer Email" for="idEmail"/>
+						</p:column>
+						<p:column>
+							<!-- <h:selectOneMenu id="idEmail" label="Email" value="#{salesBean.invoiceEmailPaymentVO.email}" required="true" style="width: 250px;">
+								<f:selectItems value="#{salesBean.personEmailList}" var="vo" itemLabel="#{vo.email}" itemValue="#{vo.email}"/>
+							</h:selectOneMenu> -->
+							<p:selectCheckboxMenu id="idEmail" value="#{salesBean.invoiceEmailPaymentVO.selectedEmailList}" label="Email List"
+    							style="display: flex;width: fit-content;">
+    							<f:selectItems value="#{salesBean.personEmailList}" var="vo" itemValue="#{vo.email}" itemLabel="#{vo.email}" itemDisabled="#{vo.isPrimary eq true}" />
+							</p:selectCheckboxMenu>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel value="Other Email" for="idOtherEmail"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idOtherEmail" value="#{salesBean.invoiceEmailPaymentVO.email}" maxlength="50" style="width: 250px;" 
+								validatorMessage="Invalid email format" disabled="#{salesBean.disableEmailSent}">
+								<f:validateRegex pattern="#{config['email.format.pattern']}" />
+							</p:inputText>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<h:panelGrid columns="2" style="width: 10px;">
+					<p:commandButton value="#{msg['common.button.label.send']}"
+						actionListener="#{salesBean.processEmailInvoice}" update="@form"
+						oncomplete="if (args &amp;&amp; !args.validationFailed) varEmailInvoiceDialog.hide()" />
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						update="@form" process="@this" oncomplete="varEmailInvoiceDialog.hide()"
+						global="false">
+						<pe:resetEditableValues for="idEmailInvoiceForm" />
+					</p:commandButton>
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idIpayConfigListDialog" header="Merchant List"
+			widgetVar="varIpayConfigListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idIpayConfigListForm">
+				<p:dataTable widgetVar="varIpayConfigListTable" value="#{salesBean.ipayConfigVOList}" var="vo" paginator="true" rows="10" 
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+					filterEvent="enter" lazy="true" rowKey="#{vo.id}" selectionMode="single">
+					<p:ajax event="rowSelect" listener="#{salesBean.handleIpayConfigSelect}" 
+						update=":idEmailPaymentForm:idHiddenMerchant, :idEmailPaymentForm:idMerchant, 
+								:idEmailPaymentForm:idAdminChargesPercent, :idEmailPaymentForm:idAdminCharges,
+								:idEmailPaymentForm:idTotalPayment" 
+						oncomplete="varIpayConfigListDialog.hide();" process="@this"/>
+					
+					<p:column headerText="Merchant Code" style="width: 100px;">
+						<h:outputText value="#{vo.merchantCode}" />
+					</p:column>
+					
+					<p:column headerText="Comment" style="width: 250px;">
+						<h:outputText value="#{vo.comment}" />
+					</p:column>
+					
+					<p:column headerText="Remarks" style="width: 250px;">
+						<h:outputText value="#{vo.remarks}" />
+					</p:column>
+					
+					<p:column headerText="Administrative Fee rate" style="width: 80px;">
+						<h:outputText value="#{vo.adminChargesPercentage}" />
+					</p:column>
+				</p:dataTable>
+				
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varIpayConfigListDialog.hide();"/>
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+		 <!-- DIALOG - DELETE ATTACHMENT CONFIRMATION -->
+		<p:confirmDialog widgetVar="varDelAttachmentDialog" header="Confirmation" message="Are you sure want to delete this attachment permanently?"
+			closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="#{msg['common.button.label.yes']}"
+					actionListener="#{salesBean.deleteInvAttachment}"
+					update=":idAddInvoiceForm:idInvAttachmentListPanel"
+					oncomplete="if (args &amp;&amp; !args.validationFailed) varDelAttachmentDialog.hide()" />
+				<p:commandButton value="#{msg['common.button.label.no']}"
+					onclick="varDelAttachmentDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+		
+		<!--
+			DIALOG - ADD ATTACHMENT
+		-->
+		<p:dialog id="idAttachmentDialog" widgetVar="varAttachmentDialog" header="Attachment" modal="true" resizable="false" dynamic="true" draggable="true" 
+			hideEffect="fade" showEffect="fade" closable="false" style="width:100% !important;">
+			<h:form id="idAttachmentForm">
+				<p:panelGrid>
+					<p:row>
+						<p:column style="width: 120px;">
+							<p:outputLabel for="idSelAttachmentType" value="Attachment Type" />
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idSelAttachmentType" label="Attachment Type"
+								value="#{salesBean.personAttachmentVO.typeCd}" required="true">
+								<f:selectItem itemLabel="Select One" itemValue="" />
+								<f:selectItems value="#{bterp:lookupItemList('cust_attachment_type')}"
+									var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+							</h:selectOneMenu>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel>Scanned Copy</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:panelGrid id="idPanelAttachmentScannedCopy" style="border:0">
+								<p:row rendered="#{empty salesBean.personAttachmentVO.scannedPath}">
+									<p:column>
+										<p:fileUpload id="idAttachmentScannedCopy"
+											fileUploadListener="#{salesBean.handlePersonAttachmentFileUpload}"
+											mode="advanced" auto="true" sizeLimit="10000000"
+											allowTypes="/(\.|\/)(pdf|jpg|jpeg|png)$/"
+											description="*.pdf;*.jpg;*.jpeg,*.png"
+											update=":idAttachmentForm:idPanelAttachmentScannedCopy" oncomplete="varStatusDialog.hide()" />
+									</p:column>
+								</p:row>
+				
+								<p:row rendered="#{not empty salesBean.personAttachmentVO.scannedPath}">
+									<p:column style="width:15px;">
+										<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{salesBean.delAttachmentScannedCopy}"
+											update="idPanelAttachmentScannedCopy" />
+									</p:column>
+									<p:column>
+										<h:outputText
+											value="#{salesBean.personAttachmentVO.scannedPath}" />
+									</p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			
+				<h:panelGrid columns="2" style="width: 1px;">
+					<p:commandButton value="#{msg['common.button.label.save']}"
+						actionListener="#{salesBean.addPersonAttachment}"
+						update="@form,:idAddInvoicePaxForm:idAttachmentListPanel" />
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						update="@form" process="@this"
+						oncomplete="varAttachmentDialog.hide();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+		
+		<!-- DIALOG - DELETE ATTACHMENT CONFIRMATION -->
+		<p:confirmDialog widgetVar="varDelPersonAttachmentDialog" header="Confirmation" message="Are you sure want to delete this attachment permanently?"
+			closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="#{msg['common.button.label.yes']}"
+					actionListener="#{salesBean.deletePersonAttachment}"
+					update=":idAddInvoicePaxForm:idAttachmentListPanel"
+					oncomplete="varDelPersonAttachmentDialog.hide()" />
+				<p:commandButton value="#{msg['common.button.label.no']}"
+					onclick="varDelPersonAttachmentDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+		
+		<!-- DIALOG - DELETE ATTACHMENT CONFIRMATION -->
+		<p:confirmDialog widgetVar="varDelPaymentAttachmentDialog" header="Confirmation" message="Are you sure want to delete this payment attachment permanently?"
+			closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="#{msg['common.button.label.yes']}"
+					actionListener="#{salesBean.deleteInvPmntAttachment}"
+					update=":idAddInvoicePaymentsForm:idInvPmntAttachmentListPanel"
+					oncomplete="if (args &amp;&amp; !args.validationFailed) varDelPaymentAttachmentDialog.hide()" />
+				<p:commandButton value="#{msg['common.button.label.no']}"
+					onclick="varDelPaymentAttachmentDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+		
+		<!-- DIALOG - SEND TO REVIEW CONFIRMATION -->
+		<p:confirmDialog id="idSendReviewDialog" widgetVar="varSendReviewDialog" header="Confirmation" message="Are you sure to send selected pax statement(s) for review?"
+			closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="#{msg['common.button.label.yes']}"
+					actionListener="#{salesBean.sendToReview}"
+					update=":idInvListForm"
+					oncomplete="if (args &amp;&amp; !args.validationFailed) varSendReviewDialog.hide()" />
+				<p:commandButton value="#{msg['common.button.label.no']}"
+					onclick="varSendReviewDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+	</ui:define>
+</ui:composition>

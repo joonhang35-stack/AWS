@@ -1,0 +1,543 @@
+package com.bcs.zsg.common.helper;
+
+import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.primefaces.json.JSONArray;
+import org.primefaces.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.support.SpringBeanAutowiringSupport;
+
+import com.bcs.zsg.apiresponse.vo.ApiResponseVO;
+import com.bcs.zsg.apiresponse.vo.CRMClaimVoucherResponseVO;
+import com.bcs.zsg.apiresponse.vo.CRMClaimedVoucherResponseVO;
+import com.bcs.zsg.apiresponse.vo.CRMRedeemCatalogVO;
+import com.bcs.zsg.apiresponse.vo.CRMRedeemVoucherRequestVO;
+import com.bcs.zsg.apiresponse.vo.CRMVoucherVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.crm.bo.CustomerPosInfoBO;
+import com.bcs.zsg.crm.bo.InvoicePosSalesBO;
+import com.bcs.zsg.crm.helper.CRMProperties;
+import com.bcs.zsg.crm.vo.CRMRequestVO;
+import com.bcs.zsg.crm.vo.CRMResponseVO;
+import com.bcs.zsg.crm.vo.CustomerPointTierVO;
+import com.bcs.zsg.crm.vo.CustomerPosInfoVO;
+import com.bcs.zsg.crm.vo.InvoicePosSalesBillingVO;
+import com.bcs.zsg.crm.vo.InvoicePosSalesVO;
+import com.bcs.zsg.sales.bo.CustomerBO;
+import com.bcs.zsg.sales.vo.InvoiceVoucherVO;
+import com.bcs.zsg.web.SystemProperty;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+@Service
+@Transactional
+public class CRMUtils  {
+
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
+	
+	public static final String VOUCHER_PENDING_CLAIM = "PC";
+	public static final String VOUCHER_PENDING = "P";
+	public static final String VOUCHER_ACTIVE = "A";
+	public static final String VOUCHER_DELETED = "D";
+	
+	@Autowired
+	private transient InvoicePosSalesBO invoicePosSalesBO;
+	
+	public CRMUtils() {
+		SpringBeanAutowiringSupport.processInjectionBasedOnCurrentContext(this);
+	}
+	
+	// Post Sales Information from ERP to CRM
+	public void postingSalesInvoice() throws BusinessException {
+		try {
+			URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_POSTING_SALES_INVOICE);
+			
+			CRMRequestVO requestVO = new CRMRequestVO();
+			List<InvoicePosSalesVO> invoicePosSalesList = invoicePosSalesBO.getInvoicePosSalesList();
+			
+			if (CollectionUtils.isEmpty(invoicePosSalesList)) return;
+			
+			List<InvoicePosSalesBillingVO> posSalesBilling = new ArrayList<InvoicePosSalesBillingVO>();
+			for (InvoicePosSalesVO salesVO : invoicePosSalesList) {
+				if (salesVO.getIdCustomer() != null) {
+					posSalesBilling = new ArrayList<InvoicePosSalesBillingVO>();
+					posSalesBilling.add(invoicePosSalesBO.getBillingDetails(salesVO.getIdCustomer()));
+					salesVO.setInvoicePosSalesBillingList(posSalesBilling);
+				}
+			}
+			
+			requestVO.setTotalCount(invoicePosSalesList.size());
+			requestVO.setData(invoicePosSalesList);
+			
+			String requestJson = generateJsonWithAnnotationOnly(requestVO);
+		    System.out.println("#############jsonString: " + new JSONObject(requestJson).toString(4));
+			System.out.println("############# uri.toURL(): " + uri.toURL());
+			System.out.println("############# uri.getPath(): " + uri.getPath());
+			
+			// open connection
+			String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.POST, requestJson);
+			
+			JSONObject obj = new JSONObject(responseJson);
+			TrackingLogUtils.infoLogs("Response: " + obj.toString(4));
+
+			// optional summary fields
+			int totalReceived = obj.optInt("totalReceived");
+			int totalSuccess = obj.optInt("totalSuccess");
+			int totalFailed = obj.optInt("totalFailed");
+
+			TrackingLogUtils.infoLogs(String.format("Received: %s, Success: %s, Failed: %s", totalReceived, totalSuccess, totalFailed));
+
+			// get results array
+			JSONArray results = obj.optJSONArray("results");
+			List<InvoicePosSalesVO> updList = new ArrayList<InvoicePosSalesVO>();
+			if (results != null) {
+			    for (int i = 0; i < results.length(); i++) {
+			        JSONObject item = results.getJSONObject(i);
+
+			        String crmId = item.optString("crmId");
+			        String customerId = item.optString("customerId");
+			        String refSalesId = item.optString("refSalesId");
+			        String timestamp = item.optString("timestamp");
+			        String status = item.optString("status");
+			        String message = item.optString("message");
+
+			        System.out.println("==== RESULT " + i + " ====");
+			        System.out.println("crmId: " + crmId);
+			        System.out.println("customerId: " + customerId);
+			        System.out.println("refSalesId: " + refSalesId);
+			        System.out.println("status: " + status);
+			        System.out.println("message: " + message);
+			        System.out.println("timestamp: " + timestamp);
+			        
+			        for (InvoicePosSalesVO salesVO : invoicePosSalesList) {
+				        if (refSalesId != null && refSalesId.equals(String.valueOf(salesVO.getIdInvoice()))) {
+				        	if (CRMCommonConstant.API_STATUS_SUCCESS.equals(status)) {
+				        		salesVO.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_SUCCESS);
+				        		salesVO.setRemarks(message);
+				        		updList.add(salesVO);
+				        	} else {
+				        		salesVO.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_FAILED);
+				        		salesVO.setRemarks(message);
+				        		updList.add(salesVO);
+				        	}
+				        	break;
+				        }
+			        }
+			    }
+			    if(CollectionUtils.isNotEmpty(updList)) invoicePosSalesBO.updateInvoicePosSalesStatus(updList);
+			}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("[CRMUtils - postingSalesInvoice]", e);
+		}
+	}
+	
+	public static CustomerPointTierVO getCustomerPointTier(Map<String, Object> params) throws BusinessException {
+	    try {
+	        String idCustomer = String.valueOf(params.get("idCustomer"));
+
+	        URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_RETRIEVE_MEMBER + "/" + idCustomer);
+
+	        String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.GET, null);
+
+	        JSONObject obj = new JSONObject(responseJson);
+	        TrackingLogUtils.infoLogs("Response: " + obj.toString(4));
+	        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+
+	        CustomerPointTierVO vo = gson.fromJson(responseJson, CustomerPointTierVO.class);
+	        return vo;
+
+	    } catch (Exception e) {
+	        throw new BusinessException(e.getMessage());
+	    }
+	}
+	
+	public static List<CustomerPosInfoVO> postingCustomerData(List<CustomerPosInfoVO> customerPosInfoList) throws BusinessException { 
+		List<CustomerPosInfoVO> updList = new ArrayList<>(); 
+		try { 
+			URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_POSTING_CONTACT); 
+			
+			CRMRequestVO requestVO = new CRMRequestVO(); 
+			
+			if (CollectionUtils.isEmpty(customerPosInfoList)) return updList; 
+			
+			requestVO.setTotalCount(customerPosInfoList.size()); 
+			requestVO.setData(customerPosInfoList); 
+			
+			String requestJson = generateJsonWithAnnotationOnly(requestVO); 
+			
+			System.out.println("############# jsonString: " + new JSONObject(requestJson).toString(4)); 
+			System.out.println("############# uri.toURL(): " + uri.toURL()); 
+			System.out.println("############# uri.getPath(): " + uri.getPath()); 
+			
+			// open connection 
+			String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.POST, requestJson); 
+			
+			JSONObject obj = new JSONObject(responseJson); 
+			TrackingLogUtils.infoLogs("Response: " + obj.toString(4)); 
+			// optional summary fields 
+			int totalReceived = obj.optInt("totalReceived"); 
+			int totalSuccess = obj.optInt("totalSuccess"); 
+			int totalFailed = obj.optInt("totalFailed"); 
+			
+			TrackingLogUtils.infoLogs(String.format("Received: %s, Success: %s, Failed: %s", totalReceived, totalSuccess, totalFailed)); // get results array 
+			
+			JSONArray results = obj.optJSONArray("results"); 
+			if (results != null) { 
+				for (int i = 0; i < results.length(); i++) { 
+					JSONObject item = results.getJSONObject(i); 
+					String crmId = item.optString("crmId"); 
+					Long customerId = item.optLong("customerId"); 
+					String status = item.optString("status"); 
+					String message = item.optString("message"); 
+					String timestamp = item.optString("timestamp"); 
+					
+					System.out.println("==== RESULT " + i + " ===="); 
+					System.out.println("crmId: " + crmId); 
+					System.out.println("customerId: " + customerId); 
+					System.out.println("status: " + status); 
+					System.out.println("message: " + message); 
+					for (CustomerPosInfoVO custVO : customerPosInfoList) { 
+						if (customerId != null && customerId.equals(custVO.getIdCustomer())) { 
+							if (CRMCommonConstant.API_STATUS_SUCCESS.equalsIgnoreCase(status)) { 
+								custVO.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_SUCCESS); 
+								custVO.setRemarks(message); 
+								custVO.setRequest(requestJson); 
+								custVO.setResponse(responseJson); 
+								custVO.setCrmId(crmId); 
+							} else { 
+								custVO.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_FAILED); 
+								custVO.setRemarks(message);
+							} 
+							updList.add(custVO);
+							break; 
+						} 
+					} 
+				} 
+			} 
+		} catch (Exception e) { 
+			e.printStackTrace(); 		
+		} 
+		return updList; 
+	}
+	
+	public static CustomerPosInfoVO postingCustomerData(CustomerPosInfoVO posInfo) throws BusinessException { 
+		try { 
+			URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_POSTING_CONTACT); 
+			
+			List<CustomerPosInfoVO> singleList = new ArrayList<>(); 
+			singleList.add(posInfo); 
+			
+			CRMRequestVO requestVO = new CRMRequestVO(); 
+			requestVO.setTotalCount(1); 
+			requestVO.setData(singleList); 
+			
+			String requestJson = generateJsonWithAnnotationOnly(requestVO); 
+			
+			System.out.println("############# IMMEDIATE REQUEST: " + new JSONObject(requestJson).toString(4)); 
+			System.out.println("############# uri.toURL(): " + uri.toURL()); 
+			
+			String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.POST, requestJson); 
+			JSONObject obj = new JSONObject(responseJson); 
+			TrackingLogUtils.infoLogs("IMMEDIATE Response: " + obj.toString(4)); 
+			JSONArray results = obj.optJSONArray("results"); 
+			if (results != null && results.length() > 0) { 
+				JSONObject item = results.getJSONObject(0); 
+				String crmId = item.optString("crmId"); 
+				Long customerId = item.optLong("customerId");
+				String status = item.optString("status"); 
+				String message = item.optString("message"); 
+				String timestamp = item.optString("timestamp"); 
+				System.out.println("==== RESULT ===="); 
+				System.out.println("crmId: " + crmId); 
+				System.out.println("customerId: " + customerId); 
+				System.out.println("status: " + status); 
+				System.out.println("message: " + message);
+				if (CRMCommonConstant.API_STATUS_SUCCESS.equalsIgnoreCase(status)) { 
+					posInfo.setCrmId(crmId);
+					posInfo.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_SUCCESS); 
+					posInfo.setRemarks(message); 
+					posInfo.setRequest(requestJson); 
+					posInfo.setResponse(responseJson);
+				} else {
+			        posInfo.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_FAILED);
+			        posInfo.setRemarks(message);
+				}
+			}
+			return posInfo; 
+		} catch (Exception e) { 
+			e.printStackTrace(); 
+			return null; 
+		} 
+	}
+	
+	// Retrieved Sales Data by Id
+	public CRMResponseVO retrievedSalesInvoice(Long id) throws BusinessException {
+		CRMResponseVO crmResponseVO = new CRMResponseVO();
+		try {
+			URI uri = new URI(String.format(CRMProperties.getSystemApiUrl() + CRMProperties.API_RETRIEVE_SALES_INVOICE + "/%s", id));
+			
+			System.out.println("############# uri.toURL(): " + uri.toURL());
+			System.out.println("############# uri.getPath(): " + uri.getPath());
+			
+			// open connection
+			String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.GET, "");
+			
+			JSONObject obj = new JSONObject(responseJson);
+			TrackingLogUtils.infoLogs("Response: " + obj.toString(4));
+
+			
+			ObjectMapper mapper = new ObjectMapper();
+
+			crmResponseVO = mapper.readValue(responseJson, CRMResponseVO.class);
+			
+			TrackingLogUtils.infoLogs(String.format("Success: %s, Error: %s, Message: %s", crmResponseVO.isSuccess(), crmResponseVO.getErrors(), crmResponseVO.getMessage()));
+
+			// get results array
+			JSONObject data = obj.optJSONObject("data");
+			TrackingLogUtils.infoLogs("Data: " + data.toString(4));
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("[CRMUtils - postingSalesInvoice]", e);
+		}
+		
+		return crmResponseVO;
+	}
+	
+	public static CustomerPosInfoVO updateCustomerData(CustomerPosInfoVO vo) throws BusinessException { 
+		try { 
+			URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_POSTING_CONTACT + "/" + vo.getIdCustomer()); 
+			CRMRequestVO requestVO = new CRMRequestVO(); 
+			List<CustomerPosInfoVO> customerPosInfoList = new ArrayList<CustomerPosInfoVO>(); 
+			
+			customerPosInfoList.add(vo); 
+			
+			requestVO.setTotalCount(1); 
+			requestVO.setData(customerPosInfoList); 
+			
+			String requestJson = generateJsonWithAnnotationOnly(requestVO); 
+			System.out.println("############# UPDATE REQUEST: " + new JSONObject(requestJson).toString(4)); 
+			System.out.println("############# uri.toURL(): "+ uri.toURL()); 
+			
+			String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.PUT, requestJson); 
+			JSONObject obj = new JSONObject(responseJson); 
+			TrackingLogUtils.infoLogs("UPDATE Response: " + obj.toString(4)); 
+			
+			JSONArray results = obj.optJSONArray("results"); 
+			if (results != null && results.length() > 0) { 
+				JSONObject item = results.getJSONObject(0); 
+				
+				String crmId = item.optString("crmId"); 
+				Long customerId = item.optLong("customerId"); 
+				String status = item.optString("status"); 
+				String message = item.optString("message"); 
+				
+				System.out.println("==== UPDATE RESULT ===="); 
+				System.out.println("crmId: " + crmId); 
+				System.out.println("customerId: " + customerId); 
+				System.out.println("status: " + status); 
+				System.out.println("message: " + message); 
+				
+				if (CRMCommonConstant.API_STATUS_SUCCESS.equalsIgnoreCase(status)) {
+					vo.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_SUCCESS); 
+					vo.setRemarks(message); 
+					vo.setRequest(requestJson); 
+					vo.setResponse(responseJson); 
+					vo.setCrmId(crmId); 
+				} else { 		
+					vo.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_FAILED); 
+					vo.setRemarks(message); 
+				}
+			} 
+			return vo; 
+		} catch (Exception e) { 
+			e.printStackTrace(); 
+			return null; 
+		} 
+	}
+	
+	public static CustomerPosInfoVO getCustomerData(CustomerPosInfoVO posInfo) throws BusinessException {
+	    try {
+	        URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_RETRIEVE_CONTACT + "/" + posInfo.getIdCustomer());
+
+	        String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.GET, null);
+
+	        JSONObject obj = new JSONObject(responseJson);
+	        JSONObject dataObj = obj.getJSONObject("data");
+	        TrackingLogUtils.infoLogs("Response: " + obj.toString(4));
+	        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+
+	        CustomerPosInfoVO vo = gson.fromJson(responseJson, CustomerPosInfoVO.class);
+	        vo.setCrmId(dataObj.optString("crmId"));
+	        return vo;
+
+	    } catch (Exception e) {
+	        throw new BusinessException(e.getMessage());
+	    }
+	}
+	
+	public static ApiResponseVO<CRMRedeemCatalogVO> getRedemptionCatalog(String ...categoryList) throws BusinessException {
+	    try {
+	    	
+	    	String baseUrl = SystemProperty.getSystemApiUrl() + SystemProperty.API_CRM_REDEEM_CATALOG;
+
+	    	StringBuilder sb = new StringBuilder(baseUrl);
+	    	
+	    	if (ArrayUtils.isNotEmpty(categoryList)) {
+	    		sb.append("?");
+		    	sb.append("categoryName=").append(URLEncoder.encode(FunctionUtils.joinWithComma(categoryList), "UTF-8"));
+//		    	sb.append("&status=").append(URLEncoder.encode(status, "UTF-8"));
+	    	}
+	    	
+	    	URI uri = new URI(sb.toString());
+//	        System.out.println("CYY uri.getPath(): " + uri.getPath());
+
+	        ApiResponseVO<CRMRedeemCatalogVO> response = HttpUtils.openAPIConnection(uri.toURL(), HttpMethod.GET, null, CRMRedeemCatalogVO.class);
+
+	        if (response.isSuccess()) {
+//	        	for (CrmCatalogCategory c : response.getData().getCategories()) {
+//					if (StringUtils.equalsIgnoreCase(c.getName(), "Cash")) {
+//						for (CrmCatalogType t : c.getTypes()) {
+//							System.out.println(String.format("Name: %s, RdpId: %s, Code: %s, Discount: %s", t.getName(), t.getRedemptionId(), t.getRedemptionCode(), t.getDiscountAmt()));
+//						}
+//					}
+//				}
+	        }
+	        
+	        return response;
+
+	    } catch (Exception e) {
+	        throw new BusinessException(e.getMessage());
+	    }
+	}
+	
+	public static ApiResponseVO<CRMClaimedVoucherResponseVO> getClaimedVoucher(Long idCustomer) throws BusinessException {
+	    try {
+	        URI uri = new URI(SystemProperty.getSystemApiUrl() + SystemProperty.API_CRM_REDEEM_CLAIMED + "/" + Long.toString(idCustomer));
+
+	        ApiResponseVO<CRMClaimedVoucherResponseVO> response = HttpUtils.openAPIConnection(uri.toURL(), HttpMethod.GET, null, CRMClaimedVoucherResponseVO.class);
+
+//	        if (response.isSuccess()) {
+//	        	for (CRMVoucherVO voucherVO : response.getData().getData()) {
+//					System.out.println(String.format("Code: %s, Status: %s, Time: %s", voucherVO.getRedemptionCode(), voucherVO.getStatus(), voucherVO.getRedeemedDateTime()));
+//				}
+//	        }
+	        
+	        return response;
+	    } catch (Exception e) {
+	        throw new BusinessException(e.getMessage());
+	    }
+	}
+	
+	public static ApiResponseVO<CRMClaimedVoucherResponseVO> getVoucherHistory(Long idCust) throws BusinessException {
+	    try {
+	        URI uri = new URI(SystemProperty.getSystemApiUrl() + SystemProperty.API_CRM_REDEEM_HISTORY + "/" + idCust);
+
+	        ApiResponseVO<CRMClaimedVoucherResponseVO> response = HttpUtils.openAPIConnection(uri.toURL(), HttpMethod.GET, null, CRMClaimedVoucherResponseVO.class);
+
+	        if (response.isSuccess()) {
+	        	for (CRMVoucherVO voucherVO : response.getData().getData()) {
+					System.out.println(String.format("Code: %s, Status: %s, Time: %s", voucherVO.getRedemptionCode(), voucherVO.getStatus(), voucherVO.getRedeemedDateTime()));
+				}
+	        }
+	        
+	        return response;
+	    } catch (Exception e) {
+	        throw new BusinessException(e.getMessage());
+	    }
+	}
+	
+	public static ApiResponseVO<CRMClaimVoucherResponseVO> claimVoucher(Long idCustomer, String redemptionCode) throws BusinessException { 
+		return claimVoucher(idCustomer, Arrays.asList(redemptionCode));
+	}
+	
+	public static ApiResponseVO<CRMClaimVoucherResponseVO> claimVoucher(Long idCustomer, List<String> redemptionCodes) throws BusinessException { 
+		try { 
+			URI uri = new URI(SystemProperty.getSystemApiUrl() + SystemProperty.API_CRM_REDEEM_CLAIM); 
+			
+			JSONObject json = new JSONObject();
+
+			json.put("customerId", Long.toString(idCustomer));
+			json.put("redemptionCodes", redemptionCodes);
+
+			String requestJson = json.toString(); 
+			
+			System.out.println("############# REQUEST: " + new JSONObject(requestJson).toString(4)); 
+			System.out.println("############# uri.toURL(): " + uri.toURL()); 
+			
+			ApiResponseVO<CRMClaimVoucherResponseVO> response = HttpUtils.openAPIConnection(uri.toURL(), HttpMethod.POST, requestJson, CRMClaimVoucherResponseVO.class); 
+			return response;
+		} catch (Exception e) { 
+			e.printStackTrace(); 
+			return null; 
+		} 
+	}
+	
+	public static ApiResponseVO<CRMClaimVoucherResponseVO> redeemVoucher(CRMRedeemVoucherRequestVO requestVO) throws BusinessException { 
+		try { 
+			URI uri = new URI(SystemProperty.getSystemApiUrl() + SystemProperty.API_CRM_REDEEM_REDEEM); 
+			
+			JSONObject json = new JSONObject(requestVO);
+
+//			json.put("customerId", Long.toString(idCustomer));
+//			json.put("redemptionCode", redemptionCode);
+
+			String requestJson = json.toString(); 
+			
+			System.out.println("############# REQUEST: " + new JSONObject(requestJson).toString(4)); 
+			System.out.println("############# uri.toURL(): " + uri.toURL()); 
+			
+			ApiResponseVO<CRMClaimVoucherResponseVO> response = HttpUtils.openAPIConnection(uri.toURL(), HttpMethod.POST, requestJson, CRMClaimVoucherResponseVO.class); 
+			return response;
+		} catch (Exception e) { 
+			e.printStackTrace(); 
+			return null; 
+		} 
+	}
+	
+	public static List<InvoiceVoucherVO> getEveryoneCanClaimVoucher() throws BusinessException {
+		
+		List<InvoiceVoucherVO> vList = new ArrayList<InvoiceVoucherVO>();
+		
+		ApiResponseVO<CRMRedeemCatalogVO> responseVO = CRMUtils.getRedemptionCatalog();
+		for (CRMVoucherVO vo : responseVO.getData().getFlatTypes()) {
+			if (vo.getEffectiveFrom() == null || vo.getEffectiveUntil() == null || vo.getMinPoints() == null || vo.getMaxPoints() == null)	continue;
+			if (DatesUtils.isDateBetween(new Date(), vo.getEffectiveFrom(), vo.getEffectiveUntil())) {
+				if (vo.getMinPoints().equals(BigDecimal.ZERO) && vo.getMaxPoints().equals(BigDecimal.ZERO)) {
+					vList.add(vo.convertVoucherCatalogToInvoiceVoucherVO());
+				}
+			}
+		}
+		
+		return vList;
+		
+	}
+	
+	private static String generateJson(Gson gson, Object requestVO) throws UnsupportedEncodingException {
+		if (gson == null) gson = new GsonBuilder().serializeNulls().setPrettyPrinting().create();
+		return gson.toJson(requestVO);
+	}
+	
+	protected static String generateJsonWithAnnotationOnly(Object requestVO) throws UnsupportedEncodingException {
+		Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").serializeNulls().excludeFieldsWithoutExposeAnnotation().create();
+		return generateJson(gson, requestVO);
+	}
+}

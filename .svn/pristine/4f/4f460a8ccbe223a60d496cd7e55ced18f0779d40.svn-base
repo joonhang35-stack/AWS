@@ -1,0 +1,109 @@
+package com.bcs.zsg.web;
+
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.context.support.SpringBeanAutowiringSupport;
+
+import com.bcs.zsg.acct.service.PendingJournalServiceImpl;
+import com.bcs.zsg.common.helper.SchedulerUtils;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.bo.AppSettingBO;
+import com.bcs.zsg.maintenance.helper.ConstantAppSetting;
+import com.bcs.zsg.maintenance.service.POSUploadSalesServiceImpl;
+import com.bcs.zsg.maintenance.vo.AppSettingVO;
+import com.bcs.zsg.sales.service.InvoiceEmailPaymentServiceImpl;
+import com.bcs.zsg.scheduler.DailyRefreshEInvoiceScheduler;
+import com.bcs.zsg.scheduler.RefreshEInvoiceScheduler;
+import com.bcs.zsg.scheduler.SchedulerApp;
+import com.bcs.zsg.scheduler.SubmitEInvoiceScheduler;
+import com.bcs.zsg.scheduler.helper.EnumJobKey;
+import com.bcs.zsg.scheduler.helper.TriggerType;
+
+public class AppStartupThread implements Runnable {
+	private static final Logger logger = LoggerFactory.getLogger(AppStartupThread.class);
+	
+	@Autowired
+	private transient AppSettingBO appSettingBO;
+	
+	@Override
+	public void run() {
+		SpringBeanAutowiringSupport.processInjectionBasedOnCurrentContext(this);
+		
+		startupScheduler();
+	}
+	
+	private void startupScheduler() {
+
+		try { 
+			if (SystemProperty.SCHEDULER_POS_STATE.equals("true")) {
+				// Scheduler For POS Upload
+				AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_POS_CONFIG_SCHEDULER_TIME_UPLOAD);
+				
+//				String time = appSettingVO.getValue();
+//				String timePattern = "";
+//				if (StringUtils.isNotBlank(time)) { // 0 59 12 1/1 * ? * Daily at 12:59  ||  0/30 * * * * ? every 30 sec
+//					String[] timeSplitList = time.split(":");
+//					timePattern = "0 " + (StringUtils.equals(timeSplitList[1], "00") ? "0" : timeSplitList[1]) + " " + timeSplitList[0] + " 1/1 * ? *";
+//					
+//					SchedulerApp.getInstance().scheduledJob(EnumJobKey.ScheduleManager, 
+//							TriggerType.Schedule, POSUploadSalesServiceImpl.class, "POSUploadDailySchedule", timePattern);
+//				}
+				SchedulerUtils.scheduleJob(appSettingVO.getValue(), EnumJobKey.ScheduleManager, POSUploadSalesServiceImpl.class, "POSUploadDailySchedule");
+			}
+			
+			// Scheduler For Reverse Journal	
+			if (isSchedulerOn(ConstantAppSetting.MAINT_REVERSE_SALES_JOURNAL_SCHEDULER)) {
+				
+				AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_JOURNAL_CONFIG_SCHEDULER_TIME_PROCESS_REVERSE_SALES);
+
+//				String time = appSettingVO.getValue();
+//				String timePattern = "";
+//				if (StringUtils.isNotBlank(time)) { // 0 59 12 1/1 * ? * Daily at 12:59  ||  0/30 * * * * ? every 30 sec
+//					String[] timeSplitList = time.split(":");
+//					timePattern = "0 " + (StringUtils.equals(timeSplitList[1], "00") ? "0" : timeSplitList[1]) + " " + timeSplitList[0] + " 1/1 * ? *";
+//					
+//					SchedulerApp.getInstance().scheduledJob(EnumJobKey.ProcessReverseJournal, 
+//							TriggerType.Schedule, PendingJournalServiceImpl.class, "ProcessReverseSalesJournalDailySchedule", timePattern);
+//				}
+				SchedulerUtils.scheduleJob(appSettingVO.getValue(), EnumJobKey.ProcessReverseJournal, PendingJournalServiceImpl.class, "ProcessReverseSalesJournalDailySchedule");
+
+			}
+			
+			/******* Scheduler For E-Invoice - START *******/
+			if (isSchedulerOn(ConstantAppSetting.MAINT_AUTO_SUBMIT_E_INV_SCHEDULER)) {
+				AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_AUTO_E_INV_CONFIG_SCHEDULER_SUBMIT_TIME_1);
+				SchedulerUtils.scheduleJob(appSettingVO.getValue(), EnumJobKey.AutoSubmitEInvoice, SubmitEInvoiceScheduler.class, "AutoSubmitEInvoiceDailySchedule");
+			}
+			
+			if (isSchedulerOn(ConstantAppSetting.MAINT_AUTO_DAILY_REFRESH_E_INV_SCHEDULER)) {
+				AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_AUTO_E_INV_CONFIG_SCHEDULER_REFRESH_TIME);
+				SchedulerUtils.scheduleJob(appSettingVO.getValue(), EnumJobKey.AutoDailyRefreshEInvoice, DailyRefreshEInvoiceScheduler.class, "AutoRefreshEInvoiceDailySchedule");
+			}
+			
+			if (isSchedulerOn(ConstantAppSetting.MAINT_AUTO_REFRESH_E_INV_SUBMISSION_SCHEDULER)) {
+				AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_AUTO_E_INV_CONFIG_SCHEDULER_REFRESH_SUB_INTERVAL);
+				SchedulerUtils.scheduleJobByCron(SchedulerUtils.secondsToCron(appSettingVO.getValue()), EnumJobKey.AutoRefreshSubmissionEInvoice, RefreshEInvoiceScheduler.class, "AutoRefreshEInvoiceSubmissionSchedule");
+			}
+			/******* Scheduler For E-Invoice - END *******/
+			
+			if (SystemProperty.SCHUDULER_EMAILPAYMENT_STATE.equals("true")) {
+				// Scheduler For Email Payment Expired Date Checking
+				// Every 1 Hours trigger a checking
+				SchedulerApp.getInstance().scheduledJob(EnumJobKey.ScheduleJob, 
+						TriggerType.Schedule, InvoiceEmailPaymentServiceImpl.class, "InvoiceEmailPaymentDailySchedule", "0 0 0/1 1/1 * ? *");
+			}
+		} catch (Exception e) {
+			logger.error("Failed to load scheduler startup configuration.", e);
+		}
+	}
+	
+	private boolean isSchedulerOn(ConstantAppSetting appSetting) throws BusinessException {
+		return isSchedulerOn(appSetting, "Y");
+	}
+	
+	private boolean isSchedulerOn(ConstantAppSetting appSetting, String trueValue) throws BusinessException {
+		return StringUtils.equalsIgnoreCase(trueValue, appSettingBO.getAppSettingByCode(appSetting).getValue());
+	}
+}

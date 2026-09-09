@@ -1,0 +1,146 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+<script type="text/javascript">
+	function onAcctValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varEditAcctDialog.hide();
+		}
+	}
+</script>
+<p:growl id="msg"/>
+<p:fieldset legend="Account Type">
+	<p:selectOneRadio id="idAcctType" value="#{chartOfAcctBean.acctVO.idAcctCat}" required="true">  
+           <f:selectItems value="#{chartOfAcctBean.acctCatList}" var="acctCatVO" itemLabel="#{acctCatVO.desc}" itemValue="#{acctCatVO.id}" />
+           <p:ajax listener="#{chartOfAcctBean.handleAcctCatSelect}" event="change" update="idAcctGroupChoose,idAcctPart"/>
+       </p:selectOneRadio>
+      </p:fieldset>
+
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:100px"><h:outputLabel for="idAcctGroupChoose">Group <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idAcctGroupChoose" label="Group" value="#{chartOfAcctBean.acctVO.idAcctSubCat}" effect="fade" required="true" style="width:130px">
+				<f:selectItem itemLabel="Select One"/>
+				<f:selectItems value="#{chartOfAcctBean.acctSubCatList}" var="acctSubCatVO" itemLabel="#{acctSubCatVO.desc}" itemValue="#{acctSubCatVO.id}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<p:panelGrid id="idAcctPart">
+	<p:row>
+		<p:column style="width:100px"><h:outputLabel>Account <span class="required">*</span></h:outputLabel></p:column>
+		<p:column style="width:180px">
+			<p:selectOneMenu id="idAcct" label="Account" value="#{chartOfAcctBean.acctVO.code}" required="true" effect="fade" editable="true" style="width:130px">
+				<f:selectItem itemLabel="Select One" itemValue=""/>
+				<f:selectItems value="#{chartOfAcctBean.acctList}" var="vo" itemLabel="#{vo.code}" itemValue="#{vo.code}"/>
+				<p:ajax listener="#{chartOfAcctBean.handleAcctSelect}" event="change" update="idAcctDesc"/>
+			</p:selectOneMenu>
+		</p:column>
+		<p:column style="width:150px"><h:outputLabel for="idAcctDesc">Account Description <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idAcctDesc" label="Account Description" value="#{chartOfAcctBean.acctVO.desc}" required="true" style="width:200px"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column style="width:100px"><h:outputLabel for="idSubAcct">Sub Account</h:outputLabel></p:column>
+		<p:column style="width:180px"><p:inputText id="idSubAcct" label="Sub Account" value="#{chartOfAcctBean.acctVO.subCode}" style="width:130px"/></p:column>
+		<p:column style="width:150px"><h:outputLabel for="idSubAcctDesc">Sub Acct Description</h:outputLabel></p:column>
+		<p:column><p:inputText id="idSubAcctDesc" label="Sub Acct Description" value="#{chartOfAcctBean.acctVO.subDesc}" style="width:200px"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idGSTType">GST Type</h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idGSTType" label="GST Type" value="#{chartOfAcctBean.acctVO.gstType}" effect="fade" required="true" style="width:130px">
+				<f:selectItem itemLabel="Select One" itemValue="-"/>
+				<f:selectItem itemLabel="Input Tax Code" itemValue="IN"/>
+				<f:selectItem itemLabel="Output Tax Code" itemValue="OUT"/>
+				<p:ajax event="change" update="idGSTCode" process="@this"/>
+			</h:selectOneMenu>
+		</p:column>
+		<p:column><h:outputLabel for="idGSTCode">GST Code</h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idGSTCode" label="GST Code" value="#{chartOfAcctBean.acctVO.taxCode}" effect="fade" 
+					style="width:180px" disabled="#{chartOfAcctBean.acctVO.gstType == null or chartOfAcctBean.acctVO.gstType == '-' }">
+				<c:if test="#{chartOfAcctBean.acctVO.gstType != null and chartOfAcctBean.acctVO.gstType != '-' }">
+				<f:selectItems value="#{chartOfAcctBean.acctVO.gstType.equals('IN') ? chartOfAcctBean.inputTaxCodeVOList : chartOfAcctBean.outputTaxCodeVOList}" 
+					var="vo" itemLabel="#{vo.code} - #{vo.rate} - #{vo.description}" itemValue="#{vo.code}" />
+				</c:if>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column style="width:100px">
+			<h:outputLabel for="idIsPreSales">Is Pre-Sales Account?</h:outputLabel>
+		</p:column>
+		<p:column style="width:180px">
+			<p:selectBooleanCheckbox id="idIsPreSales" label="Is Pre-Sales Account?" value="#{chartOfAcctBean.acctVO.isPreSales}" style="width:130px">
+				<p:ajax event="change" process="@this" update="@form"></p:ajax>
+			</p:selectBooleanCheckbox>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{chartOfAcctBean.acctVO.isPreSales}">
+		<p:column style="width:100px">
+			<h:outputLabel for="idRecogSalesAcct" rendered="#{empty chartOfAcctBean.parentAcctVO.subCode}">Recognized Sales Account</h:outputLabel>
+			<h:outputLabel for="idRecogSalesAcctSub" rendered="#{not empty chartOfAcctBean.parentAcctVO.subCode}">Recognized Sales Account</h:outputLabel>
+		</p:column>
+		<p:column style="width:180px">
+			<p:inputText id="idRecogSalesAcct" label="Recognized Sales Account" value="#{chartOfAcctBean.parentAcctVO.code}: #{chartOfAcctBean.parentAcctVO.desc}" readonly="true" style="background:#ccc" rendered="#{empty chartOfAcctBean.parentAcctVO.subCode}"/>
+			<p:inputText id="idRecogSalesAcctSub" label="Recognized Sales Account" value="#{chartOfAcctBean.parentAcctVO.code}-#{chartOfAcctBean.parentAcctVO.subCode}: #{chartOfAcctBean.parentAcctVO.desc}, #{chartOfAcctBean.parentAcctVO.subDesc}" readonly="true" style="background:#ccc" rendered="#{not empty chartOfAcctBean.parentAcctVO.subCode}"/>
+			&nbsp;<p:commandButton actionListener="#{chartOfAcctBean.onSelectParentAcct}" icon="ui-icon-search" oncomplete="varAcctListDialog.show()" update=":idAcctListDialog" process="@this" />
+		</p:column>
+	</p:row>
+	<!-- <p:row>
+		<p:column><h:outputLabel for="idType">Type</h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idType" label="Type" value="#{chartOfAcctBean.acctVO.typeCode}" effect="fade" required="true" style="width:130px">
+				<f:selectItem itemLabel="Normal" itemValue="N"/>
+				<f:selectItem itemLabel="GST" itemValue="G"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row> -->
+</p:panelGrid>
+<br/>
+<p:fieldset legend="Begining Balance">
+	<p:panelGrid id="idBeginBalField">
+		<p:row>
+			<p:column style="width:50px"><h:outputLabel>Debit<span class="required">*</span></h:outputLabel></p:column>
+			<p:column style="width:150px">
+				<p:inputText label="Debit" value="#{chartOfAcctBean.acctBalVO.debitBeginBal}" style="width:130px" rendered="#{chartOfAcctBean.option ne -1 and not chartOfAcctBean.isClosedAcct}">
+					<!--f:convertNumber maxFractionDigits="2" groupingUsed="true" type="number"/-->
+					<f:convertNumber type="number" pattern="#{config['amount.format.pattern']}"/>
+					<p:ajax listener="#{chartOfAcctBean.handleDebitCreditInput}" event="blur" update="idBeginBalField"/>
+				</p:inputText>
+				<p:inputText label="Debit" value="#{chartOfAcctBean.acctBalVO.debitBeginBal}" style="width:130px" disabled="true" rendered="#{chartOfAcctBean.option eq -1 or chartOfAcctBean.isClosedAcct}">
+					<f:convertNumber type="number" pattern="#{config['amount.format.pattern']}"/>
+				</p:inputText>
+			</p:column>
+			<p:column style="width:50px"><h:outputLabel>Credit<span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:inputText label="Credit" value="#{chartOfAcctBean.acctBalVO.creditBeginBal}" style="width:130px" rendered="#{chartOfAcctBean.option ne 1 and not chartOfAcctBean.isClosedAcct}">
+					<!--f:convertNumber maxFractionDigits="2" groupingUsed="true" type="number"/-->
+					<f:convertNumber type="number" pattern="#{config['amount.format.pattern']}"/>
+					<p:ajax listener="#{chartOfAcctBean.handleDebitCreditInput}" event="blur" update="idBeginBalField"/>
+				</p:inputText>
+				<p:inputText label="Credit" value="#{chartOfAcctBean.acctBalVO.creditBeginBal}" style="width:130px" disabled="true" rendered="#{chartOfAcctBean.option eq 1 or chartOfAcctBean.isClosedAcct}">
+					<f:convertNumber type="number" pattern="#{config['amount.format.pattern']}"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+</p:fieldset>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{chartOfAcctBean.addAcct}" update="@form,:idChartOfAcctForm" rendered="#{empty chartOfAcctBean.acctVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{chartOfAcctBean.updAcct}" update="@form,:idChartOfAcctForm" rendered="#{not empty chartOfAcctBean.acctVO.id}" oncomplete="onAcctValidation(xhr, status, args)"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{chartOfAcctBean.resetForm}" onclick="varAddAcctDialog.hide(),varEditAcctDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddAcctForm,idEditAcctForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

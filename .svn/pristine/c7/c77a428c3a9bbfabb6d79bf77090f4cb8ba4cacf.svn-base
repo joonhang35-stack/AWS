@@ -1,0 +1,390 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<style></style>
+
+	<p:growl id="msg" />
+
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.isPass) {
+				varReasonDialog.show();
+			}
+		}
+	</script>
+
+	<p:tabView id="idTabView" activeIndex="#{billPymtBean.mulpEInvActiveTabIndex}">
+	
+		<!-- <p:ajax event="tabChange"></p:ajax> -->
+		
+		<p:tab title="Bill Payment List">
+			<p:panelGrid style="margin-top:5px; width: 550px">
+				<p:row>
+					<p:column style="width:200px;">
+						<h:outputLabel>Bill Date</h:outputLabel>
+					</p:column>
+					<p:column style="width:10px;">
+						<p:separator style="width:2px;height:20px" />
+					</p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idBillDateFr" label="Bill Date From"
+							pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true"
+							value="#{billPymtBean.billFromDate}" />
+						<p:watermark for="idBillDateFr" value="Bill Date From" />
+					</p:column>
+					<p:column style="width:80px;">
+						<p:calendar id="idBillDateTo" label="Bill Date To"
+							pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true"
+							value="#{billPymtBean.billToDate}" />
+						<p:watermark for="idBillDateTo" value="Bill Date To" />
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column style="width:200px;">
+						<h:outputLabel>Supplier Country</h:outputLabel>
+					</p:column>
+					<p:column style="width:10px;">
+						<p:separator style="width:2px;height:20px" />
+					</p:column>
+					<p:column>
+						<p:selectOneButton id="idPrintType" value="#{billPymtBean.countryFilter}" style="display: flex" styleClass="nowrap">
+					 		<f:selectItem itemLabel="Both" itemValue="ALL"/>
+				            <f:selectItem itemLabel="Foreign Supplier" itemValue="F" />
+				            <f:selectItem itemLabel="Local Supplier" itemValue="L"/>
+				            <!-- <p:ajax event="change" update="@form" listener="#{billPymtBean.loadBillList}"></p:ajax> -->
+				        </p:selectOneButton>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<p:commandButton value="Search"
+							actionListener="#{billPymtBean.reloadConsolBillPymtList}"
+							update=":idMulpEInvForm:idTabView :idMulpEInvForm:idTabView:idConsolInvListTable" />
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+
+			<p:dataTable id="idConsolInvListTable"
+				widgetVar="varConsolInvListTable"
+				value="#{billPymtBean.lazyConsolDataModel}" var="purBillPmnt"
+				paginator="true" rows="20" rowIndexVar="rowIndex"
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+				rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000"
+				filteredValue="#{billPymtBean.filteredObjList}" lazy="true"
+				selection="#{billPymtBean.selectedBillList}" filterEvent="enter"
+				rowKey="#{purBillPmnt.id}">
+				
+				<p:ajax event="rowSelectCheckbox" update=":idMulpEInvForm:idTabView"/>
+				<p:ajax event="rowUnselectCheckbox" update=":idMulpEInvForm:idTabView"/>
+				<p:ajax event="toggleSelect" update=":idMulpEInvForm:idTabView"/>
+
+				<p:column selectionMode="multiple"
+					style="width:16px;text-align:center" />
+
+				<p:column headerText="Edit" style="width:40px; text-align:center;" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(1)}">
+					<p:commandButton icon="ui-icon-pencil" update=":idDetailsDialog" oncomplete="varAddFuncDialog.show()">
+						<f:actionListener binding="#{billPymtBean.onBillSelected(purBillPmnt.id)}"></f:actionListener>
+						<f:actionListener binding="#{journalBean.onJournalSelected(billPymtBean.exOrderBillVO.idJournal)}"></f:actionListener>
+					</p:commandButton>
+				</p:column>
+				<p:column headerText="Bill Id" sortBy="#{purBillPmnt.code}"
+					style="width:60px;" filterStyle="width:60px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.code}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(4)}">
+					<h:outputText value="#{purBillPmnt.code}" />
+				</p:column>
+				<p:column headerText="Supplier Name"
+					sortBy="#{purBillPmnt.supplierName}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.supplierName}"
+					filterMatchMode="contains"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(5)}">
+					<h:outputText value="#{purBillPmnt.supplierName}" />
+				</p:column>
+				<p:column headerText="Bill Date" sortBy="#{purBillPmnt.billDt}"
+					style="width: 80px;" styleClass="txt_center"
+					filterBy="#{purBillPmnt.billDt}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(6)}">
+					<h:outputText value="#{purBillPmnt.billDt}">
+						<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="EO No" sortBy="#{purBillPmnt.eoCode}"
+					style="width:60px;" filterStyle="width:60px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.eoCode}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(7)}">
+					<h:outputText value="#{purBillPmnt.eoCode}" />
+				</p:column>
+				<p:column headerText="Tax Code Applied"
+					sortBy="#{purBillPmnt.taxCodeGroup}" style="width: 80px;"
+					filterBy="#{purBillPmnt.taxCodeGroup}" filterMatchMode="contains"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(8)}">
+					<h:outputText value="#{purBillPmnt.taxCodeGroup}" />
+				</p:column>
+				<p:column headerText="Amount" sortBy="#{purBillPmnt.billAmt}"
+					style="width: 80px;" styleClass="txt_center"
+					filterBy="#{purBillPmnt.billAmt}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(9)}">
+					<h:outputText value="#{purBillPmnt.billAmt}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Payment Amount"
+					sortBy="#{purBillPmnt.amtPaid}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.amtPaid}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(10)}">
+					<h:outputText value="#{purBillPmnt.amtPaid}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Current Balance"
+					sortBy="#{purBillPmnt.curBal}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.curBal}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(11)}">
+					<h:outputText value="#{purBillPmnt.curBal}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<!-- <p:column headerText="Amount to Allocate"  style="width: 80px;" styleClass="txt_center" rendered="#{billPymtBean.blMultiPymt == true || billPymtBean.listingTableViewVO.verifyVisibility(12)}">
+					<p:inputText id="idAmountToAllocate" colspan="3" label="Amount to Allocate" value="#{purBillPmnt.amtAllocate}" rendered="#{purBillPmnt.curBal!=0}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						<p:ajax event="blur" listener="#{billPymtBean.onBillPay(purBillPmnt, false)}" update="idPurBillPmntTable" process="@this" oncomplete="subTotalRecal()"/>
+					</p:inputText>
+				</p:column> -->
+				<p:column headerText="Due Date" sortBy="#{purBillPmnt.dueDt}"
+					style="width: 70px;" filterStyle="width:70px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.dueDt}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(13)}">
+					<h:outputText value="#{purBillPmnt.dueDt}">
+						<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Tour Code" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.tourCode}"
+					filterMatchMode="contains"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(14)}">
+					<h:outputText value="#{purBillPmnt.tourCode}" />
+				</p:column>
+				<p:column headerText="Invoice/CN No."
+					sortBy="#{purBillPmnt.cnNumber}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.cnNumber}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(15)}">
+					<h:outputText value="#{purBillPmnt.cnNumber}" />
+				</p:column>
+				<p:column headerText="AWS Invoice No."
+					sortBy="#{purBillPmnt.invoices}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.invoices}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(16)}">
+					<h:outputText value="#{purBillPmnt.invoices}" />
+				</p:column>
+				<p:column headerText="Reason for Expense"
+					sortBy="#{purBillPmnt.exReason}" width="200"
+					filterBy="#{purBillPmnt.exReason}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(17)}">
+					<h:outputText value="#{purBillPmnt.exReason}" />
+				</p:column>
+				<!-- <p:column headerText="Comments" sortBy="#{purBillPmnt.comments}"
+					width="200" filterBy="#{purBillPmnt.comments}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(18)}">
+					<h:outputText value="#{purBillPmnt.comments}" />
+				</p:column> -->
+				<p:column headerText="Country" sortBy="#{purBillPmnt.countryVO.country}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.countryVO.country}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(19)}">
+					<h:outputText value="#{purBillPmnt.countryVO.country}" />
+				</p:column>
+				<p:column headerText="Status" sortBy="#{purBillPmnt.status}"
+					style="width: 80px;" styleClass="txt_center"
+					filterBy="#{purBillPmnt.status}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(19)}">
+					<h:outputText
+						value="#{zsg:referenceDataValue('BILL_STATUS', purBillPmnt.status)}" />
+				</p:column>
+				<p:column headerText="E-Invoice Status" sortBy="#{purBillPmnt.eInvoiceStatus}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.eInvoiceStatus}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(19)}">
+					<h:outputText value="#{purBillPmnt.eInvoiceStatus}" />
+				</p:column>
+				<p:column headerText="Updated By" sortBy="#{purBillPmnt.updatedBy}"
+					style="width: 70px;" filterStyle="width:70px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.updatedBy}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(20)}">
+					<h:outputText value="#{purBillPmnt.updatedBy}" />
+				</p:column>
+				<p:column headerText="Updated Date"
+					sortBy="#{purBillPmnt.updatedDate}" style="width: 70px;"
+					filterStyle="width:70px;" styleClass="txt_center"
+					filterBy="#{purBillPmnt.updatedDate}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(21)}">
+					<h:outputText value="#{purBillPmnt.updatedDate}">
+						<f:convertDateTime
+							pattern="#{config['date.display.pattern']} HH:mm:ss" />
+					</h:outputText>
+				</p:column>
+			</p:dataTable>
+		</p:tab>
+		<p:tab title="Selected Bills Payment">
+
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<p:commandButton 
+							value="Submit" actionListener="#{billPymtBean.submitMultipleEInvoice}" 
+							update=":idMulpEInvForm:msg idSelectedConsolInvListTable :idMulpEInvForm:idTabView :idMultipleEInvSubmitRespDialog" 
+							oncomplete="varMultipleEInvSubmitRespDialog.show()"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			<p:dataTable id="idSelectedConsolInvListTable"
+				widgetVar="varSelectedConsolInvListTable"
+				value="#{billPymtBean.savedSelectedBillList}" var="purBillPmnt"
+				paginator="true" rows="20" rowIndexVar="rowIndex"
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+				rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000" filterEvent="enter"
+				rowKey="#{vo.id}">
+				
+				<p:column headerText="Cancel" width="40"
+					style="text-align:center;">
+					<p:commandButton icon="ui-icon-close" actionListener="#{billPymtBean.removeBillFromSelectedBills(purBillPmnt)}" 
+						process="@this" update=":idMulpEInvForm:idTabView:idConsolInvListTable :idMulpEInvForm:idTabView:idSelectedConsolInvListTable" />
+				</p:column>
+
+				<p:column headerText="Bill Id" sortBy="#{purBillPmnt.code}"
+					style="width:60px;" filterStyle="width:60px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.code}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(4)}">
+					<h:outputText value="#{purBillPmnt.code}" />
+				</p:column>
+				<p:column headerText="Supplier Name"
+					sortBy="#{purBillPmnt.supplierName}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.supplierName}"
+					filterMatchMode="contains"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(5)}">
+					<h:outputText value="#{purBillPmnt.supplierName}" />
+				</p:column>
+				<p:column headerText="Bill Date" sortBy="#{purBillPmnt.billDt}"
+					style="width: 80px;" styleClass="txt_center"
+					filterBy="#{purBillPmnt.billDt}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(6)}">
+					<h:outputText value="#{purBillPmnt.billDt}">
+						<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="EO No" sortBy="#{purBillPmnt.eoCode}"
+					style="width:60px;" filterStyle="width:60px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.eoCode}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(7)}">
+					<h:outputText value="#{purBillPmnt.eoCode}" />
+				</p:column>
+				<p:column headerText="Tax Code Applied"
+					sortBy="#{purBillPmnt.taxCodeGroup}" style="width: 80px;"
+					filterBy="#{purBillPmnt.taxCodeGroup}" filterMatchMode="contains"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(8)}">
+					<h:outputText value="#{purBillPmnt.taxCodeGroup}" />
+				</p:column>
+				<p:column headerText="Amount" sortBy="#{purBillPmnt.billAmt}"
+					style="width: 80px;" styleClass="txt_center"
+					filterBy="#{purBillPmnt.billAmt}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(9)}">
+					<h:outputText value="#{purBillPmnt.billAmt}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Payment Amount"
+					sortBy="#{purBillPmnt.amtPaid}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.amtPaid}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(10)}">
+					<h:outputText value="#{purBillPmnt.amtPaid}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Current Balance"
+					sortBy="#{purBillPmnt.curBal}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.curBal}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(11)}">
+					<h:outputText value="#{purBillPmnt.curBal}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<!-- <p:column headerText="Amount to Allocate"  style="width: 80px;" styleClass="txt_center" rendered="#{billPymtBean.blMultiPymt == true || billPymtBean.listingTableViewVO.verifyVisibility(12)}">
+					<p:inputText id="idAmountToAllocate" colspan="3" label="Amount to Allocate" value="#{purBillPmnt.amtAllocate}" rendered="#{purBillPmnt.curBal!=0}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						<p:ajax event="blur" listener="#{billPymtBean.onBillPay(purBillPmnt, false)}" update="idPurBillPmntTable" process="@this" oncomplete="subTotalRecal()"/>
+					</p:inputText>
+				</p:column> -->
+				<p:column headerText="Due Date" sortBy="#{purBillPmnt.dueDt}"
+					style="width: 70px;" filterStyle="width:70px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.dueDt}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(13)}">
+					<h:outputText value="#{purBillPmnt.dueDt}">
+						<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Tour Code" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.tourCode}"
+					filterMatchMode="contains"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(14)}">
+					<h:outputText value="#{purBillPmnt.tourCode}" />
+				</p:column>
+				<p:column headerText="Invoice/CN No."
+					sortBy="#{purBillPmnt.cnNumber}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.cnNumber}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(15)}">
+					<h:outputText value="#{purBillPmnt.cnNumber}" />
+				</p:column>
+				<p:column headerText="AWS Invoice No."
+					sortBy="#{purBillPmnt.invoices}" style="width: 80px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.invoices}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(16)}">
+					<h:outputText value="#{purBillPmnt.invoices}" />
+				</p:column>
+				<p:column headerText="Reason for Expense"
+					sortBy="#{purBillPmnt.exReason}" width="200"
+					filterBy="#{purBillPmnt.exReason}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(17)}">
+					<h:outputText value="#{purBillPmnt.exReason}" />
+				</p:column>
+				<!-- <p:column headerText="Comments" sortBy="#{purBillPmnt.comments}"
+					width="200" filterBy="#{purBillPmnt.comments}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(18)}">
+					<h:outputText value="#{purBillPmnt.comments}" />
+				</p:column> -->
+				<p:column headerText="Country" sortBy="#{purBillPmnt.countryVO.country}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.countryVO.country}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(19)}">
+					<h:outputText value="#{purBillPmnt.countryVO.country}" />
+				</p:column>
+				<p:column headerText="Status" sortBy="#{purBillPmnt.status}"
+					style="width: 80px;" styleClass="txt_center"
+					filterBy="#{purBillPmnt.status}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(19)}">
+					<h:outputText
+						value="#{zsg:referenceDataValue('BILL_STATUS', purBillPmnt.status)}" />
+				</p:column>
+				<p:column headerText="E-Invoice Status" sortBy="#{purBillPmnt.eInvoiceStatus}" style="width: 80px;" styleClass="txt_center" filterBy="#{purBillPmnt.eInvoiceStatus}" rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(19)}">
+					<h:outputText value="#{purBillPmnt.eInvoiceStatus}" />
+				</p:column>
+				<p:column headerText="Updated By" sortBy="#{purBillPmnt.updatedBy}"
+					style="width: 70px;" filterStyle="width:70px;"
+					styleClass="txt_center" filterBy="#{purBillPmnt.updatedBy}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(20)}">
+					<h:outputText value="#{purBillPmnt.updatedBy}" />
+				</p:column>
+				<p:column headerText="Updated Date"
+					sortBy="#{purBillPmnt.updatedDate}" style="width: 70px;"
+					filterStyle="width:70px;" styleClass="txt_center"
+					filterBy="#{purBillPmnt.updatedDate}"
+					rendered="#{billPymtBean.listingTableViewVO.verifyVisibility(21)}">
+					<h:outputText value="#{purBillPmnt.updatedDate}">
+						<f:convertDateTime
+							pattern="#{config['date.display.pattern']} HH:mm:ss" />
+					</h:outputText>
+				</p:column>
+			</p:dataTable>
+		</p:tab>
+	</p:tabView>
+
+	<h:panelGrid columns="11" style="width: 1px;">
+	</h:panelGrid>
+</ui:composition>

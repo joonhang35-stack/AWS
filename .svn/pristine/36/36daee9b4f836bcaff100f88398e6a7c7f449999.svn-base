@@ -1,0 +1,208 @@
+package com.bcs.zsg.sales.bo;
+
+import java.util.List;
+import java.util.Map;
+
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.CustTourHistVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.IdentityDetailVO;
+import com.bcs.zsg.sales.vo.OnlineCustomerProfileUpdateVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+
+public interface CustomerBO {
+
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public List<CustomerVO> getCustomerList(Long companyId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param companyId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CustDetailsVO> getCustomerListSearch(Long companyId) throws BusinessException ;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public CustomerVO getCustomer(Long idCust) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public CustomerVO getCustomerDetail(Long idCust) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void insertCustomer(CustomerVO customerVO) throws BusinessException, QueueException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void updateCustomer(CustomerVO customerVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void deleteCustomer(CustomerVO customerVO) throws BusinessException;
+	
+	public void updateCustomerStatus(CustomerVO customerVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void insertObject(Object objectVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void updateObject(Object objectVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void deleteObject(Object objectVO) throws BusinessException;
+	
+	/**
+	 * 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CountryVO> getCountryList() throws BusinessException;
+	
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void updObjList(CustomerVO customerVO, AddUpdDelVO objectVO) throws BusinessException;
+
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public boolean isIdentityExisted(IdentityVO identityVO, Long companyId) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idCompany
+	 * @param filters
+	 * @return
+	 * @throws BusinessException
+	 */
+	public int getCustomerListSize(Map<String, Object> params) throws BusinessException;
+
+	/**
+	 * 
+	 * @param params
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CustomerVO> getCustomerList(Map<String, Object> params) throws BusinessException;
+
+	/**
+	 * 
+	 * @param vo
+	 * @param companyId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<CustTourHistVO> getTourHistList(CustomerVO vo, Long companyId, Map<String, Object> params) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idIdentity
+	 * @return
+	 * @throws BusinessException
+	 */
+	public IdentityDetailVO getIdentityDetail(Long idIdentity) throws BusinessException;
+
+	/**
+	 * 
+	 * @param custDetailsVO
+	 * @param idCompany 
+	 * @return int - 0 = not existed, 1 = customer name existed only, 2 = identity existed, 3 = customer name and identity existed
+	 * @throws BusinessException
+	 */
+	public int isCustomerExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param custDetailsVO
+	 * @param idCompany 
+	 * @param filterAsIndividual
+	 * @return int - 0 = not existed, 1 = customer name existed only, 2 = identity existed, 3 = customer name and identity existed
+	 * @throws BusinessException
+	 */
+	public int isCustomerExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean filterAsIndividual) throws BusinessException;
+
+	/**
+	 * 
+	 * @param custDetailsVO
+	 * @param idCompany 
+	 * @return int - 0 = not existed, 1 = customer name existed only, 2 = identity existed, 3 = customer name and identity existed
+	 * @throws BusinessException
+	 */
+	public boolean isEmailExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param custDetailsVO
+	 * @param idCompany 
+	 * @param filterAsIndividual
+	 * @return int - 0 = not existed, 1 = customer name existed only, 2 = identity existed, 3 = customer name and identity existed
+	 * @throws BusinessException
+	 */
+	public boolean isEmailExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean filterAsIndividual) throws BusinessException;
+
+	public boolean isPhoneExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param companyId
+	 * @param customerId 
+	 * @throws BusinessException
+	 */
+	public void updateAcctTransDestinationCust(Long companyId, Long customerId)throws BusinessException;
+	public void updateAllCustNmToRelatedTbl(Long companyId)throws BusinessException;
+	
+	public List<LookupItemVO> getLookUpItemList(String category) throws BusinessException;
+	
+	public List<CustomerVO> getCustomerList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException;
+
+	public void unlockCustomer(Long isCust, boolean isLock) throws BusinessException;
+	
+	public CountryVO getCountryById(Long countryId) throws BusinessException;
+
+	public void insertCustomerHistory(Long idCust, String actionCd, String reason) throws BusinessException;
+
+	public void updateCrmId(Long customerId, String crmId) throws BusinessException;
+
+	public void updateCrmIdCSV(Long customerId, String crmId) throws BusinessException;
+
+	public OnlineCustomerProfileUpdateVO getOnlineCustomerProfileUpdateDetails(Long idOnlineCustProfileUpd);
+
+	public OnlineCustomerProfileUpdateVO getOnlineCustomerProfileUpdateVO(Long idOnlineCustProfileUpd);
+
+	public void applyOnlineCustProfUpdReq(OnlineCustomerProfileUpdateVO reqVO, Long idCust) throws BusinessException;
+
+	public void rejectOnlineCustProfUpdReq(OnlineCustomerProfileUpdateVO reqVO, Long idCust) throws BusinessException;
+}

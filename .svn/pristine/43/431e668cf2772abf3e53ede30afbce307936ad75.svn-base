@@ -1,0 +1,198 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varUserDialog.hide()
+		}
+	}
+</script>
+
+<p:growl id="msg"/>
+<div style="height:400px;overflow:auto;">
+	<p:panelGrid id="idUserDetail">
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idCategory">Categorize <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<h:selectOneMenu id="idCategory" label="Categorize" value="#{billPymtBean.employeeVO.category}" required="true">  
+		            <f:selectItem itemLabel="Select One" itemValue=""/>
+		            <f:selectItems value="#{bterp:lookupItemList('usr_staff_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		        </h:selectOneMenu>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idFullName">Name as IC <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column colspan="3">
+				<p:inputText id="idFullName" label="Name as IC" value="#{billPymtBean.employeeVO.fullName}"
+					style="width:400px" maxlength="255" required="true">
+					<p:ajax event="change" update=":idAddUserForm:idUserName, :idAddUserForm:idUserCode" listener="#{billPymtBean.onNameChange}"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idUserName">User Name <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idUserName" label="User Name" value="#{billPymtBean.employeeVO.userVO.name}" maxlength="50" required="true"/>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idUserCode">Login ID <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idUserCode" label="Login ID" value="#{billPymtBean.employeeVO.userVO.loginId}" maxlength="20" required="true"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idEmailID">Email Address</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idEmailID" label="Email Address" value="#{billPymtBean.employeeVO.userVO.emailAddress}" maxlength="50"/>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idMobile">Mobile Number</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idMobile" label="Mobile Number" value="#{billPymtBean.employeeVO.userVO.mobileNumber}" maxlength="15"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idNickName">NickName </h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idNickName" label="NickName" value="#{billPymtBean.employeeVO.nickName}" maxlength="50"/>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idMsicCode">MSIC Code </h:outputLabel>
+			</p:column>
+			<p:column>
+				<h:selectOneMenu id="idMsicCode" label="MSIC Code" value="#{billPymtBean.employeeVO.msicCode}" style="width:180px;">  
+		            <f:selectItem itemLabel="Select One" itemValue="" />  
+		            <f:selectItems value="#{bterp:lookupItemList('e_inv_msic_code')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.code} : #{vo.description}"/>
+		        </h:selectOneMenu>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idNRIC">NRIC </h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputMask id="idNRIC" label="NRIC" value="#{billPymtBean.employeeVO.idNo}" mask="999999-99-9999"/>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idTIN">TIN </h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idTIN" label="TIN" value="#{billPymtBean.employeeVO.taxIdNo}" maxlength="20"/>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAdd1">Address Line 1 </h:outputLabel>
+			</p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAdd1" label="Address Line 1" value="#{billPymtBean.employeeVO.addr1}" size="50" maxlength="255"/>
+			</p:column>
+		</p:row>
+
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAdd2">Address Line 2 </h:outputLabel>
+			</p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAdd2" label="Address Line 2" value="#{billPymtBean.employeeVO.addr2}" size="50" maxlength="255"/>
+			</p:column>
+		</p:row>
+
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAdd3">Address Line 3 </h:outputLabel>
+			</p:column>
+			<p:column colspan="3">
+				<p:inputText id="idAdd3" label="Address Line 3" value="#{billPymtBean.employeeVO.addr3}" size="50" maxlength="255"/>
+			</p:column>
+		</p:row>
+
+		<p:row id="idColumnState">
+			<p:column>
+				<h:outputLabel for="idCity">City </h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idCity" label="City" value="#{billPymtBean.employeeVO.city}" maxlength="255"/>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idState">State </h:outputLabel>
+			</p:column>
+			<p:column>
+				<h:selectOneMenu id="idState" label="State" value="#{billPymtBean.employeeVO.state}" effect="fade">
+					<f:selectItem itemLabel="Select One" itemValue=""/>
+					<f:selectItems value="#{billPymtBean.malaysiaStateList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.name}"/>
+				</h:selectOneMenu>
+			</p:column>
+		</p:row>
+
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idPostcode">Postcode </h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idPostcode" label="Postcode" value="#{billPymtBean.employeeVO.postcode}" maxlength="10"/>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idCountry">Country </h:outputLabel>
+			</p:column>
+			<p:column>
+				<h:selectOneMenu id="idCountry" label="Country" value="#{billPymtBean.employeeVO.countryId}">
+					<f:selectItem itemLabel="Select One" itemValue="" />
+					<f:selectItems value="#{billPymtBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+				</h:selectOneMenu>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column>
+				<h:outputLabel for="idAcctNo">Account No </h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputMask id="idAcctNo" label="Account No" value="#{billPymtBean.employeeVO.acctNo}" maxlength="20"/>
+			</p:column>
+			<p:column>
+				<h:outputLabel for="idBankName">Bank Name </h:outputLabel>
+			</p:column>
+			<p:column>
+				<!-- <p:inputText id="idBankName" label="Bank Name" value="#{billPymtBean.employeeVO.bankName}" maxlength="200" style="width: 300px;"/> -->
+				<h:selectOneMenu id="idBankName" label="Bank Name" value="#{billPymtBean.employeeVO.bankName}" style="width:180px;">  
+		            <f:selectItem itemLabel="Select One" itemValue="" />  
+		            <f:selectItems value="#{bterp:lookupItemList('bank_list')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		        </h:selectOneMenu>
+			</p:column>
+		</p:row>
+		
+	</p:panelGrid>
+</div>
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{billPymtBean.addUser}" update="@form,:idAddFuncForm:idPayee"
+			oncomplete="onValidation(xhr, status, args)"/>
+		<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{billPymtBean.resetUserForm}"
+			oncomplete="varUserDialog.hide()" update="@form" process="@this" global="false" >
+			<pe:resetEditableValues for="idAddUserForm"/>
+		</p:commandButton>
+		
+	</p:panelGrid>
+</ui:composition>

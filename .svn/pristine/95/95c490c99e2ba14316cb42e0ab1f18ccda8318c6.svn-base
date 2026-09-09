@@ -1,0 +1,782 @@
+package com.bcs.zsg.purchase.dao;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.primefaces.model.SortOrder;
+
+import com.bcs.zsg.cfg.sec.vo.EmployeeVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.component.security.vo.UserVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.ForeignExRateVO;
+import com.bcs.zsg.purchase.vo.AirLineDetailsVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.ExOrderDetailsVO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.purchase.vo.HotelTourVO;
+import com.bcs.zsg.purchase.vo.PaxNameVO;
+import com.bcs.zsg.purchase.vo.PersonVO;
+import com.bcs.zsg.purchase.vo.CorporateVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.purchase.vo.EOInvoiceVO;
+import com.bcs.zsg.purchase.vo.ExOrderAttachmentVO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+
+public class PurchaseEODAOImpl extends BaseHibernateDAO implements PurchaseEODAO {
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getExOrderList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderVO> getExOrderList(Long companyId) {
+		Criteria criteria = getSession().createCriteria(ExOrderVO.class);
+		criteria.add(Restrictions.eq("companyId", companyId));
+		criteria.addOrder(Order.desc("id"));
+		return criteria.list();
+	}
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getExOrderList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderVO> getEOExOrderList(Long companyId) {
+		String tempStr= "select eo.id,c.name,eo.code,eo.DT_EO,d.code as tourCode,eo.amt_due,eo.status_cd,eo.upd_by from EX_ORDER eo " +
+		 		"left join supplier s on eo.id_supplier =  s.id left join corporate c on c.id_person = s.id_person left join tour_dep d on d.id = eo.id_tour " +
+		 		"where eo.id_company = :idCompany order by cast(eo.code as decimal) desc";
+		Query query = createSQLQuery(tempStr);
+		query.setParameter("idCompany", companyId);
+		List<Object> results = query.list(); 
+		List<ExOrderVO> eoList = new ArrayList<ExOrderVO>();
+		ExOrderVO vo;
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			vo = new ExOrderVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setSupplierName((String) row[1]);   
+			vo.setCode((String) row[2]);   
+			vo.setStrEODt(((Date) row[3]).toString().substring(0,10))	;  
+			vo.setEoDt((Date) row[3])	;  
+			vo.setTourCode((String) row[4]);   
+			vo.setAmtDue(Double.parseDouble(row[5].toString()) );
+			//vo.setStatusCode(row[6].toString());
+			vo.setStatus(row[6].toString());
+			vo.setUpdatedBy((String) row[7]); 
+ 
+			eoList.add(vo);
+		} 
+		return eoList; 
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getExOrderList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderBillVO> getEOBillList(Long exOrderId) throws BusinessException{ 
+		Criteria criteria = getSession().createCriteria(ExOrderBillVO.class);
+		criteria.add(Restrictions.eq("eoId", exOrderId));
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getExOrderDetailsList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderDetailsVO> getExOrderDetailsList(Long exOrderId) {
+		Criteria criteria = getSession().createCriteria(ExOrderDetailsVO.class);
+		criteria.add(Restrictions.eq("exOrderId", exOrderId));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.addOrder(Order.asc("seq"));
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getHotelTourById()
+	 */
+	@Override
+	public HotelTourVO getHotelTourById(Long id) { 
+		Criteria criteria = getSession().createCriteria(HotelTourVO.class);
+		criteria.add(Restrictions.eq("id", id));
+		return (HotelTourVO)criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getExOrderDetailsList()
+	 */
+	@Override
+	public ExOrderVO getExOrderById(Long exOrderId) { 
+		Criteria criteria = getSession().createCriteria(ExOrderVO.class);
+		criteria.add(Restrictions.eq("id", exOrderId));
+		return (ExOrderVO)criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getPaxNameList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<PaxNameVO> getPaxNameList(Long exOrderId) {
+		Criteria criteria = getSession().createCriteria(PaxNameVO.class);
+		criteria.add(Restrictions.eq("exOrderId", exOrderId));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.addOrder(Order.asc("seq"));
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getAirLineList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AirLineDetailsVO> getAirLineList(Long exOrderId) {
+		Criteria criteria = getSession().createCriteria(AirLineDetailsVO.class);
+		criteria.add(Restrictions.eq("exOrderId", exOrderId));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.addOrder(Order.asc("seq"));
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getHotelTourList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<HotelTourVO> getHotelTourList(Long exOrderId) {
+		Criteria criteria = getSession().createCriteria(HotelTourVO.class);
+		criteria.add(Restrictions.eq("exOrderId", exOrderId));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.addOrder(Order.asc("seq"));
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getCompanyList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CompanyVO> getCompanyList() {
+		Criteria criteria = getSession().createCriteria(CompanyVO.class);
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getEmployeeList()
+	 */
+	@Override
+	public EmployeeVO getEmployee(Long companyId, String user) {
+		Criteria criteria = createCriteria(EmployeeVO.class);
+		criteria.add(Restrictions.eq("companyId", companyId));
+		criteria.add(Restrictions.eq("secUser", user));
+		return (EmployeeVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getEmployeeList()
+	 */
+	@Override
+	public EmployeeVO getEmployee(Long ordererId) {
+		Criteria criteria = createCriteria(EmployeeVO.class);
+		criteria.add(Restrictions.eq("id", ordererId));
+		return (EmployeeVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getSupplier()
+	 */
+	@Override
+	public SupplierVO getSupplier(Long personId) {
+
+		Criteria criteria = getSession().createCriteria(SupplierVO.class);
+		criteria.add(Restrictions.eq("personId", personId));
+		return (SupplierVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getSupplier()
+	 */
+	@Override
+	public ForeignExRateVO getExRate(Long currencyId) {
+		Criteria criteria = getSession().createCriteria(ForeignExRateVO.class);
+		criteria.add(Restrictions.eq("id", currencyId));
+		return (ForeignExRateVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getEOSupplier()
+	 */
+	@Override
+	public SupplierVO getEOSupplier(Long supplierId) {
+
+		Criteria criteria = getSession().createCriteria(SupplierVO.class);
+		criteria.add(Restrictions.eq("id", supplierId));
+		return (SupplierVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getCompany()
+	 */
+	@Override
+	public CompanyVO getCompany(Long companyId) {
+
+		Criteria criteria = getSession().createCriteria(CompanyVO.class);
+		criteria.add(Restrictions.eq("id", companyId));
+		return (CompanyVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getCompany()
+	 */
+	@Override
+	public EmployeeVO getOrderer(Long ordererId) {
+
+		Criteria criteria = getSession().createCriteria(EmployeeVO.class);
+		criteria.add(Restrictions.eq("id", ordererId));
+		return (EmployeeVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getCompany()
+	 */
+	@Override
+	public EmployeeVO getApprover(Long approverId) {
+		Criteria criteria = getSession().createCriteria(EmployeeVO.class);
+		criteria.add(Restrictions.eq("id", approverId));
+		return (EmployeeVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getCountry()
+	 */
+	@Override
+	public CountryVO getCountry(Long countryId) {
+		Criteria criteria = getSession().createCriteria(CountryVO.class);
+		criteria.add(Restrictions.eq("Id", countryId));
+		return (CountryVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getPerson()
+	 */
+	@Override
+	public ExOrderVO getEOById(String eoSysNo) {
+		Criteria criteria = getSession().createCriteria(ExOrderVO.class); 
+		criteria.add(Restrictions.eq("code", eoSysNo));
+		return (ExOrderVO) criteria.uniqueResult();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getPerson()
+	 */
+	@Override
+	public ExOrderVO getEOByEOId(Long idEO, Long idCompany) {
+		Criteria criteria = getSession().createCriteria(ExOrderVO.class); 
+		criteria.add(Restrictions.eq("id", idEO));
+		criteria.add(Restrictions.eq("companyId",  idCompany));
+		return (ExOrderVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getPerson()
+	 */
+	@Override
+	public PersonVO getPerson(Long personId) {
+		Criteria criteria = getSession().createCriteria(PersonVO.class);
+		criteria.add(Restrictions.eq("Id", personId));
+		return (PersonVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getUser()
+	 */
+	@Override
+	public UserVO getUser(String secUser) {
+		Criteria criteria = getSession().createCriteria(UserVO.class);
+		criteria.add(Restrictions.eq("uuid", secUser));
+		return (UserVO) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#geEOInvList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<EOInvoiceVO> getEOInvList(Long exOrderId) {
+		Criteria criteria = getSession().createCriteria(EOInvoiceVO.class);
+		criteria.add(Restrictions.eq("eoId", exOrderId));
+		//criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		return criteria.list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderAttachmentVO> getEOAttachmentList(Long exOrderId) {
+		Criteria criteria = getSession().createCriteria(ExOrderAttachmentVO.class);
+		criteria.add(Restrictions.eq("eoId", exOrderId));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getCorporate()
+	 */
+	@Override
+	public CorporateVO getCorporate(Long corporateId) {
+		Criteria criteria = getSession().createCriteria(CorporateVO.class);
+		criteria.add(Restrictions.eq("personId", corporateId));
+		return (CorporateVO) criteria.uniqueResult();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getEOStatus(java.lang.Long)
+	 */
+	@Override
+	public String getEOStatus(Long id) {
+		Criteria criteria = createCriteria(ExOrderVO.class);
+		criteria.add(Restrictions.eq("id", id)).setProjection(Projections.property("status"));
+		return (String) criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getEOListSize(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getEOListSize(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select count(distinct eo.id) from ex_order eo ").
+			append("join (select id, id_person from supplier where id_company = :idCompany) s on eo.id_supplier = s.id ").
+			append("left join corporate c on c.id_person = s.id_person ").
+			append("left join tour_dep d on d.id = eo.id_tour ").
+			append("left join (select ref_cd, ref_value from com_ref_data where cat_cd = 'EO_STATUS') r on r.ref_cd = eo.status_cd ").
+			append("left join person p on p.id = s.id_person ").
+			append("left join employee e on e.id = eo.id_orderer ").
+			append("left join sec_user su on su.`UUID` = e.u_sec_user ").
+			append("left join (select id_eo, sum(fore_cur_amt) as total_fore_cur_amt, max(id_currency) as id_total_currency from ex_order_item where status_cd != :deleted group by id_eo) eoi on eoi.id_eo = eo.id ").
+			append("left join currency_ex ce on ce.id = eoi.id_total_currency ").
+			append("LEFT JOIN (SELECT id_eo, GROUP_CONCAT(scanned_path SEPARATOR '<br>') AS scanned_paths FROM ex_order_attachment GROUP BY id_eo) eoa_agg ON eoa_agg.id_eo = eo.id ").
+			append("where eo.id_company = :idCompany ");
+		String status = params.get("status") == null ? null : (String) params.get("status");
+		if (status != null) sb.append("and eo.status_cd = '").append(status).append("' ");
+		if (params.get("fromDate") != null && params.get("toDate") != null) sb.append("and date(eo.dt_eo) BETWEEN date(:fromDate) and date(:toDate) ");
+		
+		if (params.get("fromDate") != null) sb.append("and date(eo.dt_eo) >= date(:fromDate) ");
+		
+		if (params.get("toDate") != null) sb.append("and date(eo.dt_eo) <= date(:toDate) ");
+		
+		if (params.get("eoFrom") != null && params.get("eoTo") != null) sb.append("and CAST(eo.code as signed) BETWEEN CAST(:eoFrom as signed) and CAST(:eoTo as signed) ");
+		
+		if (params.get("eoFrom") != null) sb.append("and CAST(eo.code as signed) >= CAST(:eoFrom as signed) ");
+		
+		if (params.get("eoTo") != null) sb.append("and CAST(eo.code as signed) <= CAST(:eoTo as signed) ");
+		if (params.get("invDateFrom") != null && params.get("invDateTo") != null) sb.append(" AND date(eo.dt_eo) BETWEEN date(:invDateFrom) AND date(:invDateTo) ");
+		if (params.get("invDateFrom") != null) sb.append(" AND date(eo.dt_eo) >= date(:invDateFrom) ");
+		if (params.get("invDateTo") != null) sb.append(" AND date(eo.dt_eo) <= date(:invDateTo) ");
+		if (params.get("depDateFrom") != null && params.get("depDateTo") != null) sb.append(" AND date(eo.dt_tour_dep) BETWEEN date(:depDateFrom) AND date(:depDateTo) ");
+		if (params.get("depDateFrom") != null) sb.append(" AND date(eo.dt_tour_dep) >= date(:depDateFrom) ");
+		if (params.get("depDateTo") != null) sb.append(" AND date(eo.dt_tour_dep) <= date(:depDateTo) ");
+		if (params.get("notViewableCatCode") != null) {
+			List<String> notViewableCatCodeList = (List<String>) params.get("notViewableCatCode");
+			sb.append("and cat_cd not in (");
+			for (int i = 0; i < notViewableCatCodeList.size(); i++) {
+				if (i > 0) 
+					sb.append(", ");
+				
+				sb.append("'" + notViewableCatCodeList.get(i) + "'");
+			}
+			sb.append(") ");
+		}
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("supplierName".equals(entry.getKey())) sb.append("c.name like '%").append(entry.getValue()).append("%'");
+				else if ("code".equals(entry.getKey())) sb.append("eo.code like '%").append(entry.getValue()).append("%'");
+				else if ("eoDt".equals(entry.getKey())) sb.append("date_format(eo.dt_eo, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("tourCode".equals(entry.getKey())) sb.append("d.code like '%").append(entry.getValue()).append("%'");
+				else if ("amtDue".equals(entry.getKey())) sb.append("eo.amt_due like '%").append(entry.getValue()).append("%'");
+				else if ("status".equals(entry.getKey())) sb.append("lower(r.ref_value) like lower('%").append(entry.getValue()).append("%')");
+				else if ("updatedBy".equals(entry.getKey())) sb.append("eo.upd_by like '%").append(entry.getValue()).append("%'");
+				else if ("dueDt".equals(entry.getKey())) sb.append("date_format(eo.dt_due, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("contactPerson".equals(entry.getKey())) sb.append("concat(p.last_name, ' ', p.first_name) like '%").append(entry.getValue()).append("%'");
+				else if ("orderBy".equals(entry.getKey())) sb.append("su.user_name like '%").append(entry.getValue()).append("%'");
+				else if ("totalForeCurAmt".equals(entry.getKey())) sb.append("concat(ce.code, ' ', eoi.total_fore_cur_amt) like '%").append(entry.getValue()).append("%'");
+				else if ("eoComments".equals(entry.getKey())) sb.append("eo.comments like '%").append(entry.getValue()).append("%'");
+				else if ("eoInternalComments".equals(entry.getKey())) sb.append("eo.internal_comments like '%").append(entry.getValue()).append("%'");
+				else if ("updatedDate".equals(entry.getKey())) sb.append("date_format(eo.dt_upd, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("docListFull".equals(entry.getKey())) sb.append("(SELECT GROUP_CONCAT(CASE WHEN inv.doc_type_cd = 'I' THEN CONC	AT('AV ', inv.code) WHEN inv.doc_type_cd = 'P' THEN CONCAT('PS ', inv.ps_no) ")
+				.append("ELSE inv.code END SEPARATOR '<br>') FROM ex_order_inv eoin3 JOIN invoice inv ON inv.id = eoin3.id_inv WHERE eoin3.id_eo = eo.id ORDER BY inv.id) like '%").append(entry.getValue()).append("%'");
+				else if ("scannedPath".equals(entry.getKey())) sb.append("COALESCE(eoa_agg.scanned_paths, '') like '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", params.get("companyId"));
+		query.setParameter("deleted", BaseConstant.STATUS_DELETED);
+		if (params.get("fromDate") != null && params.get("toDate") != null) {
+			query.setParameter("fromDate", params.get("fromDate"));
+			query.setParameter("toDate", params.get("toDate"));
+		}
+		if (params.get("fromDate") != null) query.setParameter("fromDate", params.get("fromDate"));
+		if (params.get("toDate") != null) query.setParameter("toDate", params.get("toDate"));
+		if (params.get("eoFrom") != null && params.get("eoTo") != null) {
+			query.setParameter("eoFrom", params.get("eoFrom"));
+			query.setParameter("eoTo", params.get("eoTo"));
+		}
+		if (params.get("eoFrom") != null) query.setParameter("eoFrom", params.get("eoFrom"));
+		if (params.get("eoTo") != null) query.setParameter("eoTo", params.get("eoTo"));
+		if (params.get("invDateFrom") != null) query.setParameter("invDateFrom", params.get("invDateFrom"));
+		if (params.get("invDateTo") != null) query.setParameter("invDateTo", params.get("invDateTo"));
+		if (params.get("depDateFrom") != null) query.setParameter("depDateFrom", params.get("depDateFrom"));
+		if (params.get("depDateTo") != null) query.setParameter("depDateTo", params.get("depDateTo"));
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#getEOList(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderVO> getEOList(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select distinct eo.id,c.name,eo.code,eo.dt_eo,d.code as tourCode,eo.amt_due,r.ref_value,eo.upd_by,eo.dt_due,p.last_name,p.first_name, su.user_name as order_by ").
+			append(", format(eoi.total_fore_cur_amt, 2) as total_fore_cur_amt, ce.code as currency_code, eo.comments, eo.internal_comments, eo.dt_upd, ").
+			append("(SELECT CONCAT(").
+			append("CASE WHEN inv.doc_type_cd = 'I' THEN CONCAT('AV ', inv.code) ").
+			append("WHEN inv.doc_type_cd = 'P' THEN CONCAT('PS ', inv.ps_no) ").
+			append("ELSE inv.code END, ").
+			append("CASE WHEN (SELECT COUNT(*) FROM ex_order_inv e2 WHERE e2.id_eo = eo.id) > 1 THEN '......' ELSE '' END) ").
+			append("FROM ex_order_inv eoin2 ").
+			append("JOIN invoice inv ON inv.id = eoin2.id_inv ").
+			append("WHERE eoin2.id_eo = eo.id ").
+			append("ORDER BY inv.id LIMIT 1) AS docList, "). 
+			append("(SELECT GROUP_CONCAT(").
+			append("CASE WHEN inv.doc_type_cd = 'I' THEN CONCAT('AV ', inv.code) ").
+			append("WHEN inv.doc_type_cd = 'P' THEN CONCAT('PS ', inv.ps_no) ").
+			append("ELSE inv.code END SEPARATOR '<br>') ").
+			append("FROM ex_order_inv eoin3 ").
+			append("JOIN invoice inv ON inv.id = eoin3.id_inv ").
+		  	append("WHERE eoin3.id_eo = eo.id ").
+		  	append("ORDER BY inv.id) AS docListFull ").
+		  	append(", COALESCE(eoa_agg.scanned_paths, '') AS scannedPath ").
+			append("from ex_order eo ").
+			append("join (select id, id_person from supplier where id_company = :idCompany) s on eo.id_supplier = s.id ").
+			append("left join corporate c on c.id_person = s.id_person ").
+			append("left join tour_dep d on d.id = eo.id_tour ").
+			append("left join (select ref_cd, ref_value from com_ref_data where cat_cd = 'EO_STATUS') r on r.ref_cd = eo.status_cd ").
+			append("left join person p on p.id = s.id_person ").
+			append("left join employee e on e.id = eo.id_orderer ").
+			append("left join sec_user su on su.`UUID` = e.u_sec_user ").
+			append("left join (select id_eo, sum(fore_cur_amt) as total_fore_cur_amt, max(id_currency) as id_total_currency from ex_order_item where status_cd != :deleted group by id_eo) eoi on eoi.id_eo = eo.id ").
+			append("left join currency_ex ce on ce.id = eoi.id_total_currency ").
+			append("LEFT JOIN (SELECT id_eo, GROUP_CONCAT(scanned_path SEPARATOR '<br>') AS scanned_paths FROM ex_order_attachment GROUP BY id_eo) eoa_agg ON eoa_agg.id_eo = eo.id ").
+			append("where eo.id_company = :idCompany ");
+		String status = params.get("status") == null ? null : (String) params.get("status");
+		if (status != null) sb.append("and eo.status_cd = '").append(status).append("' ");
+		
+		if (params.get("fromDate") != null && params.get("toDate") != null) sb.append("and date(eo.dt_eo) BETWEEN date(:fromDate) and date(:toDate) ");
+		
+		if (params.get("fromDate") != null) sb.append("and date(eo.dt_eo) >= date(:fromDate) ");
+		
+		if (params.get("toDate") != null) sb.append("and date(eo.dt_eo) <= date(:toDate) ");
+		
+		if (params.get("eoFrom") != null && params.get("eoTo") != null) sb.append("and CAST(eo.code as signed) BETWEEN CAST(:eoFrom as signed) and CAST(:eoTo as signed) ");
+		
+		if (params.get("eoFrom") != null) sb.append("and CAST(eo.code as signed) >= CAST(:eoFrom as signed) ");
+		
+		if (params.get("eoTo") != null) sb.append("and CAST(eo.code as signed) <= CAST(:eoTo as signed) ");
+		if (params.get("invDateFrom") != null && params.get("invDateTo") != null) sb.append(" AND date(eo.dt_eo) BETWEEN date(:invDateFrom) AND date(:invDateTo) ");
+		if (params.get("invDateFrom") != null) sb.append(" AND date(eo.dt_eo) >= date(:invDateFrom) ");
+		if (params.get("invDateTo") != null) sb.append(" AND date(eo.dt_eo) <= date(:invDateTo) ");
+		if (params.get("depDateFrom") != null && params.get("depDateTo") != null) sb.append(" AND date(eo.dt_tour_dep) BETWEEN date(:depDateFrom) AND date(:depDateTo) ");
+		if (params.get("depDateFrom") != null) sb.append(" AND date(eo.dt_tour_dep) >= date(:depDateFrom) ");
+		if (params.get("depDateTo") != null) sb.append(" AND date(eo.dt_tour_dep) <= date(:depDateTo) ");
+		if (params.get("notViewableCatCode") != null) {
+			List<String> notViewableCatCodeList = (List<String>) params.get("notViewableCatCode");
+			sb.append("and cat_cd not in (");
+			for (int i = 0; i < notViewableCatCodeList.size(); i++) {
+				if (i > 0) 
+					sb.append(", ");
+				
+				sb.append("'" + notViewableCatCodeList.get(i) + "'");
+			}
+			sb.append(") ");
+		}
+		
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("supplierName".equals(entry.getKey())) sb.append("c.name like '%").append(entry.getValue()).append("%'");
+				else if ("code".equals(entry.getKey())) sb.append("eo.code like '%").append(entry.getValue()).append("%'");
+				else if ("eoDt".equals(entry.getKey())) sb.append("date_format(eo.dt_eo, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("tourCode".equals(entry.getKey())) sb.append("d.code like '%").append(entry.getValue()).append("%'");
+				else if ("amtDue".equals(entry.getKey())) sb.append("eo.amt_due like '%").append(entry.getValue()).append("%'");
+				else if ("status".equals(entry.getKey())) sb.append("lower(r.ref_value) like lower('%").append(entry.getValue()).append("%')");
+				else if ("updatedBy".equals(entry.getKey())) sb.append("eo.upd_by like '%").append(entry.getValue()).append("%'");
+				else if ("dueDt".equals(entry.getKey())) sb.append("date_format(eo.dt_due, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("contactPerson".equals(entry.getKey())) sb.append("concat(p.last_name, ' ', p.first_name) like '%").append(entry.getValue()).append("%'");
+				else if ("orderBy".equals(entry.getKey())) sb.append("su.user_name like '%").append(entry.getValue()).append("%'");
+				else if ("totalForeCurAmt".equals(entry.getKey())) sb.append("concat(ce.code, ' ', eoi.total_fore_cur_amt) like '%").append(entry.getValue()).append("%'");
+				else if ("eoComments".equals(entry.getKey())) sb.append("eo.comments like '%").append(entry.getValue()).append("%'");
+				else if ("eoInternalComments".equals(entry.getKey())) sb.append("eo.internal_comments like '%").append(entry.getValue()).append("%'");
+				else if ("updatedDate".equals(entry.getKey())) sb.append("date_format(eo.dt_upd, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("docListFull".equals(entry.getKey())) sb.append("(SELECT GROUP_CONCAT(CASE WHEN inv.doc_type_cd = 'I' THEN CONCAT('AV ', inv.code) WHEN inv.doc_type_cd = 'P' THEN CONCAT('PS ', inv.ps_no) ")
+			    .append("ELSE inv.code END SEPARATOR '<br>') FROM ex_order_inv eoin3 JOIN invoice inv ON inv.id = eoin3.id_inv WHERE eoin3.id_eo = eo.id ORDER BY inv.id) like '%").append(entry.getValue()).append("%'");
+				else if ("scannedPath".equals(entry.getKey())) sb.append("COALESCE(eoa_agg.scanned_paths, '') like '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		sb.append("order by ");
+		String sortField = (String) params.get("sortField");
+		if (sortField == null) sb.append("cast(eo.code as decimal) desc");
+		else {
+			if ("supplierName".equals(sortField)) sb.append("c.name");
+			else if ("code".equals(sortField)) sb.append("cast(eo.code as decimal)");
+			else if ("eoDt".equals(sortField)) sb.append("eo.dt_eo");
+			else if ("tourCode".equals(sortField)) sb.append("tourCode");
+			else if ("amtDue".equals(sortField)) sb.append("eo.amt_due");
+			else if ("status".equals(sortField)) sb.append("r.ref_value");
+			else if ("updatedBy".equals(sortField)) sb.append("eo.upd_by");
+			else if ("dueDt".equals(sortField)) sb.append("eo.dt_due");
+			else if ("orderBy".equals(sortField)) sb.append("su.user_name");
+			else if ("totalForeCurAmt".equals(sortField)) sb.append("concat(ce.code, ' ', eoi.total_fore_cur_amt)");
+			else if ("eoComments".equals(sortField)) sb.append("eo.comments");
+			else if ("eoInternalComments".equals(sortField)) sb.append("eo.internal_comments");
+			else if ("docList".equals(sortField)) sb.append("docList");
+			else if ("updatedDate".equals(sortField)) sb.append("eo.dt_upd");
+			else if ("scannedPath".equals(sortField)) sb.append("COALESCE(eoa_agg.scanned_paths, '')");
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", params.get("companyId"));
+		query.setParameter("deleted", BaseConstant.STATUS_DELETED);
+		if (params.get("fromDate") != null && params.get("toDate") != null) {
+			query.setParameter("fromDate", params.get("fromDate"));
+			query.setParameter("toDate", params.get("toDate"));
+		}
+		if (params.get("fromDate") != null) query.setParameter("fromDate", params.get("fromDate"));
+		if (params.get("toDate") != null) query.setParameter("toDate", params.get("toDate"));
+		if (params.get("eoFrom") != null && params.get("eoTo") != null) {
+			query.setParameter("eoFrom", params.get("eoFrom"));
+			query.setParameter("eoTo", params.get("eoTo"));
+		}
+		if (params.get("eoFrom") != null) query.setParameter("eoFrom", params.get("eoFrom"));
+		if (params.get("eoTo") != null) query.setParameter("eoTo", params.get("eoTo"));
+		if (params.get("invDateFrom") != null) query.setParameter("invDateFrom", params.get("invDateFrom"));
+		if (params.get("invDateTo") != null) query.setParameter("invDateTo", params.get("invDateTo"));
+		if (params.get("depDateFrom") != null) query.setParameter("depDateFrom", params.get("depDateFrom"));
+		if (params.get("depDateTo") != null) query.setParameter("depDateTo", params.get("depDateTo"));
+		query.setFirstResult((Integer) params.get("first"));
+		query.setMaxResults((Integer) params.get("pageSize"));
+		List<Object> results = query.list();
+		List<ExOrderVO> eoList = new ArrayList<ExOrderVO>();
+		ExOrderVO vo;
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			vo = new ExOrderVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setSupplierName((String) row[1]);
+			vo.setCode((String) row[2]);
+			vo.setEoDt((Date) row[3]);
+			vo.setTourCode((String) row[4]);
+			vo.setAmtDue(Double.parseDouble(row[5].toString()) );
+			vo.setStatus(row[6].toString());
+			vo.setUpdatedBy((String) row[7]);
+			vo.setDueDt(row[8] == null ? null : (Date) row[8]);
+			vo.setContactPerson(row[9] + " " + row[10]);
+			vo.setOrderBy((String) row[11]);
+			vo.setTotalForeCurAmt((row[13] == null && row[12] == null) ? "0.00" : row[13] + " " + row[12]);
+			vo.setEoComments((row[14] != null) ? row[14].toString() : null);
+			vo.setEoInternalComments((row[15] != null) ? row[15].toString() : null);
+			vo.setUpdatedDate((Date) row[16]);
+			vo.setDocList(row[17] != null ? ((String) row[17]) : null);
+			vo.setDocListFull(row[18] != null ? ((String) row[18]) : null);
+			vo.setScannedPath((String) row[19]);
+			eoList.add(vo);
+		}
+		return eoList;
+	}
+	
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderVO> getBillEOList(Long idCompany, String statusCode) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select eo.id,c.name,eo.code,eo.dt_eo,d.code as tourCode,eo.amt_due,r.ref_value,eo.upd_by,eo.dt_due,p.last_name,p.first_name from ex_order eo ").
+			append("left join supplier s on eo.id_supplier =  s.id ").
+			append("left join corporate c on c.id_person = s.id_person ").
+			append("left join tour_dep d on d.id = eo.id_tour ").
+			append("left join com_ref_data r on r.cat_cd = 'EO_STATUS' and r.ref_cd = eo.status_cd ").
+			append("left join person p on p.id = s.id_person ").
+			append("where eo.id_company = :idCompany and eo.status_cd = :statusCode ").
+			append("order by cast(eo.code as decimal) desc");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", idCompany);
+		query.setParameter("statusCode", statusCode);
+		List<Object> results = query.list();
+		List<ExOrderVO> eoList = new ArrayList<ExOrderVO>();
+		ExOrderVO vo;
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			vo = new ExOrderVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setSupplierName((String) row[1]);
+			vo.setCode((String) row[2]);
+			vo.setEoDt((Date) row[3]);
+			vo.setTourCode((String) row[4]);
+			vo.setAmtDue(Double.parseDouble(row[5].toString()) );
+			vo.setStatus(row[6].toString());
+			vo.setUpdatedBy((String) row[7]);
+			vo.setDueDt(row[8] == null ? null : (Date) row[8]);
+			vo.setContactPerson(row[9] + " " + row[10]);
+			eoList.add(vo);
+		}
+		return eoList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderVO> getTourDepartureEOList(Long idCompany, String tourCode) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select eo.id,c.name,eo.code,eo.dt_eo,d.code as tourCode,eo.amt_due,r.ref_value,eo.upd_by,eo.dt_due,p.last_name,p.first_name from ex_order eo ").
+			append("left join supplier s on eo.id_supplier =  s.id ").
+			append("left join corporate c on c.id_person = s.id_person ").
+			append("left join tour_dep d on d.id = eo.id_tour ").
+			append("left join com_ref_data r on r.cat_cd = 'EO_STATUS' and r.ref_cd = eo.status_cd ").
+			append("left join person p on p.id = s.id_person ").
+			append("where eo.id_company = :idCompany and d.code = :tourCode ").
+			append("order by cast(eo.code as decimal) desc");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", idCompany);
+		query.setParameter("tourCode", tourCode);
+		List<Object> results = query.list();
+		List<ExOrderVO> eoList = new ArrayList<ExOrderVO>();
+		ExOrderVO vo;
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			vo = new ExOrderVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setSupplierName((String) row[1]);
+			vo.setCode((String) row[2]);
+			vo.setEoDt((Date) row[3]);
+			vo.setTourCode((String) row[4]);
+			vo.setAmtDue(Double.parseDouble(row[5].toString()) );
+			vo.setStatus(row[6].toString());
+			vo.setUpdatedBy((String) row[7]);
+			vo.setDueDt(row[8] == null ? null : (Date) row[8]);
+			vo.setContactPerson(row[9] + " " + row[10]);
+			eoList.add(vo);
+		}
+		return eoList;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseEODAO#terminateEOSubInfo(java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public void terminateEOSubInfo(String table, Long idEO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE ").append(table).append(" SET status_cd = :statusCode WHERE id_eo = :idEO");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setString("statusCode", BaseConstant.STATUS_DELETED);
+		query.setLong("idEO", idEO);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updateExOrderCode(String uuid, String code) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE ExOrderVO SET code = :code WHERE code = :uuid");
+		
+		Query query = createQuery(sb.toString());
+		query.setString("code", code);
+		query.setString("uuid", uuid);
+		query.executeUpdate();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderVO> getExOrderHistoryList(Long id) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select comments, internal_comments, dt_upd, upd_by from ex_order_log ").
+			append("where id = :id ").
+			append("order by dt_upd desc");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("id", id);
+		List<Object> results = query.list();
+		List<ExOrderVO> eoList = new ArrayList<ExOrderVO>();
+		ExOrderVO vo;
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			vo = new ExOrderVO();
+			vo.setEoComments((String) row[0]);
+			vo.setEoInternalComments((String) row[1]);
+			vo.setUpdatedDate((Date) row[2]);
+			vo.setUpdatedBy((String) row[3]);
+			eoList.add(vo);
+		}
+		return eoList;
+	}
+	
+}

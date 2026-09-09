@@ -1,0 +1,53 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Role-Funtion-Action Mapping" toggleable="true" toggleSpeed="100">
+	<h:form id="idDataForm">
+		<p:growl id="idListMsg"/>
+		
+		<h:panelGrid columns="2" style="margin-bottom:5px; width:1px">
+			<h:outputLabel for="idRole">Role</h:outputLabel>
+			<h:selectOneMenu id="idRole" value="#{roleFuncActBean.roleVO.uuid}">
+				<f:selectItem itemLabel="-- Select role --"/>
+				<f:selectItems value="#{roleFuncActBean.roleList}" var="vo" itemValue="#{vo.uuid}" itemLabel="#{vo.roleName}"/>
+				<p:ajax listener="#{roleFuncActBean.handleRoleChange}" update="idRoleFunctionList"/>
+			</h:selectOneMenu>
+		</h:panelGrid>
+		
+		<p:dataTable id="idRoleFunctionList" value="#{roleFuncActBean.roleFunctionList}" var="vo" paginator="true" rows="10" rowsPerPageTemplate="10,50,100"
+			editable="true">
+			<p:ajax event="rowEdit" listener="#{roleFuncActBean.onEdit}" update="idRoleFunctionList,:idDataForm:idListMsg"/>
+			
+			<p:column headerText="Function Name">
+				<h:outputText value="#{vo.functionName}"/>
+			</p:column>
+			<p:column headerText="Available Actions" style="text-align:center; width:600px">
+				<p:cellEditor>
+					<f:facet name="output">
+						<p:selectManyButton value="#{vo.actionRefCodeList}">
+							<f:selectItems value="#{zsg:referenceDataList('ACT_TYPE_CD')}" var="n" itemValue="#{n.code}" itemLabel="#{n.value}"/>
+						</p:selectManyButton>
+					</f:facet>
+					<f:facet name="input">
+						<p:selectManyButton value="#{vo.actionRefCodeList}">
+							<f:selectItems value="#{zsg:referenceDataList('ACT_TYPE_CD')}" var="n" itemValue="#{n.code}" itemLabel="#{n.value}"/>
+						</p:selectManyButton>
+					</f:facet>
+				</p:cellEditor>
+			</p:column>
+			<p:column headerText="Edit" style="width:60px">
+				<p:rowEditor/>
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:panel>
+</ui:define>
+</ui:composition>

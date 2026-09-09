@@ -1,0 +1,804 @@
+package com.bcs.zsg.sales.service;
+
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.db.bterp.dao.accttrans.AccountTransDAO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.purchase.vo.CorPersonInChargeVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.sales.dao.CustomerDAO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.CustTourHistVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.IdentityDetailVO;
+import com.bcs.zsg.sales.vo.PersonAttachmentVO;
+import com.bcs.zsg.sales.vo.PersonClassVO;
+import com.bcs.zsg.sales.vo.PersonComplicationVO;
+import com.bcs.zsg.sales.vo.PersonContactVO;
+import com.bcs.zsg.sales.vo.PersonEmailVO;
+import com.bcs.zsg.sales.vo.PersonLangVO;
+import com.bcs.zsg.sales.vo.PersonMealVO;
+import com.bcs.zsg.sales.vo.CustomerRemarksVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+import com.bcs.zsg.zextra.backend.helper.SysNumGenUtil;
+
+public class CustomerServiceImpl implements CustomerService {
+
+	@Autowired
+	private CustomerDAO customerDAO;
+	@Autowired
+	private AccountTransDAO accountTransDAO;
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getCustomerList(java.lang.Long)
+	 */
+	@Override
+	public List<CustomerVO> getCustomerList(Long companyId) throws BusinessException {
+		return customerDAO.getCustomerList(companyId);
+	}
+
+	@Override
+	public List<CustDetailsVO> getCustomerListSearch(Long companyId) throws BusinessException {
+		return customerDAO.getCustomerListSearch(companyId);
+		
+	}
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getCustomer(java.lang.Long)
+	 */
+	@Override
+	public CustomerVO getCustomer(Long idCust) throws BusinessException {
+		return getCustomerDetail(idCust);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getCustomerDetail()
+	 */
+	@Override
+	public CustomerVO getCustomerDetail(Long idCust) throws BusinessException {
+		return customerDAO.getCustomerDetail(idCust);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getCustomerSimpleDetail(java.lang.Long)
+	 */
+	@Override
+	public CustomerVO getCustomerSimpleDetail(Long idCust) throws BusinessException	 {
+		return customerDAO.getCustomerSimpleDetail(idCust);
+	}
+	
+	public SystemNumberGenerationVO getSNGVO(String sysCd, Long companyId) throws BusinessException, QueueException {
+		// example to get system next number
+		SystemNumberGenerationVO vo = new SystemNumberGenerationVO();
+		vo.setCode(sysCd);
+		vo.setIdCompany(companyId);
+		vo = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(vo));
+		
+		return vo;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#insertCustomer(com.bcs.zsg.sales.vo.CustomerVO)
+	 */
+	@Override
+	public void insertCustomer(CustomerVO customerVO) throws BusinessException, QueueException {
+		customerVO.setStatus(CommonConstant.STATUS_CD_ACTIVE);
+		customerVO.getPersonVO().setPersonType("TC");
+		
+		String sysCd = CommonConstant.SYS_NUM_CD_CUST;
+		SystemNumberGenerationVO custSNGVO = getSNGVO(sysCd, customerVO.getCompanyId());
+		sysCd = custSNGVO.getCode();					// cust
+		Long custNo = custSNGVO.getNextnumber();		// Customer Number
+		customerVO.setCode(Long.toString(custNo));
+		
+		Long personId = (Long) customerDAO.insert(customerVO.getPersonVO());
+		Long corpId = null;
+		Long custId;
+		// insert identities
+		if (CollectionUtils.isNotEmpty(customerVO.getIdentityList())) {
+			for (IdentityVO vo : customerVO.getIdentityList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				vo.setPersonId(personId);
+				
+				if (StringUtils.isNotEmpty(customerVO.getPersonVO().getNric()) && vo.getIdType().equals(CommonConstant.LOOKUP_ITM_ID_NRIC)) {
+					if (!StringUtils.equals(vo.getIdNo(), customerVO.getPersonVO().getNric())) {
+						vo.setIdNo(customerVO.getPersonVO().getNric());
+					}
+				}
+				
+				Long identityId = (Long) customerDAO.insert(vo);
+				
+				if (vo.getIdType().equals(CommonConstant.LOOKUP_ITM_ID_PASSPRT) || vo.getIdType().equals(CommonConstant.LOOKUP_ITM_ID_VISA)) {
+					if (vo.getIdentityDetailVO() != null) {
+						vo.getIdentityDetailVO().setPersonIdentityId(identityId);
+						customerDAO.insert(vo.getIdentityDetailVO());
+					}
+				}
+			}
+		} else {
+			if (StringUtils.isNotEmpty(customerVO.getPersonVO().getNric())) {
+				IdentityVO vo = new IdentityVO();
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				vo.setPersonId(personId);
+				vo.setIdType(CommonConstant.LOOKUP_ITM_ID_NRIC);
+				vo.setIdNo(customerVO.getPersonVO().getNric());
+				customerDAO.insert(vo);
+			}
+		}
+		
+		// insert languages
+		if (CollectionUtils.isNotEmpty(customerVO.getPersonLangList())) {
+			for (PersonLangVO vo : customerVO.getPersonLangList()) {
+				vo.setPersonId(personId);
+				customerDAO.insert(vo);
+			}
+		} else if(CollectionUtils.isNotEmpty(customerVO.getLangCdList())) {
+			for(String code : customerVO.getLangCdList()) {
+				PersonLangVO vo = new PersonLangVO();
+				vo.setPersonId(personId);
+				vo.setLangCd(code);
+				customerDAO.insert(vo);
+			}
+		}
+		
+		// insert meals
+		if (CollectionUtils.isNotEmpty(customerVO.getPersonMealList())) {
+			for (PersonMealVO vo : customerVO.getPersonMealList()) {
+				vo.setPersonId(personId);
+				customerDAO.insert(vo);
+			}
+		} else if(CollectionUtils.isNotEmpty(customerVO.getMealList())) {
+			for(String code : customerVO.getMealList()) {
+				PersonMealVO vo = new PersonMealVO();
+				vo.setPersonId(personId);
+				vo.setMealCd(code);
+				customerDAO.insert(vo);
+			}
+		}
+		
+		if(CollectionUtils.isNotEmpty(customerVO.getClassList())) {
+			for(String code : customerVO.getClassList()) {
+				PersonClassVO vo = new PersonClassVO();
+				vo.setPersonId(personId);
+				vo.setClassCd(code);
+				customerDAO.insert(vo);
+			}
+		}
+		
+		if(CollectionUtils.isNotEmpty(customerVO.getCompliList())) {
+			for(String code : customerVO.getCompliList()) {
+				PersonComplicationVO vo = new PersonComplicationVO();
+				vo.setPersonId(personId);
+				vo.setComplicationCd(code);
+				customerDAO.insert(vo);
+			}
+		}
+		// insert contacts
+		if (customerVO.getPcTypeCd().equals("C")) {
+			customerVO.getCorporateVO().setPersonId(personId);
+			customerVO.getCorporateVO().setCompanyName(customerVO.getCorporateName());
+			corpId = (Long)customerDAO.insert(customerVO.getCorporateVO());
+			
+			if (customerVO.getCorBillAddressVO() != null && customerVO.getCorBillAddressVO().getCountryId() != null) {
+				customerVO.getCorBillAddressVO().setCorporateId(corpId);
+				customerVO.getCorBillAddressVO().setAddrType(CommonConstant.BILL_ADDR);
+				customerDAO.insert(customerVO.getCorBillAddressVO());
+			}
+			
+			if(customerVO.getCorMailAddressVO() != null && customerVO.getCorMailAddressVO().getCountryId() != null) {
+				customerVO.getCorMailAddressVO().setCorporateId(corpId);
+				customerVO.getCorMailAddressVO().setAddrType(CommonConstant.MAIL_ADDR);
+				customerDAO.insert(customerVO.getCorMailAddressVO());
+			}
+			
+			if (CollectionUtils.isNotEmpty(customerVO.getCorContactList())) {
+				for (CorContactVO vo : customerVO.getCorContactList()) {
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					vo.setCorporateId(corpId);
+					customerDAO.insert(vo);
+				}
+			}
+			
+			if (CollectionUtils.isNotEmpty(customerVO.getCorPicList())) {
+				for (CorPersonInChargeVO vo : customerVO.getCorPicList()) {
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					vo.setCorporateId(corpId);
+					customerDAO.insert(vo);
+				}
+			}
+			
+			customerVO.setPersCorpId(personId);
+			customerVO.setCorporateId(corpId);
+			custId = (Long) customerDAO.insert(customerVO);
+			
+		} else {
+			if (customerVO.getBillAddressVO() != null && customerVO.getBillAddressVO().getCountryId() != null) {
+				customerVO.getBillAddressVO().setPersonId(personId);
+				customerVO.getBillAddressVO().setAddrType(CommonConstant.BILL_ADDR);
+				customerDAO.insert(customerVO.getBillAddressVO());
+			}
+			
+			if (customerVO.getMailAddressVO() != null && customerVO.getMailAddressVO().getCountryId() != null) {
+				customerVO.getMailAddressVO().setPersonId(personId);
+				customerVO.getMailAddressVO().setAddrType(CommonConstant.MAIL_ADDR);
+				customerDAO.insert(customerVO.getMailAddressVO());
+			}
+			
+			if (CollectionUtils.isNotEmpty(customerVO.getPersonContactList())) {
+				for (PersonContactVO vo : customerVO.getPersonContactList()) {
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					vo.setPersonId(personId);
+					customerDAO.insert(vo);
+				}
+			}
+			
+			customerVO.setPersCorpId(personId);
+			custId = (Long) customerDAO.insert(customerVO);
+		}
+		// insert remarks
+		if (CollectionUtils.isNotEmpty(customerVO.getCustRemarksList())) {
+			for (CustomerRemarksVO vo : customerVO.getCustRemarksList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				vo.setCustId(custId);
+				customerDAO.insert(vo);
+			}
+		}
+		
+		// insert email
+		if (CollectionUtils.isNotEmpty(customerVO.getPersonVO().getEmailList())) {
+			for (PersonEmailVO vo : customerVO.getPersonVO().getEmailList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				vo.setIdPerson(personId);
+				customerDAO.insert(vo);
+			}
+		}
+		
+	}	
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#updateCustomer(com.bcs.zsg.sales.vo.CustomerVO)
+	 */
+	@Override
+	public void updateCustomer(CustomerVO customerVO) throws BusinessException {
+		customerDAO.update(customerVO);
+		customerDAO.update(customerVO.getPersonVO());
+		
+		// update customer details
+		if (customerVO.getPcTypeCd().equals("C")) {
+			deleteCorporateSubInfo("corporate_address", customerVO.getCorporateVO().getId());
+			if (customerVO.getCorBillAddressVO() != null && customerVO.getCorBillAddressVO().getCountryId() != null) {
+				customerVO.getCorBillAddressVO().setCorporateId(customerVO.getCorporateVO().getId());
+				customerVO.getCorBillAddressVO().setAddrType(CommonConstant.BILL_ADDR);
+				customerDAO.insert(customerVO.getCorBillAddressVO());
+			}
+			
+			if(customerVO.getCorMailAddressVO() != null && customerVO.getCorMailAddressVO().getCountryId() != null) {
+				customerVO.getCorMailAddressVO().setCorporateId(customerVO.getCorporateVO().getId());
+				customerVO.getCorMailAddressVO().setAddrType(CommonConstant.MAIL_ADDR);
+				customerDAO.insert(customerVO.getCorMailAddressVO());
+			}
+			
+			customerVO.getCorporateVO().setCompanyName(customerVO.getCorporateName());
+			//customerVO.getCorporateVO().setRegNo(customerVO.getRegNo());
+			customerDAO.update(customerVO.getCorporateVO());
+			// update cor contact
+			deleteCorporateSubInfo("corporate_contact", customerVO.getCorporateVO().getId());
+			if (CollectionUtils.isNotEmpty(customerVO.getCorContactList())) {
+				for (CorContactVO vo : customerVO.getCorContactList()) {
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					vo.setCorporateId(customerVO.getCorporateVO().getId());
+					customerDAO.insert(vo);
+				}
+			}
+			
+			terminateCorporateSubInfo("corporate_pic", customerVO.getCorporateVO().getId());
+			if (CollectionUtils.isNotEmpty(customerVO.getCorPicList())) {
+				for (CorPersonInChargeVO vo : customerVO.getCorPicList()) {
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					if (null == vo.getId()) {
+						vo.setCorporateId(customerVO.getCorporateVO().getId());
+						customerDAO.insert(vo);
+					} else {
+						customerDAO.update(vo);
+					}
+				}
+			}
+			
+		} else {
+			deletePersonSubInfo("person_address", customerVO.getPersonVO().getId());
+			if (customerVO.getBillAddressVO() != null && customerVO.getBillAddressVO().getCountryId() != null) {
+				customerVO.getBillAddressVO().setPersonId(customerVO.getPersonVO().getId());
+				customerVO.getBillAddressVO().setAddrType(CommonConstant.BILL_ADDR);
+				customerDAO.insert(customerVO.getBillAddressVO());
+			}
+			
+			if (customerVO.getMailAddressVO() != null && customerVO.getMailAddressVO().getCountryId() != null) {
+				customerVO.getMailAddressVO().setPersonId(customerVO.getPersonVO().getId());
+				customerVO.getMailAddressVO().setAddrType(CommonConstant.MAIL_ADDR);
+				customerDAO.insert(customerVO.getMailAddressVO());
+			}
+
+			// update person contact
+			deletePersonSubInfo("person_contact", customerVO.getPersonVO().getId());
+			if (CollectionUtils.isNotEmpty(customerVO.getPersonContactList())) {
+				for (PersonContactVO vo : customerVO.getPersonContactList()) {
+					vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+					vo.setPersonId(customerVO.getPersonVO().getId());
+					customerDAO.insert(vo);
+				}
+			}
+			
+		}
+		// update identities
+		terminatePersonSubInfo("person_identity", customerVO.getPersonVO().getId());
+		if (CollectionUtils.isNotEmpty(customerVO.getIdentityList())) {
+			for (IdentityVO vo : customerVO.getIdentityList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				if (null == vo.getId()) {
+					vo.setPersonId(customerVO.getPersonVO().getId());
+					customerDAO.insert(vo);
+					if (vo.getIdType().equals(CommonConstant.LOOKUP_ITM_ID_PASSPRT) || vo.getIdType().equals(CommonConstant.LOOKUP_ITM_ID_VISA)) {
+						if (vo.getIdentityDetailVO() != null) {
+							vo.getIdentityDetailVO().setPersonIdentityId(vo.getId());
+							customerDAO.insert(vo.getIdentityDetailVO());
+						}
+					}
+				} else {
+					customerDAO.update(vo);
+					if (vo.getIdType().equals(CommonConstant.LOOKUP_ITM_ID_PASSPRT) || vo.getIdType().equals(CommonConstant.LOOKUP_ITM_ID_VISA)) {
+						IdentityDetailVO identityDetail = vo.getIdentityDetailVO();
+		                if (identityDetail != null) {
+
+		                    // Insert or update based on the ID
+		                    if (identityDetail.getId() == null) {
+		                    	vo.getIdentityDetailVO().setPersonIdentityId(vo.getId());
+		                    	if (vo.getIdentityDetailVO().getIdCountry() == null) vo.getIdentityDetailVO().setIdCountry(customerVO.getPersonVO().getCountryId());
+		                        customerDAO.insert(identityDetail);
+		                    } else {
+		                        customerDAO.update(identityDetail);
+		                    }
+		                }
+					}
+				}
+			}
+		}
+		// update languages
+		deletePersonSubInfo("person_lang", customerVO.getPersonVO().getId());
+/*		if (CollectionUtils.isNotEmpty(customerVO.getPersonLangList())) {
+			for (PersonLangVO vo : customerVO.getPersonLangList()) {
+				vo.setPersonId(customerVO.getPersonVO().getId());
+				customerDAO.insert(vo);
+			}
+		}*/
+		
+		if(CollectionUtils.isNotEmpty(customerVO.getLangCdList())) {
+			for(String code : customerVO.getLangCdList()) {
+				PersonLangVO vo = new PersonLangVO();
+				vo.setPersonId(customerVO.getPersonVO().getId());
+				vo.setLangCd(code);
+				customerDAO.insert(vo);
+			}
+		}
+		// update meals
+		deletePersonSubInfo("person_meal", customerVO.getPersonVO().getId());
+/*		if (CollectionUtils.isNotEmpty(customerVO.getPersonMealList())) {
+			for (PersonMealVO vo : customerVO.getPersonMealList()) {
+				vo.setPersonId(customerVO.getPersonVO().getId());
+				customerDAO.insert(vo);
+			}
+		}*/
+		
+		if(CollectionUtils.isNotEmpty(customerVO.getMealList())) {
+			for(String code : customerVO.getMealList()) {
+				PersonMealVO vo = new PersonMealVO();
+				vo.setPersonId(customerVO.getPersonVO().getId());
+				vo.setMealCd(code);
+				customerDAO.insert(vo);
+			}
+		}
+		// update classes
+		deletePersonSubInfo("person_class", customerVO.getPersonVO().getId());
+/*		if (CollectionUtils.isNotEmpty(customerVO.getPersonClassList())) {
+			for (PersonClassVO vo : customerVO.getPersonClassList()) {
+				vo.setPersonId(customerVO.getPersonVO().getId());
+				customerDAO.insert(vo);
+			}
+		}*/
+		
+		if(CollectionUtils.isNotEmpty(customerVO.getClassList())) {
+			for(String code : customerVO.getClassList()) {
+				PersonClassVO vo = new PersonClassVO();
+				vo.setPersonId(customerVO.getPersonVO().getId());
+				vo.setClassCd(code);
+				customerDAO.insert(vo);
+			}
+		}
+		// update complications
+		deletePersonSubInfo("person_complication", customerVO.getPersonVO().getId());
+/*		if (CollectionUtils.isNotEmpty(customerVO.getPersonComplicationList())) {
+			for (PersonComplicationVO vo : customerVO.getPersonComplicationList()) {
+				vo.setPersonId(customerVO.getPersonVO().getId());
+				customerDAO.insert(vo);
+			}
+		}*/
+		
+		if(CollectionUtils.isNotEmpty(customerVO.getCompliList())) {
+			for(String code : customerVO.getCompliList()) {
+				PersonComplicationVO vo = new PersonComplicationVO();
+				vo.setPersonId(customerVO.getPersonVO().getId());
+				vo.setComplicationCd(code);
+				customerDAO.insert(vo);
+			}
+		}
+		// update remarks
+		terminatePersonSubInfo("customer_remarks", customerVO.getId());
+		if (CollectionUtils.isNotEmpty(customerVO.getCustRemarksList())) {
+			for (CustomerRemarksVO vo : customerVO.getCustRemarksList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				if (null == vo.getId()) {
+					vo.setCustId(customerVO.getId());
+					customerDAO.insert(vo);
+				} else customerDAO.update(vo);
+			}
+		}
+		
+		// update email
+		terminatePersonSubInfo("person_email", customerVO.getPersonVO().getId());
+		if (CollectionUtils.isNotEmpty(customerVO.getPersonVO().getEmailList())) {
+			for (PersonEmailVO vo : customerVO.getPersonVO().getEmailList()) {
+				vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+				if (null == vo.getId()) {
+					vo.setIdPerson(customerVO.getPersonVO().getId());
+					customerDAO.insert(vo);
+				} else customerDAO.update(vo);
+			}
+		}
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#deleteCustomer(com.bcs.zsg.sales.vo.CustomerVO)
+	 */
+	@Override
+	public void deleteCustomer(CustomerVO customerVO) throws BusinessException {
+		if (customerDAO.isCustNotAbleToDel(customerVO)) throw new BusinessException(CommonErrConstant.ERR_CUST_CANNOT_DEL);
+		customerDAO.deleteCustomer(customerVO);
+	}
+	
+	@Override
+	public void updateCustomerStatus(CustomerVO customerVO) throws BusinessException {
+		customerDAO.updateCustomerStatus(customerVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#insertObject(java.lang.Object)
+	 */
+	@Override
+	public void insertObject(Object objectVO) throws BusinessException {
+		if (objectVO instanceof IdentityVO) {
+			Long identityId = (Long) customerDAO.insert((IdentityVO) objectVO);
+			IdentityVO identityVO = (IdentityVO) objectVO;
+			identityVO.getIdentityDetailVO().setPersonIdentityId(identityId);
+			customerDAO.insert(identityVO.getIdentityDetailVO());
+		} else if (objectVO instanceof PersonLangVO) {
+			customerDAO.insert((PersonLangVO) objectVO);
+		} else if (objectVO instanceof PersonMealVO) {
+			customerDAO.insert((PersonMealVO) objectVO);
+		} else if (objectVO instanceof PersonContactVO) {
+			customerDAO.insert((PersonContactVO) objectVO);
+		} else if (objectVO instanceof CorContactVO) {
+			customerDAO.insert((CorContactVO) objectVO);
+		} else if (objectVO instanceof PersonClassVO) {
+			customerDAO.insert((PersonClassVO) objectVO);
+		} else if (objectVO instanceof PersonComplicationVO) {
+			customerDAO.insert((PersonComplicationVO) objectVO);
+		} else if (objectVO instanceof CustomerRemarksVO) {
+			customerDAO.insert((CustomerRemarksVO) objectVO);
+		} else if (objectVO instanceof PersonAttachmentVO) {
+			customerDAO.insert((PersonAttachmentVO) objectVO);
+		}
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#updateObject(java.lang.Object)
+	 */
+	@Override
+	public void updateObject(Object objectVO) throws BusinessException {
+		if (objectVO instanceof IdentityVO) {
+			customerDAO.update((IdentityVO) objectVO);
+			customerDAO.update(((IdentityVO) objectVO).getIdentityDetailVO());
+		} else if (objectVO instanceof PersonLangVO) {
+			customerDAO.update((PersonLangVO) objectVO);
+		} else if (objectVO instanceof PersonMealVO) {
+			customerDAO.update((PersonMealVO) objectVO);
+		} else if (objectVO instanceof PersonContactVO) {
+			customerDAO.update((PersonContactVO) objectVO);
+		} else if (objectVO instanceof CorContactVO) {
+			customerDAO.update((CorContactVO) objectVO);
+		} else if (objectVO instanceof PersonClassVO) {
+			customerDAO.update((PersonClassVO) objectVO);
+		} else if (objectVO instanceof PersonComplicationVO) {
+			customerDAO.update((PersonComplicationVO) objectVO);
+		} else if (objectVO instanceof CustomerRemarksVO) {
+			customerDAO.update((CustomerRemarksVO) objectVO);
+		} else if (objectVO instanceof PersonAttachmentVO) {
+			customerDAO.update((PersonAttachmentVO) objectVO);
+		}
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#deleteObject(java.lang.Object)
+	 */
+	@Override
+	public void deleteObject(Object objectVO) throws BusinessException {
+		if (objectVO instanceof IdentityVO) {
+			customerDAO.delete(((IdentityVO) objectVO).getIdentityDetailVO());
+			customerDAO.delete((IdentityVO) objectVO);
+		} else if (objectVO instanceof PersonLangVO) {
+			customerDAO.delete((PersonLangVO) objectVO);
+		} else if (objectVO instanceof PersonMealVO) {
+			customerDAO.delete((PersonMealVO) objectVO);
+		} else if (objectVO instanceof PersonContactVO) {
+			customerDAO.delete((PersonContactVO) objectVO);
+		} else if (objectVO instanceof CorContactVO) {
+			customerDAO.delete((CorContactVO) objectVO);
+		} else if (objectVO instanceof PersonClassVO) {
+			customerDAO.delete((PersonClassVO) objectVO);
+		} else if (objectVO instanceof PersonComplicationVO) {
+			customerDAO.delete((PersonComplicationVO) objectVO);
+		} else if (objectVO instanceof CustomerRemarksVO) {
+			customerDAO.delete((CustomerRemarksVO) objectVO);
+		} else if (objectVO instanceof PersonAttachmentVO) {
+			customerDAO.delete((PersonAttachmentVO) objectVO);
+		}
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getCountryList()
+	 */
+	@Override
+	public List<CountryVO> getCountryList() throws BusinessException {
+		List<CountryVO> countryList = customerDAO.getCountryList();
+		return countryList;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#updObjList(com.bcs.zsg.sales.vo.CustomerVO, com.bcs.zsg.common.vo.AddUpdDelVO)
+	 */
+	@Override
+	public void updObjList(CustomerVO customerVO, AddUpdDelVO objectVO) throws BusinessException {
+		if (objectVO.getAddList().size() > 0) {
+			for (Object vo : objectVO.getAddList()) {
+				if (vo instanceof IdentityVO) {
+					Long identityId = (Long) customerDAO.insert((IdentityVO) vo);
+					
+					if (((IdentityVO) vo).getIdType().equals(CommonConstant.LOOKUP_ITM_ID_PASSPRT) || ((IdentityVO) vo).getIdType().equals(CommonConstant.LOOKUP_ITM_ID_VISA)) {
+						IdentityDetailVO identityDetailVO = ((IdentityVO) vo).getIdentityDetailVO();
+						identityDetailVO.setPersonIdentityId(identityId);
+						customerDAO.insert(identityDetailVO);
+					}
+				}
+				if (vo instanceof PersonLangVO) customerDAO.insert((PersonLangVO) vo);
+				if (vo instanceof PersonMealVO) customerDAO.insert((PersonMealVO) vo);
+				if (vo instanceof PersonContactVO) customerDAO.insert((PersonContactVO) vo);
+				if (vo instanceof CorContactVO) customerDAO.insert((CorContactVO) vo);
+				if (vo instanceof PersonClassVO) customerDAO.insert((PersonClassVO) vo);
+				if (vo instanceof PersonComplicationVO) customerDAO.insert((PersonComplicationVO) vo);
+				if (vo instanceof CustomerRemarksVO) customerDAO.insert((CustomerRemarksVO) vo);
+			}
+		}
+		
+		if (objectVO.getUpdList().size() > 0) {
+			for (Object vo : objectVO.getUpdList()) {
+				if (vo instanceof IdentityVO) {
+					customerDAO.update((IdentityVO) vo);
+					if (((IdentityVO) vo).getIdType().equals(CommonConstant.LOOKUP_ITM_ID_PASSPRT) || ((IdentityVO) vo).getIdType().equals(CommonConstant.LOOKUP_ITM_ID_VISA)) {
+						customerDAO.update(((IdentityVO) vo).getIdentityDetailVO());
+					}
+				}
+				if (vo instanceof PersonLangVO) customerDAO.update((PersonLangVO) vo);
+				if (vo instanceof PersonMealVO) customerDAO.update((PersonMealVO) vo);
+				if (vo instanceof PersonContactVO) customerDAO.update((PersonContactVO) vo);
+				if (vo instanceof CorContactVO) customerDAO.update((CorContactVO) vo);
+				if (vo instanceof PersonClassVO) customerDAO.update((PersonClassVO) vo);
+				if (vo instanceof PersonComplicationVO) customerDAO.update((PersonComplicationVO) vo);
+				if (vo instanceof CustomerRemarksVO) customerDAO.update((CustomerRemarksVO) vo);
+			}
+		}
+
+		if (objectVO.getDelList().size() > 0) {
+			for (Object vo : objectVO.getDelList()) {
+				if (vo instanceof IdentityVO) {
+					if (((IdentityVO) vo).getIdType().equals(CommonConstant.LOOKUP_ITM_ID_PASSPRT) || ((IdentityVO) vo).getIdType().equals(CommonConstant.LOOKUP_ITM_ID_VISA)) {
+						customerDAO.delete(((IdentityVO) vo).getIdentityDetailVO());
+					}
+					customerDAO.delete((IdentityVO) vo);
+				}
+				if (vo instanceof PersonLangVO) customerDAO.delete((PersonLangVO) vo);
+				if (vo instanceof PersonMealVO) customerDAO.delete((PersonMealVO) vo);
+				if (vo instanceof PersonContactVO) customerDAO.delete((PersonContactVO) vo);
+				if (vo instanceof CorContactVO) customerDAO.delete((CorContactVO) vo);
+				if (vo instanceof PersonClassVO) customerDAO.delete((PersonClassVO) vo);
+				if (vo instanceof PersonComplicationVO) customerDAO.delete((PersonComplicationVO) vo);
+				if (vo instanceof CustomerRemarksVO) customerDAO.delete((CustomerRemarksVO) vo);
+			}
+		}
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#isIdentityExisted(com.bcs.zsg.purchase.vo.IdentityVO, java.lang.Long)
+	 */
+	@Override
+	public boolean isIdentityExisted(IdentityVO identityVO, Long companyId) throws BusinessException {
+		return customerDAO.isIdentityExisted(identityVO, companyId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getCustomerInfo(java.lang.Long)
+	 */
+	@Override
+	public CustomerVO getCustomerInfo(Long idCust) throws BusinessException {
+		return customerDAO.getCustomerInfo(idCust);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getCustomerListSize(java.lang.Long, java.util.Map)
+	 */
+	@Override
+	public int getCustomerListSize(Map<String, Object> params) throws BusinessException {
+		return customerDAO.getCustomerListSize(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getCustomerList(java.lang.Long, int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+	 */
+	@Override
+	public List<CustomerVO> getCustomerList(Map<String, Object> params) throws BusinessException {
+		return customerDAO.getCustomerList(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getTourHistList(com.bcs.zsg.sales.vo.CustomerVO, java.lang.Long)
+	 */
+	@Override
+	public List<CustTourHistVO> getTourHistList(CustomerVO vo, Long companyId, Map<String, Object> params) throws BusinessException {
+		return customerDAO.getTourHistList(vo, companyId, params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#deletePersonSubInfo(java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public void deletePersonSubInfo(String table, Long personId) throws BusinessException {
+		customerDAO.deletePersonSubInfo(table, personId);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#deleteCompanySubInfo(java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public void deleteCorporateSubInfo(String table, Long corpId) throws BusinessException {
+		customerDAO.deleteCorporateSubInfo(table, corpId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#terminatePersonSubInfo(java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public void terminatePersonSubInfo(String table, Long personId) throws BusinessException {
+		customerDAO.terminatePersonSubInfo(table, personId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#terminateCorporateSubInfo(java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public void terminateCorporateSubInfo(String table, Long corId) throws BusinessException {
+		customerDAO.terminateCorporateSubInfo(table, corId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#getIdentityDetail(java.lang.Long)
+	 */
+	@Override
+	public IdentityDetailVO getIdentityDetail(Long idIdentity) throws BusinessException {
+		return customerDAO.getIdentityDetail(idIdentity);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#isCustomerExisted(com.bcs.zsg.sales.vo.CustDetailsVO, java.lang.Long)
+	 */
+	@Override
+	public int isCustomerExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException {
+		return isCustomerExisted(custDetailsVO, idCompany,  null);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#isCustomerExisted(com.bcs.zsg.sales.vo.CustDetailsVO, java.lang.Long, java.lang.Boolean)
+	 */
+	@Override
+	public int isCustomerExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean filterAsIndividual) throws BusinessException {
+		return customerDAO.isCustomerExisted(custDetailsVO, idCompany, filterAsIndividual);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#isCustomerExisted(com.bcs.zsg.sales.vo.CustDetailsVO, java.lang.Long)
+	 */
+	@Override
+	public boolean isEmailExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException {
+		return isEmailExisted(custDetailsVO, idCompany,  null);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#isCustomerExisted(com.bcs.zsg.sales.vo.CustDetailsVO, java.lang.Long, java.lang.Boolean)
+	 */
+	@Override
+	public boolean isEmailExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean filterAsIndividual) throws BusinessException {
+		return customerDAO.isEmailExisted(custDetailsVO, idCompany);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.service.CustomerService#updateAcctTransDestinationCust(java.lang.Long, java.lang.Long)
+	 */
+	@Override
+	public void updateAcctTransDestinationCust(Long companyId, Long customerId) throws BusinessException {
+		//Update Account Transaction
+		accountTransDAO.updateAcctTransDestinationCust(companyId, customerId);
+	}
+	
+	@Override
+	public void updateAllCustNmToRelatedTbl(Long companyId) throws BusinessException {
+		accountTransDAO.updateAllCustNmToRelatedTbl(companyId);
+	}
+	
+	public List<CustomerVO> getCustomerList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		return customerDAO.getCustomerList(idCompany, searchParamVO);
+	}
+	
+	@Override
+	public void unlockCustomer(Long isCust, boolean isLock) throws BusinessException {
+		customerDAO.unlockCustomer(isCust, isLock);
+	}
+
+	@Override
+	public CountryVO getCountryById(Long countryId) throws BusinessException {
+		return customerDAO.getCountryById(countryId);
+	}
+
+	@Override
+	public void terminateInvoicePaxSubInfo(String table, Long invPaxId) throws BusinessException {
+		customerDAO.terminateInvoicePaxSubInfo(table, invPaxId);
+	}
+	
+	@Override
+	public void insertCustomerHistory(Long idCust, String actionCd, String reason) throws BusinessException {
+		customerDAO.insertCustomerHistory(idCust, actionCd, reason);
+	}
+}

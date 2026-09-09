@@ -1,0 +1,76 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Feedback List" toggleable="true" toggleSpeed="500">
+	<h:form id="idFeedbackListForm">
+		<p:growl id="msg"/>
+		
+		<p:dataTable id="idFeedbackListTable" value="#{feedbackBean.feedbackList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="20, 30, 50" filterEvent="enter" rowIndexVar="rowIndex">
+			
+			<p:column headerText="No." style="width:50px; text-align:center;">
+				<h:outputText value="#{rowIndex + 1}"/>
+			</p:column>
+			
+<!-- 			<p:column headerText="ID" sortBy="#{vo.idFeedback}" filterBy="#{vo.idFeedback}" style="width:80px; text-align:center;">
+				<h:outputText value="#{vo.idFeedback}"/>
+			</p:column> -->
+			
+			<p:column headerText="Customer Name" sortBy="#{vo.customerName}" filterBy="#{vo.customerName}" filterMatchMode="contains">
+				<h:outputText value="#{vo.customerName}"/>
+			</p:column>
+			
+			<p:column headerText="Tour Departure Code" sortBy="#{vo.tourDepCode}" filterBy="#{vo.tourDepCode}" filterMatchMode="contains" style="text-align:center;">
+				<h:outputText value="#{vo.tourDepCode}"/>
+			</p:column>
+			
+			<p:column headerText="Booking ID" sortBy="#{vo.tourBookingId}" filterBy="#{vo.tourBookingId}" style="text-align:center;">
+				<h:outputText value="#{vo.tourBookingId}"/>
+			</p:column>
+			
+<!-- 			<p:column headerText="Invoice ID" sortBy="#{vo.invCode}" filterBy="#{vo.invCode}" filterMatchMode="contains" style="text-align:center;">
+				<h:outputText value="#{vo.invCode}" rendered="#{not empty vo.invCode}"/>
+				<h:outputText value="#{vo.invId}" rendered="#{empty vo.invCode}"/>
+			</p:column> -->
+			
+			<p:column headerText="Overall Score" sortBy="#{vo.overallScore}" filterBy="#{vo.overallScore}" style="width:100px; text-align:center;">
+				<h:outputText value="#{vo.overallScore}" rendered="#{vo.overallScore ne null}">
+					<f:convertNumber type="number" minFractionDigits="2" maxFractionDigits="2"/>
+				</h:outputText>
+				<h:outputText value="N/A" rendered="#{vo.overallScore eq null}"/>
+			</p:column>
+			
+			<p:column headerText="Status" sortBy="#{vo.feedbackStatus}" filterBy="#{vo.feedbackStatus}" filterMatchMode="contains" style="width:100px; text-align:center;">
+				<h:outputText value="Completed" rendered="#{vo.feedbackStatus eq 'C'}"/>
+				<h:outputText value="Emailed" rendered="#{vo.feedbackStatus eq 'E'}"/>
+				<h:outputText value="Pending" rendered="#{vo.feedbackStatus eq 'P'}"/>
+			</p:column>
+			
+			<p:column headerText="Email" sortBy="#{vo.customerEmail}" filterBy="#{vo.customerEmail}" filterMatchMode="contains">
+				<h:outputText value="#{vo.customerEmail}"/>
+			</p:column>
+			
+			<p:column style="font-size:10px; text-align:center;">
+			    <p:commandButton
+			        value="Send Email"
+			        rendered="#{vo.feedbackStatus ne 'C'}"
+			        actionListener="#{feedbackBean.handleSendFeedbackEmail(vo)}"
+			        update="@form"/>
+			</p:column>
+			
+		</p:dataTable>
+	</h:form>
+</p:panel>
+</ui:define>
+
+</ui:composition>

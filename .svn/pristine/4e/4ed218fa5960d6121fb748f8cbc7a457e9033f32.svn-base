@@ -1,0 +1,101 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg2"/>
+<script type="text/javascript">
+function onValidationAccountCode(xhr, status, args) {
+	if (!args.validateAccountCodeError) {
+		 varEditAccCodeDialog.hide();
+	} else {
+		varEditAccCodeDialog.show(); 
+	}
+}
+</script>
+
+<p:panelGrid columns="1" style="margin-bottom:10px;">  
+	<p:row>
+		<p:column><h:outputLabel>Tour Code &nbsp;&nbsp;:&nbsp;</h:outputLabel></p:column>
+		<p:column><h:outputLabel value="#{accountCodeBean.tourDepVO.code}"></h:outputLabel></p:column>
+	</p:row>
+	<p:row>
+		<p:column ><h:outputLabel>Country &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;</h:outputLabel></p:column>
+		<p:column><h:outputLabel value="#{accountCodeBean.countryVO.country}"></h:outputLabel></p:column> 
+	</p:row>
+	<p:row>
+		<p:column ><h:outputLabel>Destination :&nbsp;</h:outputLabel></p:column>
+		<p:column><h:outputLabel value="#{accountCodeBean.tourPkgVO.nameEn} #{accountCodeBean.tourPkgVO.nameZh}">  </h:outputLabel></p:column> 
+	</p:row>
+	<!-- <p:row>
+		<p:column >
+			<p:outputLabel value="Department" for="idDepartment"/>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idDepartment" required="true" effect="fade" value="#{accountCodeBean.tourDepVO.idDepartment}">
+				<f:selectItem itemLabel="Select One" />
+			 	<f:selectItems value="#{bterp:lookupItemList('dept_type')}"  var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>  -->
+	<p:row>
+		<p:column><h:outputLabel for="idTourCompany">Company :</h:outputLabel></p:column>
+		<p:column>&nbsp;
+			<h:selectOneMenu id="idTourCompany"  editable="true"  effect="fade" value="#{accountCodeBean.companyVO.id}">
+			 	<f:selectItems value="#{accountCodeBean.companyList}"  var="vo" itemLabel="#{vo.name}" itemValue="#{vo.id}"/>
+				<p:ajax event="change" listener="#{accountCodeBean.handleCompanySelect}" update="@form, :idAcctListTableForm:idAcctListTable" />  
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid  id ="idEditAccCodePanel">
+	<p:row>
+		<p:column> 
+			<p:dataTable id="idAccountCodeTable" value="#{accountCodeBean.tourDepItemVOList}" var="accountCodeVO"> 
+				<p:column  headerText="Item Description">
+					  <h:outputText value="#{accountCodeVO.desc}"/>
+				</p:column>
+				<p:column headerText="Account" style="width:200px;text-align:center"> 
+					<p:autoComplete id="dd" value="#{accountCodeVO.acctCodeSubCode}" completeMethod="#{accountCodeBean.complete}" size="10">  
+     					<p:ajax event="itemSelect" listener="#{accountCodeBean.handleAccountCodeKeyUp(accountCodeVO)}" 
+     						update=":idEditAccCodeForm:idEditAccCodePanel"/>  
+    				</p:autoComplete>&nbsp;
+    				<p:commandButton icon="ui-icon-search" actionListener="#{accountCodeBean.selectTourDepItem(accountCodeVO)}"
+    					oncomplete="varAcctSubCatList.show()" update=":idAcctSubCatList" process="@this"/>
+				</p:column>
+				<p:column headerText="Account Description" style="width:200px;"> 
+					<h:outputText escape="false"  value="#{accountCodeVO.acctDesc}"/>
+				</p:column>
+				<p:column headerText="GST Code" style="width:200px;text-align:center">
+					<p:inputText value="#{accountCodeVO.taxCode}" size="10" readonly="true"/>&nbsp;
+					<p:commandButton icon="ui-icon-search"  actionListener="#{accountCodeBean.selectTourDepItem(accountCodeVO)}"
+						oncomplete="varGSTListDialog.show()" update="idAccountCodeTable" process="@this"/>
+				</p:column>
+				<p:column headerText="GST Rate (%)" style="width:100px; text-align:center;">
+					<h:outputText value="#{accountCodeVO.taxRate}"/>
+				</p:column>
+				<p:column headerText="Unit Price" style="width:150px; text-align:right;">
+					<h:outputText value="#{accountCodeVO.taxAmount}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				</p:column>
+				<p:column headerText="GST Inclusive Price" style="width:150px; text-align:right;">
+					<h:outputText value="#{accountCodeVO.amount}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+				</p:column>
+				<p:column headerText="Lock Item" style="width:40px; text-align:center;">
+					<p:selectBooleanCheckbox value="#{accountCodeVO.isLock}"/>
+				</p:column>
+			</p:dataTable> 	
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 10px;margin-top: 15px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{accountCodeBean.saveAccountCode}" oncomplete="if (args &amp;&amp; !args.validationFailed) varEditAccCodeDialog.hide(),varTourAcctCodeList.clearFilters();" update="@form,:idForm:idTourDepList" /> 
+	<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varEditAccCodeDialog.hide()" actionListener="#{accountCodeBean.resetForm}" update="@form" process="@this">
+		<pe:resetEditableValues for="idEditAccCodeForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

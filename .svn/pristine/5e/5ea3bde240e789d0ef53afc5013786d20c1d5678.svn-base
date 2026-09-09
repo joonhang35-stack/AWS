@@ -1,0 +1,1558 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp"
+	template="/WEB-INF/views/layouts/main.xhtml">
+
+	<ui:define name="content">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+		<style>
+		.tourDepListClass .ui-datatable th div.ui-dt-c,
+		.tourDepListClass .ui-datatable .ui-datatable-data td div.ui-dt-c {
+			padding: 4px 0px; 
+			font-size: 10px; 
+			text-align: center;
+		}
+		.tourDepListClass .ui-state-highlight,
+		.tourDepListClass .ui-widget-content .ui-state-highlight {
+			border: 3px solid red;
+			background: #7ddbfe !important;
+		}
+		.ui-tooltip {
+			max-width: 600px;
+		}
+		</style>
+		<script type="text/javascript">
+			
+			
+			function onTransferValidation(xhr, status, args) {
+				if (!args.validationFailed) {
+					varAvailableTourDepListDialog.hide();
+					varTransferConfirmationDialog.hide();
+					varAddBookingDialog.hide();
+				}
+			}
+			
+			function handleComplete(tourDepId) {
+				var ftTwnPax = $("#idAddInvoiceForm\\:idFtTwn").val();
+				var ftSglPax = $("#idAddInvoiceForm\\:idFtSgl").val();
+				var ftCtwPax = $("#idAddInvoiceForm\\:idFtCtw").val();
+				var ftCwbPax = $("#idAddInvoiceForm\\:idFtCwb").val();
+				var ftCnbPax = $("#idAddInvoiceForm\\:idFtCnb").val();
+				var ftInftPax = $("#idAddInvoiceForm\\:idFtInft").val();
+				var gaTwnPax = $("#idAddInvoiceForm\\:idGaTwn").val();
+				var gaSglPax = $("#idAddInvoiceForm\\:idGaSgl").val();
+				var gaCtwPax = $("#idAddInvoiceForm\\:idGaCtw").val();
+				var gaCwbPax = $("#idAddInvoiceForm\\:idGaCwb").val();
+				var gaCnbPax = $("#idAddInvoiceForm\\:idGaCnb").val();
+				var gaInftPax = $("#idAddInvoiceForm\\:idGaInft").val();
+				
+				var params = "&amp;ftTwnPax=" + ftTwnPax;
+				params += "&amp;ftSglPax=" + ftSglPax;
+				params += "&amp;ftCtwPax=" + ftCtwPax;
+				params += "&amp;ftCwbPax=" + ftCwbPax;
+				params += "&amp;ftCnbPax=" + ftCnbPax;
+				params += "&amp;ftInftPax=" + ftInftPax;
+				params += "&amp;gaTwnPax=" + gaTwnPax;
+				params += "&amp;gaSglPax=" + gaSglPax;
+				params += "&amp;gaCtwPax=" + gaCtwPax;
+				params += "&amp;gaCwbPax=" + gaCwbPax;
+				params += "&amp;gaCnbPax=" + gaCnbPax;
+				params += "&amp;gaInftPax=" + gaInftPax;
+				window.open('#{request.contextPath}/app/emailtmp/bookingemailtmp?tourDepId=' + tourDepId + params);
+			}
+			
+			document.addEventListener('DOMContentLoaded', function() {
+				var filters = document.querySelectorAll('input.ui-inputtext');
+		        filters.forEach(function(filter) {
+		            filter.setAttribute('enterkeyhint', 'enter');
+		        });
+		    });
+			
+			function setEnterKeyHint() {
+		        var filters = document.querySelectorAll('input.ui-inputtext');
+		        filters.forEach(function(filter) {
+		            filter.setAttribute('enterkeyhint', 'enter');
+		        });
+		    }
+		</script>
+		<p:panel header="Tour Packages" toggleable="true" toggleSpeed="500">
+			<h:form id="idTourPkgForm">
+				<p:tabView id="idTab" activeIndex="#{salesBean.activeIndex}">
+					<p:tab id="idTabList" title="Package List">
+						<p:panelGrid>
+							<p:row>
+								<p:column style="width:50px;">
+									<h:outputLabel for="idTourCat">Category</h:outputLabel>
+								</p:column>
+								<p:column>
+									<h:selectOneMenu id="idTourCat"
+										value="#{salesBean.searchParamVO.obj2}" effect="fade">
+										<f:selectItem itemLabel="Select One" />
+										<f:selectItems value="#{salesBean.tourCatViewList}" var="vo"
+											itemLabel="#{vo.desc}" itemValue="#{vo.id}" />
+										<p:ajax event="change"
+											listener="#{salesBean.handleTourCatSelect}"
+											update="@form,idTourPkgList" />
+									</h:selectOneMenu>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+
+						<p:panel rendered="#{empty salesBean.searchParamVO.obj2}">
+							<h:outputText value="Please select category." />
+						</p:panel>
+
+						<p:panel
+							rendered="#{not empty salesBean.searchParamVO.obj2 and empty salesBean.tourThemeList}">
+							<h:outputText value="No records found." />
+						</p:panel>
+
+						<p:accordionPanel id="idTourPkgList"
+							value="#{salesBean.tourThemeList}" var="vo" activeIndex="null">
+							<p:tab
+								title="#{vo.desc} #{empty vo.countriesName ? '' : ' - '} #{vo.countriesName}"
+								titleStyle="font-size: 13px;">
+								<div style="font-size: 1.1em !important;">
+									<h:inputHidden value="#{salesBean.beginNumber}" />
+									
+									<ui:repeat value="#{vo.tourThemeMapList}" var="themeYearVO" varStatus="varStatus">
+										<h:panelGrid columns="1"
+											rendered="#{varStatus.index gt 0}"
+											style="background:#cccccc;font-size:1.3em;color:red;font-weight:bold;">
+											<h:outputText value="#{themeYearVO.key}" />
+											<h:inputHidden value="#{salesBean.beginNumber}" />
+										</h:panelGrid>
+										
+										<ui:repeat value="#{themeYearVO.value}" var="child">
+											<p:panelGrid rendered="#{not empty child.tourPkgList}">
+												<p:row>
+													<p:column
+														style="background:#{config['table.header.color']}; font-weight:bold;font-size: 1.07em !important">
+														<h:outputText
+															value="#{child.desc} #{empty child.countriesName ? '' : ' - '} #{child.countriesName}" />
+													</p:column>
+												</p:row>
+											</p:panelGrid>
+											
+											<p:dataTable value="#{child.tourPkgList}" var="tourPkgVO"
+												rowIndexVar="rowIndex"
+												rendered="#{not empty child.tourPkgList}">
+												<p:column headerText="No."
+													style="width:50px; text-align:center;">
+													<h:outputText value="#{salesBean.runningNumber}" />
+												</p:column>
+												<p:column headerText="Description">
+													<p:commandLink
+														actionListener="#{salesBean.handleTourPkgSelect(tourPkgVO)}"
+														update=":idTourDepListDialog"
+														oncomplete="varTourDepListDialog.show()"
+														style="color:#000000; margin-right:5px;">
+														<h:outputText
+															value="#{tourPkgVO.numDays}D/#{tourPkgVO.numNights}N #{tourPkgVO.nameEn} #{tourPkgVO.nameOther}" />
+														<h:outputText value="-Theme Tour" style="color:#FF0000;"
+															rendered="#{tourPkgVO.isThemeTour}" />
+													</p:commandLink>
+													<ui:repeat value="#{tourPkgVO.tourBadgeDescList}"
+														var="tourBadgeVO">
+														<h:outputText value="#{tourBadgeVO}"
+															style="display:inline-block; background:white; color:black; border:1px solid grey; border-radius: 5px; padding:2px; margin:2px;"
+															rendered="#{not empty tourPkgVO.tourBadgeTagList}" />
+													</ui:repeat>
+													<ui:repeat value="#{tourPkgVO.travelStyleDescList}"
+														var="travelBadgeVO">
+														<h:outputText value="#{travelBadgeVO}"
+															style="display:inline-block; background:white; color:red; border:1px solid red; border-radius: 5px; padding:2px; margin:2px;"
+															rendered="#{not empty tourPkgVO.travelStyleList}" />
+													</ui:repeat>
+												</p:column>
+											</p:dataTable>
+										</ui:repeat>					
+									</ui:repeat>
+									
+									<ui:repeat value="#{vo.tourPkgMapList}" var="pkgYearVO" varStatus="varTourPkgStatus">
+										<h:panelGrid columns="1"
+											rendered="#{varTourPkgStatus.index gt 0}"
+											style="background:#cccccc;font-size:1.3em;color:red;font-weight:bold;">
+											<h:outputText value="#{pkgYearVO.key}" />
+										</h:panelGrid>
+										<p:dataTable value="#{pkgYearVO.value}" var="tourPkgVO"
+											style="margin-top:10px;"
+											rendered="#{not empty vo.tourPkgList}" rowIndexVar="rowIndex">
+											<p:column headerText="No."
+												style="width:50px; text-align:center;">
+												<h:outputText value="#{salesBean.runningNumber}" />
+											</p:column>
+											<p:column headerText="Description">
+												<p:commandLink
+													actionListener="#{salesBean.handleTourPkgSelect(tourPkgVO)}"
+													update=":idTourDepListDialog"
+													oncomplete="varTourDepListDialog.show()"
+													style="color:#000000;">
+													<h:outputText
+														value="#{tourPkgVO.numDays}D/#{tourPkgVO.numNights}N " />
+													<h:outputText
+														value="#{tourPkgVO.nameEn} #{tourPkgVO.nameOther} #{tourPkgVO.nameZh}" />
+													<h:outputText value="-Theme Tour" style="color:#FF0000;"
+														rendered="#{tourPkgVO.isThemeTour}" />
+												</p:commandLink>
+											</p:column>
+										</p:dataTable>
+									</ui:repeat>
+								</div>
+							</p:tab>
+						</p:accordionPanel>
+					</p:tab>
+					<p:tab id="idTabSearchList" title="Find Tour List">
+						<p:panelGrid id="idSearchFilter">
+							<p:row>
+								<p:column style="width: 80px;">
+									<p:outputLabel value="Tour Code" />
+								</p:column>
+								<p:column style="width: 80px;">
+									<p:outputLabel value="Package Title" />
+								</p:column>
+								<p:column style="width: 100px;">
+									<p:outputLabel for="idValidFrom" value="Dep. Date From" />
+								</p:column>
+								<p:column style="width: 10px;">
+									<p:outputLabel value="To" for="idValidTo"/>
+								</p:column>
+								<p:column style="width: 10px;">
+									<p:outputLabel value="Price From" for="idPriceFrom"/>
+								</p:column>
+								<p:column style="width: 10px;">
+									<p:outputLabel value="To" for="idPriceTo"/>
+								</p:column>
+								<p:column style="width: 130px">
+									<p:outputLabel value="Balance Seat" for="idBalSeat"/>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<p:inputText id="idTourCode" value="#{salesBean.searchTourDepFilter.code}" />
+									<p:watermark for="idTourCode" value="Tour Code" />
+								</p:column>
+								<p:column>
+									<p:inputText id="idPkgTitle" value="#{salesBean.searchTourDepFilter.packageDesc}" size="30" />
+									<p:watermark for="idPkgTitle" value="Package Title" />
+								</p:column>
+								<p:column>
+									<p:calendar id="idValidFrom" navigator="true" showButtonPanel="true" size="15" pattern="dd-MMM-yyyy"
+										value="#{salesBean.searchTourDepFilter.fromDate}" maxdate="#{salesBean.searchTourDepFilter.toDate}" >
+										<p:ajax event="dateSelect" update=":idTourPkgForm:idTab:idValidFrom, :idTourPkgForm:idTab:idValidTo" global="false"/>
+									</p:calendar>
+									<p:watermark for="idValidFrom" value="dd-mmm-yyyy" />
+								</p:column>
+								<p:column>
+									<p:calendar id="idValidTo" navigator="true" showButtonPanel="true" size="15" pattern="dd-MMM-yyyy"
+										value="#{salesBean.searchTourDepFilter.toDate}" mindate="#{salesBean.searchTourDepFilter.fromDate}">
+										<p:ajax event="dateSelect" update=":idTourPkgForm:idTab:idValidFrom" global="false"/>
+									</p:calendar>
+									<p:watermark for="idValidTo" value="dd-mmm-yyyy" />
+								</p:column>
+								<p:column>
+									<p:inputText id="idPriceFrom" value="#{salesBean.searchTourDepFilter.priceFrom}" size="10" maxlength="10">
+										<!-- <f:convertNumber pattern="#,##0.00" /> -->
+										<pe:keyFilter regEx="/[\d\.\s,]/" />
+									</p:inputText>
+								</p:column>
+								<p:column>
+									<p:inputText id="idPriceTo" value="#{salesBean.searchTourDepFilter.priceTo}" size="10" maxlength="10">
+										<pe:keyFilter regEx="/[\d\.\s,]/" />
+									</p:inputText>
+								</p:column>
+								<p:column>
+									<p:inputText id="idBalSeat" value="#{salesBean.searchTourDepFilter.balanceSeat}" size="6" maxlength="3">
+										<pe:keyFilter regEx="/[\d]/"/>
+									</p:inputText>
+								</p:column>
+								<p:column>
+									<p:spacer width="250" height="10"/>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column colspan="8">
+									<p:panelGrid style="width: 10px;">
+										<p:row>
+											<p:column>
+												<p:selectCheckboxMenu value="#{salesBean.searchTourDepFilter.tourStatusList}" label="Tour Status" style="width:100px; display:block;">
+													<f:selectItems value="#{bterp:lookupItemList('tour_status')}" var="statusVO" itemLabel="#{statusVO.description}" itemValue="#{statusVO.code}" />
+												</p:selectCheckboxMenu>
+											</p:column>
+											<p:column>
+												<p:selectCheckboxMenu value="#{salesBean.searchTourDepFilter.departDateBadgeList}" label="Depart date badge" style="width:150px; display:block;" >
+												<f:selectItems value="#{bterp:lookupItemList('depart_date_badge')}" var="badgeVO" itemValue="#{badgeVO.code}" itemLabel="#{badgeVO.description}"/>
+											</p:selectCheckboxMenu>
+											</p:column>
+											<p:column>
+												<p:selectCheckboxMenu value="#{salesBean.searchTourDepFilter.selectedSeason}" label="Season" style="width:100px; display:block;" >
+													<f:selectItems value="#{salesBean.refDataListSeason}" var="seasonVO" itemLabel="#{seasonVO.value}" itemValue="#{seasonVO.code}" />
+												</p:selectCheckboxMenu>
+											</p:column>
+											<p:column>
+												<p:selectCheckboxMenu value="#{salesBean.searchTourDepFilter.tourLangList}" label="Tour Languages" style="width:150px; display:block;">
+													<f:selectItems value="#{bterp:lookupItemList('product_lang')}" var="langVO" itemLabel="#{langVO.description}" itemValue="#{langVO.code}" />
+												</p:selectCheckboxMenu>
+											</p:column>
+											<p:column>
+												<p:selectCheckboxMenu id="idSectorType" label="Sector Type" filter="true" filterMatchMode="contains" style="width:100px; display:block;"
+													value="#{salesBean.searchTourDepFilter.sectorTypeList}" onHide="executeOnContinentOnhide();">
+													<f:selectItems value="#{salesBean.filterFullRegionList}" var="rgnVO" itemValue="#{rgnVO.id}" itemLabel="#{rgnVO.regionname}" />
+												</p:selectCheckboxMenu>
+												<p:remoteCommand name="executeOnContinentOnhide" actionListener="#{salesBean.handleSectorTypeChange}" global="false"
+									       			update=":idTourPkgForm:idTab:idSector" process="@this :idTourPkgForm:idTab:idSectorType" />
+											</p:column>
+											<p:column>
+												<p:selectCheckboxMenu id="idSector" label="Sector" filter="true" filterMatchMode="contains" style="width:100px; display:block;"
+													disabled="#{empty salesBean.searchTourDepFilter.sectorTypeList}"
+													value="#{salesBean.searchTourDepFilter.sectorList}">
+													<f:selectItems value="#{salesBean.filterFullCountryList}" var="ctryVO" itemValue="#{ctryVO.id}" itemLabel="#{ctryVO.country}" />
+												</p:selectCheckboxMenu>
+											</p:column>
+											<p:column>
+												<p:selectBooleanCheckbox
+													value="#{salesBean.searchTourDepFilter.inactiveRecord}"
+													itemLabel="Inactive Records" style="width:120px; display:block;"/>
+											</p:column>
+											<p:column>
+												<p:commandButton value="Search"
+													actionListener="#{salesBean.handleFilterBookingTourDepList}"
+													oncomplete="setEnterKeyHint();"
+													update=":idTourPkgForm:idTab:idTourFilterBookingDepList" />
+											</p:column>
+											<p:column>
+												<p:commandButton value="Clear All" style="width:70px;"
+													actionListener="#{salesBean.handleFilterClearAll}"
+													update=":idTourPkgForm:idTab:idSearchFilter" process="@this"/>
+											</p:column>
+											<p:column>
+												<p:spacer width="10" height="10"/>
+											</p:column>
+										</p:row>
+									</p:panelGrid>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+						<div class="tourDepListClass">
+						<p:dataTable id="idTourFilterBookingDepList"
+							value="#{salesBean.tourBookingFilterDepList}" var="filterVO"
+							rowStyleClass="#{filterVO.groupColor eq 0 ? 'group-color-one' : 'group-color-two'}"
+							paginator="true"
+							paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+							rowsPerPageTemplate="5,10,15" rows="10" rowKey="#{filterVO.id}" selectionMode="single">
+							
+							<p:columnGroup type="header">
+								<p:row>
+									<p:column rowspan="2" headerText="Tour Package" style="width:130px;" />
+									<p:column rowspan="2" headerText="Date" style="width:100px;" sortBy="#{filterVO.dtDep}" />
+									<p:column rowspan="2" headerText="Status" style="width:60px;" sortBy="#{filterVO.tourStatusCd}" />
+									<p:column rowspan="2" headerText="Tour Code" style="width:130px;" />
+									<p:column rowspan="2" headerText="Departure Name"
+										style="width:160px;" />
+									<p:column rowspan="2" headerText="Airline" style="width:40px;" />
+									<p:column colspan="2" headerText="Discount Level" />
+									<p:column colspan="5" headerText="Seat Allotment" />
+									<p:column colspan="2" headerText="Adult Price (RM)" />
+									<p:column colspan="3" headerText="Child Price (RM)" />
+									<p:column rowspan="2" headerText="MISC Taxes&lt;br/&gt;ADT/CHD"
+										style="width:110px;" />
+									<p:column rowspan="2" headerText="Normal&lt;br/&gt;AC/SI"
+										style="width:90px;" />
+									<p:column rowspan="2" headerText="Itinery" style="width:40px;" />
+									<p:column rowspan="2" headerText="More&lt;br/&gt;Info"
+										style="width:30px;" />
+									<p:column rowspan="2" headerText="Mail" style="width:30px;" />
+								</p:row>
+								<p:row>
+									<p:column headerText="Level 1" style="width:50px;" />
+									<p:column headerText="Level 2" style="width:50px;" />
+									<p:column headerText="All" style="width:30px; font-size:10px;" />
+									<p:column headerText="Sold" style="width:30px; font-size:10px;" />
+									<p:column headerText="KIV" style="width:30px; font-size:10px;" />
+									<p:column headerText="Bal" style="width:30px; font-size:10px;" />
+									<p:column headerText="GA" style="width:30px; font-size:10px;" />
+									<p:column headerText="TWN" style="width:55px; font-size:10px;" />
+									<p:column headerText="SGL" style="width:55px; font-size:10px;" />
+									<p:column headerText="CTW" style="width:55px; font-size:10px;" />
+									<p:column headerText="CEB" style="width:55px; font-size:10px;" />
+									<p:column headerText="CNB" style="width:55px; font-size:10px;" />
+									<!-- <p:column headerText="EN" width="25" style="font-size:10px;" /> -->
+									<!-- <p:column headerText="CN" width="25" style="font-size:10px;" /> -->
+								</p:row>
+							</p:columnGroup>
+							<p:column style="width:130px;">
+								<h:outputText value="#{filterVO.nameEn}#{filterVO.nameZh}#{filterVO.nameOther}" />
+							</p:column>
+							<p:column style="width:100px; padding: 8px 0;">
+								<h:outputText value="#{filterVO.dtDep}">
+									<f:convertDateTime pattern="#{config['date.display.pattern2']}" />
+								</h:outputText>
+								<ui:repeat value="#{filterVO.departDateBadgeList}" var="badgeVO">
+									<h:outputText id="idTooltipBadge" value="#{badgeVO}"
+										style="display:inline-block; background:white; #{not empty filterVO.departDateBadgeList and (filterVO.departDateBadgeList.contains('DISCx2') or filterVO.departDateBadgeList.contains('EX-DIS')) ? 'color:red; border:1px solid red;' : 'color:green; border:1px solid green;'} border-radius: 5px; padding:2px; margin:2px;"
+										rendered="#{not empty filterVO.departDateBadgeList}"/>
+									<pe:tooltip for="idTooltipBadge" rendered="#{not empty badgeVO}">
+										<h:outputText value="#{bterp:lookupItemDesc('depart_date_badge', badgeVO)}"/>
+									</pe:tooltip>
+								</ui:repeat>
+								<h:outputText id="idTooltipLangCode" rendered="#{not empty filterVO.langCode}" style="display:inline-block; background:#{filterVO.langCode eq 'BM' ? 'green' : 'white'}; color:#{filterVO.langCode eq 'BM' ? 'white' : 'green'}; border:1px solid green; border-radius: 5px; padding:2px; margin:2px;"
+									value="#{filterVO.langCode}"/>
+								<pe:tooltip for="idTooltipLangCode" rendered="#{not empty filterVO.langCode}">
+									<h:outputText value="#{bterp:lookupItemDesc('product_lang', filterVO.langCode)}"/>
+								</pe:tooltip>
+							</p:column>
+							<p:column style="width:60px;">
+								<p:commandLink id="idBookButton"
+									actionListener="#{salesBean.handleTourDepSelectFromSearch(filterVO)}"
+									update=":idAddBookingDialog"
+									oncomplete="varAddBookingDialog.show()"
+									rendered="#{filterVO.statusCode eq 'AC' and not salesBean.isAgentViewOnly and (filterVO.accCodeStatusCd eq 'Y' and (filterVO.tourStatusCd eq 'A' or filterVO.tourStatusCd eq 'L' or filterVO.tourStatusCd eq 'C1')) and not filterVO.isPrivateBooking}">
+									<p:graphicImage value="/img/book_button_a.png"
+										rendered="#{filterVO.tourStatusCd eq 'A' or filterVO.tourStatusCd eq 'C1'}" />
+									<p:graphicImage value="/img/book_button_l.png"
+										rendered="#{filterVO.tourStatusCd eq 'L'}" />
+									<pe:tooltip for="idBookButton" shared="true" showDelay="0" myPosition="left center" atPosition="right center">
+										TWN=<span style="font-weight: bold;">#{salesBean.getDoubleDecimalFormat(((filterVO.fullTwn + filterVO.miscAdt - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullTwn + filterVO.miscAdt - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((filterVO.fullTwn + filterVO.miscAdt - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullTwn + filterVO.miscAdt - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))))}</span>
+										<span style="color: #F00;">#{(filterVO.discountPax1 > 0 or
+											filterVO.discountPax2 > 0) ? (filterVO.discountPax1 > 0 ?
+											'('.concat(filterVO.discountPax1).concat(')') :
+											'('.concat(filterVO.discountPax2).concat(')')) : ''}</span>
+											&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+										SGL=<span style="font-weight: bold;">#{salesBean.getDoubleDecimalFormat(((filterVO.fullSgl + filterVO.miscAdt - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullSgl + filterVO.miscAdt - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((filterVO.fullSgl + filterVO.miscAdt - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullSgl + filterVO.miscAdt - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))))}</span>
+										<span style="color: #F00;">#{(filterVO.discountPax1 > 0 or
+											filterVO.discountPax2 > 0) ? (filterVO.discountPax1 > 0 ?
+											'('.concat(filterVO.discountPax1).concat(')') :
+											'('.concat(filterVO.discountPax2).concat(')')) : ''}</span>
+											&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+										CTW=<span style="font-weight: bold;">#{salesBean.getDoubleDecimalFormat(((filterVO.fullCtw + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullCtw + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((filterVO.fullCtw + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullCtw + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))))}</span>
+										<span style="color: #F00;">#{(filterVO.discountPax1 > 0 or
+											filterVO.discountPax2 > 0) ? (filterVO.discountPax1 > 0 ?
+											'('.concat(filterVO.discountPax1).concat(')') :
+											'('.concat(filterVO.discountPax2).concat(')')) : ''}</span>
+										<br />
+										CWB=<span style="font-weight: bold;">#{salesBean.getDoubleDecimalFormat(((filterVO.fullCeb + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullCeb + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((filterVO.fullCeb + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullCeb + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))))}</span>
+										<span style="color: #F00;">#{(filterVO.discountPax1 > 0 or
+											filterVO.discountPax2 > 0) ? (filterVO.discountPax1 > 0 ?
+											'('.concat(filterVO.discountPax1).concat(')') :
+											'('.concat(filterVO.discountPax2).concat(')')) : ''}</span>
+											&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+										CNB=<span style="font-weight: bold;">#{salesBean.getDoubleDecimalFormat(((filterVO.fullCnb + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullCnb + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((filterVO.fullCnb + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))) lt 0) ? 0 : (filterVO.fullCnb + filterVO.miscChd - (filterVO.discountPax1 > 0 ? filterVO.discount1 : (filterVO.discountPax2 > 0 ? filterVO.discount2 : 0))))}</span>
+										<span style="color: #F00;">#{(filterVO.discountPax1 > 0 or
+											filterVO.discountPax2 > 0) ? (filterVO.discountPax1 > 0 ?
+											'('.concat(filterVO.discountPax1).concat(')') :
+											'('.concat(filterVO.discountPax2).concat(')')) : ''}</span>
+										<br/><br/>
+										<span style="font-weight: bold;">Deposit #{salesBean.getDoubleDecimalFormat('#,##0', filterVO.deposit)}</span> per pax 
+										<h:outputLabel style="font-size:10px; color:#F00;"
+											rendered="#{(filterVO.discountPax1 gt 0 and filterVO.discount1 gt 0) or (filterVO.discountPax2 gt 0 and filterVO.discount2 gt 0)}">
+											<br />
+											<br />
+											Noted: Above price is <b>Grand Total include Discount (If has)</b>
+										</h:outputLabel>
+									</pe:tooltip>
+								</p:commandLink>
+								<p:outputPanel id="idTooltipStatusReason" layout="block">
+									<h:outputText value="Not Ready"
+										style="text-transform:uppercase; color:#F00;"
+										rendered="#{filterVO.accCodeStatusCd eq 'N'}" />
+									<h:outputText
+										value="#{bterp:lookupItemDesc('tour_status', filterVO.tourStatusCd)}"
+										style="text-transform:uppercase; color:#F00;"
+										rendered="#{filterVO.tourStatusCd ne 'F' and filterVO.tourStatusCd ne 'A' and filterVO.tourStatusCd ne 'L' and filterVO.tourStatusCd ne 'C1'}" />
+									<h:outputText value="Full"
+										style="text-transform:uppercase; color:#F00;"
+										rendered="#{filterVO.tourStatusCd eq 'F' and filterVO.tourStatusCd ne 'A' and filterVO.tourStatusCd ne 'L'}" />
+									<p:graphicImage value="/img/more.png" width="11" style="margin-left: 3px;" rendered="#{not empty filterVO.tourStatusReason}"/>
+								</p:outputPanel>
+								<pe:tooltip for="idTooltipStatusReason" shared="true" showDelay="0" myPosition="left center" atPosition="right center"
+									rendered="#{not empty filterVO.tourStatusReason}">
+									<h:outputText value="#{filterVO.tourStatusReason}" escape="true" style="white-space: pre-wrap"/>
+								</pe:tooltip>
+							</p:column>
+							<p:column style="width:130px;">
+								<h:outputText value="#{filterVO.code}" />
+								<h:outputText id="idTooltipPrivate" class="fa fa-user" rendered="#{filterVO.isPrivateTour}" style="margin-left: 3px;"/>
+								<pe:tooltip for="idTooltipPrivate" rendered="#{filterVO.isPrivateTour}">
+									<h:outputText value="Private Tour"/>
+								</pe:tooltip>
+							</p:column>
+							<p:column style="width:160px;">
+								<p:commandLink
+									actionListener="#{salesBean.handleShowBookingListFromSearch(filterVO)}"
+									oncomplete="varBookingListDialog.show()"
+									update=":idBookingListDialog" style="color:#CC2EFA;">
+									<h:outputText value="PD " rendered="#{filterVO.isDepositPaid}" />
+									<h:outputText
+										value="#{filterVO.numDays}D/#{filterVO.numNights}N " />
+									<h:outputText value=" [#{filterVO.desc}]"
+										style="color:#FF0000;" rendered="#{not empty filterVO.desc}" />
+									<h:outputText value="[S]" style="color:#86B404;"
+										rendered="#{filterVO.isIssuedS}" />
+									<h:outputText value="[F]" style="color:#86B404;"
+										rendered="#{filterVO.isIssuedF}" />
+									<h:outputText value="[#{filterVO.dailyCode}]"
+										style="color:#000000;"
+										rendered="#{not empty filterVO.dailyCode}" />
+									<p:graphicImage value="/img/push.gif"
+										rendered="#{filterVO.isPush and (filterVO.tourStatusCd eq 'A' or filterVO.tourStatusCd eq 'L')}" />
+									<ui:repeat value="#{filterVO.departDateBadgeList}" var="badgeVO">
+										<h:outputText value="(#{badgeVO})" style="color:brown;"
+											rendered="#{not empty filterVO.departDateBadgeList}" />
+									</ui:repeat>
+								</p:commandLink>
+							</p:column>
+							<p:column style="width:40px;">
+								<p:commandLink actionListener="#{salesBean.handleTourDepSelectFromSearch(filterVO)}" oncomplete="varTourDepAirlineInfoDialog.show()" update=":idTourDepAirlineInfoDialog" style="color:#CC2EFA;" process="@this">
+									<h:outputText value="#{filterVO.airlineCode}"/>
+								</p:commandLink>
+							</p:column>
+							<p:column style="width:50px;">
+								<h:outputText
+									value="#{filterVO.discount1 gt 0 ? filterVO.discount1 * -1 : filterVO.discount1}"
+									rendered="#{filterVO.discount1 % 1 &gt; 0}"
+									style="#{not empty filterVO.departDateBadgeList and (filterVO.departDateBadgeList.contains('DISCx2') or filterVO.departDateBadgeList.contains('EX-DIS')) ? 'color: red; font-weight:bold;' : ''}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText
+									value="#{filterVO.discount1 gt 0 ? filterVO.discount1 * -1 : filterVO.discount1}"
+									rendered="#{filterVO.discount1 % 1 &lt;= 0}"
+									style="#{not empty filterVO.departDateBadgeList and (filterVO.departDateBadgeList.contains('DISCx2') or filterVO.departDateBadgeList.contains('EX-DIS')) ? 'color: red; font-weight:bold;' : ''}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+								<h:outputText value=" (#{filterVO.discountPax1})"
+									style="color: red;" />
+							</p:column>
+							<p:column style="width:50px;">
+								<h:outputText
+									value="#{filterVO.discount2 gt 0 ? filterVO.discount2 * -1 : filterVO.discount2}"
+									rendered="#{filterVO.discount2 % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText
+									value="#{filterVO.discount2 gt 0 ? filterVO.discount2 * -1 : filterVO.discount2}"
+									rendered="#{filterVO.discount2 % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+								<h:outputText value=" (#{filterVO.discountPax2})"
+									style="color: red;" />
+							</p:column>
+							<p:column style="width:30px;">
+								<h:outputText value="#{filterVO.seatAllot}" />
+							</p:column>
+							<p:column style="width:30px;">
+								<h:outputText
+									value="#{filterVO.tfairPax + filterVO.agentPax + filterVO.inHsePax + filterVO.on9BookingPax}" />
+							</p:column>
+							<p:column style="width:30px;">
+								<h:outputText value="#{filterVO.kivPax}" />
+							</p:column>
+							<p:column style="width:30px; font-size:10px; background:#00BFFF; text-align:center;">
+								<h:outputText
+									value="#{filterVO.seatAllot - filterVO.reservedSeat - filterVO.tourManagerPax - (filterVO.tfairPax + filterVO.agentPax + filterVO.inHsePax + filterVO.kivPax + filterVO.on9BookingPax)}"
+									style="#{(filterVO.seatAllot - filterVO.reservedSeat - filterVO.tourManagerPax - (filterVO.tfairPax + filterVO.agentPax + filterVO.inHsePax + filterVO.kivPax + filterVO.on9BookingPax)) eq 0 ? 'color:#f00; font-weight:bold;' : ''}" />
+							</p:column>
+							<p:column style="width:30px;">
+								<h:outputText value="#{filterVO.totalGA}" />
+							</p:column>
+							<p:column style="width:55px;">
+								<h:outputText value="#{filterVO.fullTwn}"
+									rendered="#{filterVO.fullTwn % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText value="#{filterVO.fullTwn}"
+									rendered="#{filterVO.fullTwn % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+							</p:column>
+							<p:column style="width:55px;">
+								<h:outputText value="#{filterVO.fullSgl}"
+									rendered="#{filterVO.fullSgl % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText value="#{filterVO.fullSgl}"
+									rendered="#{filterVO.fullSgl % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+							</p:column>
+							<p:column style="width:55px;">
+								<h:outputText value="#{filterVO.fullCtw}"
+									rendered="#{filterVO.fullCtw % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText value="#{filterVO.fullCtw}"
+									rendered="#{filterVO.fullCtw % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+							</p:column>
+							<p:column style="width:55px;">
+								<h:outputText value="#{filterVO.fullCeb}"
+									rendered="#{filterVO.fullCeb % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText value="#{filterVO.fullCeb}"
+									rendered="#{filterVO.fullCeb % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+							</p:column>
+							<p:column style="width:55px;">
+								<h:outputText value="#{filterVO.fullCnb}"
+									rendered="#{filterVO.fullCnb % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText value="#{filterVO.fullCnb}"
+									rendered="#{filterVO.fullCnb % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+							</p:column>
+							<p:column style="width:110px;">
+								<h:outputText value="#{filterVO.miscAdt}"
+									rendered="#{filterVO.miscAdt % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText value="/"
+									rendered="#{filterVO.miscAdt % 1 &gt; 0}" />
+								<h:outputText value="#{filterVO.miscChd}"
+									rendered="#{filterVO.miscChd % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText value="#{filterVO.miscAdt}"
+									rendered="#{filterVO.miscAdt % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+								<h:outputText value="/"
+									rendered="#{filterVO.miscAdt % 1 &lt;= 0}" />
+								<h:outputText value="#{filterVO.miscChd}"
+									rendered="#{filterVO.miscChd % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+							</p:column>
+							<p:column style="width:90px;">
+								<h:outputText value="#{filterVO.cnaAdt}"
+									rendered="#{filterVO.cnaAdt % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText value="/" rendered="#{filterVO.cnaAdt % 1 &gt; 0}" />
+								<h:outputText value="#{filterVO.csiAdt}"
+									rendered="#{filterVO.csiAdt % 1 &gt; 0}">
+									<f:convertNumber pattern="#,##0.00" />
+								</h:outputText>
+								<h:outputText value="#{filterVO.cnaAdt}"
+									rendered="#{filterVO.cnaAdt % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+								<h:outputText value="/"
+									rendered="#{filterVO.cnaAdt % 1 &lt;= 0}" />
+								<h:outputText value="#{filterVO.csiAdt}"
+									rendered="#{filterVO.csiAdt % 1 &lt;= 0}">
+									<f:convertNumber pattern="#,##0" />
+								</h:outputText>
+							</p:column>
+							<p:column style="width:40px;">
+								<ui:repeat value="#{filterVO.tourItineryList}" var="itineryVO">
+									<h:outputLink target="_blank"
+										value="#{request.contextPath}#{itineryVO.path}/#{salesBean.urlEncoder(itineryVO.name)}"
+										rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'EN'}">
+										<p:graphicImage value="/img/pdf.png" />
+									</h:outputLink>
+								</ui:repeat>
+							</p:column>
+							<!-- <p:column width="25">
+								<ui:repeat value="#{filterVO.tourItineryList}" var="itineryVO">
+									<h:outputLink target="_blank"
+										value="#{request.contextPath}#{itineryVO.path}/#{salesBean.urlEncoder(itineryVO.name)}"
+										rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'ZH'}">
+										<p:graphicImage value="/img/pdf.png" />
+									</h:outputLink>
+								</ui:repeat>
+							</p:column> -->
+							<p:column style="width:30px;">
+								<p:commandLink
+									actionListener="#{salesBean.handleTourDepSelectFromSearch(filterVO)}"
+									oncomplete="varTourDepMoreInfoDialog.show()"
+									update=":idTourDepMoreInfoDialog">
+									<p:graphicImage value="/img/more.png" />
+								</p:commandLink>
+							</p:column>
+							<p:column style="width:30px;">
+								<h:outputLink
+									value="#{request.contextPath}/app/emailtmp/bookingemailtmp?tourDepId=#{filterVO.id}&amp;withOutPax=Y"
+									target="_blank">
+									<p:graphicImage value="/img/mail.png" />
+								</h:outputLink>
+							</p:column>
+						</p:dataTable>
+						
+						<h:panelGrid columns="2" style="margin-top:5px; width:1px">
+							<p:commandButton icon="ui-icon-print" value="Export" actionListener="#{salesBean.printTourDepFindTourListRpt}" ajax="false"/>
+						</h:panelGrid>
+						</div>
+					</p:tab>
+				</p:tabView>
+			</h:form>
+		</p:panel>
+
+		<!--
+	DIALOG - TOUR DEPARTURE LIST
+	style="width:90% !important; height:95% !important; overflow:auto;"
+-->
+		<p:dialog id="idTourDepListDialog" header="Tour Departures"
+			widgetVar="varTourDepListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idTourDepListForm">
+				<ui:include src="tour_dep_list.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!--
+	DIALOG - ADD BOOKING
+-->
+		<p:dialog id="idAddBookingDialog" header="Book Tour"
+			widgetVar="varAddBookingDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idAddInvoiceForm">
+				<script type="text/javascript">
+					function onValidation(xhr, status, args) {
+						if (!args.validationFailed) {
+							varAddBookingDialog.hide();
+						}
+					}
+					function onAddValidation(xhr, status, args) {
+						if (!args.validationFailed) {
+							varAddBookingDialog.hide();
+						}
+					}
+					function onBookingTransferValidation(xhr, status, args) {
+						if (!args.validationFailed) {
+							varAvailableTourDepListDialog.show();
+						}
+					}
+					var regTwnVO = #{(salesBean.tourDepVO.fullTwn + salesBean.tourDepVO.miscAdt)};
+					var regSglVO = #{(salesBean.tourDepVO.fullSgl + salesBean.tourDepVO.miscAdt)};
+					var regCtwVO = #{(salesBean.tourDepVO.fullCtw + salesBean.tourDepVO.miscChd)};
+					var regCwbVO = #{(salesBean.tourDepVO.fullCeb + salesBean.tourDepVO.miscChd)};
+					var regCnbVO = #{(salesBean.tourDepVO.fullCnb + salesBean.tourDepVO.miscChd)};
+					var grdTwnVO = #{(salesBean.tourDepVO.grndTwn + salesBean.tourDepVO.grdMiscAdtChd)};
+					var grdSglVO = #{(salesBean.tourDepVO.grndSgl + salesBean.tourDepVO.grdMiscAdtChd)};
+					var grdCtwVO = #{(salesBean.tourDepVO.grndCtw + salesBean.tourDepVO.grdMiscAdtChd)};
+					var grdCwbVO = #{(salesBean.tourDepVO.grndCeb + salesBean.tourDepVO.grdMiscAdtChd)};
+					var grdCnbVO = #{(salesBean.tourDepVO.grndCnb + salesBean.tourDepVO.grdMiscAdtChd)};
+					var deposit = #{salesBean.tourPkgVO.deposit};
+					
+					$(function() {
+						var idFtTwn = document.getElementById('idAddInvoiceForm:idFtTwn').value;
+						var idFtSgl = document.getElementById('idAddInvoiceForm:idFtSgl').value;
+						var idFtCtw = document.getElementById('idAddInvoiceForm:idFtCtw').value;
+						var idFtCwb = document.getElementById('idAddInvoiceForm:idFtCwb').value;
+						var idFtCnb = document.getElementById('idAddInvoiceForm:idFtCnb').value;
+						var idFtInft = document.getElementById('idAddInvoiceForm:idFtInft').value;
+						
+						var idGaTwn = document.getElementById('idAddInvoiceForm:idGaTwn').value;
+						var idGaSgl = document.getElementById('idAddInvoiceForm:idGaSgl').value;
+						var idGaCtw = document.getElementById('idAddInvoiceForm:idGaCtw').value;
+						var idGaCwb = document.getElementById('idAddInvoiceForm:idGaCwb').value;
+						var idGaCnb = document.getElementById('idAddInvoiceForm:idGaCnb').value;
+						var idGaInft = document.getElementById('idAddInvoiceForm:idGaInft').value;
+
+						if(!idFtTwn){
+							idFtTwn = 0;
+						}
+						if(!idFtSgl){
+							idFtSgl = 0;
+						}
+						if(!idFtCtw){
+							idFtCtw = 0;
+						}
+						if(!idFtCwb){
+							idFtCwb = 0;
+						}
+						if(!idFtCnb){
+							idFtCnb = 0;
+						}
+						if(!idFtInft){
+							idFtInft = 0;
+						}
+						
+						if(!idGaTwn){
+							idGaTwn = 0;
+						}
+						if(!idGaSgl){
+							idGaSgl = 0;
+						}
+						if(!idGaCtw){
+							idGaCtw = 0;
+						}
+						if(!idGaCwb){
+							idGaCwb = 0;
+						}
+						if(!idGaCnb){
+							idGaCnb = 0;
+						}
+						if(!idGaInft){
+							idGaInft = 0;
+						}
+						document.getElementById('idAddInvoiceForm:idTotalTwn').value = parseFloat(parseFloat(regTwnVO*Number(idFtTwn)) + parseFloat(grdTwnVO*Number(idGaTwn))).toFixed(2);
+						document.getElementById('idAddInvoiceForm:idTotalSgl').value = parseFloat(parseFloat(regSglVO*Number(idFtSgl)) + parseFloat(grdSglVO*Number(idGaSgl))).toFixed(2);
+						document.getElementById('idAddInvoiceForm:idTotalCtw').value = parseFloat(parseFloat(regCtwVO*Number(idFtCtw)) + parseFloat(grdCtwVO*Number(idGaCtw))).toFixed(2);
+						document.getElementById('idAddInvoiceForm:idTotalCwb').value = parseFloat(parseFloat(regCwbVO*Number(idFtCwb)) + parseFloat(grdCwbVO*Number(idGaCwb))).toFixed(2);
+						document.getElementById('idAddInvoiceForm:idTotalCnb').value = parseFloat(parseFloat(regCnbVO*Number(idFtCnb)) + parseFloat(grdCnbVO*Number(idGaCnb))).toFixed(2);
+						document.getElementById('idAddInvoiceForm:idTotalInft').value = parseFloat(parseFloat(0*Number(idFtInft)) + parseFloat(0*Number(idGaInft))).toFixed(2);
+						var totalTwn = document.getElementById('idAddInvoiceForm:idTotalTwn').value;
+						var totalSgl = document.getElementById('idAddInvoiceForm:idTotalSgl').value;
+						var totalCtw = document.getElementById('idAddInvoiceForm:idTotalCtw').value;
+						var totalCwb = document.getElementById('idAddInvoiceForm:idTotalCwb').value;
+						var totalCnb = document.getElementById('idAddInvoiceForm:idTotalCnb').value;
+						var totalInft = document.getElementById('idAddInvoiceForm:idTotalInft').value;
+						
+						if(!totalTwn)
+							totalTwn = 0;
+						if(!totalSgl)
+							totalSgl = 0;
+						if(!totalCtw)
+							totalCtw = 0;
+						if(!totalCwb)
+							totalCwb = 0;
+						if(!totalCnb)
+							totalCnb = 0;
+						if(!totalInft)
+							totalInft = 0;
+						
+						document.getElementById('idAddInvoiceForm:idTotalAmount').value = parseFloat(parseFloat(totalTwn) + parseFloat(totalSgl) + parseFloat(totalCtw) + parseFloat(totalCwb) + parseFloat(totalCnb) + parseFloat(totalInft)).toFixed(2); 
+						var bookingId = #{salesBean.bookingVO.id eq null ? 0 : salesBean.bookingVO.id};
+						if(Number(bookingId)==0){
+							var discount1 = #{salesBean.tourDepVO.discount1};
+							var discount2 = #{salesBean.tourDepVO.discount2};
+							var disc1Pax = #{salesBean.tourDepVO.discountPax1};	
+							var disc2Pax = #{salesBean.tourDepVO.discountPax2};	
+						}else{
+							var discount1 = #{salesBean.bookingVO.discount1};
+							var discount2 = #{salesBean.bookingVO.discount2};
+							var disc1Pax = #{salesBean.bookingVO.discountPax1};	
+							var disc2Pax = #{salesBean.bookingVO.discountPax2};	
+						}
+						var totalPax = Number(idFtTwn) + Number(idFtSgl) + Number(idFtCtw) + Number(idFtCwb) + Number(idFtCnb);
+						var totalDiscPax = Number(disc1Pax) + Number(disc2Pax);
+						var remaining;
+						
+						var totalGaPax = Number(idGaTwn) + Number(idGaSgl) + Number(idGaCtw) + Number(idGaCwb) + Number(idGaCnb);
+						document.getElementById('idAddInvoiceForm:idDepositAmount').value = parseFloat((totalPax + totalGaPax) * Number(deposit)).toFixed(2);
+						
+						if(Number(disc1Pax) != 0){
+							if(Number(disc2Pax) != 0){
+								if(Number(totalPax) > Number(totalDiscPax)){
+									document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+								}else if(Number(totalPax) == Number(totalDiscPax)){
+									document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+								}else if(Number(totalDiscPax) > Number(totalPax)){
+									if(Number(disc1Pax) > Number(totalPax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(totalPax))).toFixed(2);
+									}else if(Number(disc1Pax) == Number(totalPax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+									}else if(Number(totalPax) > Number(disc1Pax)){
+										remaining = Number(totalPax) - Number(disc1Pax);
+										disc2Pax = remaining;
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+									}
+								}
+							} else{
+								if(Number(totalPax) > Number(disc1Pax)){
+									document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+								}else if(Number(totalPax) == Number(disc1Pax)){
+									document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+								}else if(Number(disc1Pax) > Number(totalPax)){
+									document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(totalPax))).toFixed(2);
+								}
+							}
+						}else{
+							if(Number(disc2Pax) != 0){
+								if(Number(totalPax) > Number(disc2Pax)){
+									document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+								}else if(Number(totalPax) == Number(disc2Pax)){
+									document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+								}else if(Number(disc2Pax) > Number(totalPax)){
+									document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(totalPax))).toFixed(2);
+								}
+							}else{
+								document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*0) + parseFloat(discount2*0)).toFixed(2);
+							}
+						}
+						document.getElementById('idAddInvoiceForm:idPayableAmount').value = parseFloat(parseFloat(document.getElementById('idAddInvoiceForm:idTotalAmount').value) - parseFloat(document.getElementById('idAddInvoiceForm:idDiscountAmount').value)).toFixed(2); 
+					});
+					
+					[document.getElementById('idAddInvoiceForm:idFtTwn'), document.getElementById('idAddInvoiceForm:idGaTwn'), document.getElementById('idAddInvoiceForm:idFtSgl'), document.getElementById('idAddInvoiceForm:idGaSgl'), document.getElementById('idAddInvoiceForm:idFtCtw'), document.getElementById('idAddInvoiceForm:idGaCtw'), document.getElementById('idAddInvoiceForm:idFtCwb'), document.getElementById('idAddInvoiceForm:idGaCwb'), document.getElementById('idAddInvoiceForm:idFtCnb'), document.getElementById('idAddInvoiceForm:idGaCnb'), document.getElementById('idAddInvoiceForm:idFtInft'), document.getElementById('idAddInvoiceForm:idGaInft')].forEach(item => {
+						  item.addEventListener('keyup', event => {
+							  var idFtTwn = document.getElementById('idAddInvoiceForm:idFtTwn').value;
+								var idFtSgl = document.getElementById('idAddInvoiceForm:idFtSgl').value;
+								var idFtCtw = document.getElementById('idAddInvoiceForm:idFtCtw').value;
+								var idFtCwb = document.getElementById('idAddInvoiceForm:idFtCwb').value;
+								var idFtCnb = document.getElementById('idAddInvoiceForm:idFtCnb').value;
+								var idFtInft = document.getElementById('idAddInvoiceForm:idFtInft').value;
+								
+								var idGaTwn = document.getElementById('idAddInvoiceForm:idGaTwn').value;
+								var idGaSgl = document.getElementById('idAddInvoiceForm:idGaSgl').value;
+								var idGaCtw = document.getElementById('idAddInvoiceForm:idGaCtw').value;
+								var idGaCwb = document.getElementById('idAddInvoiceForm:idGaCwb').value;
+								var idGaCnb = document.getElementById('idAddInvoiceForm:idGaCnb').value;
+								var idGaInft = document.getElementById('idAddInvoiceForm:idGaInft').value;
+								
+								if(!idGaTwn){
+									idGaTwn = 0;
+								}
+								if(!idGaSgl){
+									idGaSgl = 0;
+								}
+								if(!idGaCtw){
+									idGaCtw = 0;
+								}
+								if(!idGaCwb){
+									idGaCwb = 0;
+								}
+								if(!idGaCnb){
+									idGaCnb = 0;
+								}
+								if(!idGaInft){
+									idGaInft = 0;
+								}
+							
+							if(!idFtTwn){
+								idFtTwn = 0;
+							}
+							document.getElementById('idAddInvoiceForm:idTotalTwn').value = parseFloat(parseFloat(regTwnVO*Number(idFtTwn)) + parseFloat(grdTwnVO*Number(idGaTwn))).toFixed(2);
+							if(!idFtSgl){
+								idFtSgl = 0;
+							}
+							document.getElementById('idAddInvoiceForm:idTotalSgl').value = parseFloat(parseFloat(regSglVO*Number(idFtSgl)) + parseFloat(grdSglVO*Number(idGaSgl))).toFixed(2);
+							if(!idFtCtw){
+								idFtCtw = 0;			
+							}
+							document.getElementById('idAddInvoiceForm:idTotalCtw').value = parseFloat(parseFloat(regCtwVO*Number(idFtCtw)) + parseFloat(grdCtwVO*Number(idGaCtw))).toFixed(2);
+							if(!idFtCwb){
+								idFtCwb = 0;					
+							}
+							document.getElementById('idAddInvoiceForm:idTotalCwb').value = parseFloat(parseFloat(regCwbVO*Number(idFtCwb)) + parseFloat(grdCwbVO*Number(idGaCwb))).toFixed(2);
+							if(!idFtCnb){
+								idFtCnb = 0;					
+							}
+							document.getElementById('idAddInvoiceForm:idTotalCnb').value = parseFloat(parseFloat(regCnbVO*Number(idFtCnb)) + parseFloat(grdCnbVO*Number(idGaCnb))).toFixed(2);
+							document.getElementById('idAddInvoiceForm:idTotalInft').value = parseFloat(parseFloat(0*Number(idFtInft)) + parseFloat(0*Number(idGaInft))).toFixed(2);
+							var totalTwn = document.getElementById('idAddInvoiceForm:idTotalTwn').value;
+							var totalSgl = document.getElementById('idAddInvoiceForm:idTotalSgl').value;
+							var totalCtw = document.getElementById('idAddInvoiceForm:idTotalCtw').value;
+							var totalCwb = document.getElementById('idAddInvoiceForm:idTotalCwb').value;
+							var totalCnb = document.getElementById('idAddInvoiceForm:idTotalCnb').value;
+							var totalInft = document.getElementById('idAddInvoiceForm:idTotalInft').value;
+							
+							if(!totalTwn)
+								totalTwn = 0;
+							if(!totalSgl)
+								totalSgl = 0;
+							if(!totalCtw)
+								totalCtw = 0;
+							if(!totalCwb)
+								totalCwb = 0;
+							if(!totalCnb)
+								totalCnb = 0;
+							if(!totalInft)
+								totalInft = 0;
+							
+							document.getElementById('idAddInvoiceForm:idTotalAmount').value = parseFloat(parseFloat(totalTwn) + parseFloat(totalSgl) + parseFloat(totalCtw) + parseFloat(totalCwb) + parseFloat(totalCnb) + parseFloat(totalInft)).toFixed(2); 
+							var bookingId = #{salesBean.bookingVO.id eq null ? 0 : salesBean.bookingVO.id};
+							
+							if(Number(bookingId)==0){
+								var discount1 = #{salesBean.tourDepVO.discount1};
+								var discount2 = #{salesBean.tourDepVO.discount2};
+								var disc1Pax = #{salesBean.tourDepVO.discountPax1};	
+								var disc2Pax = #{salesBean.tourDepVO.discountPax2};	
+							}else{
+								var discount1 = #{salesBean.bookingVO.discount1};
+								var discount2 = #{salesBean.bookingVO.discount2};
+								var disc1Pax = #{salesBean.bookingVO.discountPax1};	
+								var disc2Pax = #{salesBean.bookingVO.discountPax2};	
+							}
+							var totalPax = Number(idFtTwn) + Number(idFtSgl) + Number(idFtCtw) + Number(idFtCwb) + Number(idFtCnb);
+							var totalDiscPax = Number(disc1Pax) + Number(disc2Pax);
+							var remaining;
+							
+							var totalGaPax = Number(idGaTwn) + Number(idGaSgl) + Number(idGaCtw) + Number(idGaCwb) + Number(idGaCnb);
+							document.getElementById('idAddInvoiceForm:idDepositAmount').value = parseFloat((totalPax + totalGaPax) * Number(deposit)).toFixed(2);
+							
+							if(Number(disc1Pax) != 0){
+								if(Number(disc2Pax) != 0){
+									if(Number(totalPax) > Number(totalDiscPax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+									}else if(Number(totalPax) == Number(totalDiscPax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+									}else if(Number(totalDiscPax) > Number(totalPax)){
+										if(Number(disc1Pax) > Number(totalPax)){
+											document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(totalPax))).toFixed(2);
+										}else if(Number(disc1Pax) == Number(totalPax)){
+											document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+										}else if(Number(totalPax) > Number(disc1Pax)){
+											remaining = Number(totalPax) - Number(disc1Pax);
+											disc2Pax = remaining;
+											document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax)) + parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+										}
+									}
+								} else{
+									if(Number(totalPax) > Number(disc1Pax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+									}else if(Number(totalPax) == Number(disc1Pax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(disc1Pax))).toFixed(2);
+									}else if(Number(disc1Pax) > Number(totalPax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*Number(totalPax))).toFixed(2);
+									}
+								}
+							}else{
+								if(Number(disc2Pax) != 0){
+									if(Number(totalPax) > Number(disc2Pax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+									}else if(Number(totalPax) == Number(disc2Pax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(disc2Pax))).toFixed(2);
+									}else if(Number(disc2Pax) > Number(totalPax)){
+										document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount2*Number(totalPax))).toFixed(2);
+									}
+								}else{
+									document.getElementById("idAddInvoiceForm:idDiscountAmount").value = parseFloat(parseFloat(discount1*0) + parseFloat(discount2*0)).toFixed(2);
+								}
+							}
+							
+							var totalAmount = document.getElementById("idAddInvoiceForm:idTotalAmount").value;
+							var idDiscountAmount = document.getElementById("idAddInvoiceForm:idDiscountAmount").value;
+							document.getElementById("idAddInvoiceForm:idPayableAmount").value = parseFloat(parseFloat(totalAmount) - parseFloat(idDiscountAmount)).toFixed(2);
+						  })
+					});
+					
+				</script>
+				<p:growl id="msg" />
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<h:outputText value="Dep Date" />
+						</p:column>
+						<p:column>
+							<h:outputText value="#{salesBean.tourDepVO.dtDep}">
+								<f:convertDateTime pattern="#{config['date.display.pattern2']}" />
+							</h:outputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputText value="Tour Name" />
+						</p:column>
+						<p:column>
+							<h:outputText
+								value="#{salesBean.tourPkgVO.numDays}D/#{salesBean.tourPkgVO.numNights}N " />
+							<h:outputText value="#{salesBean.tourPkgVO.nameEn}" />
+							<h:outputText value=" [#{salesBean.tourDepVO.desc}]" />
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputText value="Invoice No." />
+						</p:column>
+						<p:column>
+							<h:outputText value="#{salesBean.bookingVO.invoiceVO.code}"
+								rendered="#{not empty salesBean.bookingVO.invoiceVO}" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				<p:panel>
+					<div style="height:100%; overflow:auto;">
+					<p:panelGrid>
+						<p:row>
+							<p:column style="width: 100px;">
+								<h:outputLabel>Sales Person</h:outputLabel>
+							</p:column>
+							<p:column style="width: 140px;">
+								<!-- <p:inputText value="#{salesBean.sessionInfoBean.userVO.name}"
+									readonly="true" style="background:#ccc"
+									rendered="#{salesBean.bookBoolean.add and (not salesBean.salesPersonAuth and not salesBean.salesManager)}" />
+								<p:inputText
+									value="#{salesBean.bookingVO.employeeViewVO.userVO.name}"
+									readonly="true" style="background:#ccc"
+									rendered="#{salesBean.bookBoolean.upd and (not salesBean.salesPersonAuth and not salesBean.salesManager)}" />
+								<p:selectOneMenu value="#{salesBean.bookingVO.idEmployee}" filter="true"
+									rendered="#{(salesBean.bookBoolean.add or salesBean.bookBoolean.upd) and (salesBean.salesPersonAuth or salesBean.salesManager)}">
+									<f:selectItems value="#{salesBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}" />
+								</p:selectOneMenu> -->
+								<p:inputText value="#{salesBean.sessionInfoBean.userVO.name}" readonly="true" style="background:#ccc"
+									rendered="#{salesBean.bookBoolean.add and
+										((not salesBean.salesPersonAuth and not salesBean.salesManager and not salesBean.asstSalesManager) or
+										(not empty salesBean.bookingVO.invoiceVO and salesBean.bookingVO.invoiceVO.isLockSP))}"/>
+								<p:inputText value="#{salesBean.bookingVO.employeeViewVO.userVO.name}" readonly="true" style="background:#ccc"
+									rendered="#{salesBean.bookBoolean.upd and
+										((not salesBean.salesPersonAuth and not salesBean.salesManager and not salesBean.asstSalesManager) or
+										(not empty salesBean.bookingVO.invoiceVO and salesBean.bookingVO.invoiceVO.isLockSP))}"/>
+								<p:selectOneMenu value="#{salesBean.bookingVO.idEmployee}" filter="true"
+									rendered="#{(salesBean.bookBoolean.add or salesBean.bookBoolean.upd) and
+										(salesBean.salesPersonAuth or salesBean.salesManager or salesBean.asstSalesManager) and
+										(empty salesBean.bookingVO.invoiceVO or (not empty salesBean.bookingVO.invoiceVO and not salesBean.bookingVO.invoiceVO.isLockSP))}">
+									<f:selectItems value="#{salesBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+								</p:selectOneMenu>
+							</p:column>
+							<p:column style="width: 80px;">
+								<h:outputLabel for="idAddSurvey">Survey</h:outputLabel>
+							</p:column>
+							<p:column style="padding-top: 10px;padding-bottom: 0px;width: 300px;">
+								<p:selectCheckboxMenu id="idAddSurvey" label="Select" onHide="updateSurveyDesc();"
+									value="#{salesBean.bookingVO.idSurveyList}" filter="true" filterMatchMode="contains">
+									<f:selectItems value="#{bterp:lookupItemList('survey_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+								</p:selectCheckboxMenu>
+								<p:remoteCommand name="updateSurveyDesc" update="idSurveyDesc" global="false" />
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column>
+								<h:outputLabel>Order Source</h:outputLabel>
+							</p:column>
+							<p:column>
+								<h:selectOneMenu value="#{salesBean.bookingVO.orderTypeCd}" effect="fade">
+									<f:selectItems value="#{bterp:lookupItemList('ordr_sorc')}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+									<!-- <p:ajax process="@this" update="idTFairSalerList" global="false"/> -->
+								</h:selectOneMenu>
+							</p:column>
+							<p:column colspan="2" style="width: 300px;">
+								<p:outputLabel id="idSurveyDesc" value="#{salesBean.bookingVO.surveyDesc}" />
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column><h:outputLabel id="idTFairSalerLabel">Referral SP</h:outputLabel></p:column>
+							<p:column>
+								<!-- <p:selectOneMenu id="idTFairSalerList" value="#{salesBean.bookingVO.idSalerTfair}" filter="true">
+									<f:selectItem itemLabel="Select One"/>
+									<f:selectItems value="#{salesBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+								</p:selectOneMenu> -->
+								<p:inputText value="#{salesBean.bookingVO.refEmployeeViewVO.userVO.name}" readonly="true" style="background:#ccc"
+									rendered="#{( salesBean.bookBoolean.add or salesBean.bookBoolean.upd) and
+										((not salesBean.salesPersonAuth and not salesBean.salesManager and not salesBean.asstSalesManager) or
+										(not empty salesBean.bookingVO.invoiceVO and salesBean.bookingVO.invoiceVO.isLockSP))}"/>
+								<p:selectOneMenu id="idTFairSalerList" value="#{salesBean.bookingVO.idSalerTfair}" filter="true"
+									rendered="#{(salesBean.bookBoolean.add or salesBean.bookBoolean.upd) and
+										(salesBean.salesPersonAuth or salesBean.salesManager or salesBean.asstSalesManager) and
+										(empty salesBean.bookingVO.invoiceVO or (not empty salesBean.bookingVO.invoiceVO and not salesBean.bookingVO.invoiceVO.isLockSP))}">
+									<f:selectItem itemLabel="Select One"/>
+									<f:selectItems value="#{salesBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+								</p:selectOneMenu>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column>
+								<h:outputLabel>No. Of Pax <span class="required">*</span></h:outputLabel>
+							</p:column>
+							<p:column colspan="3">
+								<p:panelGrid>
+									<p:row>
+										<p:column>
+											<p:fieldset legend="Full Tour">
+												<h:panelGrid columns="6">
+													<h:outputLabel>TWN</h:outputLabel>
+													<h:outputLabel>SGL</h:outputLabel>
+													<h:outputLabel>CTW</h:outputLabel>
+													<h:outputLabel>CWB</h:outputLabel>
+													<h:outputLabel>CNB</h:outputLabel>
+													<h:outputLabel>INFT</h:outputLabel>
+													<p:inputText label="FT TWN"
+														value="#{salesBean.bookingVO.paxFullTwn}" required="true"
+														id="idFtTwn" style="width:50px;">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="FT SGL"
+														value="#{salesBean.bookingVO.paxFullSgl}" required="true"
+														id="idFtSgl" style="width:50px;">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="FT CTW"
+														value="#{salesBean.bookingVO.paxFullCtw}" required="true"
+														id="idFtCtw" style="width:50px;">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="FT CWB"
+														value="#{salesBean.bookingVO.paxFullCeb}" required="true"
+														id="idFtCwb" style="width:50px;">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="FT CNB"
+														value="#{salesBean.bookingVO.paxFullCnb}" required="true"
+														id="idFtCnb" style="width:50px;">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="FT INFT"
+														value="#{salesBean.bookingVO.paxFullInft}" required="true"
+														id="idFtInft" style="width:50px;">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+												</h:panelGrid>
+											</p:fieldset>
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<p:fieldset legend="Ground Only">
+												<h:panelGrid columns="6">
+													<h:outputLabel>TWN</h:outputLabel>
+													<h:outputLabel>SGL</h:outputLabel>
+													<h:outputLabel>CTW</h:outputLabel>
+													<h:outputLabel>CWB</h:outputLabel>
+													<h:outputLabel>CNB</h:outputLabel>
+													<h:outputLabel>INFT</h:outputLabel>
+													<c:set var="groundOnlyDisable" value="#{salesBean.tourDepVO.grndSgl == 0 and
+																							salesBean.tourDepVO.grndTwn == 0 and
+																							salesBean.tourDepVO.grndCtw == 0 and
+																							salesBean.tourDepVO.grndCeb == 0 and
+																							salesBean.tourDepVO.grndCnb == 0 and
+																							salesBean.tourDepVO.grndInft == 0}" />
+													<p:inputText label="GA TWN"
+														value="#{salesBean.bookingVO.paxGrndTwn}" required="true"
+														id="idGaTwn" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="GA SGL"
+														value="#{salesBean.bookingVO.paxGrndSgl}" required="true"
+														id="idGaSgl" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="GA CTW"
+														value="#{salesBean.bookingVO.paxGrndCtw}" required="true"
+														id="idGaCtw" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="GA CWB"
+														value="#{salesBean.bookingVO.paxGrndCeb}" required="true"
+														id="idGaCwb" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="GA CNB"
+														value="#{salesBean.bookingVO.paxGrndCnb}" required="true"
+														id="idGaCnb" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+													<p:inputText label="GA INFT"
+														value="#{salesBean.bookingVO.paxGrndInft}" required="true"
+														id="idGaInft" style="#{groundOnlyDisable ? 'background:#ccc;' : ''} width:50px;" readonly="#{groundOnlyDisable}">
+														<pe:keyFilter regEx="/[\d]/" />
+													</p:inputText>
+												</h:panelGrid>
+												<h:panelGrid columns="1" rendered="#{groundOnlyDisable}">
+													<h:outputText value="Ground only booking unavailable. Contact Operation for enquiry." />
+												</h:panelGrid>
+											</p:fieldset>
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column>
+								<h:outputLabel>
+									Sub Total Amount
+								</h:outputLabel>
+							</p:column>
+							<p:column colspan="3">
+								<p:panelGrid>
+									<p:row>
+										<p:column>
+											<h:panelGrid columns="6">
+													<h:outputLabel>TWN</h:outputLabel>
+													<h:outputLabel>SGL</h:outputLabel>
+													<h:outputLabel>CTW</h:outputLabel>
+													<h:outputLabel>CWB</h:outputLabel>
+													<h:outputLabel>CNB</h:outputLabel>
+													<h:outputLabel>INFT</h:outputLabel>
+													<p:inputText id="idTotalTwn" label="TOTAL TWN"
+														readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+													<p:inputText id="idTotalSgl" label="TOTAL SGL"
+														readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+													<p:inputText id="idTotalCtw" label="TOTAL CTW"
+														readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+													<p:inputText id="idTotalCwb" label="TOTAL CWB"
+														readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+													<p:inputText id="idTotalCnb" label="TOTAL CNB"
+														readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+													<p:inputText id="idTotalInft" label="TOTAL INFT"
+														readonly="true" style="background:#ccc;width:50px;"></p:inputText>
+												</h:panelGrid>
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column />
+							<p:column colspan="3">
+								<p:panelGrid>
+									<p:row>
+										<p:column style="text-align:right">
+											<h:outputLabel>
+											Total Amount:
+											</h:outputLabel>&nbsp;
+											<p:inputText id="idTotalAmount" label="Total Amount"
+												required="true" readonly="true"
+												style="background:#ccc; text-transform:uppercase;" />
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column style="text-align:right">
+											<h:outputLabel>
+											Discount Amount:
+											</h:outputLabel>&nbsp;
+											<p:inputText id="idDiscountAmount" label="Discount Amount"
+												required="true" readonly="true"
+												style="background:#ccc; text-transform:uppercase;" />
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column style="text-align:right">
+											<h:outputLabel>
+											Deposit Amount:
+											</h:outputLabel>&nbsp;
+											<p:inputText id="idDepositAmount" label="Deposit Amount"
+												required="true" readonly="true"
+												style="background:#ccc; text-transform:uppercase;" />
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column style="text-align:right">
+											<h:outputLabel>
+											Total Amount Payable:
+											</h:outputLabel>&nbsp;
+											<p:inputText id="idPayableAmount" label="Total Amount Payable"
+												required="true" readonly="true"
+												style="background:#ccc; text-transform:uppercase;" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+							</p:column>
+						</p:row>
+						<p:row>
+							<p:column>
+								<h:outputLabel for="idCustDetails">Customer <span
+										class="required">*</span>
+								</h:outputLabel>
+							</p:column>
+							<p:column colspan="3">
+								<p:inputText id="idCustDetails" label="Customer"
+									value="#{salesBean.custDetailsVO.contPersonName}"
+									required="true" readonly="true"
+									style="background:#ccc; text-transform:uppercase;" />&nbsp;
+								<p:commandButton icon="ui-icon-search"
+									oncomplete="varCustListDialog.show()"
+									update=":idCustListDialog" />
+								<p:commandButton icon="ui-icon-plus" actionListener="#{salesBean.onAddCust}"
+									oncomplete="varAddCustDialog.show()" update=":idAddCustDialog" />
+								<h:inputHidden id="idAttTo" />
+								<h:inputHidden id="idTotalUPoint" />
+								<h:inputHidden id="idTotalVoucher" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+					</div>
+				</p:panel>
+				<h:panelGrid columns="3" style="width:1px;">
+					<p:commandButton value="Book"
+						actionListener="#{salesBean.addBooking}"
+						update="@form,:idTourDepListForm, :idTourPkgForm:idTab:idTourFilterBookingDepList"
+						oncomplete="onAddValidation(xhr, status, args)"
+						rendered="#{salesBean.bookBoolean.add}" />
+					<p:commandButton value="#{msg['common.button.label.update']}"
+						actionListener="#{salesBean.updBooking}"
+						update="@form,:idTourDepListForm,:idBookingListForm, :idTourPkgForm:idTab:idTourFilterBookingDepList"
+						oncomplete="onValidation(xhr, status, args)"
+						rendered="#{salesBean.bookBoolean.upd and not salesBean.fromBookingPage}" />
+					<!--  and empty salesBean.bookingVO.invoiceVO -->
+					<p:commandButton value="#{msg['common.button.label.update']}"
+						actionListener="#{salesBean.updBooking2}"
+						update="@form,:idBookingListForm:idBookingList,:idAddInvoiceForm"
+						oncomplete="onValidation(xhr, status, args)"
+						rendered="#{salesBean.bookBoolean.upd and salesBean.fromBookingPage}" />
+					<!--  and empty salesBean.bookingVO.invoiceVO -->
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						actionListener="#{salesBean.resetBookingForm}" update="@form"
+						process="@this" oncomplete="varAddBookingDialog.hide()"
+						rendered="#{not salesBean.fromBookingPage}">
+						<pe:resetEditableValues for="idAddInvoiceForm" />
+					</p:commandButton>
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						update="@form,:idAddInvoiceForm:idCustDetails"
+						oncomplete="varAddBookingDialog.hide()"
+						rendered="#{salesBean.fromBookingPage}" />
+					<p:commandButton value="Price Quote" update="@form" style="width:100px;"
+						oncomplete="handleComplete('#{salesBean.tourDepVO.id}');"
+						rendered="#{salesBean.bookBoolean.add}" />
+					<p:commandButton value="Transfer"
+						actionListener="#{salesBean.handleTransfer(false)}"
+						oncomplete="onBookingTransferValidation(xhr, status, args)"
+						update=":idAvailableTourDepList:idTourDepList" process="@this"
+						rendered="#{not empty salesBean.bookingVO.id and not sessionInfoBean.employeeVO.department.contains('sale')}" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+
+		<!--
+	DIALOG - CANCEL BOOKING
+-->
+		<p:confirmDialog widgetVar="varCancelBookingDialog"
+			message="Are you sure want to cancel this booking?">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="#{msg['common.button.label.yes']}"
+					actionListener="#{salesBean.cancelBooking}"
+					update="@form,:idBookingListForm,:idTourDepListForm"
+					oncomplete="varCancelBookingDialog.hide()" />
+				<p:commandButton value="#{msg['common.button.label.no']}"
+					actionListener="#{salesBean.resetForm}"
+					oncomplete="varCancelBookingDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+
+		<!--
+	DIALOG - CUSTOMER LIST
+-->
+		<p:dialog id="idCustListDialog" header="Customer List"
+			widgetVar="varCustListDialog" modal="true" showEffect="fade"
+			resizable="false" dynamic="true" draggable="true" closable="false" onShow="initializeFilters()">
+			<h:form id="idCustListForm">
+				<ui:include src="../../common/customer_list.xhtml" />
+				<!-- <ui:include src="customer_list.xhtml" /> -->
+			</h:form>
+			<script type="text/javascript">
+		        function initializeFilters() {
+		            var filters = document.querySelectorAll('#idCustListDialog input.ui-column-filter');
+		            filters.forEach(function(filter) {
+		                filter.setAttribute('enterkeyhint', 'enter');
+		            });
+		        }
+   		 	</script>
+		</p:dialog>
+
+		<!--
+	DIALOG - ADD CUSTOMER
+-->
+		<p:dialog id="idAddCustDialog" header="Customer"
+			widgetVar="varAddCustDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idAddCustForm">
+				<ui:include src="add_customer.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!--
+	DIALOG - BOOKING LIST
+-->
+		<p:dialog id="idBookingListDialog" header="Booking Made"
+			widgetVar="varBookingListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<p:ajax event="close" listener="#{salesBean.reloadTourDepList}"
+				udpate=":idTourDepListForm" />
+
+			<h:form id="idBookingListForm">
+				<ui:include src="booking_list.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!--
+	DIALOG - BOOKING DETAILS
+-->
+		<p:dialog id="idBookingDetailsDialog" header="Booking Details"
+			widgetVar="varBookingDetailsDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idBookingDetailsForm">
+				<ui:include src="booking_details.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!--
+	DIALOG - TOUR DEPARTURE MORE INFO
+-->
+		<p:dialog id="idTourDepMoreInfoDialog"
+			widgetVar="varTourDepMoreInfoDialog" header="More Info" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false"
+			style="width:100% !important;">
+			<h:form id="idTourDepMoreInfoForm">
+				<ui:include src="more_info.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!--
+	DIALOG - AVAILABLE TOUR DEPARTURE LIST
+-->
+		<p:dialog header="Select Tour Departure"
+			widgetVar="varAvailableTourDepListDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<h:form id="idAvailableTourDepList">
+				<ui:include src="../reserve/available_tour_dep_list.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!--
+	DIALOG - TRANSFER CONFIRMATION
+-->
+		<p:confirmDialog widgetVar="varTransferConfirmationDialog"
+			header="Confirmation" message="Are you sure want to do transfer?"
+			closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="#{msg['common.button.label.yes']}"
+					actionListener="#{salesBean.handleTransfer(true)}"
+					update="@form,:idBookingListForm:idBookingList,:idTourDepListForm"
+					oncomplete="onTransferValidation(xhr, status, args)" />
+				<p:commandButton value="#{msg['common.button.label.no']}"
+					onclick="varTransferConfirmationDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+		
+		<!-- <p:dialog id="idInvoiceRemarksDialog" header="Invoice Remarks"
+			widgetVar="varInvoiceRemarksDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idInvoiceRemarksForm">
+				<p:inputTextarea id="idInternalRemarks" label="Internal Remarks" value="#{salesBean.bookingVO.internalRemarks}"
+					rows="10" cols="70" style="width:515px; height:400px;" autoResize="false"/>
+				
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varInvoiceRemarksDialog.hide();"
+						update="@form" process="@this" global="false"/>
+				</h:panelGrid>
+			</h:form>
+		</p:dialog> -->
+		
+		<p:dialog id="idAddInvoiceRefDialog" header="Invoice"
+			widgetVar="varAddInvoiceRefDialog" modal="true" resizable="false"
+			dynamic="true" closable="true" styleClass="invoiceRefDialog">
+			<h:form id="idAddInvoiceRefForm">
+				<div style="height:550px;">
+				<ui:include src="../../inv/add_ref_invoice.xhtml" />
+				</div>
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idTourDepAirlineInfoDialog"
+			widgetVar="varTourDepAirlineInfoDialog" header="Airline" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false"
+			style="width:100% !important;">
+			<h:form id="idTourDepAirlineInfoForm">
+				<ui:include src="../../common/airline_info.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!-- <p:dialog id="idPassportImageDialog"
+			widgetVar="varPassportImageDialog" header="Passport Image"
+			modal="true" resizable="false" draggable="true" closable="true"
+			width="800" height="600">
+			<h:form style="height: 100%;">
+				<iframe
+					src="#{request.contextPath}#{salesBean.destinationPassportPath}/#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}"
+					style="width: 100%; height: 100%;" frameborder="0"></iframe>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						oncomplete="varPassportImageDialog.hide();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog> -->
+	</ui:define>
+</ui:composition>

@@ -1,0 +1,88 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	  			
+<style>
+	.disabled {
+		background : grey !important;
+		color : white;
+		cursor : auto;
+		pointer-events : none;
+	}
+</style>
+<!-- <p:growl id="msg"/>
+<p:dataTable value="#{tourPkgBean.custDetailsList}" var="vo" paginator="true" rows="10" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowKey="#{vo.custId}" selection="#{tourPkgBean.custDetailsVO}" selectionMode="single">
+	<p:ajax event="rowSelect" listener="#{tourPkgBean.handleCustSelect}" update=":idAddInvoiceForm:idCustDetails,:idAddInvoiceForm:idAttTo" oncomplete="varCustListDialog.hide()"/>
+	
+	<p:column headerText="Customer Id" sortBy="#{vo.custId}" filterBy="#{vo.custId}">
+		<h:outputText value="#{vo.custId}"/>
+	</p:column>
+	<p:column headerText="Name" sortBy="#{vo.lastName} #{vo.firstName}" filterBy="#{vo.lastName} #{vo.firstName}">
+		<h:outputText value="#{vo.contPersonName}"/>
+	</p:column>
+	<p:column headerText="Company Name" sortBy="#{vo.companyName}" filterBy="#{vo.companyName}">
+		<h:outputText value="#{vo.companyName}"/>
+	</p:column>
+</p:dataTable> -->
+
+<p:dataTable widgetVar="varCustListTable" value="#{custBean.lazyCustDataModel}" var="vo" paginator="true" rows="10" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	filterEvent="enter" lazy="true" rowKey="#{vo.id}" selectionMode="single" rowStyleClass="#{(vo.classes.contains('BLACKLISTED') and !tourPkgBean.enableBlackListed) ? 'disabled' : ''}">
+	<p:ajax event="rowSelect" listener="#{tourPkgBean.handleCustSelect}" update=":idAddInvoiceForm:idCustDetails" oncomplete="varCustListDialog.hide();" process="@this"/>
+	
+	<p:column headerText="Customer&lt;br/&gt;Type" sortBy="#{vo.pcTypeDesc}" filterBy="#{vo.pcTypeDesc}" filterStyle="width: 90%" width="80">
+		<h:outputText value="#{vo.pcTypeDesc}" />
+	</p:column>
+	
+	<p:column headerText="Customer No" sortBy="#{vo.code}" filterBy="#{vo.code}">
+		<h:outputText value="#{vo.code}" />
+	</p:column>
+	
+	<p:column headerText="Customer Name" sortBy="#{vo.custName}" filterBy="#{vo.custName}" filterMatchMode="contains">
+		<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.salutationCd)} #{vo.custName}" style="#{vo.classes.contains('BLACKLISTED') ? 'color:red;font-weight:bold;': ''}"/>
+		<p:outputLabel id="idRemarks" rendered="#{not empty vo.classes or not empty vo.remarks}">
+			<i class="fa fa-info-circle" />
+		</p:outputLabel>
+		<pe:tooltip for="idRemarks">
+		    <h:panelGrid>
+		        <h:outputText value="Class: #{vo.classes}" />
+		        <h:outputText value="Note: #{vo.remarks}" />
+		    </h:panelGrid>
+		</pe:tooltip>
+	</p:column>
+	
+	<p:column headerText="NickName" sortBy="#{vo.nickName}" filterBy="#{vo.nickName}" filterMatchMode="contains">
+		<h:outputText value="#{vo.nickName}" />
+	</p:column>
+	
+	<p:column headerText="Company Name" sortBy="#{vo.corporateName}" filterBy="#{vo.corporateName}" filterMatchMode="contains">
+		<h:outputText value="#{vo.corporateName}" />
+	</p:column>
+	
+	<p:column headerText="Contact" sortBy="#{vo.fullPhoneNo}" filterBy="#{vo.fullPhoneNo}">
+        <ui:repeat value="#{vo.fullPhoneNo.split(',')}" var="cntc" varStatus="status" rendered="#{not empty vo.fullPhoneNo}">
+            <h:outputText value="#{custBean.getContactStr(cntc)}"/><br/>
+        </ui:repeat>
+	</p:column>
+	
+	<p:column headerText="Identity" sortBy="#{vo.identities}" filterBy="#{vo.identities}" filterMatchMode="contains">
+        <ui:repeat value="#{vo.identities.split(',')}" var="identity" rendered="#{not empty vo.identities}">
+            <h:outputText value="#{custBean.getIdentityStr(identity)}"/><br/>
+        </ui:repeat>
+	</p:column>
+</p:dataTable>
+
+<h:panelGrid columns="2" style="width:1px">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varCustListDialog.hide()"/>
+	<p:selectBooleanCheckbox itemLabel="Enable Blacklisted Customer" value="#{tourPkgBean.enableBlackListed}" rendered="#{salesInvBean.docTypeCd ne 'C'}" style="width:400px; margin-left:10px; margin-top:5px; display: flex; align-items: center; font-weight: bold;">
+   		<p:ajax event="change" update="idCustListForm"/>	
+	</p:selectBooleanCheckbox>
+</h:panelGrid>
+</ui:composition>

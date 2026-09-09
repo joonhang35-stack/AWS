@@ -1,0 +1,108 @@
+package com.bcs.zsg.product.vo;
+
+import com.bcs.zsg.core.vo.BaseVO;
+
+public class TourItineryVO extends BaseVO {
+
+	private static final long serialVersionUID = 1L;
+
+	private Long idTourDep;
+	private String name;
+	private String path;
+	private String langCd;
+	private String typeCd;
+	private boolean isSingleFile;
+	private boolean isFromPkg;
+	
+	/**
+	 * @return the idTourDep
+	 */
+	public Long getIdTourDep() {
+		return idTourDep;
+	}
+
+	/**
+	 * @param idTourDep the idTourDep to set
+	 */
+	public void setIdTourDep(Long idTourDep) {
+		this.idTourDep = idTourDep;
+	}
+
+	/**
+	 * @return the name
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/**
+	 * @param name the name to set
+	 */
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	/**
+	 * @return the path
+	 */
+	public String getPath() {
+		return path;
+	}
+
+	/**
+	 * @param path the path to set
+	 */
+	public void setPath(String path) {
+		this.path = path;
+	}
+
+	/**
+	 * @return the langCd
+	 */
+	public String getLangCd() {
+		return langCd;
+	}
+
+	/**
+	 * @param langCd the langCd to set
+	 */
+	public void setLangCd(String langCd) {
+		this.langCd = langCd;
+	}
+
+	/**
+	 * @return the typeCd
+	 */
+	public String getTypeCd() {
+		return typeCd;
+	}
+
+	/**
+	 * @param typeCd the typeCd to set
+	 */
+	public void setTypeCd(String typeCd) {
+		this.typeCd = typeCd;
+	}
+
+	/**
+	 * @return the isSingleFile
+	 */
+	public boolean isSingleFile() {
+		return isSingleFile;
+	}
+
+	/**
+	 * @param isSingleFile the isSingleFile to set
+	 */
+	public void setSingleFile(boolean isSingleFile) {
+		this.isSingleFile = isSingleFile;
+	}
+
+	public boolean getIsFromPkg() {
+		return isFromPkg;
+	}
+
+	public void setIsFromPkg(boolean isFromPkg) {
+		this.isFromPkg = isFromPkg;
+	}
+}

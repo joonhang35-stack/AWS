@@ -1,0 +1,279 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<style>
+	.badge-email-pending {
+  		background-color: #ffa500; 
+	}
+	.badge-email-success {
+		background-color: green;
+	}
+	.badge-email-pending,
+	.badge-email-success {
+		color: white;
+	    padding: 1px 4px; /* Adjusted padding to make the badge smaller */
+	    margin-left: 5px;
+	    border-radius: 50%;
+	    font-size: 0.75em; /* Adjusted font size to make the badge text smaller */
+	    font-weight: bold;
+	}
+</style>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+</script>
+<p:panel header="Supplier" toggleable="true" toggleSpeed="500">
+	<h:form>
+		<p:messages id="idEntryMsg"/>
+	</h:form>
+	
+	<h:form id="idSuppListForm">
+		<h:panelGrid columns="3" cellpadding="0" cellspacing="2" style="margin-bottom:10px; width:200px">
+			<p:commandButton value="Add" actionListener="#{purchaseBean.booleanAdd}" update=":idSuppOptDialog" oncomplete="varSuppOptDialog.show()" immediate="true"/>
+			<h:outputLabel for="idGroupSupLB">Group Type:</h:outputLabel>
+			<h:selectOneMenu id="idGroupSupLB" value="#{purchaseBean.searchParamVO.obj1}">
+	            <f:selectItem itemLabel="All" itemValue="" />  
+	            <f:selectItems value="#{bterp:lookupItemList('supl_group_code')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+        		<p:ajax event="change" listener="#{purchaseBean.handleGroupSupplierSelect}" oncomplete="purSupMainTable.clearFilters()" update="@form"/>
+        	</h:selectOneMenu> 
+		</h:panelGrid>
+			
+  		<p:growl id="msg"/> 
+		<p:dataTable id="idPurSupMainTable" widgetVar="purSupMainTable" value="#{purchaseBean.lazySuppDataModel}" var="supplierVO" paginator="true" rows="20" 
+				paginatorTemplate="#{bterp:pageTemplate()}" 
+				rowsPerPageTemplate="20, 30, 50, 100, 300, 500, 1000, 1500" emptyMessage="#{msg['cust.tbl.empty.message']}" filteredValue="#{purchaseBean.filteredObjList}" lazy="true" filterEvent="enter">
+		
+		<p:column headerText="Edit" style="width:40px; text-align:center;">
+			<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseBean.onSupplierSelected(supplierVO)}"
+				update=":idSuppOptDialog" oncomplete="varSuppOptDialog.show()"/>
+		</p:column>
+
+		<p:column headerText="Delete" style="width:40px; text-align:center;">
+			<p:commandButton icon="ui-icon-close" actionListener="#{purchaseBean.onSupplierSelected(supplierVO)}" oncomplete="varDelSuppDialog.show()"/>
+		</p:column>
+			
+		<p:column headerText="Supplier No" sortBy="#{supplierVO.sysNo}" style="width: 70px;" filterStyle="width:70px;" styleClass="txt_center" filterBy="#{supplierVO.sysNo}">
+			<h:outputText value="#{supplierVO.sysNo}" />
+		</p:column>
+		
+		<p:column headerText="Supplier Name" sortBy="#{supplierVO.fullName}" style="width: 190px;" filterStyle="width:190px;" styleClass="txt_center" filterBy="#{supplierVO.fullName}">
+			<h:outputText value="#{supplierVO.fullName}" />
+			<h:outputText id="idEmailUpdPending" value="P" styleClass="badge-email-pending" rendered="#{not empty supplierVO.emailUpdStatus and supplierVO.emailUpdStatus eq 'P'}"/>
+			<h:outputText id="idEmailUpdSuccess" value="S" styleClass="badge-email-success" rendered="#{not empty supplierVO.emailUpdStatus and supplierVO.emailUpdStatus eq 'S'}"/>
+			<pe:tooltip for="idEmailUpdPending" shared="true" showDelay="3000" rendered="#{not empty supplierVO.emailUpdStatus and supplierVO.emailUpdStatus eq 'P'}">
+				<h:outputText value="#{supplierVO.emailUpdRemarks}" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<pe:tooltip for="idEmailUpdSuccess" shared="true" showDelay="3000" rendered="#{not empty supplierVO.emailUpdStatus and supplierVO.emailUpdStatus eq 'S'}">
+				<h:outputText value="#{supplierVO.emailUpdRemarks}" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+		</p:column>
+		
+		<p:column headerText="Supplier Type" sortBy="#{supplierVO.supplierType}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{supplierVO.supplierType}">
+			<h:outputText value="#{supplierVO.supplierType}" />
+		</p:column>
+		
+		<p:column headerText="GST Reg No" sortBy="#{supplierVO.gstRegNo}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{supplierVO.gstRegNo}">
+			<h:outputText value="#{supplierVO.gstRegNo}" />
+		</p:column>
+		
+		<p:column headerText="Country" sortBy="#{supplierVO.countryName}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{supplierVO.countryName}">
+			<h:outputText value="#{supplierVO.countryName}" />
+		</p:column>
+		
+		<p:column headerText="Supplier Category" sortBy="#{supplierVO.supplierCatName}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{supplierVO.supplierCatName}">
+			<h:outputText value="#{supplierVO.supplierCatName}" />
+		</p:column>
+		
+		<p:column headerText="Contact No" sortBy="#{supplierVO.contactNo}" style="width: 200px;" filterStyle="width:200px;" filterBy="#{supplierVO.contactNo}">
+			 <ui:repeat value="#{supplierVO.contactNo.split(',')}" var="cntc" rendered="#{not empty supplierVO.contactNo}">
+	            <h:outputText value="#{cntc}"/><br/>
+	        </ui:repeat>
+		</p:column>
+		<p:column headerText="Email" sortBy="#{supplierVO.email}" styleClass="txt_center" filterBy="#{supplierVO.email}">
+				<h:outputText value="#{supplierVO.email}" />
+		</p:column>
+		
+		<p:column headerText="Updated By" sortBy="#{supplierVO.updatedBy}" style="width: 80px;" styleClass="txt_center" filterBy="#{supplierVO.updatedBy}">
+			<h:outputText value="#{supplierVO.updatedBy}" />
+		</p:column>
+		      
+		<p:column headerText="Updated Date" sortBy="#{supplierVO.updatedDate}" filterBy="#{supplierVO.updatedDate}">
+			<h:outputText value="#{supplierVO.updatedDate}">
+				<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss"/>  
+			</h:outputText>
+		</p:column>
+		
+		</p:dataTable>
+		<br/>
+		<p:commandButton value="Add" actionListener="#{purchaseBean.booleanAdd}" update=":idSuppOptDialog" oncomplete="varSuppOptDialog.show()" immediate="true"/>
+	</h:form>
+</p:panel>
+
+<p:dialog id="idSuppOptDialog" widgetVar="varSuppOptDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="true">
+	<f:facet name="header">
+		<h:outputFormat value="Supplier/ Vendor" />
+	</f:facet>
+	<h:form id="idAddSupplierForm">
+		<ui:include src="../../purchase/common/add_supplier.xhtml"/>
+	</h:form>
+</p:dialog>
+		
+<p:dialog id="idIndivSupplDialog" widgetVar="varAddIndivDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Supplier/ Vendor" />
+	</f:facet>
+	<h:form id="idAddPCustomerForm">
+		<ui:include src="../../purchase/common/add_individual_suppl.xhtml"/>
+	</h:form>
+</p:dialog>
+		
+		<p:dialog id="idEditIndivDialog" widgetVar="varEditIndivDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Supplier/ Vendor" />
+				</f:facet>
+				<h:form id="idEditPCustomerForm">
+				<ui:include src="../../purchase/common/edit_individual_suppl.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idCompSupplDialog" widgetVar="varAddCompDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Supplier/ Vendor" />
+				</f:facet>
+				<h:form id="idAddCSupplierForm">
+				<ui:include src="../../purchase/common/add_company_suppl.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idEditCompDialog" widgetVar="varEditCompDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Supplier/ Vendor" />
+				</f:facet>
+				<h:form id="idEditCSupplierForm">
+				<ui:include src="../../purchase/common/edit_company_suppl.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idIDDialog" widgetVar="varIDDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Add Identity" />
+				</f:facet>
+				<h:form id="idAddIDForm">
+				<ui:include src="../../purchase/common/add_identity.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idEditIDDialog" widgetVar="varEditIDDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Edit Identity" />
+				</f:facet>
+				<h:form id="idEditIDForm">
+				<ui:include src="../../purchase/common/edit_identity.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idContactDialog" widgetVar="varContactDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Add Contact" />
+				</f:facet>
+				<h:form id="idAddContactForm">
+				<ui:include src="../../purchase/common/add_contact.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idEditContactDialog" widgetVar="varEditContactDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Edit Contact" />
+				</f:facet>
+				<h:form id="idEditContactForm">
+				<ui:include src="../../purchase/common/edit_contact.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idEditCorContactDialog" widgetVar="varEditCorContactDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Edit Contact" />
+				</f:facet>
+				<h:form id="idEditCorContactForm">
+				<ui:include src="../../purchase/common/edit_corp_contact.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idRemarksDialog" widgetVar="varRemarksDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Add Remarks" />
+				</f:facet>
+				<h:form id="idAddRemarksForm">
+				<ui:include src="../../purchase/common/add_remarks.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idEditRemarksDialog" widgetVar="varEditRemarksDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+				hideEffect="fade" showEffect="fade" closable="false">
+				<f:facet name="header">
+					<h:outputFormat value="Edit Remarks" />
+				</f:facet>
+				<h:form id="idEditRemarksForm">
+				<ui:include src="../../purchase/common/edit_remarks.xhtml"/>
+				</h:form>
+		</p:dialog>
+		
+		<p:confirmDialog widgetVar="varDelSuppDialog"
+			message="Are you sure want to delete this record?">
+		 
+				<f:facet name="header">
+					<h:outputFormat value="Delete record" />
+				</f:facet>
+			<h:form>
+				<p:commandButton value="Yes"
+					actionListener="#{purchaseBean.deleteSuppl}"
+					oncomplete="varDelSuppDialog.hide();purSupMainTable.clearFilters();"
+					update="@form,:idSuppListForm" />
+				<p:commandButton value="Cancel"
+					actionListener="#{purchaseBean.resetForm}"
+					oncomplete="varDelSuppDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+		
+		<!-- DIALOG - SENT EMAIL UPDATE PROFILE -->
+		<p:confirmDialog widgetVar="varConfirmSentSupplierProfileUpdateDialog" header="Confirmation"
+			message="Are you sure you want to send email for this supplier?" closable="false">
+			<h:form>
+				<p:growl id="msg" />
+				<p:commandButton value="#{msg['common.button.label.yes']}"
+					actionListener="#{purchaseBean.processEmailSupplierProfileUpdate}"
+					update="@form" process="@this"
+					oncomplete="varConfirmSentSupplierProfileUpdateDialog.hide()" />
+				<p:commandButton value="#{msg['common.button.label.no']}"
+					update="@form" process="@this"
+					oncomplete="varConfirmSentSupplierProfileUpdateDialog.hide()" />
+			</h:form>
+		</p:confirmDialog>
+	</ui:define>
+</ui:composition>

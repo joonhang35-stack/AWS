@@ -1,0 +1,265 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+								xmlns:c="http://java.sun.com/jsp/jstl/core"
+								xmlns:ui="http://java.sun.com/jsf/facelets"
+								xmlns:h="http://java.sun.com/jsf/html"
+								xmlns:f="http://java.sun.com/jsf/core"
+								xmlns:p="http://primefaces.org/ui"
+								xmlns:zsg="http://www.bcs.com/zsg/jsf"
+								xmlns:pe="http://primefaces.org/ui/extensions">
+	  					
+<div style="height:500px; width:900px; overflow:auto;">
+	<p:growl id="msg"/>
+	<script type="text/javascript">
+			function onValidation(xhr, status, args) {
+				if (args.validationFailed) {
+					varJournalDetailsDialog.show();
+				} else {
+					varJournalDetailsDialog.hide();
+				}
+			}
+	</script>
+	<p:panelGrid>
+		<p:row rendered="#{not journalBean.isAddNewDetail}">
+			<p:column><h:outputLabel>Journal Number </h:outputLabel></p:column>
+			<p:column>
+				<h:outputText value="#{journalBean.journalVO.sysNo}"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel>Company </h:outputLabel></p:column>
+			<p:column>
+				<h:outputText value="#{sessionInfoBean.companyVO.name}" required="true"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idReason">Reason <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idReason" label="Reason" value="#{journalBean.journalVO.reason}" size="60" required="true"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idJournalDt">Journal Date </h:outputLabel></p:column>
+			<p:column>
+				<p:calendar pattern="#{config['date.display.pattern']}" id="idJournalDt" label="Journal Date" 
+										mindate="#{journalBean.finPeriodLockVO.dtStart}" 
+										maxdate="#{journalBean.finPeriodLockVO.dtEnd}"
+										value="#{journalBean.journalVO.journalDt}" required="true"
+										navigator="true" showButtonPanel="true"
+										disabled="#{journalBean.dateInFinPeriodClosed}">
+					<p:ajax event="dateSelect" listener="#{journalBean.handleDateChange}" />
+				</p:calendar>
+	        </p:column>
+	    </p:row>
+	    <p:row>
+	    	<p:column>
+				<h:outputLabel for="idTour">Tour Code</h:outputLabel>
+			</p:column>
+	    	<p:column>
+				<p:inputText id="idTour" label="Tour Code" value="#{journalBean.journalVO.tourCd}" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;"/>&nbsp;
+				<p:outputPanel id="idTourCodeSearch">
+					<p:commandButton icon="ui-icon-search" actionListener="#{journalBean.loadTourDepartureList}" oncomplete="varTourListDialog.show()" update=":idTourListDialog" process="@this"
+						rendered="#{journalBean.journalVO.typeCd ne 'sales'}" />
+				</p:outputPanel>
+			</p:column>
+	    </p:row>
+	    <p:row>
+	    	<p:column>
+				<h:outputLabel for="idDpt">Department <span class="required">*</span></h:outputLabel>
+			</p:column>
+	    	<p:column>
+				<h:selectOneMenu id="idDpt" label="Department" value="#{journalBean.journalVO.idDpt}" required="true">
+					<f:selectItem itemLabel="Select One" itemValue=""/>
+					<f:selectItems value="#{bterp:lookupItemList('dept_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+				</h:selectOneMenu>
+			</p:column>
+	    </p:row>
+	    <p:row>
+			<p:column><h:outputLabel for="idReference">Reference </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idReference" label="Reference" value="#{journalBean.journalVO.reference}" size="60"/>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{not empty journalBean.journalVO.exOrderBillVO}">
+			<p:column><h:outputLabel>Bill ID </h:outputLabel></p:column>
+			<p:column>
+				<h:outputText value="#{journalBean.journalVO.exOrderBillVO.code}"></h:outputText>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{not empty journalBean.journalVO.exOrderBillVO}">
+			<p:column><h:outputLabel>Bill Date </h:outputLabel></p:column>
+			<p:column>
+				<h:outputText value="#{journalBean.journalVO.exOrderBillVO.billDt}">
+					<f:convertDateTime pattern="dd-MMM-yyyy" />
+				</h:outputText>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{not empty journalBean.journalVO.exOrderBillVO}">
+			<p:column><h:outputLabel>Supplier </h:outputLabel></p:column>
+			<p:column>
+				<h:outputText value="#{journalBean.journalVO.exOrderBillVO.supplierName}">
+				</h:outputText>
+			</p:column>
+		</p:row>
+		
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.label.action.add']}" actionListener="#{journalBean.handleJourItemAddNew}" 
+			oncomplete="varJourItemDialog.show()" update=":idJourItemDialog:" process="@this"
+			disabled="#{journalBean.dateInFinPeriodClosed}" rendered="#{journalBean.journalVO.typeCd ne 'sales'}"/>
+	</p:panelGrid>
+
+	<p:panelGrid>
+		<p:row>
+			<p:column>
+				<p:panel id ="idJournal" style="border:none">
+					<p:dataTable id="idJournalTable" widgetVar="varJournalTable" value="#{journalBean.journalCartList}" var="vo" paginator="true" rows="20" 
+						paginatorTemplate="#{bterp:pageTemplate()}" filteredValue="#{journalBean.filteredJournalDetailList}" 
+						rowsPerPageTemplate="20, 30, 50" emptyMessage="#{msg['tbl.empty.message']}" 
+						rendered="#{not empty journalBean.journalCartList}">
+						
+						<p:columnGroup type="header">
+							<p:row rendered="#{journalBean.isGSTPeriod}">
+								<p:column colspan="6">
+								</p:column>
+								<p:column colspan="2" headerText="Amount Inc. GST" />
+							</p:row>
+							<p:row>
+								<p:column headerText="#{msg['common.label.action.edit']}" 
+									rendered="#{journalBean.journalVO.typeCd ne 'sales'}"
+									style="width: 40px; width:1px; text-align:center;" />
+												
+								<p:column headerText="#{msg['common.label.action.delete']}" 
+									rendered="#{journalBean.journalVO.typeCd ne 'sales'}"
+									style="width:40px; text-align:center;" />
+								<p:column headerText="Account" style="width: 80px;" />
+								<p:column headerText="Description" styleClass="txt_left" />
+								<p:column headerText="GST Amount" style="width: 110px;" rendered="#{journalBean.isGSTPeriod}"/>
+								<p:column headerText="Amount" style="width: 110px;" />
+								<p:column headerText="Debit" style="width: 110px;" />
+								<p:column headerText="Credit" style="width: 110px;" />
+							</p:row>
+						</p:columnGroup>
+						<p:column rendered="#{journalBean.journalVO.typeCd ne 'sales'}">
+							<p:commandButton icon="ui-icon-pencil" 
+									actionListener="#{journalBean.handleJourItemSelect(vo)}"
+									update=":idJourItemDialog"
+									process="@this"
+									oncomplete="varJourItemDialog.show()"
+									disabled="#{journalBean.dateInFinPeriodClosed}" />
+						</p:column>
+				 				
+						<p:column rendered="#{journalBean.journalVO.typeCd ne 'sales'}">
+							<p:commandButton icon="ui-icon-close" actionListener="#{journalBean.delSingleJournal(vo)}" 
+									update=":idJournalCartForm:idJournal" process="@this"
+									disabled="#{journalBean.dateInFinPeriodClosed}" />
+						</p:column>
+						<p:column>
+							<h:outputText value="#{vo.code}" />
+						</p:column>
+						<p:column>
+							<h:outputText value="#{vo.desc}" />
+						</p:column>
+						<p:column styleClass="txt_right" rendered="#{journalBean.isGSTPeriod}">
+							<h:outputText value="#{vo.taxAmount}">
+				        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</h:outputText>
+						</p:column>
+						
+						<!-- this is for general & bill journal, can't show -ve number -->
+						<p:column rendered="#{journalBean.journalVO.typeCd ne 'sales'}" styleClass="txt_right">
+							<h:outputText value="#{vo.debit > 0.00 ? vo.debit : vo.credit}">
+				        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				        	</h:outputText>
+						</p:column>
+						<p:column rendered="#{journalBean.journalVO.typeCd ne 'sales'}" styleClass="txt_right">
+								<h:outputText value="#{vo.debit != 0.00 ? (0.00 > vo.amountIncludeTax ? -1 * vo.amountIncludeTax : vo.amountIncludeTax) : 0.00}">
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								</h:outputText>
+						</p:column>
+						<p:column rendered="#{journalBean.journalVO.typeCd ne 'sales'}" styleClass="txt_right">
+							<h:outputText value="#{vo.credit != 0.00 ? (0.00 > vo.amountIncludeTax ? -1 * vo.amountIncludeTax : vo.amountIncludeTax) : 0.00}" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</h:outputText>
+						</p:column>
+						
+						<!-- this is only for reverse sales journal, can show -ve number -->
+						<p:column rendered="#{journalBean.journalVO.typeCd eq 'sales'}" styleClass="txt_right" >
+							<h:outputText value="#{vo.debit ne 0.00 ? vo.debit : vo.credit}">
+				        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				        	</h:outputText>
+						</p:column>
+						<p:column rendered="#{journalBean.journalVO.typeCd eq 'sales'}" styleClass="txt_right">
+								<h:outputText value="#{vo.debit}">
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								</h:outputText>
+						</p:column>
+						<p:column rendered="#{journalBean.journalVO.typeCd eq 'sales'}" styleClass="txt_right">
+							<h:outputText value="#{vo.credit}" >
+								<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							</h:outputText>
+						</p:column>
+	
+						<p:columnGroup type="footer">  
+					        <p:row>  
+					        	<p:column footerText="" colspan="3" rendered="#{journalBean.journalVO.typeCd ne 'sales'}"/> 
+					        	<p:column footerText="" rendered="#{journalBean.journalVO.typeCd eq 'sales'}"/> 
+					            <p:column footerText="Total:"  style="text-align:right" /> 
+								<p:column style="text-align:right" rendered="#{journalBean.isGSTPeriod}">
+						   	 		<f:facet name="footer">
+						                <h:outputText value="#{journalBean.amtCalcViewVO.totalTax.doubleValue()}">
+											<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						                </h:outputText>
+						            </f:facet>
+								</p:column>
+					        	<p:column footerText="" /> 
+								<p:column style="text-align:right" >
+						   	 		<f:facet name="footer">
+						                <h:outputText value="#{journalBean.totalDbtAmt.doubleValue()}">
+											<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						                </h:outputText>
+						            </f:facet>
+								</p:column>
+								<p:column style="text-align:right" >
+						   	 		<f:facet name="footer">
+						                <h:outputText value="#{journalBean.totalCrdAmt.doubleValue()}">
+											<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						                </h:outputText>
+						            </f:facet>
+								</p:column>
+					        </p:row> 
+			   			</p:columnGroup>
+					</p:dataTable>
+				</p:panel>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+
+	<p:panelGrid columns="3" style="width: 1px;">
+		<!-- empty billPymtBean = true, opened from journal_list -->
+		<p:commandButton 
+			rendered="#{empty billPymtBean and journalBean.journalVO.typeCd ne 'sales'}" 
+			value="#{msg['common.button.label.save']}" actionListener="#{journalBean.saveJournalCart}" 
+			oncomplete="onValidation(xhr, status, args)" update="@form,:idMainJournalForm"/>	
+				
+		<!-- not empty billPymtBean = true, opened from add_bills_payment -->
+		<p:commandButton 
+			rendered="#{not empty billPymtBean}" 
+			value="#{msg['common.button.label.save']}"
+			oncomplete="onValidation(xhr, status, args)" update="@form,:idMainJournalForm,:idAddFuncForm">
+			<f:actionListener binding="#{journalBean.saveJournalCart(billPymtBean.exOrderBillVO)}"></f:actionListener>
+			<f:actionListener binding="#{billPymtBean.onBillSelected(billPymtBean.exOrderBillVO.id)}"></f:actionListener>
+			<!-- <f:actionListener binding="#{journalBean.onJournalSelected(billPymtBean.exOrderBillVO.idJournal)}"></f:actionListener> -->
+		</p:commandButton>
+			
+		<!-- <p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varJournalDetailsDialog.hide()" immediate="true" /> -->
+		
+		<p:commandButton id="idBtnAddCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{journalBean.resetForm}" process="@this" oncomplete="varJournalDetailsDialog.hide()">
+			<pe:resetEditableValues for="idJournalCartForm"/>
+		</p:commandButton>
+	</p:panelGrid>
+  
+</div>
+	
+</ui:composition>

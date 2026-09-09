@@ -1,0 +1,997 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+<style>
+.phone-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+	
+</style>
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddInvoicePaxDialog.show();
+		} else {
+			varAddInvoicePaxDialog.hide();
+		}
+	}
+</script>
+
+<div style="height:565px;overflow:auto;">
+<p:panelGrid id="idInvPaxPanel">
+	<p:row>
+		<p:column style="width:410px;">
+			<h:outputLabel>Customer No</h:outputLabel>
+		</p:column>
+		<p:column style="width:800px;">
+			<h:outputLabel value="#{salesBean.invoicePaxVO.custDetailsVO.code} " style="font-weight:bold;"/>
+			<p:commandButton icon="ui-icon-search" value="Existing Cust" styleClass="ui-state-error" update=":idPassangerListDialog" oncomplete="varPassangerListDialog.show()"
+				process="@this" rendered="#{empty salesBean.invoicePaxVO.custId}"/>
+			<p:commandButton icon="ui-icon-add" value="Same as billing person" styleClass="ui-state-error" actionListener="#{salesBean.handleFullCopyFromBillSelect}" update=":idAddInvoicePaxForm:idInvPaxPanel" 
+				process="@this" rendered="#{empty salesBean.invoicePaxVO.custId and empty salesBean.invoiceVO.invoicePaxList}"/>
+			<p:commandButton icon="ui-icon-close" value="Remove" styleClass="ui-state-error" actionListener="#{salesBean.passangerClear}" update=":idAddInvoicePaxForm:idInvPaxPanel" process="@this" rendered="#{not empty salesBean.invoicePaxVO.custId}"/>
+		</p:column>
+		<p:column style="width:410px;"><h:outputLabel for="idClassType">Class</h:outputLabel></p:column>
+		<p:column style="width:800px;">
+			<p:selectCheckboxMenu id="idClassType"
+				style="vertical-align:middle"
+				value="#{salesBean.invoicePaxVO.custDetailsVO.classCdList}" label="Class"
+				filter="true" filterMatchMode="contains"
+				onHide="executeOnClassOnhide();">
+				<f:selectItems value="#{bterp:lookupItemList('cust_class')}"
+					var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+			</p:selectCheckboxMenu>
+			<p:remoteCommand name="executeOnClassOnhide"
+				actionListener="#{salesBean.handleClassChange}"
+				update=":idAddInvoicePaxForm:idClassName"
+				process="@this, :idAddInvoicePaxForm:idClassType" global="false" />
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column colspan="3">
+			<h:outputLabel />
+		</p:column>
+		<p:column>
+			<h:outputText id="idClassName" value="#{salesBean.invoicePaxVO.custDetailsVO.className}" style="font-size:8px;"></h:outputText>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idSalutate">Title <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idSalutate" label="Title" value="#{salesBean.invoicePaxVO.custDetailsVO.salutation}" required="true" rendered="#{empty salesBean.invoicePaxVO.custId}">
+				<f:selectItem itemLabel="Select One" itemValue="" />
+				<f:selectItems value="#{bterp:lookupItemList('salutatn2')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+			</h:selectOneMenu>
+			<p:inputText value="#{bterp:lookupItemDesc('salutatn', salesBean.invoicePaxVO.custDetailsVO.salutation)}" readonly="true" style="background:#ccc;width:80px;" rendered="#{not empty salesBean.invoicePaxVO.custId}"/>
+			<!-- <p:commandButton icon="ui-icon-search" update=":idPassangerListDialog" oncomplete="varPassangerListDialog.show()" process="@this" rendered="#{empty salesBean.invoicePaxVO.custId}"/>
+			<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.passangerClear}" update=":idAddInvoicePaxForm:idInvPaxPanel" process="@this" rendered="#{not empty salesBean.invoicePaxVO.custId}"/> -->
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idTitle">Honor</h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idTitle" label="Honor" value="#{salesBean.invoicePaxVO.custDetailsVO.title}">
+				<f:selectItem itemLabel="Select One" itemValue="" />
+				<f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idSurNm">SurName <span class="required">*</span>
+			</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText value="#{salesBean.invoicePaxVO.custDetailsVO.lastName}" readonly="true" style="background:#ccc;" rendered="#{not empty salesBean.invoicePaxVO.custId}"/>
+			<p:inputText id="idSurNm" label="SurName" value="#{salesBean.invoicePaxVO.custDetailsVO.lastName}" maxlength="50" required="true" rendered="#{empty salesBean.invoicePaxVO.custId}"/>
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idGender">Gender</h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idGender" label="Gender"
+				value="#{salesBean.invoicePaxVO.custDetailsVO.sex}">
+				<f:selectItem itemLabel="Select One" itemValue="" />
+				<f:selectItems value="#{bterp:lookupItemList('gender_type')}"
+					var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idGivenName">Given Name <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText value="#{salesBean.invoicePaxVO.custDetailsVO.firstName}" readonly="true" style="background:#ccc;" rendered="#{not empty salesBean.invoicePaxVO.custId}"/>
+			<p:inputText id="idGivenNm" label="Given Name" value="#{salesBean.invoicePaxVO.custDetailsVO.firstName}" maxlength="50" required="true" rendered="#{empty salesBean.invoicePaxVO.custId}"/>
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idNickName">NickName</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText value="#{salesBean.invoicePaxVO.custDetailsVO.nickName}" readonly="true" style="background:#ccc;" rendered="#{not empty salesBean.invoicePaxVO.custId}"/>
+			<p:inputText id="idNickName" label="NickName" value="#{salesBean.invoicePaxVO.custDetailsVO.nickName}" maxlength="50" rendered="#{empty salesBean.invoicePaxVO.custId}"/>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idNationality">Nationality <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idNationality" label="Nationality"
+				value="#{salesBean.invoicePaxVO.custDetailsVO.countryId}" style="width:180px;" required="true">
+				<p:ajax event="change" listener="#{salesBean.handleNationalitySelected}" update=":idPassRefNoDialog idTaxIdNo :idAddInvoicePaxForm:idCity :idAddInvoicePaxForm:idState" />
+				<f:selectItem itemLabel="Select One" itemValue="" />
+				<f:selectItems value="#{salesBean.countryList}" var="vo"
+					itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+			</h:selectOneMenu>
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idTaxIdNo">TIN</h:outputLabel>
+		</p:column>
+		<p:column colspan="3">
+			<p:inputText id="idTaxIdNo" label="TIN"
+				value="#{salesBean.invoicePaxVO.custDetailsVO.taxIdNo}" maxlength="20"
+				disabled="#{not empty salesBean.invoicePaxVO.custDetailsVO.taxIdNo and not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}"
+				validatorMessage="TIN shouldn't contain spaces.">
+				<f:validateRegex pattern="^\S+$" />
+				<p:ajax event="change" global="false"></p:ajax>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idNRIC">NRIC <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputMask id="idNRIC" label="NRIC" value="#{salesBean.invoicePaxVO.custDetailsVO.nricIdVO.idNo}" mask="999999-99-9999"
+				disabled="#{not empty salesBean.invoicePaxVO.custDetailsVO.nricIdVO.idNo and not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+				<p:ajax event="change" update=":idAddInvoicePaxForm:idDOB,:idAddInvoicePaxForm:idAge" listener="#{salesBean.syncNRIC}"/>
+			</p:inputMask>
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idPassportNo">Passport No <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column colspan="3">
+			<p:inputText id="idPassportNo" label="Passport No"
+				value="#{salesBean.invoicePaxVO.custDetailsVO.passportIdVO.idNo}" maxlength="20" onkeypress="return rtnAlphaNumeric(event);"
+				disabled="#{not empty salesBean.invoicePaxVO.custDetailsVO.passportIdVO.idNo and not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+				<p:ajax event="change" update=":idAddInvoicePaxForm:idPssprtNo" listener="#{salesBean.syncPassportNo}"/>	
+			</p:inputText>
+		</p:column>
+	</p:row>
+
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idDOB">Date of Birth (DOB)</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:calendar id="idDOB" label="Date of Birth"
+				value="#{salesBean.invoicePaxVO.custDetailsVO.dob}" navigator="true" showButtonPanel="true"
+				yearRange="#{salesBean.yearRange}" pattern="dd-MMM-yyyy">
+				<p:ajax event="dateSelect" listener="#{salesBean.calculateAge}"
+					update="idAge" global="false" />
+			</p:calendar>
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idAge">Age</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAge" label="Age"
+				value="#{salesBean.invoicePaxVO.custDetailsVO.age}" size="3"
+				readonly="true" />
+		</p:column>
+	</p:row>
+
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idSpokenLanguageList">Spoken Language</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:selectCheckboxMenu id="idSpokenLanguageList"
+				style="vertical-align:middle"
+				value="#{salesBean.invoicePaxVO.custDetailsVO.langCdList}" label="Spoken Language"
+				filter="true" filterMatchMode="contains"
+				onHide="executeOnLanguageOnhide();">
+				<f:selectItems value="#{bterp:lookupItemList('lang_dilc')}"
+					var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+			</p:selectCheckboxMenu>
+			<p:remoteCommand name="executeOnLanguageOnhide"
+				actionListener="#{salesBean.handleLanguageChange}"
+				update=":idAddInvoicePaxForm:idLanguageName"
+				process="@this, :idAddInvoicePaxForm:idSpokenLanguageList"
+				global="false" />
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idRace">Race</h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idRace" label="Race"
+				value="#{salesBean.invoicePaxVO.custDetailsVO.race}">
+				<f:selectItem itemLabel="Select One" itemValue="" />
+				<f:selectItems value="#{bterp:lookupItemList('race_type')}"
+					var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+
+	<p:row>
+		<p:column>
+			<h:outputLabel />
+		</p:column>
+		<p:column>
+			<h:outputText id="idLanguageName" value="#{salesBean.invoicePaxVO.custDetailsVO.languageName}" style="font-size:8px;"></h:outputText>
+		</p:column>
+		<p:column>
+			<h:outputLabel />
+		</p:column>
+		<p:column style="width:100px">
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column colspan="4">
+			<p:panel id="idPanelPerContact" header="Contact" toggleable="true">
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:panel header="Mobile No">
+								<p:panelGrid>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idNumber">Number
+										</h:outputLabel>
+										</p:column>
+										<p:column styleClass="phone-row">
+											<p:selectOneMenu id="idMobileCountry" value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perMobileCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+										        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+										        <f:selectItems value="#{salesBean.countryCdList}" var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+										    </p:selectOneMenu>
+											<p:inputText id="idMobileNumber" label="Mobile Number" style="width:120px"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perMobileNumber}"
+												maxlength="14" size="20"
+												onkeypress="return rtnPhoneNo(event);"
+												validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+												<p:watermark for="idMobileNumber" value="Number" />
+												<f:validateLength maximum="14" minimum="8"/>
+												<f:validateRegex pattern="^[0-9+-]+$" />
+											</p:inputText>
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idMobileAtt">Attention</h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idMobileAtt" label="Attention" style="width:250px"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perMobileAttention}"
+												maxlength="100" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+							</p:panel>
+						</p:column>
+						<p:column>
+							<p:panel header="Office No">
+								<p:panelGrid>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idNumber">Number
+										</h:outputLabel>
+										</p:column>
+										<p:column styleClass="phone-row">
+											<p:selectOneMenu id="idOfficeCountry" value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perOfficeCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+										        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+										        <f:selectItems value="#{salesBean.countryCdList}" var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+										    </p:selectOneMenu>
+											<p:inputText id="idOfficeNumber" label="Office Number" style="width:120px"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perOfficeNumber}"
+												maxlength="14" size="20"
+												onkeypress="return rtnPhoneNo(event);"
+												validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+												<p:watermark for="idOfficeNumber" value="Number" />
+												<f:validateLength maximum="14" minimum="8"/>
+												<f:validateRegex pattern="^[0-9+-]+$" />
+											</p:inputText>
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idOfficeAtt">Attention</h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idOfficeAtt" label="Attention" style="width:250px"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perOfficeAttention}"
+												maxlength="100" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+							</p:panel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:panel header="Home No">
+								<p:panelGrid>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idNumber">Number
+										</h:outputLabel>
+										</p:column>
+										<p:column styleClass="phone-row">
+											<p:selectOneMenu id="idHomeCountry" value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perHomeCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+										        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+										        <f:selectItems value="#{salesBean.countryCdList}" var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+										    </p:selectOneMenu>
+											<p:inputText id="idHomeNumber" label="Home Number" style="width:120px"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perHomeNumber}"
+												maxlength="14" size="20"
+												onkeypress="return rtnPhoneNo(event);"
+												validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+												<p:watermark for="idHomeNumber" value="Number" />
+												<f:validateLength maximum="14" minimum="8"/>
+												<f:validateRegex pattern="^[0-9+-]+$" />
+											</p:inputText>
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idHomeAtt">Attention</h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idHomeAtt" label="Attention" style="width:250px"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perHomeAttention}"
+												maxlength="100" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+							</p:panel>
+						</p:column>
+						<p:column>
+							<p:panel header="Fax No">
+								<p:panelGrid>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idNumber">Number
+										</h:outputLabel>
+										</p:column>
+										<p:column styleClass="phone-row">
+											<p:selectOneMenu id="idFaxCountry" value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perFaxCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+										        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+										        <f:selectItems value="#{salesBean.countryCdList}" var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+										    </p:selectOneMenu>
+											<p:inputText id="idFaxNumber" label="Fax Number" style="width:120px"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perFaxNumber}"
+												maxlength="14" size="20"
+												onkeypress="return rtnPhoneNo(event);"
+												validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+												<p:watermark for="idFaxNumber" value="Number" />
+												<f:validateLength maximum="14" minimum="8"/>
+												<f:validateRegex pattern="^[0-9+-]+$" />
+											</p:inputText>
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idFaxAtt">Attention</h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idFaxAtt" label="Attention" style="width:250px"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.personContactVO.perFaxAttention}"
+												maxlength="100" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+							</p:panel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="2">
+							<p:panel id="idPanelEmail" header="Email" toggleable="true">
+								<p:panelGrid>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idEmail">Primary Email </h:outputLabel>
+										</p:column>
+										<p:column colspan="3">
+											<p:inputText id="idEmail" label="Email"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.email}" readonly="true"
+												style="background:#ccc;" size="40" />	
+										</p:column>
+									</p:row>
+				
+									<p:row>
+										<p:column>
+											<p:commandButton value="Email List"
+												actionListener="#{salesBean.setEmailAdd(true)}"
+												oncomplete="varPassEmailDialog.show()"
+												update=":idPassEmailDialog" process="@this" />
+										</p:column>
+										<p:column colspan="3">
+											<p:panel id ="idEmailListPanel" style="border:none">
+												<p:dataTable id="idEmailListTable" value="#{salesBean.invoicePaxVO.custDetailsVO.emailList}" var="emailVO">
+													<p:column headerText="Edit" style="width:50px; text-align:center;">
+														<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onEmailSelected(emailVO)}" oncomplete="varPassEmailDialog.show()" process="@this" update=":idPassEmailDialog"/>
+													</p:column>
+													<p:column headerText="Delete" style="width:50px; text-align:center;">
+														<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteEmail(emailVO)}" update=":idAddInvoicePaxForm:idEmailListTable,:idAddInvoicePaxForm:idEmail" process="@this"/>
+													</p:column>
+													<p:column headerText="Email">
+														<h:outputText value="#{emailVO.email}"/>
+													</p:column>
+													<p:column headerText="Primary Email" style="text-align:center;">
+														<h:outputText value="Y" rendered="#{emailVO.isPrimary}"/>
+														<h:outputText value="N" rendered="#{not emailVO.isPrimary}"/>
+													</p:column>
+												</p:dataTable>
+											</p:panel>
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								<f:facet name="actions">
+						            <p:selectBooleanCheckbox id="idCopyEmail" value="#{salesBean.invoicePaxVO.custDetailsVO.deepCopyEmail}" style="vertical-align:text-bottom;margin-left:367px">
+										<p:ajax listener="#{salesBean.handleCopyEmailSelect}" update="idPanelEmail" global="false"/>
+									</p:selectBooleanCheckbox>
+									<h:outputLabel>Same as billing person</h:outputLabel>
+						        </f:facet>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column colspan="4">
+			<p:panel id="idPanelTravelDoc" header="Travel Document" toggleable="true">
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idPssprtNo">Passport No</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idPssprtNo" label="Passport No" value="#{salesBean.invoicePaxVO.custDetailsVO.passportIdVO.idNo}" maxlength="20" onkeypress="return rtnAlphaNumeric(event);"/>
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idPssprtDtExp">Date of Expiry</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:calendar id="idPssprtDtExp" label="Date of Expiry" value="#{salesBean.invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.dtExpired}" navigator="true" showButtonPanel="true" yearRange="c-10:c+10" pattern="dd-MMM-yyyy"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idPlaceIssue">Nationality</h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idPlaceIssue" label="Nationality" value="#{salesBean.invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.idCountry}"
+								style="width:180px;">  
+								<f:selectItem itemLabel="Select One" itemValue="" />  
+								<f:selectItems value="#{salesBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}" />  
+				            </h:selectOneMenu>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel>Scanned Copy</h:outputLabel>
+						</p:column>
+				        <p:column colspan="3">
+							<p:panelGrid id="idPassportScannedCopy" style="border:0">
+								<p:row rendered="#{empty salesBean.invoicePaxVO.custDetailsVO.passportIdVO.uploadedFile}">
+									<p:column>
+										<p:fileUpload id="idScannedCopy" fileUploadListener="#{salesBean.handlePaxFileUploadPassport}" mode="advanced" auto="true" sizeLimit="#{bterp:globalConfigValue('GLOBAL', 'PATH_PDF_FILE_SIZE')}" allowTypes="/(\.|\/)(pdf|jpg|jpeg|png)$/" description="*.pdf;*.jpg;*.jpeg" update="msg, :idAddInvoicePaxForm:idPassportScannedCopy" oncomplete="varStatusDialog.hide()"/>
+									</p:column>
+								</p:row>
+								<p:row rendered="#{not empty salesBean.invoicePaxVO.custDetailsVO.passportIdVO.uploadedFile}">
+									<p:column style="width:15px;"><p:commandLink styleClass="ui-icon ui-icon-close" onclick="varDelPaxScannedPassportDialog.show()"/></p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath}" rendered="#{empty salesBean.invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.id}"/>
+										<h:outputLink target="_blank" value="#{request.contextPath}#{salesBean.destinationPassportPath}/#{salesBean.invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}" rendered="#{not empty salesBean.invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.id}">
+											<h:outputText value="#{salesBean.invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath}"/>
+										</h:outputLink>
+									</p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:commandButton value="ID" actionListener="#{salesBean.setIdentityAdd(true)}" oncomplete="varPassIDDialog.show()" update=":idPassIDDialog" process="@this"/>
+						</p:column>
+						<p:column colspan="3">
+							<p:panel id ="idIdentityListPanel" style="border:none">
+								<p:dataTable id="idIdendityListTable" value="#{salesBean.invoicePaxVO.custDetailsVO.identityList}" var="identityVO" rowKey="#{identityVO.idType}" selectionMode="single">
+									<p:column headerText="Edit" style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onIdentitySelected(identityVO)}" oncomplete="varPassIDDialog.show()" process="@this"
+											update=":idPassIDDialog" rendered="#{identityVO.id eq null or not (salesBean.invoicePaxVO.custDetailsVO.passportIdVO.id eq identityVO.id or salesBean.invoicePaxVO.custDetailsVO.nricIdVO.id eq identityVO.id)}"/>
+									</p:column>
+									<p:column headerText="Delete" style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteIdentity(identityVO)}" update=":idAddInvoicePaxForm:idIdendityListTable" process="@this"
+											rendered="#{identityVO.id eq null or not (salesBean.invoicePaxVO.custDetailsVO.passportIdVO.id eq identityVO.id or salesBean.invoicePaxVO.custDetailsVO.nricIdVO.id eq identityVO.id)}"/>
+									</p:column>
+									<p:column headerText="ID Type">
+										<h:outputText value="#{bterp:lookupItemDesc('id_type', identityVO.idType)}"/>
+									</p:column>
+									<p:column headerText="ID No">
+										<h:outputText value="#{identityVO.idNo}"/>
+									</p:column>
+									<p:column headerText="Age" style="text-align:center;">
+										<h:outputText value="#{salesBean.calculateAgeByIdNo(identityVO.idNo)}" rendered="#{identityVO.idType == 'nric'}"/>
+									</p:column>
+									<p:column headerText="Expired Date" style="text-align:center;">
+										<h:outputText value="#{identityVO.identityDetailVO.dtExpired}" rendered="#{not empty identityVO.identityDetailVO.dtExpired}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</p:column>
+									<p:column headerText="Attactment" style="width:80px; text-align:center;">
+										<h:outputLink id="idTTIDAttachment" target="_blank" value="#{request.contextPath}#{identityVO.idType == 'visa' ? salesBean.destinationVisaPath : salesBean.destinationPassportPath}/#{identityVO.identityDetailVO.filePath}"
+											style="color: #db3333;text-decoration: underline;"
+											rendered="#{not empty identityVO.identityDetailVO.scannedPath and not empty identityVO.identityDetailVO.filePath}">
+											<h:outputText value="View"/>
+										</h:outputLink>
+										<pe:tooltip for="idTTIDAttachment" shared="true" showDelay="3000"  position="top right"
+											rendered="#{not empty identityVO.identityDetailVO.scannedPath and not empty identityVO.identityDetailVO.filePath}">
+											<h:outputText value="#{identityVO.identityDetailVO.scannedPath}" escape="true" style="white-space: pre-wrap"/>
+										</pe:tooltip>
+									</p:column>
+								</p:dataTable>
+								<p:panel id="idAttachmentListPanel" style="display:none"/>
+							</p:panel>
+						</p:column>
+					</p:row>
+					
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idComplicationType">Complication</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:selectCheckboxMenu id="idComplicationType"
+								style="vertical-align:middle"
+								value="#{salesBean.invoicePaxVO.custDetailsVO.compliCdList}" label="Complication"
+								filter="true" filterMatchMode="contains"
+								onHide="executeOnComplicationOnhide();">
+								<f:selectItems value="#{bterp:lookupItemList('cust_cmpl')}"
+									var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+							</p:selectCheckboxMenu>
+							<p:remoteCommand name="executeOnComplicationOnhide"
+								actionListener="#{salesBean.handleComplicationChange}"
+								update=":idAddInvoicePaxForm:idComplicationName"
+								process="@this, :idAddInvoicePaxForm:idComplicationType" global="false" />
+						</p:column>
+						<p:column>
+							<h:outputLabel for="idMealList">Add Meals</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:selectCheckboxMenu id="idMealList" style="vertical-align:middle"
+								value="#{salesBean.invoicePaxVO.custDetailsVO.mealCdList}" label="Add Meals"
+								filter="true" filterMatchMode="contains"
+								onHide="executeOnMealOnhide();">
+								<f:selectItems value="#{bterp:lookupItemList('meal_pref')}"
+									var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+							</p:selectCheckboxMenu>
+							<p:remoteCommand name="executeOnMealOnhide"
+								actionListener="#{salesBean.handleMealChange}"
+								update=":idAddInvoicePaxForm:idMealName"
+								process="@this, :idAddInvoicePaxForm:idMealList" global="false" />
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column></p:column>
+						<p:column>
+							<h:outputText id="idComplicationName"
+								value="#{salesBean.invoicePaxVO.custDetailsVO.complicationName}" style="font-size:8px;"></h:outputText>
+						</p:column>
+						<p:column></p:column>
+						<p:column>
+							<h:outputText id="idMealName"
+								value="#{salesBean.invoicePaxVO.custDetailsVO.mealName}" style="font-size:8px;"></h:outputText>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column colspan="4">
+			<p:panel id="idPanelPerAddress" header="Address" toggleable="true">
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:panel id="idPanelBillAddress" header="Billing Address">
+								<p:panelGrid>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idBillCompName">Company Name</h:outputLabel>
+										</p:column>
+										<p:column colspan="3">
+											<p:inputText id="idBillCompName" label="Company Name"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.companyName}" size="50"
+												disabled="#{not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idAdd1">Address Line 1 <span class="required">*</span>
+											</h:outputLabel>
+										</p:column>
+										<p:column colspan="3">
+											<p:inputText id="idAdd1" label="Address Line 1"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.addr1}" size="50"
+												required="true"
+												disabled="#{not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+									</p:row>
+			
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idAdd2">Address Line 2 </h:outputLabel>
+										</p:column>
+										<p:column colspan="3">
+											<p:inputText id="idAdd2" label="Address Line 2"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.addr2}" size="50"
+												disabled="#{not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+									</p:row>
+			
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idAdd3">Address Line 3 </h:outputLabel>
+										</p:column>
+										<p:column colspan="3">
+											<p:inputText id="idAdd3" label="Address Line 3"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.addr3}" size="50"
+												disabled="#{not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+									</p:row>
+			
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idCity">City <span
+												class="required">*</span>
+											</h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idCity" label="Billing Address - City" required="true"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.city}"
+												disabled="#{not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+										<p:column>
+											<h:outputLabel for="idState">State <span
+												class="required">*</span>
+											</h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idState" label="Billing Address - State" rendered="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.countryId ne 129}"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.state}"
+												disabled="#{not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+											<h:selectOneMenu id="idStateMalaysia" label="Billing Address - State" value="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.state}" effect="fade" rendered="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.countryId eq 129}"
+												disabled="#{not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}" required="true">
+												<f:selectItem itemLabel="Select One" itemValue=""/>
+												<f:selectItems value="#{custBean.malaysiaStateList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.name}"/>
+											</h:selectOneMenu>
+										</p:column>
+									</p:row>
+			
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idPostcode">Postcode <span
+														class="required">*</span>
+											</h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idPostcode" label="Billing Address - Postcode" required="true"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.postcode}"
+												maxlength="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.countryId == 129 ? 5 : 99}"
+												disabled="#{not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+											<pe:tooltip for="idPostcode" position="bottom left" rendered="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.countryId == 129}">
+												<h:outputText value="For Malaysian addresses, the postcode must not exceed 5 digits." escape="true"
+													style="white-space: pre-wrap" />
+											</pe:tooltip>
+										</p:column>
+										<p:column>
+											<h:outputLabel for="idCountry">Country <span
+													class="required">*</span>
+											</h:outputLabel>
+										</p:column>
+										<p:column>
+											<h:selectOneMenu id="idCountry" label="Country"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.addressVO.countryId}"
+												required="true"
+												disabled="#{not salesBean.invPaxAdd and salesBean.invoicePaxVO.custDetailsVO.isLock}">
+												<p:ajax event="change" listener="#{salesBean.handleBillAddressState}" update="idPanelBillAddress :idAddInvoicePaxForm:idTaxIdNo" />
+												<f:selectItem itemLabel="Select One" itemValue="" />
+												<f:selectItems value="#{salesBean.countryList}" var="vo"
+													itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+											</h:selectOneMenu>
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								<f:facet name="actions">
+						            <p:selectBooleanCheckbox id="idCopyFromBill" value="#{salesBean.invoicePaxVO.custDetailsVO.deepCopyFromBill}" style="vertical-align:text-bottom;margin-left:367px">
+										<p:ajax listener="#{salesBean.handleCopyFromBillSelect}" update="idPanelBillAddress" global="false"/>
+									</p:selectBooleanCheckbox>
+									<h:outputLabel>Same as billing person</h:outputLabel>
+						        </f:facet>
+							</p:panel>
+						</p:column>
+					</p:row>
+					
+					<p:row>
+						<p:column>
+							<p:panel id="idPanelMailAddress" header="Mailing Address" toggleable="true" collapsed="true">
+								<p:ajax event="toggle" global="false"></p:ajax>
+								<p:panelGrid>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idMailCompName">Company Name</h:outputLabel>
+										</p:column>
+										<p:column colspan="3">
+											<p:inputText id="idMailCompName" label="Company Name"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.companyName}" size="50" >
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+									</p:row>
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idMailAdd1">Address Line 1</h:outputLabel>
+										</p:column>
+										<p:column colspan="3">
+											<p:inputText id="idMailAdd1" label="Address Line 1"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.addr1}" size="50">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+									</p:row>
+			
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idMailAdd2">Address Line 2 </h:outputLabel>
+										</p:column>
+										<p:column colspan="3">
+											<p:inputText id="idMailAdd2" label="Address Line 2"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.addr2}" size="50">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+									</p:row>
+			
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idMailAdd3">Address Line 3 </h:outputLabel>
+										</p:column>
+										<p:column colspan="3">
+											<p:inputText id="idMailAdd3" label="Address Line 3"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.addr3}" size="50">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+									</p:row>
+			
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idMailCity">City </h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idMailCity" label="City"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.city}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+										<p:column>
+											<h:outputLabel for="idMailState">State </h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idMailState" label="State" rendered="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.countryId ne 129}"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.state}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+											<h:selectOneMenu id="idMailStateMalaysia" label="State" value="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.state}" effect="fade" rendered="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.countryId eq 129}">
+												<f:selectItem itemLabel="Select One" itemValue=""/>
+												<f:selectItems value="#{custBean.malaysiaStateList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.name}"/>
+											</h:selectOneMenu>
+										</p:column>
+									</p:row>
+			
+									<p:row>
+										<p:column>
+											<h:outputLabel for="idMailPostcode">Postcode </h:outputLabel>
+										</p:column>
+										<p:column>
+											<p:inputText id="idMailPostcode" label="Postcode"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.postcode}">
+												<p:ajax event="change" global="false"></p:ajax>
+											</p:inputText>
+										</p:column>
+										<p:column>
+											<h:outputLabel for="idMailCountry">Country</h:outputLabel>
+										</p:column>
+										<p:column>
+											<h:selectOneMenu id="idMailCountry" label="Country"
+												value="#{salesBean.invoicePaxVO.custDetailsVO.mailAddressVO.countryId}">
+												<p:ajax event="change" listener="#{salesBean.handleMailAddressState}" update="idPanelMailAddress" />
+												<f:selectItem itemLabel="Select One" itemValue="" />
+												<f:selectItems value="#{salesBean.countryList}" var="vo"
+													itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+											</h:selectOneMenu>
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								<f:facet name="actions">
+						            <p:selectBooleanCheckbox id="idCopy" value="#{salesBean.invoicePaxVO.custDetailsVO.deepCopy}" style="vertical-align:text-bottom;margin-left:367px">
+										<p:ajax listener="#{salesBean.handleCopySelect}" update="idPanelMailAddress" process="@this, idPanelMailAddress" global="false"/>
+									</p:selectBooleanCheckbox>
+									<h:outputLabel>Same as billing address</h:outputLabel>
+						        </f:facet>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:column>
+	</p:row>
+	
+	<p:row>
+		<p:column colspan="4">
+			<p:panel id="idPanelOthers" header="Others" toggleable="true">
+				<p:panelGrid>
+					<p:row>
+						<p:column rendered="#{salesBean.invoiceVO.catCd eq 'to' or not empty salesBean.invoiceVO.bookingId}">
+							<h:outputLabel for="idRoomType">Room Type <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.catCd eq 'to' or not empty salesBean.invoiceVO.bookingId}">
+							<h:selectOneMenu id="idRoomType" label="Room Type" value="#{salesBean.invoicePaxVO.roomTypeCd}" required="true">  
+					        	<f:selectItem itemLabel="Select One" itemValue=""/>
+					        	<f:selectItems value="#{bterp:lookupItemList('room_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+						    </h:selectOneMenu>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.catCd ne 'to' and empty salesBean.invoiceVO.bookingId}">
+							<h:outputLabel for="idRoomType2">Room Type</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.catCd ne 'to' and empty salesBean.invoiceVO.bookingId}">
+							<h:selectOneMenu id="idRoomType2" label="Room Type" value="#{salesBean.invoicePaxVO.roomTypeCd}">  
+					        	<f:selectItem itemLabel="Select One" itemValue=""/>
+					        	<f:selectItems value="#{bterp:lookupItemList('room_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+						    </h:selectOneMenu>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.catCd eq 'to' or not empty salesBean.invoiceVO.bookingId}">
+							<h:outputLabel for="idRoomPairingNo">Room Pairing No <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.catCd eq 'to' or not empty salesBean.invoiceVO.bookingId}">
+							<p:inputText id="idRoomPairingNo" label="Room Pairing No" value="#{salesBean.invoicePaxVO.roomPairingNo}" maxlength="3" required="true"/>  
+				        	<pe:keyFilter for="idRoomPairingNo" mask="num"/>
+				        </p:column>
+				        <p:column rendered="#{salesBean.invoiceVO.catCd ne 'to' and empty salesBean.invoiceVO.bookingId}">
+							<h:outputLabel for="idRoomPairingNo2">Room Pairing No</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.catCd ne 'to' and empty salesBean.invoiceVO.bookingId}">
+							<p:inputText id="idRoomPairingNo2" label="Room Pairing No" value="#{salesBean.invoicePaxVO.roomPairingNo}" maxlength="3" />  
+				        	<pe:keyFilter for="idRoomPairingNo2" mask="num"/>
+				        </p:column>
+					</p:row>
+					<p:row>
+						<p:column rendered="#{salesBean.invoiceVO.catCd eq 'to' or not empty salesBean.invoiceVO.bookingId}">
+							<h:outputLabel for="idTrvlInsType">Trvl Ins Type <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.catCd eq 'to' or not empty salesBean.invoiceVO.bookingId}">
+							<h:selectOneMenu id="idTrvlInsType" label="Trvl Ins Type" value="#{salesBean.invoicePaxVO.travelInsType}" required="true">
+								<f:selectItem itemLabel="Select One"/>
+					        	<f:selectItems value="#{bterp:lookupItemList('travel_Ins_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+								<p:ajax listener="#{salesBean.handleTrvlInsType}" event="change" update=":idAddInvoicePaxForm:idTrvlInsPolicy"/>
+						    </h:selectOneMenu>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.catCd ne 'to' and empty salesBean.invoiceVO.bookingId}">
+							<h:outputLabel for="idTrvlInsType2">Trvl Ins Type</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.catCd ne 'to' and empty salesBean.invoiceVO.bookingId}">
+							<h:selectOneMenu id="idTrvlInsType2" label="Trvl Ins Type" value="#{salesBean.invoicePaxVO.travelInsType}">
+								<f:selectItem itemLabel="Select One"/>
+					        	<f:selectItems value="#{bterp:lookupItemList('travel_Ins_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+								<p:ajax listener="#{salesBean.handleTrvlInsType}" event="change" update=":idAddInvoicePaxForm:idTrvlInsPolicy"/>
+						    </h:selectOneMenu>
+						</p:column>
+						<!-- <p:column>
+							<h:outputLabel for="idTicketNo">Ticket No</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idTicketNo" label="Ticket No" value="#{salesBean.invoicePaxVO.ticketNo}" maxlength="255"/>
+				        </p:column> -->
+				        <p:column rendered="#{salesBean.hideCRM eq false}">
+							<h:outputLabel for="idItemCode">Item Code</h:outputLabel>
+						</p:column>
+				        <p:column headerText="Item Code" rendered="#{salesBean.hideCRM eq false}">
+						    <h:selectOneMenu id="idItemCode" value="#{salesBean.invoicePaxVO.itemCode}">						        
+						        <f:selectItem itemLabel="Select One" itemValue="" />					        
+						        <f:selectItems value="#{salesBean.availableItemCode}" var="item" itemLabel="#{item.label}" itemValue="#{item.value}" />
+						    </h:selectOneMenu>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idTrvlInsPolicy">Trvl Ins Policy</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputTextarea id="idTrvlInsPolicy" label="Trvl Ins Policy" value="#{salesBean.invoicePaxVO.travelInsPolicy}" maxlength="255"/>
+						</p:column>
+				        <p:column>
+							<h:outputLabel for="idSpclReq">Special Request</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputTextarea id="idSpclReq" label="Special Request" value="#{salesBean.invoicePaxVO.spclReq}"/>
+				        </p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Reference No" 
+								actionListener="#{salesBean.setRefNoAdd(true)}"
+								oncomplete="varPassRefNoDialog.show()"
+								update=":idPassRefNoDialog" process="@this"/>
+						</p:column>
+						<p:column colspan="3">
+							<p:panel id ="idRefNoListPanel" style="border:none">
+								<p:dataTable id="idRefNoListTable" value="#{salesBean.tempInvoicePaxRefNoList}" var="refNoVO">
+									<p:column headerText="Edit" style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onRefNoSelected(refNoVO)}" oncomplete="varPassRefNoDialog.show()" process="@this" update=":idPassRefNoDialog"/>
+									</p:column>
+									<p:column headerText="Delete" style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteRefNo(refNoVO)}" update=":idAddInvoicePaxForm:idRefNoListTable" process="@this"/>
+									</p:column>
+									<p:column headerText="Reference Type" style="text-align:center;">
+										<h:outputText value="#{bterp:lookupItemDesc('inv_ref_no', refNoVO.refType)}"/>
+									</p:column>
+									<p:column headerText="Reference Number" style="text-align:center;">
+										<h:outputText value="#{refNoVO.refNo}"/>
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+</div>
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{salesBean.addInvPax}" update="@form,:idAddInvoiceForm:idInvDetailsTab:idInvPaxListTable" rendered="#{salesBean.invPaxAdd and (not salesBean.invoicePaxVO.isLock)}"/>
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{salesBean.updateInvPax}" update="@form,:idAddInvoiceForm:idInvDetailsTab:idInvPaxListTable" oncomplete="onValidation(xhr, status, args)" rendered="#{(not salesBean.invPaxAdd) and (not salesBean.invoicePaxVO.isLock)}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.resetInvPaxForm}" update="@form" process="@this" oncomplete="varAddInvoicePaxDialog.hide()">
+		<pe:resetEditableValues for="idAddInvoicePaxForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

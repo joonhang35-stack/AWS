@@ -1,0 +1,809 @@
+package com.bcs.zsg.sales.dao;
+
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.SQLQuery;
+import org.hibernate.transform.Transformers;
+import org.hibernate.type.DateType;
+import org.hibernate.type.DoubleType;
+import org.hibernate.type.IntegerType;
+import org.hibernate.type.LongType;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.db.bterp.vo.report.SalesCommissionReportVO;
+import com.bcs.zsg.maintenance.bo.AppSettingBO;
+import com.bcs.zsg.maintenance.helper.ConstantAppSetting;
+import com.bcs.zsg.maintenance.vo.AppSettingVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.sales.vo.SalesListingVO;
+
+public class InvoiceReportDAOImpl extends BaseHibernateDAO implements InvoiceReportDAO {
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceReportList(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@Autowired
+	private AppSettingBO appSettingBO;
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceReportListA(Long companyId, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		
+		AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_POS_CONFIG_GL_ACCT_TO_EXCLUDE);
+		String invPrefix = LookupItemUtils.getInvPrefix(companyId);
+		String psPrefix = LookupItemUtils.getPsPrefix(companyId);
+		String cnPrefix = LookupItemUtils.getCnPrefix(companyId);
+		
+		sb.append("select a.id, a.code, a.invoiceDt, a.departureDt, ");
+		if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+			sb.append("IF(count_acct_not_exclude > 0, amount - amt_dep, 0.00) * IF(a.doc_type_cd = 'I', 1, -1) AS amount, ");
+			sb.append("IF(count_acct_not_exclude > 0, amtPaid - amt_dep, 0.00) * IF(a.doc_type_cd = 'I', 1, -1) AS amtPaid, ");
+			sb.append("CASE WHEN count_acct_not_exclude > 0 THEN a.balance ELSE 0.00 END AS balance, ");
+		} else {
+			sb.append("a.amount, a.amtPaid, a.balance, ");
+		}
+		sb.append("a.tourDepId, a.tourCd, a.customerId, a.salerName, a.salerId, a.typeCd, a.custName, a.custSalutation, a.coName, a.statusCd, ");
+		sb.append("IF(a.docTypeCd = 'C', CONCAT('" + psPrefix + " ', a.cnPsNo), CONCAT('" + psPrefix + " ', a.psNo)) AS psNo, ");
+		sb.append("IF(a.docTypeCd = 'C', a.cnPsDt, a.psDt) as psDt ");
+		sb.append("from ( ").
+			append("select iv.id as id, concat(if(iv.doc_type_cd = 'C', '"+cnPrefix+"', if(iv.doc_type_cd = 'I', '"+invPrefix+"', if(iv.doc_type_cd = 'P', '"+psPrefix+"', ''))), ' ', iv.code) as code, iv.dt_inv as invoiceDt, ").
+			append("iv.dt_departure as departureDt, iv.amount as amount, ").
+				append("(select case when sum(pmnt.amount) is null then 0 else sum(pmnt.amount) end from invoice_pmnt pmnt ").
+					append("where pmnt.id_inv = iv.id and pmnt.status_cd = 'A') as 'amtPaid', ").
+				append("iv.balance as balance, ").
+				append("iv.id_tour_booking as tourDepId, ifnull(tdp.code, '') as tourCd, iv.id_customer as customerId, ").
+				append("usr.user_name as salerName, iv.id_saler as salerId, cm.pc_type_cd as typeCd, ").
+				append("concat(p.last_name, ' ', p.first_name) as custName, ").
+				append("p.salutation_cd as custSalutation, cm.corporate_name as coName, iv.status_cd as statusCd ");
+				if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+					sb.append(", iv.doc_type_cd ");
+					sb.append(", IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.id_acct IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id), 0) AS amt_dep ");
+					sb.append(", (SELECT COUNT(id) FROM invoice_item inv_item WHERE inv_item.id_acct NOT IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id) AS count_acct_not_exclude ");
+				}
+				sb.append(", iv.doc_type_cd as docTypeCd, ps.ps_no as psNo, ps.dt_inv as psDt, cn_ps.ps_no as cnPsNo, cn_ps.dt_inv as cnPsDt ");
+			sb.append("from invoice iv ");
+			sb.append("LEFT JOIN invoice ps ON ps.ps_no IS NOT NULL AND iv.id_company=ps.id_company and ps.ps_no = iv.ps_no and ps.doc_type_cd = 'P' ");
+			sb.append("LEFT JOIN invoice cn_iv ");
+			sb.append("ON (iv.cn_inv_no IS NOT NULL AND iv.id_company=cn_iv.id_company AND cn_iv.code = iv.cn_inv_no and cn_iv.doc_type_cd = 'I') ");
+			sb.append("LEFT JOIN invoice cn_ps ");
+			sb.append("ON (iv.cn_ps_no IS NOT NULL AND iv.id_company=cn_ps.id_company AND cn_ps.ps_no = iv.cn_ps_no and cn_ps.doc_type_cd = 'P') ");
+			sb.append("left join tour_dep tdp on (CASE WHEN iv.doc_type_cd != 'C' THEN iv.id_tour_dep ELSE if(cn_iv.id_tour_dep IS NOT NULL, cn_iv.id_tour_dep, cn_ps.id_tour_dep) END)=tdp.id ").
+			append(", employee ep, sec_user usr, customer cm, person p ").
+			append("where iv.id_company=:idCompany and iv.id_saler=ep.id and iv.id_saler=ep.id and ").
+				append("ep.u_sec_user=usr.uuid and iv.id_customer=cm.id and cm.id_pc=p.id ").
+				append("AND (iv.doc_type_cd = 'I' or iv.doc_type_cd = 'C' or (iv.doc_type_cd = 'P' AND iv.doc_type_status IN ('OP', 'RW'))) ");
+				if (searchParamVO.getObj1() != null) sb.append("and date(iv.dt_inv) >= date('" + sdf.format((Date)searchParamVO.getObj1()) + "') ");
+				if (searchParamVO.getObj2() != null) sb.append("and date(iv.dt_inv) <= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+				if (searchParamVO.getObj3() != null) sb.append("and date(iv.dt_departure) >= date('" + sdf.format((Date)searchParamVO.getObj3()) + "') ");
+				if (searchParamVO.getObj4() != null) sb.append("and date(iv.dt_departure) <= date('" + sdf.format((Date)searchParamVO.getObj4()) + "') ");
+				if (searchParamVO.getObj5() != null) sb.append("and iv.id_saler = '" + (String) searchParamVO.getObj5() + "' ");
+				if (searchParamVO.getObj6() != null) sb.append("and cn_iv.order_cd = '" + (String) searchParamVO.getObj6() + "' ");
+				if (searchParamVO.getObj7() != null) sb.append("and iv.doc_type_cd = '" + (String) searchParamVO.getObj7() + "' ");
+				if (searchParamVO.getObj9() != null && ((boolean) searchParamVO.getObj9()) == false)
+					sb.append("and iv.status_cd != '" + CommonConstant.STATUS_CD_CANCELLED + "' ");
+				if (searchParamVO.getObj10() != null && ((boolean) searchParamVO.getObj10()) == false)
+					sb.append("and iv.status_cd != '" + CommonConstant.STATUS_CD_VOID + "' ");
+		sb.append(") a ").
+		append("order by a.salerName, a.invoiceDt, cast(code as decimal)");
+		
+		SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+		query.addScalar("id", LongType.INSTANCE);
+		query.addScalar("code");
+		query.addScalar("invoiceDt", DateType.INSTANCE);
+		query.addScalar("departureDt", DateType.INSTANCE);
+		query.addScalar("amount", DoubleType.INSTANCE);
+		query.addScalar("amtPaid", DoubleType.INSTANCE);
+		query.addScalar("balance", DoubleType.INSTANCE);
+		query.addScalar("customerId", LongType.INSTANCE);
+		query.addScalar("tourDepId", LongType.INSTANCE);
+		query.addScalar("tourCd");
+		query.addScalar("salerId", LongType.INSTANCE);
+		query.addScalar("salerName");
+		query.addScalar("typeCd");
+		query.addScalar("custName");
+		query.addScalar("custSalutation");
+		query.addScalar("coName");
+		query.addScalar("statusCd");
+		query.addScalar("psNo");
+		query.addScalar("psDt");
+		query.setParameter("idCompany", companyId);
+//		query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+//		query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+		if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+			List<String> excludeAcctList = Arrays.asList(appSettingVO.getValue().split(","));
+			query.setParameterList("excludeAcct", excludeAcctList);
+		}
+		query.setResultTransformer(Transformers.aliasToBean(InvoiceVO.class));
+		return query.list();
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceReportListB(java.lang.Long, com.bcs.zsg.common.vo.SearchParamVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceReportListB(Long companyId, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		
+		AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_POS_CONFIG_GL_ACCT_TO_EXCLUDE);
+		String invPrefix = LookupItemUtils.getInvPrefix(companyId);
+		String psPrefix = LookupItemUtils.getPsPrefix(companyId);
+		String cnPrefix = LookupItemUtils.getCnPrefix(companyId);
+		
+		sb.append("select a.id, a.code, a.invoiceDt, a.departureDt, ");
+		if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+			sb.append("IF(count_acct_not_exclude > 0, amount - amt_dep, 0.00) * IF(a.doc_type_cd = 'I', 1, -1) AS amount, ");
+			sb.append("IF(count_acct_not_exclude > 0, amtPaid - amt_dep, 0.00) * IF(a.doc_type_cd = 'I', 1, -1) AS amtPaid, ");
+			sb.append("CASE WHEN count_acct_not_exclude > 0 THEN a.balance ELSE 0.00 END AS balance, ");
+		} else {
+			sb.append("a.amount, a.amtPaid, a.balance, ");
+		}
+		sb.append("a.tourDepId, a.tourCd, a.customerId, a.salerName, a.salerId, a.typeCd, a.custName, a.custSalutation, a.coName, a.statusCd,  ");
+		sb.append("CONCAT('"+psPrefix+" ', IF(a.docTypeCd = 'C', a.cnPsNo, a.psNo)) AS psNo, ");
+		sb.append("IF(a.docTypeCd = 'C', a.cnPsDt, a.psDt) as psDt ");
+		sb.append("from ( ").
+			append("select iv.id as id, CONCAT(CASE iv.doc_type_cd WHEN 'C' THEN '"+cnPrefix+" ' WHEN 'P' THEN '"+psPrefix+" ' WHEN 'I' THEN '"+invPrefix+" ' ELSE '' END, iv.code) AS code, iv.dt_inv as invoiceDt, ").
+				append("iv.dt_departure as departureDt, iv.amount as amount, ").
+				append("(select case when sum(pmnt.amount) is null then 0 else sum(pmnt.amount) end from invoice_pmnt pmnt ").
+					append("where pmnt.id_inv = iv.id and pmnt.status_cd = 'A') as 'amtPaid', ").
+				append("iv.balance as balance, ").
+				append("iv.id_tour_booking as tourDepId, ifnull(tdp.code, '') as tourCd, iv.id_customer as customerId, ").
+				append("usr.user_name as salerName, iv.id_saler as salerId, cm.pc_type_cd as typeCd, ").
+				append("concat(p.last_name, ' ', p.first_name) as custName, ").
+				append("p.salutation_cd as custSalutation, cm.corporate_name as coName, iv.status_cd as statusCd ");
+				if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+					sb.append(", iv.doc_type_cd ");
+					sb.append(", IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.id_acct IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id), 0) AS amt_dep ");
+					sb.append(", (SELECT COUNT(id) FROM invoice_item inv_item WHERE inv_item.id_acct NOT IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id) AS count_acct_not_exclude ");
+				}
+				sb.append(", iv.doc_type_cd as docTypeCd, ps.ps_no as psNo, ps.dt_inv as psDt, cn_ps.ps_no as cnPsNo, cn_ps.dt_inv as cnPsDt ");
+			sb.append("from invoice iv ");
+			sb.append("LEFT JOIN invoice ps ON ps.ps_no IS NOT NULL AND iv.id_company=ps.id_company and ps.ps_no = iv.ps_no and ps.doc_type_cd = 'P' ");
+			sb.append("LEFT JOIN invoice cn_iv ");
+			sb.append("ON (iv.cn_inv_no IS NOT NULL AND iv.id_company=cn_iv.id_company AND cn_iv.code = iv.cn_inv_no and cn_iv.doc_type_cd = 'I') ");
+			sb.append("LEFT JOIN invoice cn_ps ");
+			sb.append("ON (iv.cn_ps_no IS NOT NULL AND iv.id_company=cn_ps.id_company AND cn_ps.ps_no = iv.cn_ps_no and cn_ps.doc_type_cd = 'P') ");
+			sb.append("left join tour_dep tdp on (CASE WHEN iv.doc_type_cd != 'C' THEN iv.id_tour_dep ELSE cn_iv.id_tour_dep END)=tdp.id, employee ep, sec_user usr, customer cm, person p ").
+			append("where iv.id_company=:idCompany and iv.id_saler=ep.id and iv.id_saler=ep.id and ").
+				append("ep.u_sec_user=usr.uuid and iv.id_customer=cm.id and cm.id_pc=p.id ").
+				append("AND (iv.doc_type_cd = 'I' or iv.doc_type_cd = 'C' or (iv.doc_type_cd = 'P' AND iv.doc_type_status IN ('OP', 'RW'))) ");
+				if (searchParamVO.getObj1() != null) sb.append("and date(iv.dt_inv) >= date('" + sdf.format((Date)searchParamVO.getObj1()) + "') ");
+				if (searchParamVO.getObj2() != null) sb.append("and date(iv.dt_inv) <= date('" + sdf.format((Date)searchParamVO.getObj2()) + "') ");
+				if (searchParamVO.getObj6() != null) sb.append("and cn_iv.order_cd = '" + (String) searchParamVO.getObj6() + "' ");
+				if (searchParamVO.getObj7() != null) sb.append("and iv.doc_type_cd = '" + (String) searchParamVO.getObj7() + "' ");
+				if (searchParamVO.getObj9() != null && ((boolean) searchParamVO.getObj9()) == false)
+					sb.append("and iv.status_cd != '" + CommonConstant.STATUS_CD_CANCELLED + "' ");
+				if (searchParamVO.getObj10() != null && ((boolean) searchParamVO.getObj10()) == false)
+					sb.append("and iv.status_cd != '" + CommonConstant.STATUS_CD_VOID + "' ");
+		sb.append(") a ").
+		append("order by a.departureDt, a.invoiceDt, cast(code as decimal)");
+		
+		SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+		query.addScalar("id", LongType.INSTANCE);
+		query.addScalar("code");
+		query.addScalar("invoiceDt", DateType.INSTANCE);
+		query.addScalar("departureDt", DateType.INSTANCE);
+		query.addScalar("amount", DoubleType.INSTANCE);
+		query.addScalar("amtPaid", DoubleType.INSTANCE);
+		query.addScalar("balance", DoubleType.INSTANCE);
+		query.addScalar("customerId", LongType.INSTANCE);
+		query.addScalar("tourDepId", LongType.INSTANCE);
+		query.addScalar("tourCd");
+		query.addScalar("salerId", LongType.INSTANCE);
+		query.addScalar("salerName");
+		query.addScalar("typeCd");
+		query.addScalar("custName");
+		query.addScalar("custSalutation");
+		query.addScalar("coName");
+		query.addScalar("statusCd");
+		query.addScalar("psNo");
+		query.addScalar("psDt");
+		query.setParameter("idCompany", companyId);
+//		query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+//		query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+		if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+			List<String> excludeAcctList = Arrays.asList(appSettingVO.getValue().split(","));
+			query.setParameterList("excludeAcct", excludeAcctList);
+		}
+		query.setResultTransformer(Transformers.aliasToBean(InvoiceVO.class));
+		return query.list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getSalesReportList(Long idTourDep, Long companyId, Map<String, Object> params) throws BusinessException {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_POS_CONFIG_GL_ACCT_TO_EXCLUDE);
+		
+		String invPrefix = LookupItemUtils.getInvPrefix(companyId);
+		String psPrefix = LookupItemUtils.getPsPrefix(companyId);
+		String cnPrefix = LookupItemUtils.getCnPrefix(companyId);
+		String rnPrefix = LookupItemUtils.getRnPrefix(companyId);
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT id, invoiceDt, code, departureDt, tourCd, customerId, typeCd, custSalutation, custName, coName, salerId, salerName, deptCode, deptDesc ");
+		sb.append(", idTourCat, tourCatDesc, country, tourPkgName, subjLine ");
+		sb.append(", IF(doc_type_cd = 'C', IF(id_tour_booking IS NOT NULL, paxCount, IF(raw_reference_iv_amt != raw_iv_amt, 0, -1) * paxCount), paxCount) AS paxCount ");
+		sb.append(", bookingPax, invPax, ");
+		sb.append("CASE WHEN cat_cd = 'to' AND id_tour_booking IS NOT NULL AND (IF(invSplitPax < 0, bookingPax != invPax, bookingPax != invSplitPax)) THEN 'Y' ELSE 'N' END AS notTallyPax ");
+		if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+			sb.append(", IF(count_acct_not_exclude > 0, amount - amt_dep, 0.00) * IF(doc_type_cd = 'C', -1, 1) AS amount ");
+			sb.append(", IF(count_acct_not_exclude > 0, amtPaid - amt_dep, 0.00) * IF(doc_type_cd = 'C', -1, 1) AS amtPaid ");
+			sb.append(", CASE WHEN count_acct_not_exclude > 0 THEN balance ELSE 0.00 END AS balance ");
+		} else {
+			sb.append(", amount * IF(doc_type_cd = 'C', -1, 1) AS amount ");
+			sb.append(", amtPaid * IF(doc_type_cd = 'C', -1, 1) AS amtPaid ");
+			sb.append(", balance ");
+		}
+		sb.append(", catCd, bookingId, orderCd, airlineCd, bookingStatus, totalUPoint * IF(doc_type_cd = 'C', -1, 1) as totalUPoint, totalVoucherPoint * IF(doc_type_cd = 'C', -1, 1) as totalVoucherPoint ");
+		sb.append(", issuedBy, issuedByDeptDesc, tfairSalerName, contra, cnInvNo, cnInvoiceDt, transferredDate, originalTc, statusCd ");
+		
+		if (params.get("documentType") != null && "ALL".equals((String) params.get("documentType"))) {
+			sb.append(", concat('" + psPrefix + " ', psNo) as psNo, psDt, concat('" + psPrefix + " ', parentPsNo) as parentPsNo, parentPsDt, ");
+			sb.append("concat('" + psPrefix + " ', psCNNo) as psCNNo, psCNDt ");
+		}
+			sb.append(", docTypeStatus, psDue, eInvoiceDocumentUuid, eInvoiceSubmissionUid, eInvoiceStatus, referenceNoList, eInvoiceTypeDesc, eInvoiceDtIssued ");
+			sb.append(", concat('" + rnPrefix + " ', rnNo) as rnNo, eInvoiceRnStatus, eInvoiceRnDtIssued, eInvoiceRnDocumentUuid ");
+		
+		sb.append("FROM ( ");
+			sb.append("SELECT ");
+			sb.append("iv.id, iv.dt_inv AS invoiceDt, if(iv.doc_type_cd = 'P', concat('" + psPrefix + " ', iv.ps_no), concat('" + invPrefix + " ', iv.code)) AS code, iv.dt_departure AS departureDt, td.code AS tourCd, ");
+			sb.append("iv.amount, 0 AS cn_iv_amount, ");
+			sb.append("(select case when sum(pmnt.amount) is null then 0 else sum(pmnt.amount) end from invoice_pmnt pmnt ");
+			sb.append("where pmnt.id_inv = iv.id and pmnt.status_cd = 'A') as 'amtPaid', ");
+			sb.append("iv.balance as balance, ");
+			sb.append("iv.id_customer AS customerId, c.pc_type_cd as typeCd, ps.salutation_cd as custSalutation, concat(ps.last_name, ' ', ps.first_name) AS custName, c.corporate_name as coName, ");
+			sb.append("iv.id_saler as salerId, usr.user_name as salerName, ifnull(iv.id_tour_booking, iv.id_parent_inv_tour_booking) AS id_tour_booking, 0 AS raw_reference_iv_amt, 0 AS raw_iv_amt, ");
+			sb.append("IFNULL(iv_pax.pax_count, 0) AS paxCount, ");
+			sb.append("iv.cat_cd, IFNULL(bk_pax.quantity, 0) AS bookingPax, IFNULL(iv_pax.pax_count, 0) AS invPax, ");
+			sb.append("IFNULL(inv_split.pax_count, -1) AS invSplitPax, ");
+			sb.append("ep.department AS deptCode, li.description AS deptDesc ");
+			sb.append(", tc.id AS idTourCat, tc.description AS tourCatDesc, ctry.name as country, tp.name_en as tourPkgName, iv.subj_line AS subjLine ");
+			sb.append(", iv.doc_type_cd ");
+			if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+				sb.append(", IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.id_acct IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id), 0) AS amt_dep ");
+				sb.append(", (SELECT COUNT(id) FROM invoice_item inv_item WHERE inv_item.id_acct NOT IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id) AS count_acct_not_exclude ");
+			}
+			sb.append(", li1.description as catCd ");
+			sb.append(", CASE WHEN iv.id_tour_booking IS NULL AND iv.id_parent_inv_tour_booking IS NOT NULL THEN iv.id_parent_inv_tour_booking ELSE iv.id_tour_booking END as bookingId ");
+			sb.append(", li2.description as orderCd ");
+			sb.append(", arl.code as airlineCd ");
+			sb.append(", crd.ref_value as bookingStatus ");
+			if((boolean)params.get("uPointOnly") == true && (boolean)params.get("aPointOnly") == false) {
+				sb.append(", iv.total_upoint as totalUPoint ");
+				sb.append(", null as totalVoucherPoint ");
+			}else if((boolean)params.get("aPointOnly") == true && (boolean)params.get("uPointOnly") == false) {
+				sb.append(", null as totalUPoint ");
+				sb.append(", iv.total_apple_voucher_point as totalVoucherPoint ");
+			}else if((boolean)params.get("uPointOnly") == true && (boolean)params.get("aPointOnly") == true) {
+				sb.append(", iv.total_upoint as totalUPoint ");
+				sb.append(", iv.total_apple_voucher_point as totalVoucherPoint ");
+			}else if((boolean)params.get("uPointOnly") == false && (boolean)params.get("aPointOnly") == false) {
+				sb.append(", null as totalUPoint ");
+				sb.append(", null as totalVoucherPoint ");
+			}
+			sb.append(", usr2.user_name AS issuedBy, li3.description AS issuedByDeptDesc, ifnull(usr3.user_name, usr.user_name) as tfairSalerName ");
+			sb.append(", (select if(sum(if(pmnt_type_cd = 'cont', 1, 0)) > 0, 'Contra', '') from invoice_pmnt pmnt ");
+			sb.append("where pmnt.id_inv = iv.id and pmnt.status_cd = 'A') as contra ");
+			sb.append(",'' as cnInvNo, null as cnInvoiceDt ");
+			sb.append(", iv.transferred_date as transferredDate ");
+			sb.append(", iv.original_tc as originalTc, iv.status_cd as statusCd ");
+			
+			if (params.get("documentType") != null && "ALL".equals((String) params.get("documentType"))) {
+				sb.append(", inv_ps.ps_no as psNo, inv_ps.dt_inv as psDt ");
+				sb.append(", ps_parent.ps_no as parentPsNo, ps_parent.dt_inv parentPsDt ");
+				sb.append(", null as psCNNo, NULL as psCNDt ");
+				sb.append(", CASE WHEN iv.doc_type_cd = 'I' AND iv.ps_no IS NOT NULL THEN inv_ps.doc_type_status ");
+				sb.append("WHEN iv.doc_type_cd = 'P' THEN iv.doc_type_status ELSE NULL ");
+				sb.append("END as docTypeStatus ");
+				sb.append(", CASE WHEN iv.doc_type_cd = 'I' AND iv.ps_no IS NOT NULL THEN inv_ps.inv_due ");
+				sb.append("WHEN iv.doc_type_cd = 'P' THEN iv.inv_due ELSE NULL ");
+				sb.append("END as psDue ");
+			} else {
+				sb.append(", null as psCNNo, NULL as psCNDt ");
+				sb.append(", iv.doc_type_status as docTypeStatus ");
+				sb.append(", iv.inv_due as psDue ");
+			}
+			sb.append(", iv.e_invoice_document_uuid as eInvoiceDocumentUuid, iv.e_invoice_submission_uid as eInvoiceSubmissionUid, iv.e_invoice_status as eInvoiceStatus ");
+			sb.append(", (SELECT GROUP_CONCAT(CONCAT(ref_type, ': ', ref_no) SEPARATOR '\n') FROM invoice_pax_ref_no iprn ");
+			sb.append("JOIN invoice_pax ip ON iprn.id_inv_pax = ip.id WHERE ip.id_inv = iv.id AND ip.status_cd = 'A' AND iprn.status_cd = 'A') as referenceNoList, ");
+			sb.append("IF(e.is_consol_e_inv=1, 'Consolidate', 'Individual') AS eInvoiceTypeDesc, e.dt_created AS eInvoiceDtIssued ");
+			sb.append(", iv.rn_no as rnNo, iv.e_invoice_rn_status as eInvoiceRnStatus, ");
+			sb.append("(select dt_issued from e_invoice_document e_rn_doc ");
+			sb.append("where iv.id_company = e_rn_doc.id_company and iv.e_invoice_rn_document_uuid = e_rn_doc.document_uuid and e_rn_doc.sys_doc_type = 'rfnd_note' ");
+			sb.append(") as eInvoiceRnDtIssued, ");
+			sb.append("iv.e_invoice_rn_document_uuid as eInvoiceRnDocumentUuid ");
+			sb.append("FROM invoice iv ");
+			sb.append("LEFT JOIN tour_dep td ON td.id = iv.id_tour_dep ");
+			sb.append("LEFT JOIN tour_pkg tp ON tp.id = td.id_tour_pkg ");
+			sb.append("LEFT JOIN airline arl on td.id_airline = arl.id ");
+			sb.append("LEFT JOIN tour_theme tt ON tt.id = tp.id_tour_theme AND tt.status_cd = 'AC' ");
+			sb.append("LEFT JOIN country ctry ON tt.id_country = ctry.id ");
+			sb.append("LEFT JOIN tour_cat tc ON tc.id = tt.id_tour_cat AND tc.status_cd = 'AC' ");
+			sb.append("LEFT JOIN customer c ON c.id = iv.id_customer ");
+			sb.append("LEFT JOIN person ps ON ps.id = c.id_pc ");
+			sb.append("LEFT JOIN employee ep ON ep.id = iv.id_saler ");
+			sb.append("LEFT JOIN sec_user usr ON usr.uuid = ep.u_sec_user ");
+			sb.append("LEFT JOIN lookup_item li ON li.lookup_cat_cd = 'dept_type' AND li.code = ep.department ");
+			sb.append("LEFT JOIN employee ep2 ON ep2.id = iv.id_issuer and ep2.id_company = :idCompany ");
+			sb.append("LEFT JOIN sec_user usr2 ON usr2.uuid = ep2.u_sec_user ");
+			sb.append("LEFT JOIN employee ep3 ON ep3.id = iv.id_saler_tfair ");
+			sb.append("LEFT JOIN sec_user usr3 ON usr3.uuid = ep3.u_sec_user ");
+			sb.append("LEFT JOIN lookup_item li3 ON li3.lookup_cat_cd = 'dept_type' AND li3.code = ep2.department ");
+			sb.append("LEFT JOIN (SELECT COUNT(id) AS pax_count, id_inv FROM invoice_pax WHERE status_cd = 'A' GROUP BY id_inv) iv_pax ON iv_pax.id_inv = iv.id ");
+			sb.append("LEFT JOIN ( ");
+				sb.append("SELECT COUNT(ivp.id) AS pax_count, ivs.id_parent_inv FROM invoice_pax ivp LEFT JOIN invoice ivs ON ivp.id_inv = ivs.id ");
+				sb.append("WHERE ivp.status_cd = 'A' and ivs.id_parent_inv IS NOT NULL AND (ivs.doc_type_cd = 'I' OR (ivs.doc_type_cd = 'P' AND ivs.doc_type_status IN ('OP', 'RW'))) ");
+				sb.append("GROUP BY ivs.id_parent_inv ");
+			sb.append(") inv_split ON inv_split.id_parent_inv = iv.id_parent_inv ");
+			sb.append("LEFT JOIN ( ");
+				sb.append("SELECT tb.id, tb.id_company, tb.`quantity` - ifnull(tbci.quantity, 0) AS quantity ");
+				sb.append("FROM tour_booking tb LEFT JOIN tour_booking_charge_item tbci ON tb.id = tbci.id_tour_booking AND tbci.code = 'FT_INFT' ");
+			sb.append(") bk_pax ON CASE WHEN iv.id_tour_booking IS NULL AND iv.id_parent_inv_tour_booking IS NOT NULL THEN iv.id_parent_inv_tour_booking ELSE iv.id_tour_booking END = bk_pax.id AND iv.id_company = bk_pax.id_company ");
+			sb.append("LEFT JOIN lookup_item li1 on li1.lookup_cat_cd = 'inv_cat' and iv.cat_cd = li1.code ");
+			sb.append("LEFT JOIN lookup_item li2 on li2.lookup_cat_cd = 'ordr_sorc' and iv.order_cd = li2.code ");
+			sb.append("LEFT JOIN tour_booking tb on CASE WHEN iv.id_tour_booking IS NULL AND iv.id_parent_inv_tour_booking IS NOT NULL THEN iv.id_parent_inv_tour_booking ELSE iv.id_tour_booking END = tb.id and iv.id_company = tb.id_company ");
+			sb.append("LEFT JOIN com_ref_data crd on tb.status_cd = crd.REF_CD AND crd.cat_cd = 'BOOK_STATUS' ");
+			sb.append("LEFT JOIN e_invoice_document e ON iv.e_invoice_document_uuid = e.document_uuid ");
+			if (params.get("documentType") != null && "ALL".equals((String) params.get("documentType"))) {
+			sb.append("LEFT JOIN (SELECT ps_no, id_parent_inv, dt_inv, doc_type_status, inv_due FROM invoice WHERE id_company = :idCompany AND doc_type_cd = 'P') inv_ps on iv.ps_no = inv_ps.ps_no ");
+			sb.append("LEFT JOIN (SELECT id, ps_no, dt_inv, doc_type_status, inv_due FROM invoice WHERE id_company = :idCompany AND doc_type_cd = 'P') ps_parent on inv_ps.id_parent_inv = ps_parent.id ");
+			}
+			sb.append("WHERE iv.id_company = :idCompany ");
+			if (params.get("documentType") != null && "ALL".equals((String) params.get("documentType"))) {
+				sb.append("AND (iv.doc_type_cd = 'I' OR (iv.doc_type_cd = 'P' AND iv.doc_type_status IN ('OP', 'RW'))) ");
+			} else if (params.get("documentType") != null && "PS".equals((String) params.get("documentType"))) {
+				sb.append("AND (iv.doc_type_cd = 'P' AND iv.doc_type_status IN ('OP', 'RW', 'CV')) ");
+			} else {
+				sb.append("AND iv.doc_type_cd = 'I' ");
+			}
+			
+			if (params.get("salesPerson") != null) sb.append("AND iv.id_saler = :salesPerson ");
+			if (idTourDep != null) sb.append("AND td.id = :idTourDep ");
+			if (params.get("idRegionList") != null) sb.append("AND tt.id_tour_cat IN (:idRegionList) ");
+			if (params.get("idTourThemeList") != null) sb.append("AND tp.id_tour_theme IN (:idTourThemeList) ");
+			if (params.get("idInvCatList") != null) sb.append("AND iv.cat_cd IN (:idInvCatList) ");
+			if (params.get("idDepartmentList") != null) sb.append("AND ep.department IN (:idDepartmentList) ");
+			if (params.get("idOrderSourceList") != null) sb.append("AND iv.order_cd IN (:idOrderSourceList) ");
+			if (params.get("includeCancelled") != null && (boolean) params.get("includeCancelled") == false) sb.append("AND iv.status_cd != :statusCdCC ");
+			if (params.get("includeVoided") != null && (boolean) params.get("includeVoided") == false) sb.append("AND iv.status_cd != :statusCdVD ");
+			
+			if (params.get("dateFrom") != null || params.get("dateTo") != null) {
+				sb.append("AND (( ");
+				if (params.get("dateFrom") != null) {
+					sb.append("date(iv.dt_inv) >= date('" + sdf.format((Date) params.get("dateFrom")) + "') ");
+				}
+				if (params.get("dateTo") != null) {
+					sb.append("AND date(iv.dt_inv) <= date('" + sdf.format((Date) params.get("dateTo")) + "') ");
+				}
+				sb.append(") OR ( ");
+				if (params.get("dateFrom") != null) {
+					sb.append("date(iv.transferred_date) >= date('" + sdf.format((Date) params.get("dateFrom")) + "') ");
+				}
+				if (params.get("dateTo") != null) {
+					sb.append("AND date(iv.transferred_date) <= date('" + sdf.format((Date) params.get("dateTo")) + "') ");
+				}
+				sb.append(")) ");
+			}
+			if (params.get("depDateFr") != null) sb.append("and date(iv.dt_departure) >= date('" + sdf.format((Date) params.get("depDateFr")) + "') ");
+			if (params.get("depDateTo") != null) sb.append("and date(iv.dt_departure) <= date('" + sdf.format((Date) params.get("depDateTo")) + "') ");
+			
+			sb.append(" UNION ");
+			
+			sb.append("SELECT ");
+			sb.append("iv.id, iv.dt_inv AS invoiceDt, concat(if(iv.doc_type_cd = 'C', '" + cnPrefix + " ', ''), iv.code) AS code, ifnull(cn_iv.dt_departure, cn_ps.dt_departure) AS departureDt, td.code AS tourCd, ");
+			sb.append("iv.amount, cn_iv.amount AS cn_iv_amount, ");
+			sb.append("(select case when sum(pmnt.amount) is null then 0 else sum(pmnt.amount) end from invoice_pmnt pmnt ");
+			sb.append("where pmnt.id_inv = iv.id and pmnt.status_cd = 'A') as 'amtPaid', ");
+			sb.append("iv.balance as balance, ");
+			sb.append("iv.id_customer AS customerId, c.pc_type_cd as typeCd, ps.salutation_cd as custSalutation, concat(ps.last_name, ' ', ps.first_name) AS custName, c.corporate_name as coName, ");
+			sb.append("iv.id_saler as salerId, usr.user_name as salerName, ");
+//			sb.append("cn_iv.id_tour_booking, ");
+			sb.append("if(iv.cn_inv_no IS NOT NULL, ifnull(cn_iv.id_tour_booking, cn_iv.id_parent_inv_tour_booking), ifnull(cn_ps.id_tour_booking, cn_ps.id_parent_inv_tour_booking)) AS id_tour_booking, ");
+			sb.append("IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.amount >= 0 AND inv_item.status_cd = 'A' AND inv_item.id_inv = cn_iv.id), 0) AS raw_reference_iv_amt, ");
+			sb.append("IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.amount >= 0 AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id), 0) AS raw_iv_amt, ");
+			sb.append("(IFNULL(iv_pax.pax_count, 0) * ");
+				sb.append("IF((SELECT id_credit_note FROM invoice_pmnt pmnt WHERE pmnt.id_inv = cn_iv.id AND pmnt.status_cd = 'A' AND pmnt_type_cd = 'credit_note' ORDER BY id DESC LIMIT 1) = iv.id, ");
+				sb.append("IF(tb.status_cd = 'CC' || tb.status_cd = 'VD', -1, 0), 0) ");
+			sb.append(") AS paxCount, ");
+			sb.append("cn_iv.cat_cd, IFNULL(bk_pax.quantity, 0) AS bookingPax, IFNULL(iv_pax.pax_count, 0) AS invPax, ");
+			sb.append("-1 AS invSplitPax, ");
+			sb.append("ep.department AS deptCode, li.description AS deptDesc ");
+			sb.append(", tc.id AS idTourCat, tc.description AS tourCatDesc, ctry.name as country, tp.name_en as tourPkgName, iv.subj_line AS subjLine ");
+			sb.append(", iv.doc_type_cd ");
+			if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+				sb.append(", IFNULL((SELECT SUM(amount + tax_amount) AS amount FROM invoice_item inv_item WHERE inv_item.id_acct IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id), 0) AS amt_dep ");
+				sb.append(", (SELECT COUNT(id) FROM invoice_item inv_item WHERE inv_item.id_acct NOT IN :excludeAcct AND inv_item.status_cd = 'A' AND inv_item.id_inv = iv.id) AS count_acct_not_exclude ");
+			}
+			sb.append(", li1.description as catCd ");
+			sb.append(", if(iv.cn_inv_no IS NOT NULL, ifnull(cn_iv.id_tour_booking, cn_iv.id_parent_inv_tour_booking), ifnull(cn_ps.id_tour_booking, cn_ps.id_parent_inv_tour_booking)) as bookingId ");
+			sb.append(", li2.description as orderCd ");
+			sb.append(", arl.code as airlineCd ");
+			sb.append(", crd.ref_value as bookingStatus ");
+			if((boolean)params.get("uPointOnly") == true && (boolean)params.get("aPointOnly") == false) {
+				sb.append(", cn_iv.total_upoint as totalUPoint ");
+				sb.append(", null as totalVoucherPoint ");
+			}else if((boolean)params.get("aPointOnly") == true && (boolean)params.get("uPointOnly") == false) {
+				sb.append(", null as totalUPoint ");
+				sb.append(", cn_iv.total_apple_voucher_point as totalVoucherPoint ");
+			}else if((boolean)params.get("uPointOnly") == true && (boolean)params.get("aPointOnly") == true) {
+				sb.append(", cn_iv.total_upoint as totalUPoint ");
+				sb.append(", cn_iv.total_apple_voucher_point as totalVoucherPoint ");
+			}else if((boolean)params.get("uPointOnly") == false && (boolean)params.get("aPointOnly") == false) {
+				sb.append(", null as totalUPoint ");
+				sb.append(", null as totalVoucherPoint ");
+			}
+			sb.append(", usr2.user_name AS issuedBy, li3.description AS issuedByDeptDesc, usr2.user_name AS tfairSalerName ");
+			sb.append(", '' as contra ");
+			sb.append(",concat('" + invPrefix + " ',cn_iv.code) as cnInvNo, cn_iv.dt_inv as cnInvoiceDt ");
+			sb.append(", iv.transferred_date as transferredDate ");
+			sb.append(", iv.original_tc as originalTc, iv.status_cd as statusCd ");
+			if (params.get("documentType") != null && "ALL".equals((String) params.get("documentType"))) {
+				sb.append(", null as psNo, NULL as psDt, NULL as parentPsNo, NULL as parentPsDt ");
+				sb.append(", cn_ps.ps_no as psCNNo, cn_ps.dt_inv as psCNDt ");
+				sb.append(", '' as docTypeStatus, NULL as psDue ");
+			} else {
+				sb.append(", cn_ps.ps_no as psCNNo, cn_ps.dt_inv as psCNDt, '' as docTypeStatus, NULL as psDue ");
+			}
+//			sb.append(", '' as eInvoiceDocumentUuid, '' as eInvoiceSubmissionUid, '' as eInvoiceStatus, '' as referenceNoList ");
+			sb.append(", iv.e_invoice_document_uuid as eInvoiceDocumentUuid, iv.e_invoice_submission_uid as eInvoiceSubmissionUid, iv.e_invoice_status as eInvoiceStatus, ");
+			sb.append("(SELECT GROUP_CONCAT(CONCAT(ref_type, ': ', ref_no) SEPARATOR '\\n') FROM invoice_pax_ref_no iprn JOIN invoice_pax ip ON iprn.id_inv_pax = ip.id WHERE ip.id_inv = iv.id AND ip.status_cd = 'A' AND iprn.status_cd = 'A') as referenceNoList, ");
+			sb.append("IF(e.is_consol_e_inv=1, 'Consolidate', 'Individual') AS eInvoiceTypeDesc, e.dt_created AS eInvoiceDtIssued ");
+			sb.append(", iv.rn_no as rnNo, iv.e_invoice_rn_status as eInvoiceRnStatus, ");
+			sb.append("(select dt_issued from e_invoice_document e_rn_doc ");
+			sb.append("where iv.id_company = e_rn_doc.id_company and iv.e_invoice_rn_document_uuid = e_rn_doc.document_uuid and e_rn_doc.sys_doc_type = 'rfnd_note' ");
+			sb.append(") as eInvoiceRnDtIssued, ");
+			sb.append("iv.e_invoice_rn_document_uuid as eInvoiceRnDocumentUuid ");
+			sb.append("FROM invoice iv ");
+//			sb.append("INNER JOIN invoice cn_iv ON cn_iv.code = iv.cn_inv_no AND cn_iv.doc_type_cd = 'I' ");
+//			if (params.get("documentType") != null && "PS".equals((String) params.get("documentType"))) {
+//				sb.append("AND cn_iv.doc_type_cd = 'P' ");
+//			}
+//			sb.append("LEFT JOIN invoice cn_iv ");
+//				sb.append("ON (CASE WHEN iv.cn_inv_no IS NOT NULL THEN iv.id_company=cn_iv.id_company and cn_iv.code = iv.cn_inv_no and cn_iv.doc_type_cd = 'I' ");
+//					sb.append("ELSE iv.id_company=cn_iv.id_company and cn_iv.ps_no = iv.cn_ps_no and cn_iv.doc_type_cd = 'P' END) ");
+			sb.append("LEFT JOIN invoice cn_iv ");
+				sb.append("ON iv.id_company = cn_iv.id_company AND iv.doc_type_cd = 'C' AND iv.cn_inv_no IS NOT NULL AND cn_iv.code = iv.cn_inv_no AND cn_iv.doc_type_cd = 'I' ");
+			sb.append("LEFT JOIN invoice cn_ps ");
+				sb.append("ON iv.id_company = cn_ps.id_company AND iv.doc_type_cd = 'C' AND iv.cn_ps_no IS NOT NULL AND cn_ps.ps_no = iv.cn_ps_no AND cn_ps.doc_type_cd = 'P' ");
+			sb.append("LEFT JOIN tour_dep td ON td.id = ifnull(cn_iv.id_tour_dep, cn_ps.id_tour_dep) ");
+			sb.append("LEFT JOIN tour_pkg tp ON tp.id = td.id_tour_pkg ");
+			sb.append("LEFT JOIN airline arl on td.id_airline = arl.id ");
+			sb.append("LEFT JOIN tour_theme tt ON tt.id = tp.id_tour_theme AND tt.status_cd = 'AC' ");
+			sb.append("LEFT JOIN country ctry ON tt.id_country = ctry.id ");
+			sb.append("LEFT JOIN tour_cat tc ON tc.id = tt.id_tour_cat AND tc.status_cd = 'AC' ");
+			sb.append("LEFT JOIN customer c ON c.id = iv.id_customer ");
+			sb.append("LEFT JOIN person ps ON ps.id = c.id_pc ");
+			sb.append("LEFT JOIN employee ep ON ep.id = iv.id_saler ");
+			sb.append("LEFT JOIN sec_user usr ON usr.uuid = ep.u_sec_user ");
+			sb.append("LEFT JOIN lookup_item li ON li.lookup_cat_cd = 'dept_type' AND li.code = ep.department ");
+			sb.append("LEFT JOIN employee ep2 ON ep2.id = iv.id_issuer and ep2.id_company = :idCompany ");
+			sb.append("LEFT JOIN sec_user usr2 ON usr2.uuid = ep2.u_sec_user ");
+			sb.append("LEFT JOIN lookup_item li3 ON li3.lookup_cat_cd = 'dept_type' AND li3.code = ep2.department ");
+			sb.append("LEFT JOIN (SELECT COUNT(id) AS pax_count, id_inv FROM invoice_pax WHERE status_cd = 'A' GROUP BY id_inv) iv_pax ON iv_pax.id_inv = if(iv.cn_inv_no IS NOT NULL, cn_iv.id, cn_ps.id) AND IF(if(iv.cn_inv_no IS NOT NULL, cn_iv.cat_cd, cn_ps.cat_cd) = 'to', (CASE WHEN (if(iv.cn_inv_no IS NOT NULL, ifnull(cn_iv.id_tour_booking, cn_iv.id_parent_inv_tour_booking), ifnull(cn_ps.id_tour_booking, cn_ps.id_parent_inv_tour_booking)) IS NOT NULL) THEN true ELSE false END), true) ");
+			sb.append("LEFT JOIN ( ");
+				sb.append("SELECT tb.id, tb.id_company, tb.`quantity` - ifnull(tbci.quantity, 0) AS quantity ");
+				sb.append("FROM tour_booking tb LEFT JOIN tour_booking_charge_item tbci ON tb.id = tbci.id_tour_booking AND tbci.code = 'FT_INFT' ");
+			sb.append(") bk_pax ON if(iv.cn_inv_no IS NOT NULL, ifnull(cn_iv.id_tour_booking, cn_iv.id_parent_inv_tour_booking), ifnull(cn_ps.id_tour_booking, cn_ps.id_parent_inv_tour_booking)) = bk_pax.id AND bk_pax.id_company = :idCompany ");
+			sb.append("LEFT JOIN lookup_item li1 on li1.lookup_cat_cd = 'inv_cat' AND ifnull(cn_iv.cat_cd, cn_ps.cat_cd) = li1.code ");
+			sb.append("LEFT JOIN lookup_item li2 on li2.lookup_cat_cd = 'ordr_sorc' AND ifnull(cn_iv.order_cd, cn_ps.order_cd) = li2.code ");
+			sb.append("LEFT JOIN tour_booking tb on if(iv.cn_inv_no IS NOT NULL, ifnull(cn_iv.id_tour_booking, cn_iv.id_parent_inv_tour_booking), ifnull(cn_ps.id_tour_booking, cn_ps.id_parent_inv_tour_booking)) = tb.id and tb.id_company = :idCompany ");
+			sb.append("LEFT JOIN com_ref_data crd on tb.status_cd = crd.REF_CD AND crd.cat_cd = 'BOOK_STATUS' ");
+			sb.append("LEFT JOIN e_invoice_document e ON iv.e_invoice_document_uuid = e.document_uuid ");
+			sb.append("WHERE iv.id_company = :idCompany AND iv.doc_type_cd = 'C' ");
+			if (params.get("salesPerson") != null) sb.append("AND iv.id_saler = :salesPerson ");
+			if (idTourDep != null) sb.append("AND td.id = :idTourDep ");
+			if (params.get("idRegionList") != null) sb.append("AND tt.id_tour_cat IN (:idRegionList) ");
+			if (params.get("idTourThemeList") != null) sb.append("AND tp.id_tour_theme IN (:idTourThemeList) ");
+			if (params.get("idInvCatList") != null) sb.append("AND iv.cat_cd IN (:idInvCatList) ");
+			if (params.get("idDepartmentList") != null) sb.append("AND ep.department IN (:idDepartmentList) ");
+			if (params.get("idOrderSourceList") != null) sb.append("AND iv.order_cd IN (:idOrderSourceList) ");
+			if (params.get("includeCancelled") != null && (boolean) params.get("includeCancelled") == false) sb.append("AND iv.status_cd != :statusCdCC ");
+			if (params.get("includeVoided") != null && (boolean) params.get("includeVoided") == false) sb.append("AND iv.status_cd != :statusCdVD ");
+
+			if (params.get("dateFrom") != null || params.get("dateTo") != null) {
+				sb.append("AND (( ");
+				if (params.get("dateFrom") != null) {
+					sb.append("date(iv.dt_inv) >= date('" + sdf.format((Date) params.get("dateFrom")) + "') ");
+				}
+				if (params.get("dateTo") != null) {
+					sb.append("AND date(iv.dt_inv) <= date('" + sdf.format((Date) params.get("dateTo")) + "') ");
+				}
+				sb.append(") OR ( ");
+				if (params.get("dateFrom") != null) {
+					sb.append("date(iv.transferred_date) >= date('" + sdf.format((Date) params.get("dateFrom")) + "') ");
+				}
+				if (params.get("dateTo") != null) {
+					sb.append("AND date(iv.transferred_date) <= date('" + sdf.format((Date) params.get("dateTo")) + "') ");
+				}
+				sb.append(")) ");
+			}
+			if (params.get("depDateFr") != null) sb.append("and ifnull(cn_iv.dt_departure, cn_ps.dt_departure) >= date('" + sdf.format((Date) params.get("depDateFr")) + "') ");
+			if (params.get("depDateTo") != null) sb.append("and ifnull(cn_iv.dt_departure, cn_ps.dt_departure) <= date('" + sdf.format((Date) params.get("depDateTo")) + "') ");
+			
+		sb.append(" ) a ");
+//		sb.append("ORDER BY code");
+		sb.append("order by field(a.doc_type_cd,  'I', 'C', 'P'), a.code ");
+		
+		SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+		query.addScalar("id", LongType.INSTANCE);
+		query.addScalar("invoiceDt", DateType.INSTANCE);
+		query.addScalar("code");
+		query.addScalar("departureDt", DateType.INSTANCE);
+		query.addScalar("tourCd");
+		query.addScalar("amount", DoubleType.INSTANCE);
+		query.addScalar("amtPaid", DoubleType.INSTANCE);
+		query.addScalar("balance", DoubleType.INSTANCE);
+		query.addScalar("customerId", LongType.INSTANCE);
+		query.addScalar("typeCd");
+		query.addScalar("custSalutation");
+		query.addScalar("custName");
+		query.addScalar("coName");
+		query.addScalar("salerId", LongType.INSTANCE);
+		query.addScalar("salerName");
+		query.addScalar("paxCount", IntegerType.INSTANCE);
+		query.addScalar("bookingPax", IntegerType.INSTANCE);
+		query.addScalar("invPax", IntegerType.INSTANCE);
+		query.addScalar("notTallyPax");
+		query.addScalar("deptCode");
+		query.addScalar("deptDesc");
+		query.addScalar("idTourCat", LongType.INSTANCE);
+		query.addScalar("tourCatDesc");
+		query.addScalar("bookingId", LongType.INSTANCE);
+		query.addScalar("orderCd");
+		query.addScalar("country");
+		query.addScalar("tourPkgName");
+		query.addScalar("subjLine");
+		query.addScalar("catCd");
+		query.addScalar("airlineCd");
+		query.addScalar("bookingStatus");
+		query.addScalar("totalUPoint", IntegerType.INSTANCE);
+		query.addScalar("totalVoucherPoint", IntegerType.INSTANCE);
+		query.addScalar("issuedBy");
+		query.addScalar("issuedByDeptDesc");
+		query.addScalar("tfairSalerName");
+		query.addScalar("contra");
+		query.addScalar("cnInvNo");
+		query.addScalar("cnInvoiceDt");
+		query.addScalar("transferredDate", DateType.INSTANCE);
+		query.addScalar("originalTc");
+		query.addScalar("statusCd");
+		if (params.get("documentType") != null && "ALL".equals((String) params.get("documentType"))) {
+			query.addScalar("psNo");
+			query.addScalar("psDt", DateType.INSTANCE);
+			query.addScalar("parentPsNo");
+			query.addScalar("parentPsDt", DateType.INSTANCE);
+			query.addScalar("psCNNo");
+			query.addScalar("psCNDt", DateType.INSTANCE);
+		}
+		query.addScalar("psDue", DateType.INSTANCE);
+		query.addScalar("docTypeStatus");
+		query.addScalar("eInvoiceDocumentUuid");
+		query.addScalar("eInvoiceSubmissionUid");
+		query.addScalar("eInvoiceStatus");
+		query.addScalar("referenceNoList");
+		query.addScalar("eInvoiceTypeDesc");
+		query.addScalar("eInvoiceDtIssued", DateType.INSTANCE);
+		query.addScalar("rnNo");
+		query.addScalar("eInvoiceRnStatus");
+		query.addScalar("eInvoiceRnDtIssued", DateType.INSTANCE);
+		query.addScalar("eInvoiceRnDocumentUuid");
+		
+		query.setParameter("idCompany", companyId);
+		if (params.get("includeCancelled") != null && (boolean) params.get("includeCancelled") == false)
+			query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+		if (params.get("includeVoided") != null && (boolean) params.get("includeVoided") == false)
+			query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+		
+		if (params.get("salesPerson") != null) query.setParameter("salesPerson", (String) params.get("salesPerson"));
+		if (idTourDep != null) query.setParameter("idTourDep", idTourDep);
+		if (params.get("idRegionList") != null) query.setParameterList("idRegionList", (List<String>) params.get("idRegionList"));
+		if (params.get("idTourThemeList") != null) query.setParameterList("idTourThemeList", (List<String>) params.get("idTourThemeList"));
+		if (params.get("idInvCatList") != null) query.setParameterList("idInvCatList", (List<String>) params.get("idInvCatList"));
+		if (params.get("idDepartmentList") != null) query.setParameterList("idDepartmentList", (List<String>) params.get("idDepartmentList"));
+		if (params.get("idOrderSourceList") != null) query.setParameterList("idOrderSourceList", (List<String>) params.get("idOrderSourceList"));
+		if (appSettingVO != null && StringUtils.isNotBlank(appSettingVO.getValue())) {
+			List<String> excludeAcctList = Arrays.asList(appSettingVO.getValue().split(","));
+			query.setParameterList("excludeAcct", excludeAcctList);
+		}
+		query.setResultTransformer(Transformers.aliasToBean(SalesListingVO.class));
+		return query.list();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<SalesCommissionReportVO> getSalesCommissionReportList(Map<String, Object> params) throws BusinessException {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("SELECT * ");
+		sb.append("FROM ( ");
+			sb.append("SELECT ");
+				sb.append("iv.id, iv.code as sortCode, iv.doc_type_cd as docTypeCd, scc.department, li1.description as catCd, td.code AS tourCd, iv.dt_departure AS departureDt, li2.description as orderCd, ");
+				sb.append("usr.user_name as salerName, li.description AS deptDesc, usr2.user_name as tfairSalerName, li3.description AS tfairSalerDeptDesc, ");
+				sb.append("iv.code AS code, iv.dt_inv AS invoiceDt, crd2.ref_value as invoiceStatus, ");
+				sb.append("iv.id_tour_booking as bookingId, crd.ref_value as bookingStatus, i.fullPaxCount + i.grndPaxCount as paxCount, ((i.fullPaxCount + i.grndPaxCount) * tp.deposit) as deposit, iv.amount, ");
+				sb.append("(select case when sum(pmnt.amount) is null then 0 else sum(pmnt.amount) end from invoice_pmnt pmnt ");
+				sb.append("where pmnt.id_inv = iv.id and pmnt.status_cd = 'A') as amtPaid, iv.balance as balance, ");
+				sb.append("(select if(sum(if(pmnt_type_cd = 'cont', 1, 0)) > 0, 'Contra', '') from invoice_pmnt pmnt ");
+				sb.append("where pmnt.id_inv = iv.id and pmnt.status_cd = 'A') as contra, ");
+				sb.append("(i.fullPaxCount * IFNULL(tbsc.full_sp_comm, 0)) + (i.grndPaxCount * IFNULL(tbsc.grnd_sp_comm, 0)) as totalSpComm, ");
+				sb.append("(i.fullPaxCount * IFNULL(tbsc.full_ref_sp_comm, 0)) + (i.grndPaxCount * IFNULL(tbsc.grnd_ref_sp_comm, 0))  as totalRefSpComm, ");
+				sb.append("(i.fullPaxCount * IFNULL(tbsc.full_ss_comm, 0)) + (i.grndPaxCount * IFNULL(tbsc.grnd_ss_comm, 0)) as totalSsComm, ");
+				sb.append("(i.fullPaxCount * IFNULL(tbsc.full_hod_comm, 0)) + (i.grndPaxCount * IFNULL(tbsc.grnd_hod_comm, 0)) as totalHodComm, ");
+				sb.append("(i.fullPaxCount * IFNULL(tbsc.full_op_comm, 0)) + (i.grndPaxCount * IFNULL(tbsc.grnd_op_comm, 0)) as totalOpComm, ");
+				sb.append("IFNULL(tbsc.full_tour_fare, 0) as fullTourFare, IFNULL(tbsc.full_sp_comm, 0) as fullSpComm, IFNULL(tbsc.full_ref_sp_comm, 0) as fullRefSpComm, ");
+				sb.append("IFNULL(tbsc.full_ss_comm, 0) as fullSsComm, IFNULL(tbsc.full_hod_comm, 0) as fullHodComm,  IFNULL(tbsc.full_op_comm, 0) as fullOpComm, i.fullPaxCount, ");
+				sb.append("IFNULL(tbsc.grnd_tour_fare, 0) as grndTourFare, IFNULL(tbsc.grnd_sp_comm, 0) as grndSpComm, IFNULL(tbsc.grnd_ref_sp_comm, 0) as grndRefSpComm, ");
+				sb.append("IFNULL(tbsc.grnd_ss_comm, 0) as grndSsComm, IFNULL(tbsc.grnd_hod_comm, 0) as grndHodComm,  IFNULL(tbsc.grnd_op_comm, 0) as grndOpComm, i.grndPaxCount ");
+			sb.append("FROM invoice iv ");
+			sb.append("LEFT JOIN tour_dep td ON td.id = iv.id_tour_dep ");
+			sb.append("LEFT JOIN tour_pkg tp ON tp.id = td.id_tour_pkg ");
+			sb.append("LEFT JOIN employee ep ON ep.id = iv.id_saler and ep.id_company = iv.id_company ");
+			sb.append("LEFT JOIN sec_user usr ON usr.uuid = ep.u_sec_user ");
+			sb.append("LEFT JOIN lookup_item li ON li.lookup_cat_cd = 'dept_type' AND li.code = ep.department ");
+			sb.append("LEFT JOIN employee ep2 ON ep2.id = iv.id_saler_tfair and ep2.id_company = iv.id_company ");
+			sb.append("LEFT JOIN sec_user usr2 ON usr2.uuid = ep2.u_sec_user ");
+			sb.append("LEFT JOIN lookup_item li3 ON li3.lookup_cat_cd = 'dept_type' AND li3.code = ep2.department ");
+			sb.append("LEFT JOIN lookup_item li1 on li1.lookup_cat_cd = 'inv_cat' and iv.cat_cd = li1.code ");
+			sb.append("LEFT JOIN lookup_item li2 on li2.lookup_cat_cd = 'ordr_sorc' and iv.order_cd = li2.code ");
+			sb.append("LEFT JOIN tour_booking tb on iv.id_tour_booking = tb.id and iv.id_company = tb.id_company ");
+			sb.append("LEFT JOIN (SELECT ");
+					sb.append("id_tour_booking, ");
+					sb.append("SUM(CASE WHEN code IN ('FT_SGL', 'FT_TWN', 'FT_CTW', 'FT_CWB', 'FT_CNB') THEN quantity ELSE 0 END) AS fullPaxCount, ");
+					sb.append("SUM(CASE WHEN code IN ('GA_SGL', 'GA_TWN', 'GA_CTW', 'GA_CWB', 'GA_CNB') THEN quantity ELSE 0 END) AS grndPaxCount ");
+				sb.append("FROM tour_booking_charge_item WHERE type_cd = 'T' AND quantity > 0 ");
+				sb.append("GROUP BY id_tour_booking) i ON i.id_tour_booking = tb.id ");
+			sb.append("LEFT JOIN com_ref_data crd on tb.status_cd = crd.REF_CD AND crd.cat_cd = 'BOOK_STATUS' ");
+			sb.append("LEFT JOIN com_ref_data crd2 on iv.status_cd = crd2.REF_CD AND crd2.cat_cd = 'INV_STATUS' ");
+			sb.append("LEFT JOIN sales_comm_config scc on tp.id_sales_comm_conf = scc.id ");
+			sb.append("LEFT JOIN ( ");
+				sb.append("SELECT ");
+					sb.append("id_tour_booking, ");
+					sb.append("MAX(CASE WHEN tour_type = 'FT' THEN tour_fare END) as full_tour_fare, ");
+					sb.append("MAX(CASE WHEN tour_type = 'FT' THEN sp_comm END) as full_sp_comm, ");
+					sb.append("MAX(CASE WHEN tour_type = 'FT' THEN ref_sp_comm END) as full_ref_sp_comm, ");
+					sb.append("MAX(CASE WHEN tour_type = 'FT' THEN ss_comm END) as full_ss_comm, ");
+					sb.append("MAX(CASE WHEN tour_type = 'FT' THEN hod_comm END) as full_hod_comm, ");
+					sb.append("MAX(CASE WHEN tour_type = 'FT' THEN op_comm END) as full_op_comm, ");
+					sb.append("MAX(CASE WHEN tour_type = 'GA' THEN tour_fare END) as grnd_tour_fare, ");
+					sb.append("MAX(CASE WHEN tour_type = 'GA' THEN sp_comm END) as grnd_sp_comm, ");
+					sb.append("MAX(CASE WHEN tour_type = 'GA' THEN ref_sp_comm END) as grnd_ref_sp_comm, ");
+					sb.append("MAX(CASE WHEN tour_type = 'GA' THEN ss_comm END) as grnd_ss_comm, ");
+					sb.append("MAX(CASE WHEN tour_type = 'GA' THEN hod_comm END) as grnd_hod_comm, ");
+					sb.append("MAX(CASE WHEN tour_type = 'GA' THEN op_comm END) as grnd_op_comm ");
+				sb.append("FROM tour_booking_sales_comm ");
+				sb.append("WHERE status_cd = 'A' ");
+				sb.append("GROUP BY id_tour_booking) tbsc ON tbsc.id_tour_booking = tb.id ");
+			sb.append("WHERE tb.id IS NOT NULL AND iv.id_company = :idCompany AND iv.status_cd != :statusCdCC AND iv.status_cd != :statusCdVD AND iv.doc_type_cd = 'I' ");
+			if (params.get("dateFrom") != null) sb.append("and date(iv.dt_inv) >= date('" + sdf.format((Date) params.get("dateFrom")) + "') ");
+			if (params.get("dateTo") != null) sb.append("and date(iv.dt_inv) <= date('" + sdf.format((Date) params.get("dateTo")) + "') ");
+			if (params.get("depDateFr") != null) sb.append("and date(iv.dt_departure) >= date('" + sdf.format((Date) params.get("depDateFr")) + "') ");
+			if (params.get("depDateTo") != null) sb.append("and date(iv.dt_departure) <= date('" + sdf.format((Date) params.get("depDateTo")) + "') ");
+			if (params.get("idDepartmentList") != null) sb.append("AND tp.id_sales_comm_conf IN (:idDepartmentList) ");
+			if (params.get("idStaffDepartmentList") != null) sb.append("AND ep.department IN (:idStaffDepartmentList) ");
+			if (params.get("idSalesPersonList") != null) sb.append("AND ep.department IN (:idSalesPersonList) ");
+			if (params.get("idRefSalesPersonList") != null) sb.append("AND ep2.department IN (:idRefSalesPersonList) ");
+			if (params.get("idOrderSourceList") != null) sb.append("AND iv.order_cd IN (:idOrderSourceList) ");
+	
+		if (params.get("hideCreditNote") != null &&  true == (boolean) params.get("hideCreditNote")) {
+		} else {
+			sb.append("UNION ");
+	
+			sb.append("SELECT ");
+				sb.append("iv.id, iv.code as sortCode, iv.doc_type_cd as docTypeCd, scc.department, li1.description as catCd, td.code AS tourCd, cn_iv.dt_departure AS departureDt, li2.description as orderCd, ");
+				sb.append("usr.user_name as salerName, li.description AS deptDesc, ifnull(usr2.user_name, usr.user_name) as tfairSalerName, li3.description AS tfairSalerDeptDesc, ");
+				sb.append("concat(if(iv.doc_type_cd = 'C', 'CN', ''), iv.code) AS code, iv.dt_inv AS invoiceDt, crd2.ref_value as invoiceStatus, ");
+				sb.append("cn_iv.id_tour_booking as bookingId, crd.ref_value as bookingStatus, -(i.fullPaxCount + i.grndPaxCount) as paxCount, 0 AS deposit, -iv.amount, ");
+				sb.append("-(select case when sum(pmnt.amount) is null then 0 else sum(pmnt.amount) end from invoice_pmnt pmnt ");
+				sb.append("where pmnt.id_inv = iv.id and pmnt.status_cd = 'A') as amtPaid, iv.balance as balance, '' as contra, ");
+				sb.append("0 as totalSpComm, 0 as totalRefSpComm, 0 as totalSsComm, 0 as totalHodComm, 0 as totalOpComm, ");
+				sb.append("0 as fullTourFare, 0 as fullSpComm, 0 as fullRefSpComm, 0 as fullSsComm, 0 as fullHodComm, 0 as fullOpComm, 0 as fullPaxCount, ");
+				sb.append("0 as grndTourFare, 0 as grndSpComm, 0 as grndRefSpComm, 0 as grndSsComm, 0 as grndHodComm,  0 as grndOpComm, 0 as grndPaxCount ");
+			sb.append("FROM invoice iv ");
+			sb.append("INNER JOIN invoice cn_iv ON cn_iv.code = iv.cn_inv_no AND cn_iv.doc_type_cd = 'I' ");
+			sb.append("LEFT JOIN tour_dep td ON td.id = cn_iv.id_tour_dep ");
+			sb.append("LEFT JOIN tour_pkg tp ON tp.id = td.id_tour_pkg ");
+			sb.append("LEFT JOIN employee ep ON ep.id = iv.id_saler and ep.id_company = iv.id_company ");
+			sb.append("LEFT JOIN sec_user usr ON usr.uuid = ep.u_sec_user ");
+			sb.append("LEFT JOIN lookup_item li ON li.lookup_cat_cd = 'dept_type' AND li.code = ep.department ");
+			sb.append("LEFT JOIN employee ep2 ON ep2.id = iv.id_issuer and ep2.id_company = iv.id_company ");
+			sb.append("LEFT JOIN sec_user usr2 ON usr2.uuid = ep2.u_sec_user ");
+			sb.append("LEFT JOIN lookup_item li3 ON li3.lookup_cat_cd = 'dept_type' AND li3.code = ep2.department ");
+			sb.append("LEFT JOIN lookup_item li1 on li1.lookup_cat_cd = 'inv_cat' and cn_iv.cat_cd = li1.code ");
+			sb.append("LEFT JOIN lookup_item li2 on li2.lookup_cat_cd = 'ordr_sorc' and cn_iv.order_cd = li2.code ");
+			sb.append("LEFT JOIN tour_booking tb on cn_iv.id_tour_booking = tb.id and cn_iv.id_company = tb.id_company ");
+			sb.append("LEFT JOIN (SELECT ");
+					sb.append("id_tour_booking, ");
+					sb.append("SUM(CASE WHEN code IN ('FT_SGL', 'FT_TWN', 'FT_CTW', 'FT_CWB', 'FT_CNB') THEN quantity ELSE 0 END) AS fullPaxCount, ");
+					sb.append("SUM(CASE WHEN code IN ('GA_SGL', 'GA_TWN', 'GA_CTW', 'GA_CWB', 'GA_CNB') THEN quantity ELSE 0 END) AS grndPaxCount ");
+				sb.append("FROM tour_booking_charge_item WHERE type_cd = 'T' AND quantity > 0 ");
+				sb.append("GROUP BY id_tour_booking) i ON i.id_tour_booking = tb.id ");
+			sb.append("LEFT JOIN com_ref_data crd on tb.status_cd = crd.REF_CD AND crd.cat_cd = 'BOOK_STATUS' ");
+			sb.append("LEFT JOIN com_ref_data crd2 on iv.status_cd = crd2.REF_CD AND crd2.cat_cd = 'INV_STATUS' ");
+			sb.append("LEFT JOIN sales_comm_config scc on tp.id_sales_comm_conf = scc.id ");
+			sb.append("WHERE tb.id IS NOT NULL AND iv.id_company = :idCompany AND iv.status_cd != :statusCdCC AND iv.status_cd != :statusCdVD AND iv.doc_type_cd = 'C' ");
+			if (params.get("dateFrom") != null) sb.append("and date(iv.dt_inv) >= date('" + sdf.format((Date) params.get("dateFrom")) + "') ");
+			if (params.get("dateTo") != null) sb.append("and date(iv.dt_inv) <= date('" + sdf.format((Date) params.get("dateTo")) + "') ");
+			if (params.get("depDateFr") != null) sb.append("and date(cn_iv.dt_departure) >= date('" + sdf.format((Date) params.get("depDateFr")) + "') ");
+			if (params.get("depDateTo") != null) sb.append("and date(cn_iv.dt_departure) <= date('" + sdf.format((Date) params.get("depDateTo")) + "') ");
+			if (params.get("idDepartmentList") != null) sb.append("AND tp.id_sales_comm_conf IN (:idDepartmentList) ");
+			if (params.get("idStaffDepartmentList") != null) sb.append("AND ep.department IN (:idStaffDepartmentList) ");
+			if (params.get("idSalesPersonList") != null) sb.append("AND ep.department IN (:idSalesPersonList) ");
+			if (params.get("idRefSalesPersonList") != null) sb.append("AND ep2.department IN (:idRefSalesPersonList) ");
+			if (params.get("idOrderSourceList") != null) sb.append("AND iv.order_cd IN (:idOrderSourceList) ");
+		}
+		sb.append(") a ");
+		sb.append("ORDER BY FIELD(docTypeCd, 'I', 'C'), sortCode");
+		
+		SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+		query.addScalar("id", LongType.INSTANCE);
+		query.addScalar("sortCode");
+		query.addScalar("docTypeCd");
+		query.addScalar("department");
+		query.addScalar("catCd");
+		query.addScalar("tourCd");
+		query.addScalar("departureDt", DateType.INSTANCE);
+		query.addScalar("orderCd");
+		query.addScalar("salerName");
+		query.addScalar("deptDesc");
+		query.addScalar("tfairSalerName");
+		query.addScalar("tfairSalerDeptDesc");
+		query.addScalar("code");
+		query.addScalar("invoiceDt", DateType.INSTANCE);
+		query.addScalar("invoiceStatus");
+		query.addScalar("bookingId", LongType.INSTANCE);
+		query.addScalar("bookingStatus");
+		query.addScalar("paxCount", IntegerType.INSTANCE);
+		query.addScalar("deposit", DoubleType.INSTANCE);
+		query.addScalar("amount", DoubleType.INSTANCE);
+		query.addScalar("amtPaid", DoubleType.INSTANCE);
+		query.addScalar("balance", DoubleType.INSTANCE);
+		query.addScalar("contra");
+		query.addScalar("totalSpComm", DoubleType.INSTANCE);
+		query.addScalar("totalRefSpComm", DoubleType.INSTANCE);
+		query.addScalar("totalSsComm", DoubleType.INSTANCE);
+		query.addScalar("totalHodComm", DoubleType.INSTANCE);
+		query.addScalar("totalOpComm", DoubleType.INSTANCE);
+		query.addScalar("fullTourFare", DoubleType.INSTANCE);
+		query.addScalar("fullSpComm", DoubleType.INSTANCE);
+		query.addScalar("fullRefSpComm", DoubleType.INSTANCE);
+		query.addScalar("fullSsComm", DoubleType.INSTANCE);
+		query.addScalar("fullHodComm", DoubleType.INSTANCE);
+		query.addScalar("fullOpComm", DoubleType.INSTANCE);
+		query.addScalar("fullPaxCount", IntegerType.INSTANCE);
+		query.addScalar("grndTourFare", DoubleType.INSTANCE);
+		query.addScalar("grndSpComm", DoubleType.INSTANCE);
+		query.addScalar("grndRefSpComm", DoubleType.INSTANCE);
+		query.addScalar("grndSsComm", DoubleType.INSTANCE);
+		query.addScalar("grndHodComm", DoubleType.INSTANCE);
+		query.addScalar("grndOpComm", DoubleType.INSTANCE);
+		query.addScalar("grndPaxCount", IntegerType.INSTANCE);
+
+		query.setParameter("idCompany", params.get("idCompany"));
+		query.setParameter("statusCdCC", CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameter("statusCdVD", CommonConstant.STATUS_CD_VOID);
+		if (params.get("idDepartmentList") != null) query.setParameterList("idDepartmentList", (List<String>) params.get("idDepartmentList"));
+		if (params.get("idStaffDepartmentList") != null) query.setParameterList("idStaffDepartmentList", (List<String>) params.get("idStaffDepartmentList"));
+		if (params.get("idSalesPersonList") != null) query.setParameterList("idSalesPersonList", (List<String>) params.get("idSalesPersonList"));
+		if (params.get("idRefSalesPersonList") != null) query.setParameterList("idRefSalesPersonList", (List<String>) params.get("idRefSalesPersonList"));
+		if (params.get("idOrderSourceList") != null) query.setParameterList("idOrderSourceList", (List<String>) params.get("idOrderSourceList"));
+		
+		query.setResultTransformer(Transformers.aliasToBean(SalesCommissionReportVO.class));
+		return query.list();
+	}
+}

@@ -1,0 +1,204 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Cruise" toggleable="true" toggleSpeed="500">
+	<h:form id="idCruiseForm">
+		<h:panelGrid columns="2" style="width:1px;">
+			<p:commandButton value="Add" oncomplete="varAddCruiseDialog.show()" update=":idAddCruiseDialog" immediate="true"/>
+		</h:panelGrid>
+		
+		<p:dataTable id="idCruiseList" value="#{cruiseBean.cruiseList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="20, 30, 50" filterEvent="enter">
+			<p:column headerText="Edit" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{cruiseBean.setCruiseVO(vo)}" update=":idEditCruiseDialog" oncomplete="varEditCruiseDialog.show()"/>
+			</p:column>
+			<p:column headerText="Delete" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-close" actionListener="#{cruiseBean.setCruiseVO(vo)}" oncomplete="varDelCruiseDialog.show()"/>
+			</p:column>
+			<p:column headerText="Cruise Code" sortBy="#{vo.code}" filterBy="#{vo.code}" style="width:100px;" filterMatchMode="contains">
+				<h:outputText value="#{vo.code}"/>
+			</p:column>
+			<p:column headerText="Cruise Description" sortBy="#{vo.desc}" filterBy="#{vo.desc}" filterMatchMode="contains">
+				<h:outputText value="#{vo.desc}"/>
+			</p:column>
+			<p:column headerText="Schedules" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-plus" actionListener="#{cruiseBean.handleCruiseSchedule(vo)}" oncomplete="varCruiseSchedulesDialog.show()" update=":idCruiseSchedulesDialog"/>
+			</p:column>
+		</p:dataTable>
+		
+		<h:panelGrid columns="2" style="width:1px;">
+			<p:commandButton value="Add" oncomplete="varAddCruiseDialog.show()" update=":idAddCruiseDialog" immediate="true"/>
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - ADD AIRLINE
+-->
+<p:dialog id="idAddCruiseDialog" widgetVar="varAddCruiseDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Cruise" />
+	</f:facet>
+	
+	<h:form id="idAddCruiseForm">
+		<ui:include src="add_ship.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - EDIT AIRLINE
+-->
+<p:dialog id="idEditCruiseDialog" widgetVar="varEditCruiseDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Cruise" />
+	</f:facet>
+	
+	<h:form id="idEditCruiseForm">
+		<ui:include src="add_ship.xhtml" />
+	</h:form>
+</p:dialog>
+	
+<!--
+	DIALOG - DELETE AIRLINE
+-->
+<p:confirmDialog header="Delete Cruise" widgetVar="varDelCruiseDialog" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{cruiseBean.delCruise}" update="@form,:idCruiseForm" oncomplete="varDelCruiseDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{cruiseBean.resetForm}" oncomplete="varDelCruiseDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - SCHEDULE LIST
+-->
+<p:dialog id="idCruiseSchedulesDialog" widgetVar="varCruiseSchedulesDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Schedule(s)" />
+	</f:facet>
+	
+	<h:form id="idCruiseSchedulesForm">
+		<ui:include src="ship_schedule_list.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - SCHEDULE LIST
+-->
+<p:dialog id="idEditCruiseScheduleDialog" widgetVar="varEditCruiseScheduleDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Schedule(s)" />
+	</f:facet>
+	
+	<h:form id="idEditCruiseSchedulesForm">
+		<ui:include src="edit_ship_schedule_list.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ADD AIRLINE SCHEDULE
+-->
+<p:dialog id="idAddCruiseScheduleDialog" widgetVar="varAddCruiseScheduleDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Cruise Schedule" />
+	</f:facet>
+	
+	<h:form id="idAddCruiseScheduleForm">
+		<ui:include src="add_ship_schedule.xhtml" />
+	</h:form>
+</p:dialog>
+	
+<!--
+	DIALOG - DELETE AIRLINE SCHEDULE
+-->
+<p:confirmDialog header="Delete Schedule" widgetVar="varDelCruiseScheduleDialog" message="Are you sure want to delete this schedule?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{cruiseBean.delCruiseSchedule}" update="@form,:idCruiseSchedulesForm" oncomplete="varDelCruiseScheduleDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{cruiseBean.resetScheduleForm}" oncomplete="varDelCruiseScheduleDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - ADD AIRLINE SCHEDULE ITEM
+-->
+<p:dialog id="idAddCruiseScheduleItemDialog" widgetVar="varAddCruiseScheduleItemDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Cruise Schedule Item" />
+	</f:facet>
+	
+	<h:form id="idAddCruiseScheduleItemForm">
+		<ui:include src="add_ship_schedule_item.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - EDIT AIRLINE SCHEDULE ITEM
+-->
+<p:dialog id="idEditCruiseScheduleItemDialog" widgetVar="varEditCruiseScheduleItemDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Cruise Schedule Item" />
+	</f:facet>
+	
+	<h:form id="idEditCruiseScheduleItemForm">
+		<ui:include src="add_ship_schedule_item.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ADD AIRLINE SCHEDULE ITEM CHARGE
+-->
+<p:dialog id="idAddScheduleChargeDialog" widgetVar="varAddScheduleChargeDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Add Cruise Schedule Item Charge" />
+	</f:facet>
+	
+	<h:form id="idAddScheduleItemChargeForm">
+		<ui:include src="add_ship_schedule_charge.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - EDIT AIRLINE SCHEDULE ITEM CHARGE
+-->
+<p:dialog id="idEditScheduleChargeDialog" widgetVar="varEditScheduleChargeDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<f:facet name="header">
+		<h:outputFormat value="Edit Cruise Schedule Item Charge" />
+	</f:facet>
+	
+	<h:form id="idEditScheduleItemChargeForm">
+		<ui:include src="add_ship_schedule_charge.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - DELETE AIRLINE SCHEDULE ITEM
+-->
+<p:confirmDialog header="Delete Schedule Item" widgetVar="varDelCruiseScheduleItemDialog" message="Are you sure want to delete this schedule item?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{cruiseBean.delCruiseScheduleItem}" update="@form,:idCruiseSchedulesForm" oncomplete="varDelCruiseScheduleItemDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{cruiseBean.resetScheduleForm}" oncomplete="varDelCruiseScheduleItemDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+</ui:define>
+</ui:composition>

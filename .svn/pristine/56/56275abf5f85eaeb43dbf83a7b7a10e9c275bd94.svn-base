@@ -1,0 +1,1726 @@
+package com.bcs.zsg.sales.vo;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.core.vo.BaseVO;
+import com.bcs.zsg.product.helper.ProductConstant;
+import com.bcs.zsg.product.vo.TourCruiseCabinVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.product.vo.TourPackageVO;
+
+public class BookingVO extends BaseVO {
+
+	private static final long serialVersionUID = 1L;
+
+	private Long idCompany;
+	private Long idTourDep;
+	private Long idEmployee;
+	private Long idCust;
+	private Long idTourDepHist;
+	private Long idSalerTfair;
+	private String orderTypeCd;
+	private Integer quantity = 0;
+	private String pmntStatusCd;
+	private String paxStatementCd;
+	private boolean lockStatus;
+	private Date dtExp;
+	private List<BookingItemVO> bookingItemList;
+	private Set<BookingItemVO> bookingItemSet;
+	private List<BookingChargeItemVO> bookingChargeItemList;
+	private Set<BookingChargeItemVO> bookingChargeItemSet;
+	private EmployeeViewVO employeeViewVO;
+	private EmployeeViewVO refEmployeeViewVO;
+	private String feedbackStatus;
+	
+	// for display purpose
+	private CustomerVO customerVO;
+	private InvoiceVO invoiceVO;
+	private List<InvoiceVO> invList; // pax stmt might split, so booking to pax stmt/inv is one to many
+	private List<InvoiceVO> paxStmtList; // pax stmt might split, so booking to pax stmt/inv is one to many
+	private int ftAdt;
+	private int ftChd;
+	private int ftInft;
+	private int gaAdt;
+	private int gaChd;
+	private int gaInft;
+	private int totFtAdt;
+	private int totFtChd;
+	private int totFtInft;
+	private int totGaAdt;
+	private int totGaChd;
+	private int totGaInft;
+	private Date expiryDate;
+	private String custName;
+	private int paxFullTwn;
+	private int paxFullSgl;
+	private int paxFullCtw;
+	private int paxFullCeb;
+	private int paxFullCnb;
+	private int paxFullInft;
+	private int paxGrndTwn;
+	private int paxGrndSgl;
+	private int paxGrndCtw;
+	private int paxGrndCeb;
+	private int paxGrndCnb;
+	private int paxGrndInft;
+	private int totPaxFullTwn;
+	private int totPaxFullSgl;
+	private int totPaxFullCtw;
+	private int totPaxFullCeb;
+	private int totPaxFullCnb;
+	private int totPaxFullInft;
+	private int totPaxGrndTwn;
+	private int totPaxGrndSgl;
+	private int totPaxGrndCtw;
+	private int totPaxGrndCeb;
+	private int totPaxGrndCnb;
+	private int totPaxGrndInft;
+	private double amtFullTwn;
+	private double amtFullSgl;
+	private double amtFullCtw;
+	private double amtFullCeb;
+	private double amtFullCnb;
+	private double amtFullInft;
+	private double amtGrndTwn;
+	private double amtGrndSgl;
+	private double amtGrndCtw;
+	private double amtGrndCeb;
+	private double amtGrndCnb;
+	private double amtGrndInft;
+	private double airlineTrvlIns;
+	private double airlineVisa;
+	private double airlineAC;
+	private double airlineTipping;
+	private double airlineExtra;
+	private double airlineAptAdt;
+	private double airlineAptChd;
+	private double airlineYqAdt;
+	private double airlineYqChd;
+	private double airlineTotAdt;
+	private double airlineTotChd;
+	private double airlineDeviation;
+
+	private double cruiseTrvlIns;
+	private double cruiseVisa;
+	private double cruiseAC;
+	private double cruiseTipping;
+	private double cruiseExtra;
+	private double cruiseAptAdt;
+	private double cruiseAptChd;
+	private double cruiseYqAdt;
+	private double cruiseYqChd;
+	private double cruiseTotAdt;
+	private double cruiseTotChd;
+	private double cruiseDeviation;
+	private double cruisePortCharges;
+
+	private double discount;
+	private double discount1;
+	private double discount2;
+	private int discountPax1;
+	private int discountPax2;
+	private int notEntitledDiscountPax;
+	private double miscellaneous;
+	private Long invId;
+	private String invCode;
+	private String internalRemarks;
+	private Integer validPassportStatus; // 0: Invalid, 1:Valid
+	private Integer visaCopiesStatus; // 0: Received, 1: Non, 2: Non visa required
+	private String nricNumber;
+
+	private List<String> idSurveyList;
+	private String typeCd = ProductConstant.TYPE_TOUR;
+	private List<TourCruiseCabinVO> tourCruiseCabinList;
+	private int totalCabin;
+	private int totalHeadCount;
+	private Integer cabinQty = 0;
+	private int paxFullTrpl;
+	private int paxGrndTrpl;
+	private Double amount = 0.0;
+	private double totalAmount;
+	private double discountAmount;
+	private double depositAmount;
+	private double amountPayable;
+
+	// for badges use
+	private Date transferredDate;
+	private Double amtPaid;
+	private String invPmntStatusCd;
+
+	private TourDepartureVO tourDepVO;
+	private TourPackageVO tourPkgVO;
+
+	private Long idTourCat;
+
+	private String invStatusCd;
+	private String psNo;
+
+	public String getPsNo() {
+		return psNo;
+	}
+
+	public void setPsNo(String psNo) {
+		this.psNo = psNo;
+	}
+
+	public TourDepartureVO getTourDepVO() {
+		return tourDepVO;
+	}
+
+	public TourPackageVO getTourPkgVO() {
+		return tourPkgVO;
+	}
+
+	public void setTourDepVO(TourDepartureVO tourDepVO) {
+		this.tourDepVO = tourDepVO;
+	}
+
+	public void setTourPkgVO(TourPackageVO tourPkgVO) {
+		this.tourPkgVO = tourPkgVO;
+	}
+
+	public double getCruisePortCharges() {
+		return cruisePortCharges;
+	}
+
+	public void setCruisePortCharges(double cruisePortCharges) {
+		this.cruisePortCharges = cruisePortCharges;
+	}
+
+	public double getCruiseTrvlIns() {
+		return cruiseTrvlIns;
+	}
+
+	public double getCruiseVisa() {
+		return cruiseVisa;
+	}
+
+	public double getCruiseAC() {
+		return cruiseAC;
+	}
+
+	public double getCruiseTipping() {
+		return cruiseTipping;
+	}
+
+	public double getCruiseExtra() {
+		return cruiseExtra;
+	}
+
+	public double getCruiseAptAdt() {
+		return cruiseAptAdt;
+	}
+
+	public double getCruiseAptChd() {
+		return cruiseAptChd;
+	}
+
+	public double getCruiseYqAdt() {
+		return cruiseYqAdt;
+	}
+
+	public double getCruiseYqChd() {
+		return cruiseYqChd;
+	}
+
+	public double getCruiseTotAdt() {
+		return cruiseTotAdt;
+	}
+
+	public double getCruiseTotChd() {
+		return cruiseTotChd;
+	}
+
+	public double getCruiseDeviation() {
+		return cruiseDeviation;
+	}
+
+	public void setCruiseTrvlIns(double cruiseTrvlIns) {
+		this.cruiseTrvlIns = cruiseTrvlIns;
+	}
+
+	public void setCruiseVisa(double cruiseVisa) {
+		this.cruiseVisa = cruiseVisa;
+	}
+
+	public void setCruiseAC(double cruiseAC) {
+		this.cruiseAC = cruiseAC;
+	}
+
+	public void setCruiseTipping(double cruiseTipping) {
+		this.cruiseTipping = cruiseTipping;
+	}
+
+	public void setCruiseExtra(double cruiseExtra) {
+		this.cruiseExtra = cruiseExtra;
+	}
+
+	public void setCruiseAptAdt(double cruiseAptAdt) {
+		this.cruiseAptAdt = cruiseAptAdt;
+	}
+
+	public void setCruiseAptChd(double cruiseAptChd) {
+		this.cruiseAptChd = cruiseAptChd;
+	}
+
+	public void setCruiseYqAdt(double cruiseYqAdt) {
+		this.cruiseYqAdt = cruiseYqAdt;
+	}
+
+	public void setCruiseYqChd(double cruiseYqChd) {
+		this.cruiseYqChd = cruiseYqChd;
+	}
+
+	public void setCruiseTotAdt(double cruiseTotAdt) {
+		this.cruiseTotAdt = cruiseTotAdt;
+	}
+
+	public void setCruiseTotChd(double cruiseTotChd) {
+		this.cruiseTotChd = cruiseTotChd;
+	}
+
+	public void setCruiseDeviation(double cruiseDeviation) {
+		this.cruiseDeviation = cruiseDeviation;
+	}
+
+	public String getInvStatusCd() {
+		return invStatusCd;
+	}
+
+	public void setInvStatusCd(String invStatusCd) {
+		this.invStatusCd = invStatusCd;
+	}
+
+	public Long getIdTourCat() {
+		return idTourCat;
+	}
+
+	public void setIdTourCat(Long idTourCat) {
+		this.idTourCat = idTourCat;
+	}
+
+	public double getTotalAmount() {
+		return totalAmount;
+	}
+
+	public double getDiscountAmount() {
+		return discountAmount;
+	}
+
+	public double getDepositAmount() {
+		return depositAmount;
+	}
+
+	public double getAmountPayable() {
+		return amountPayable;
+	}
+
+	public void setTotalAmount(double totalAmount) {
+		this.totalAmount = totalAmount;
+	}
+
+	public void setDiscountAmount(double discountAmount) {
+		this.discountAmount = discountAmount;
+	}
+
+	public void setDepositAmount(double depositAmount) {
+		this.depositAmount = depositAmount;
+	}
+
+	public void setAmountPayable(double amountPayable) {
+		this.amountPayable = amountPayable;
+	}
+
+	public Double getAmount() {
+		return amount;
+	}
+
+	public void setAmount(Double amount) {
+		this.amount = amount;
+	}
+
+	public int getPaxGrndTrpl() {
+		return paxGrndTrpl;
+	}
+
+	public void setPaxGrndTrpl(int paxGrndTrpl) {
+		this.paxGrndTrpl = paxGrndTrpl;
+	}
+
+	public int getPaxFullTrpl() {
+		return paxFullTrpl;
+	}
+
+	public void setPaxFullTrpl(int paxFullTrpl) {
+		this.paxFullTrpl = paxFullTrpl;
+	}
+
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+
+	public Integer getCabinQty() {
+		return cabinQty;
+	}
+
+	public void setCabinQty(Integer cabinQty) {
+		this.cabinQty = cabinQty;
+	}
+
+	public int getTotalCabin() {
+		return totalCabin;
+	}
+
+	public int getTotalHeadCount() {
+		return totalHeadCount;
+	}
+
+	public void setTotalCabin(int totalCabin) {
+		this.totalCabin = totalCabin;
+	}
+
+	public void setTotalHeadCount(int totalHeadCount) {
+		this.totalHeadCount = totalHeadCount;
+	}
+
+	public List<TourCruiseCabinVO> getTourCruiseCabinList() {
+		return tourCruiseCabinList;
+	}
+
+	public void setTourCruiseCabinList(List<TourCruiseCabinVO> tourCruiseCabinList) {
+		this.tourCruiseCabinList = tourCruiseCabinList;
+	}
+
+	public String getTypeCd() {
+		return typeCd;
+	}
+
+	public void setTypeCd(String typeCd) {
+		this.typeCd = typeCd;
+	}
+
+	public String getSurveyDesc() {
+		String surveyDesc = "";
+		if (CollectionUtils.isEmpty(this.idSurveyList)) {
+			return surveyDesc;
+		}
+
+		int i = 0;
+		for (String idSurvey : idSurveyList) {
+			if (i != 0)
+				surveyDesc = surveyDesc + ", ";
+
+			surveyDesc = surveyDesc + idSurvey;
+			i++;
+		}
+
+		return surveyDesc;
+	}
+
+	/**
+	 * @return the idCompany
+	 */
+	public Long getIdCompany() {
+		return idCompany;
+	}
+
+	/**
+	 * @param idCompany the idCompany to set
+	 */
+	public void setIdCompany(Long idCompany) {
+		this.idCompany = idCompany;
+	}
+
+	/**
+	 * @return the idTourDep
+	 */
+	public Long getIdTourDep() {
+		return idTourDep;
+	}
+
+	/**
+	 * @param idTourDep the idTourDep to set
+	 */
+	public void setIdTourDep(Long idTourDep) {
+		this.idTourDep = idTourDep;
+	}
+
+	/**
+	 * @return the idEmployee
+	 */
+	public Long getIdEmployee() {
+		return idEmployee;
+	}
+
+	/**
+	 * @param idEmployee the idEmployee to set
+	 */
+	public void setIdEmployee(Long idEmployee) {
+		this.idEmployee = idEmployee;
+	}
+
+	/**
+	 * @return the idCust
+	 */
+	public Long getIdCust() {
+		return idCust;
+	}
+
+	/**
+	 * @param idCust the idCust to set
+	 */
+	public void setIdCust(Long idCust) {
+		this.idCust = idCust;
+	}
+
+	/**
+	 * @return the idTourDepHist
+	 */
+	public Long getIdTourDepHist() {
+		return idTourDepHist;
+	}
+
+	/**
+	 * @param idTourDepHist the idTourDepHist to set
+	 */
+	public void setIdTourDepHist(Long idTourDepHist) {
+		this.idTourDepHist = idTourDepHist;
+	}
+
+	public Long getIdSalerTfair() {
+		return idSalerTfair;
+	}
+
+	public void setIdSalerTfair(Long idSalerTfair) {
+		this.idSalerTfair = idSalerTfair;
+	}
+
+	/**
+	 * @return the orderTypeCd
+	 */
+	public String getOrderTypeCd() {
+		return orderTypeCd;
+	}
+
+	/**
+	 * @param orderTypeCd the orderTypeCd to set
+	 */
+	public void setOrderTypeCd(String orderTypeCd) {
+		this.orderTypeCd = orderTypeCd;
+	}
+
+	/**
+	 * @return the quantity
+	 */
+	public Integer getQuantity() {
+		return quantity;
+	}
+
+	/**
+	 * @param quantity the quantity to set
+	 */
+	public void setQuantity(Integer quantity) {
+		this.quantity = quantity;
+	}
+
+	/**
+	 * @return the pmntStatusCd
+	 */
+	public String getPmntStatusCd() {
+		return pmntStatusCd;
+	}
+
+	/**
+	 * @param pmntStatusCd the pmntStatusCd to set
+	 */
+	public void setPmntStatusCd(String pmntStatusCd) {
+		this.pmntStatusCd = pmntStatusCd;
+	}
+
+	/**
+	 * @return the dtExp
+	 */
+	public Date getDtExp() {
+		return dtExp;
+	}
+
+	/**
+	 * @param dtExp the dtExp to set
+	 */
+	public void setDtExp(Date dtExp) {
+		this.dtExp = dtExp;
+	}
+
+	/**
+	 * @return the bookingItemList
+	 */
+	public List<BookingItemVO> getBookingItemList() {
+		return bookingItemList;
+	}
+
+	/**
+	 * @param bookingItemList the bookingItemList to set
+	 */
+	public void setBookingItemList(List<BookingItemVO> bookingItemList) {
+		this.bookingItemList = bookingItemList;
+	}
+
+	/**
+	 * @return the bookingItemSet
+	 */
+	public Set<BookingItemVO> getBookingItemSet() {
+		return bookingItemSet;
+	}
+
+	/**
+	 * @param bookingItemSet the bookingItemSet to set
+	 */
+	public void setBookingItemSet(Set<BookingItemVO> bookingItemSet) {
+		this.bookingItemSet = bookingItemSet;
+	}
+
+	/**
+	 * @return the bookingChargeItemList
+	 */
+	public List<BookingChargeItemVO> getBookingChargeItemList() {
+		return bookingChargeItemList;
+	}
+
+	/**
+	 * @param bookingChargeItemList the bookingChargeItemList to set
+	 */
+	public void setBookingChargeItemList(List<BookingChargeItemVO> bookingChargeItemList) {
+		this.bookingChargeItemList = bookingChargeItemList;
+	}
+
+	/**
+	 * @return the bookingChargeItemSet
+	 */
+	public Set<BookingChargeItemVO> getBookingChargeItemSet() {
+		return bookingChargeItemSet;
+	}
+
+	/**
+	 * @param bookingChargeItemSet the bookingChargeItemSet to set
+	 */
+	public void setBookingChargeItemSet(Set<BookingChargeItemVO> bookingChargeItemSet) {
+		this.bookingChargeItemSet = bookingChargeItemSet;
+	}
+
+	/**
+	 * @return the employeeViewVO
+	 */
+	public EmployeeViewVO getEmployeeViewVO() {
+		return employeeViewVO;
+	}
+
+	/**
+	 * @param employeeViewVO the employeeViewVO to set
+	 */
+	public void setEmployeeViewVO(EmployeeViewVO employeeViewVO) {
+		this.employeeViewVO = employeeViewVO;
+	}
+
+	/**
+	 * @return the customerVO
+	 */
+	public CustomerVO getCustomerVO() {
+		return customerVO;
+	}
+
+	/**
+	 * @param customerVO the customerVO to set
+	 */
+	public void setCustomerVO(CustomerVO customerVO) {
+		this.customerVO = customerVO;
+	}
+
+	/**
+	 * @return the invoiceVO
+	 */
+	public InvoiceVO getInvoiceVO() {
+		return invoiceVO;
+	}
+
+	/**
+	 * @param invoiceVO the invoiceVO to set
+	 */
+	public void setInvoiceVO(InvoiceVO invoiceVO) {
+		this.invoiceVO = invoiceVO;
+	}
+
+	/**
+	 * @return the ftAdt
+	 */
+	public int getFtAdt() {
+		return ftAdt;
+	}
+
+	/**
+	 * @param ftAdt the ftAdt to set
+	 */
+	public void setFtAdt(int ftAdt) {
+		this.ftAdt = ftAdt;
+	}
+
+	/**
+	 * @return the ftChd
+	 */
+	public int getFtChd() {
+		return ftChd;
+	}
+
+	/**
+	 * @param ftChd the ftChd to set
+	 */
+	public void setFtChd(int ftChd) {
+		this.ftChd = ftChd;
+	}
+
+	/**
+	 * @return the ftInft
+	 */
+	public int getFtInft() {
+		return ftInft;
+	}
+
+	/**
+	 * @param ftInft the ftInft to set
+	 */
+	public void setFtInft(int ftInft) {
+		this.ftInft = ftInft;
+	}
+
+	/**
+	 * @return the gaAdt
+	 */
+	public int getGaAdt() {
+		return gaAdt;
+	}
+
+	/**
+	 * @param gaAdt the gaAdt to set
+	 */
+	public void setGaAdt(int gaAdt) {
+		this.gaAdt = gaAdt;
+	}
+
+	/**
+	 * @return the gaChd
+	 */
+	public int getGaChd() {
+		return gaChd;
+	}
+
+	/**
+	 * @param gaChd the gaChd to set
+	 */
+	public void setGaChd(int gaChd) {
+		this.gaChd = gaChd;
+	}
+
+	/**
+	 * @return the gaInft
+	 */
+	public int getGaInft() {
+		return gaInft;
+	}
+
+	/**
+	 * @param gaInft the gaInft to set
+	 */
+	public void setGaInft(int gaInft) {
+		this.gaInft = gaInft;
+	}
+
+	/**
+	 * @return the totFtAdt
+	 */
+	public int getTotFtAdt() {
+		return totFtAdt;
+	}
+
+	/**
+	 * @param totFtAdt the totFtAdt to set
+	 */
+	public void setTotFtAdt(int totFtAdt) {
+		this.totFtAdt = totFtAdt;
+	}
+
+	/**
+	 * @return the totFtChd
+	 */
+	public int getTotFtChd() {
+		return totFtChd;
+	}
+
+	/**
+	 * @param totFtChd the totFtChd to set
+	 */
+	public void setTotFtChd(int totFtChd) {
+		this.totFtChd = totFtChd;
+	}
+
+	/**
+	 * @return the totFtInft
+	 */
+	public int getTotFtInft() {
+		return totFtInft;
+	}
+
+	/**
+	 * @param totFtInft the totFtInft to set
+	 */
+	public void setTotFtInft(int totFtInft) {
+		this.totFtInft = totFtInft;
+	}
+
+	/**
+	 * @return the totGaAdt
+	 */
+	public int getTotGaAdt() {
+		return totGaAdt;
+	}
+
+	/**
+	 * @param totGaAdt the totGaAdt to set
+	 */
+	public void setTotGaAdt(int totGaAdt) {
+		this.totGaAdt = totGaAdt;
+	}
+
+	/**
+	 * @return the totGaChd
+	 */
+	public int getTotGaChd() {
+		return totGaChd;
+	}
+
+	/**
+	 * @param totGaChd the totGaChd to set
+	 */
+	public void setTotGaChd(int totGaChd) {
+		this.totGaChd = totGaChd;
+	}
+
+	/**
+	 * @return the totGaInft
+	 */
+	public int getTotGaInft() {
+		return totGaInft;
+	}
+
+	/**
+	 * @param totGaInft the totGaInft to set
+	 */
+	public void setTotGaInft(int totGaInft) {
+		this.totGaInft = totGaInft;
+	}
+
+	/**
+	 * @return the expiryDate
+	 */
+	public Date getExpiryDate() {
+		return expiryDate;
+	}
+
+	/**
+	 * @param expiryDate the expiryDate to set
+	 */
+	public void setExpiryDate(Date expiryDate) {
+		this.expiryDate = expiryDate;
+	}
+
+	/**
+	 * @return the custName
+	 */
+	public String getCustName() {
+		return custName;
+	}
+
+	/**
+	 * @param custName the custName to set
+	 */
+	public void setCustName(String custName) {
+		this.custName = custName;
+	}
+
+	/**
+	 * @return the paxFullTwn
+	 */
+	public int getPaxFullTwn() {
+		return paxFullTwn;
+	}
+
+	/**
+	 * @param paxFullTwn the paxFullTwn to set
+	 */
+	public void setPaxFullTwn(int paxFullTwn) {
+		this.paxFullTwn = paxFullTwn;
+	}
+
+	/**
+	 * @return the paxFullSgl
+	 */
+	public int getPaxFullSgl() {
+		return paxFullSgl;
+	}
+
+	/**
+	 * @param paxFullSgl the paxFullSgl to set
+	 */
+	public void setPaxFullSgl(int paxFullSgl) {
+		this.paxFullSgl = paxFullSgl;
+	}
+
+	/**
+	 * @return the paxFullCtw
+	 */
+	public int getPaxFullCtw() {
+		return paxFullCtw;
+	}
+
+	/**
+	 * @param paxFullCtw the paxFullCtw to set
+	 */
+	public void setPaxFullCtw(int paxFullCtw) {
+		this.paxFullCtw = paxFullCtw;
+	}
+
+	/**
+	 * @return the paxFullCeb
+	 */
+	public int getPaxFullCeb() {
+		return paxFullCeb;
+	}
+
+	/**
+	 * @param paxFullCeb the paxFullCeb to set
+	 */
+	public void setPaxFullCeb(int paxFullCeb) {
+		this.paxFullCeb = paxFullCeb;
+	}
+
+	/**
+	 * @return the paxFullCnb
+	 */
+	public int getPaxFullCnb() {
+		return paxFullCnb;
+	}
+
+	/**
+	 * @param paxFullCnb the paxFullCnb to set
+	 */
+	public void setPaxFullCnb(int paxFullCnb) {
+		this.paxFullCnb = paxFullCnb;
+	}
+
+	/**
+	 * @return the paxFullInft
+	 */
+	public int getPaxFullInft() {
+		return paxFullInft;
+	}
+
+	/**
+	 * @param paxFullInft the paxFullInft to set
+	 */
+	public void setPaxFullInft(int paxFullInft) {
+		this.paxFullInft = paxFullInft;
+	}
+
+	/**
+	 * @return the paxGrndTwn
+	 */
+	public int getPaxGrndTwn() {
+		return paxGrndTwn;
+	}
+
+	/**
+	 * @param paxGrndTwn the paxGrndTwn to set
+	 */
+	public void setPaxGrndTwn(int paxGrndTwn) {
+		this.paxGrndTwn = paxGrndTwn;
+	}
+
+	/**
+	 * @return the paxGrndSgl
+	 */
+	public int getPaxGrndSgl() {
+		return paxGrndSgl;
+	}
+
+	/**
+	 * @param paxGrndSgl the paxGrndSgl to set
+	 */
+	public void setPaxGrndSgl(int paxGrndSgl) {
+		this.paxGrndSgl = paxGrndSgl;
+	}
+
+	/**
+	 * @return the paxGrndCtw
+	 */
+	public int getPaxGrndCtw() {
+		return paxGrndCtw;
+	}
+
+	/**
+	 * @param paxGrndCtw the paxGrndCtw to set
+	 */
+	public void setPaxGrndCtw(int paxGrndCtw) {
+		this.paxGrndCtw = paxGrndCtw;
+	}
+
+	/**
+	 * @return the paxGrndCeb
+	 */
+	public int getPaxGrndCeb() {
+		return paxGrndCeb;
+	}
+
+	/**
+	 * @param paxGrndCeb the paxGrndCeb to set
+	 */
+	public void setPaxGrndCeb(int paxGrndCeb) {
+		this.paxGrndCeb = paxGrndCeb;
+	}
+
+	/**
+	 * @return the paxGrndCnb
+	 */
+	public int getPaxGrndCnb() {
+		return paxGrndCnb;
+	}
+
+	/**
+	 * @param paxGrndCnb the paxGrndCnb to set
+	 */
+	public void setPaxGrndCnb(int paxGrndCnb) {
+		this.paxGrndCnb = paxGrndCnb;
+	}
+
+	/**
+	 * @return the paxGrndInft
+	 */
+	public int getPaxGrndInft() {
+		return paxGrndInft;
+	}
+
+	/**
+	 * @param paxGrndInft the paxGrndInft to set
+	 */
+	public void setPaxGrndInft(int paxGrndInft) {
+		this.paxGrndInft = paxGrndInft;
+	}
+
+	/**
+	 * @return the totPaxFullTwn
+	 */
+	public int getTotPaxFullTwn() {
+		return totPaxFullTwn;
+	}
+
+	/**
+	 * @param totPaxFullTwn the totPaxFullTwn to set
+	 */
+	public void setTotPaxFullTwn(int totPaxFullTwn) {
+		this.totPaxFullTwn = totPaxFullTwn;
+	}
+
+	/**
+	 * @return the totPaxFullSgl
+	 */
+	public int getTotPaxFullSgl() {
+		return totPaxFullSgl;
+	}
+
+	/**
+	 * @param totPaxFullSgl the totPaxFullSgl to set
+	 */
+	public void setTotPaxFullSgl(int totPaxFullSgl) {
+		this.totPaxFullSgl = totPaxFullSgl;
+	}
+
+	/**
+	 * @return the totPaxFullCtw
+	 */
+	public int getTotPaxFullCtw() {
+		return totPaxFullCtw;
+	}
+
+	/**
+	 * @param totPaxFullCtw the totPaxFullCtw to set
+	 */
+	public void setTotPaxFullCtw(int totPaxFullCtw) {
+		this.totPaxFullCtw = totPaxFullCtw;
+	}
+
+	/**
+	 * @return the totPaxFullCeb
+	 */
+	public int getTotPaxFullCeb() {
+		return totPaxFullCeb;
+	}
+
+	/**
+	 * @param totPaxFullCeb the totPaxFullCeb to set
+	 */
+	public void setTotPaxFullCeb(int totPaxFullCeb) {
+		this.totPaxFullCeb = totPaxFullCeb;
+	}
+
+	/**
+	 * @return the totPaxFullCnb
+	 */
+	public int getTotPaxFullCnb() {
+		return totPaxFullCnb;
+	}
+
+	/**
+	 * @param totPaxFullCnb the totPaxFullCnb to set
+	 */
+	public void setTotPaxFullCnb(int totPaxFullCnb) {
+		this.totPaxFullCnb = totPaxFullCnb;
+	}
+
+	/**
+	 * @return the totPaxFullInft
+	 */
+	public int getTotPaxFullInft() {
+		return totPaxFullInft;
+	}
+
+	/**
+	 * @param totPaxFullInft the totPaxFullInft to set
+	 */
+	public void setTotPaxFullInft(int totPaxFullInft) {
+		this.totPaxFullInft = totPaxFullInft;
+	}
+
+	/**
+	 * @return the totPaxGrndTwn
+	 */
+	public int getTotPaxGrndTwn() {
+		return totPaxGrndTwn;
+	}
+
+	/**
+	 * @param totPaxGrndTwn the totPaxGrndTwn to set
+	 */
+	public void setTotPaxGrndTwn(int totPaxGrndTwn) {
+		this.totPaxGrndTwn = totPaxGrndTwn;
+	}
+
+	/**
+	 * @return the totPaxGrndSgl
+	 */
+	public int getTotPaxGrndSgl() {
+		return totPaxGrndSgl;
+	}
+
+	/**
+	 * @param totPaxGrndSgl the totPaxGrndSgl to set
+	 */
+	public void setTotPaxGrndSgl(int totPaxGrndSgl) {
+		this.totPaxGrndSgl = totPaxGrndSgl;
+	}
+
+	/**
+	 * @return the totPaxGrndCtw
+	 */
+	public int getTotPaxGrndCtw() {
+		return totPaxGrndCtw;
+	}
+
+	/**
+	 * @param totPaxGrndCtw the totPaxGrndCtw to set
+	 */
+	public void setTotPaxGrndCtw(int totPaxGrndCtw) {
+		this.totPaxGrndCtw = totPaxGrndCtw;
+	}
+
+	/**
+	 * @return the totPaxGrndCeb
+	 */
+	public int getTotPaxGrndCeb() {
+		return totPaxGrndCeb;
+	}
+
+	/**
+	 * @param totPaxGrndCeb the totPaxGrndCeb to set
+	 */
+	public void setTotPaxGrndCeb(int totPaxGrndCeb) {
+		this.totPaxGrndCeb = totPaxGrndCeb;
+	}
+
+	/**
+	 * @return the totPaxGrndCnb
+	 */
+	public int getTotPaxGrndCnb() {
+		return totPaxGrndCnb;
+	}
+
+	/**
+	 * @param totPaxGrndCnb the totPaxGrndCnb to set
+	 */
+	public void setTotPaxGrndCnb(int totPaxGrndCnb) {
+		this.totPaxGrndCnb = totPaxGrndCnb;
+	}
+
+	/**
+	 * @return the totPaxGrndInft
+	 */
+	public int getTotPaxGrndInft() {
+		return totPaxGrndInft;
+	}
+
+	/**
+	 * @param totPaxGrndInft the totPaxGrndInft to set
+	 */
+	public void setTotPaxGrndInft(int totPaxGrndInft) {
+		this.totPaxGrndInft = totPaxGrndInft;
+	}
+
+	/**
+	 * @return the amtFullTwn
+	 */
+	public double getAmtFullTwn() {
+		return amtFullTwn;
+	}
+
+	/**
+	 * @param amtFullTwn the amtFullTwn to set
+	 */
+	public void setAmtFullTwn(double amtFullTwn) {
+		this.amtFullTwn = amtFullTwn;
+	}
+
+	/**
+	 * @return the amtFullSgl
+	 */
+	public double getAmtFullSgl() {
+		return amtFullSgl;
+	}
+
+	/**
+	 * @param amtFullSgl the amtFullSgl to set
+	 */
+	public void setAmtFullSgl(double amtFullSgl) {
+		this.amtFullSgl = amtFullSgl;
+	}
+
+	/**
+	 * @return the amtFullCtw
+	 */
+	public double getAmtFullCtw() {
+		return amtFullCtw;
+	}
+
+	/**
+	 * @param amtFullCtw the amtFullCtw to set
+	 */
+	public void setAmtFullCtw(double amtFullCtw) {
+		this.amtFullCtw = amtFullCtw;
+	}
+
+	/**
+	 * @return the amtFullCeb
+	 */
+	public double getAmtFullCeb() {
+		return amtFullCeb;
+	}
+
+	/**
+	 * @param amtFullCeb the amtFullCeb to set
+	 */
+	public void setAmtFullCeb(double amtFullCeb) {
+		this.amtFullCeb = amtFullCeb;
+	}
+
+	/**
+	 * @return the amtFullCnb
+	 */
+	public double getAmtFullCnb() {
+		return amtFullCnb;
+	}
+
+	/**
+	 * @param amtFullCnb the amtFullCnb to set
+	 */
+	public void setAmtFullCnb(double amtFullCnb) {
+		this.amtFullCnb = amtFullCnb;
+	}
+
+	/**
+	 * @return the amtFullInft
+	 */
+	public double getAmtFullInft() {
+		return amtFullInft;
+	}
+
+	/**
+	 * @param amtFullInft the amtFullInft to set
+	 */
+	public void setAmtFullInft(double amtFullInft) {
+		this.amtFullInft = amtFullInft;
+	}
+
+	/**
+	 * @return the amtGrndTwn
+	 */
+	public double getAmtGrndTwn() {
+		return amtGrndTwn;
+	}
+
+	/**
+	 * @param amtGrndTwn the amtGrndTwn to set
+	 */
+	public void setAmtGrndTwn(double amtGrndTwn) {
+		this.amtGrndTwn = amtGrndTwn;
+	}
+
+	/**
+	 * @return the amtGrndSgl
+	 */
+	public double getAmtGrndSgl() {
+		return amtGrndSgl;
+	}
+
+	/**
+	 * @param amtGrndSgl the amtGrndSgl to set
+	 */
+	public void setAmtGrndSgl(double amtGrndSgl) {
+		this.amtGrndSgl = amtGrndSgl;
+	}
+
+	/**
+	 * @return the amtGrndCtw
+	 */
+	public double getAmtGrndCtw() {
+		return amtGrndCtw;
+	}
+
+	/**
+	 * @param amtGrndCtw the amtGrndCtw to set
+	 */
+	public void setAmtGrndCtw(double amtGrndCtw) {
+		this.amtGrndCtw = amtGrndCtw;
+	}
+
+	/**
+	 * @return the amtGrndCeb
+	 */
+	public double getAmtGrndCeb() {
+		return amtGrndCeb;
+	}
+
+	/**
+	 * @param amtGrndCeb the amtGrndCeb to set
+	 */
+	public void setAmtGrndCeb(double amtGrndCeb) {
+		this.amtGrndCeb = amtGrndCeb;
+	}
+
+	/**
+	 * @return the amtGrndCnb
+	 */
+	public double getAmtGrndCnb() {
+		return amtGrndCnb;
+	}
+
+	/**
+	 * @param amtGrndCnb the amtGrndCnb to set
+	 */
+	public void setAmtGrndCnb(double amtGrndCnb) {
+		this.amtGrndCnb = amtGrndCnb;
+	}
+
+	/**
+	 * @return the amtGrndInft
+	 */
+	public double getAmtGrndInft() {
+		return amtGrndInft;
+	}
+
+	/**
+	 * @param amtGrndInft the amtGrndInft to set
+	 */
+	public void setAmtGrndInft(double amtGrndInft) {
+		this.amtGrndInft = amtGrndInft;
+	}
+
+	/**
+	 * @return the airlineTrvlIns
+	 */
+	public double getAirlineTrvlIns() {
+		return airlineTrvlIns;
+	}
+
+	/**
+	 * @param airlineTrvlIns the airlineTrvlIns to set
+	 */
+	public void setAirlineTrvlIns(double airlineTrvlIns) {
+		this.airlineTrvlIns = airlineTrvlIns;
+	}
+
+	/**
+	 * @return the airlineVisa
+	 */
+	public double getAirlineVisa() {
+		return airlineVisa;
+	}
+
+	/**
+	 * @param airlineVisa the airlineVisa to set
+	 */
+	public void setAirlineVisa(double airlineVisa) {
+		this.airlineVisa = airlineVisa;
+	}
+
+	/**
+	 * @return the airlineAC
+	 */
+	public double getAirlineAC() {
+		return airlineAC;
+	}
+
+	/**
+	 * @param airlineAC the airlineAC to set
+	 */
+	public void setAirlineAC(double airlineAC) {
+		this.airlineAC = airlineAC;
+	}
+
+	/**
+	 * @return the airlineTipping
+	 */
+	public double getAirlineTipping() {
+		return airlineTipping;
+	}
+
+	/**
+	 * @param airlineTipping the airlineTipping to set
+	 */
+	public void setAirlineTipping(double airlineTipping) {
+		this.airlineTipping = airlineTipping;
+	}
+
+	/**
+	 * @return the airlineExtra
+	 */
+	public double getAirlineExtra() {
+		return airlineExtra;
+	}
+
+	/**
+	 * @param airlineExtra the airlineExtra to set
+	 */
+	public void setAirlineExtra(double airlineExtra) {
+		this.airlineExtra = airlineExtra;
+	}
+
+	/**
+	 * @return the airlineAptAdt
+	 */
+	public double getAirlineAptAdt() {
+		return airlineAptAdt;
+	}
+
+	/**
+	 * @param airlineAptAdt the airlineAptAdt to set
+	 */
+	public void setAirlineAptAdt(double airlineAptAdt) {
+		this.airlineAptAdt = airlineAptAdt;
+	}
+
+	/**
+	 * @return the airlineAptChd
+	 */
+	public double getAirlineAptChd() {
+		return airlineAptChd;
+	}
+
+	/**
+	 * @param airlineAptChd the airlineAptChd to set
+	 */
+	public void setAirlineAptChd(double airlineAptChd) {
+		this.airlineAptChd = airlineAptChd;
+	}
+
+	/**
+	 * @return the airlineYqAdt
+	 */
+	public double getAirlineYqAdt() {
+		return airlineYqAdt;
+	}
+
+	/**
+	 * @param airlineYqAdt the airlineYqAdt to set
+	 */
+	public void setAirlineYqAdt(double airlineYqAdt) {
+		this.airlineYqAdt = airlineYqAdt;
+	}
+
+	/**
+	 * @return the airlineYqChd
+	 */
+	public double getAirlineYqChd() {
+		return airlineYqChd;
+	}
+
+	/**
+	 * @param airlineYqChd the airlineYqChd to set
+	 */
+	public void setAirlineYqChd(double airlineYqChd) {
+		this.airlineYqChd = airlineYqChd;
+	}
+
+	/**
+	 * @return the airlineTotAdt
+	 */
+	public double getAirlineTotAdt() {
+		return airlineTotAdt;
+	}
+
+	/**
+	 * @param airlineTotAdt the airlineTotAdt to set
+	 */
+	public void setAirlineTotAdt(double airlineTotAdt) {
+		this.airlineTotAdt = airlineTotAdt;
+	}
+
+	/**
+	 * @return the airlineTotChd
+	 */
+	public double getAirlineTotChd() {
+		return airlineTotChd;
+	}
+
+	/**
+	 * @param airlineTotChd the airlineTotChd to set
+	 */
+	public void setAirlineTotChd(double airlineTotChd) {
+		this.airlineTotChd = airlineTotChd;
+	}
+
+	/**
+	 * @return the airlineDeviation
+	 */
+	public double getAirlineDeviation() {
+		return airlineDeviation;
+	}
+
+	/**
+	 * @param airlineDeviation the airlineDeviation to set
+	 */
+	public void setAirlineDeviation(double airlineDeviation) {
+		this.airlineDeviation = airlineDeviation;
+	}
+
+	/**
+	 * @return the discount
+	 */
+	public double getDiscount() {
+		return discount;
+	}
+
+	/**
+	 * @param discount the discount to set
+	 */
+	public void setDiscount(double discount) {
+		this.discount = discount;
+	}
+
+	/**
+	 * @return the miscellaneous
+	 */
+	public double getMiscellaneous() {
+		return miscellaneous;
+	}
+
+	/**
+	 * @param miscellaneous the miscellaneous to set
+	 */
+	public void setMiscellaneous(double miscellaneous) {
+		this.miscellaneous = miscellaneous;
+	}
+
+	/**
+	 * @return the invCode
+	 */
+	public String getInvCode() {
+		return invCode;
+	}
+
+	/**
+	 * @param invCode the invCode to set
+	 */
+	public void setInvCode(String invCode) {
+		this.invCode = invCode;
+	}
+
+	public boolean getLockStatus() {
+		return lockStatus;
+	}
+
+	public void setLockStatus(boolean lockStatus) {
+		this.lockStatus = lockStatus;
+	}
+
+	public double getDiscount1() {
+		return discount1;
+	}
+
+	public void setDiscount1(double discount1) {
+		this.discount1 = discount1;
+	}
+
+	public double getDiscount2() {
+		return discount2;
+	}
+
+	public void setDiscount2(double discount2) {
+		this.discount2 = discount2;
+	}
+
+	public int getDiscountPax1() {
+		return discountPax1;
+	}
+
+	public void setDiscountPax1(int discountPax1) {
+		this.discountPax1 = discountPax1;
+	}
+
+	public int getDiscountPax2() {
+		return discountPax2;
+	}
+
+	public void setDiscountPax2(int discountPax2) {
+		this.discountPax2 = discountPax2;
+	}
+
+	public int getNotEntitledDiscountPax() {
+		return notEntitledDiscountPax;
+	}
+
+	public void setNotEntitledDiscountPax(int notEntitledDiscountPax) {
+		this.notEntitledDiscountPax = notEntitledDiscountPax;
+	}
+
+	public List<String> getIdSurveyList() {
+		return idSurveyList;
+	}
+
+	public void setIdSurveyList(List<String> idSurveyList) {
+		this.idSurveyList = idSurveyList;
+	}
+
+	public String getInternalRemarks() {
+		return internalRemarks;
+	}
+
+	public void setInternalRemarks(String internalRemarks) {
+		this.internalRemarks = internalRemarks;
+	}
+
+	public Integer getValidPassportStatus() {
+		return validPassportStatus;
+	}
+
+	public void setValidPassportStatus(Integer validPassportStatus) {
+		this.validPassportStatus = validPassportStatus;
+	}
+
+	public Integer getVisaCopiesStatus() {
+		return visaCopiesStatus;
+	}
+
+	public void setVisaCopiesStatus(Integer visaCopiesStatus) {
+		this.visaCopiesStatus = visaCopiesStatus;
+	}
+
+	public Long getInvId() {
+		return invId;
+	}
+
+	public void setInvId(Long invId) {
+		this.invId = invId;
+	}
+
+	public String getNricNumber() {
+		return nricNumber;
+	}
+
+	public void setNricNumber(String nricNumber) {
+		this.nricNumber = nricNumber;
+	}
+
+	public EmployeeViewVO getRefEmployeeViewVO() {
+		return refEmployeeViewVO;
+	}
+
+	public void setRefEmployeeViewVO(EmployeeViewVO refEmployeeViewVO) {
+		this.refEmployeeViewVO = refEmployeeViewVO;
+	}
+
+	public Date getTransferredDate() {
+		return transferredDate;
+	}
+
+	public void setTransferredDate(Date transferredDate) {
+		this.transferredDate = transferredDate;
+	}
+
+	public Double getAmtPaid() {
+		return amtPaid;
+	}
+
+	public void setAmtPaid(Double amtPaid) {
+		this.amtPaid = amtPaid;
+	}
+
+	public String getInvPmntStatusCd() {
+		return invPmntStatusCd;
+	}
+
+	public void setInvPmntStatusCd(String invPmntStatusCd) {
+		this.invPmntStatusCd = invPmntStatusCd;
+	}
+
+	public List<InvoiceVO> getInvList() {
+		return invList;
+	}
+
+	public void setInvList(List<InvoiceVO> invList) {
+		this.invList = invList;
+	}
+
+	public List<InvoiceVO> getPaxStmtList() {
+		return paxStmtList;
+	}
+
+	public void setPaxStmtList(List<InvoiceVO> paxStmtList) {
+		this.paxStmtList = paxStmtList;
+	}
+
+	public String getPaxStatementCd() {
+		return paxStatementCd;
+	}
+
+	public void setPaxStatementCd(String paxStatementCd) {
+		this.paxStatementCd = paxStatementCd;
+	}
+
+	public String getFeedbackStatus() {
+		return feedbackStatus;
+	}
+
+	public void setFeedbackStatus(String feedbackStatus) {
+		this.feedbackStatus = feedbackStatus;
+	}
+}

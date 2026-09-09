@@ -1,0 +1,1227 @@
+package com.bcs.zsg.sales.dao;
+
+import java.math.BigInteger;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.classic.Session;
+import org.hibernate.criterion.Restrictions;
+import org.primefaces.model.SortOrder;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.LookupItemConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.purchase.vo.AddressVO;
+import com.bcs.zsg.purchase.vo.CorAddressVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.purchase.vo.CorPersonInChargeVO;
+import com.bcs.zsg.purchase.vo.CorporateVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.purchase.vo.PersonVO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.CustTourHistVO;
+import com.bcs.zsg.sales.vo.CustomerRemarksVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.IdentityDetailVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.sales.vo.PersonAttachmentVO;
+import com.bcs.zsg.sales.vo.PersonClassVO;
+import com.bcs.zsg.sales.vo.PersonComplicationVO;
+import com.bcs.zsg.sales.vo.PersonContactVO;
+import com.bcs.zsg.sales.vo.PersonEmailVO;
+import com.bcs.zsg.sales.vo.PersonLangVO;
+import com.bcs.zsg.sales.vo.PersonMealVO;
+
+public class CustomerDAOImpl extends BaseHibernateDAO implements CustomerDAO {
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getCustomerListSearch(java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CustDetailsVO> getCustomerListSearch(Long companyId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT distinct ").
+			append("c.id AS 'custId',").
+			append("case when c.pc_type_cd = 'C' then p2.id when c.pc_type_cd = 'P' then p.id  end as personId,").
+			append("case when c.pc_type_cd = 'C' then (case when p2.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p2.salutation_cd else '' end) when c.pc_type_cd = 'P' then (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) end as salutation_cd,").
+			append("case when c.pc_type_cd = 'C' then p2.first_name when c.pc_type_cd = 'P' then p.first_name end as first_name,").
+			append("case when c.pc_type_cd = 'C' then p2.last_name when c.pc_type_cd = 'P' then p.last_name end as last_name,").
+			append("case when c.pc_type_cd = 'C' then p2.email when c.pc_type_cd = 'P' then p.email end as email,").
+			append("o.name AS 'corporate', c.id_pc, c.pc_type_cd, ").
+			append("case when c.pc_type_cd = 'C' then pa2.addr_1 when c.pc_type_cd = 'P' then pa1.addr_1 end as address1,").
+			append("case when c.pc_type_cd = 'C' then pa2.addr_2 when c.pc_type_cd = 'P' then pa1.addr_2 end as address2,").
+			append("case when c.pc_type_cd = 'C' then pa2.addr_3 when c.pc_type_cd = 'P' then pa1.addr_3 end as address3,").
+			append("case when c.pc_type_cd = 'C' then pa2.city when c.pc_type_cd = 'P' then pa1.city end as city,").
+			append("case when c.pc_type_cd = 'C' then pa2.state when c.pc_type_cd = 'P' then pa1.state end as state,").
+			append("case when c.pc_type_cd = 'C' then pa2.postcode when c.pc_type_cd = 'P' then pa1.postcode end as postcode, ").
+			append("case when c.pc_type_cd = 'C' then pa2.id_country when c.pc_type_cd = 'P' then pa1.id_country end as country, ").
+			append("c.code ").
+			append("FROM customer c left join person p on (c.pc_type_cd = 'P' and c.id_pc = p.id) ").
+			append("left join corporate o on (c.pc_type_cd = 'C' AND c.id_corporate = o.id ) ").
+			append("left join person p2 on (c.pc_type_cd = 'C' and c.id_pc = p2.id) ").
+			append("left join person_address pa1 on pa1.id_person = p.id ").
+			append("left join corporate_address pa2 on pa2.id_corporate = o.id ").
+			append(" WHERE id_company = '" + companyId + "' and status_cd = '" + CommonConstant.STATUS_CD_ACTIVE + "' ").
+			append("ORDER BY last_name, first_name");
+		
+		Query query = createSQLQuery(sb.toString());
+		List<Object> objList = query.list();
+		List<CustDetailsVO> list = new ArrayList<CustDetailsVO>();
+ 
+		CustDetailsVO vo;
+		if (CollectionUtils.isNotEmpty(objList)) {
+			for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+				Object[] row = (Object[]) it.next();
+				vo = new CustDetailsVO();
+				vo.setAddressVO(new AddressVO());
+				
+				if (row[0] != null) vo.setCustId(((BigInteger) row[0]).longValue());
+				if (row[1] != null) vo.setPersonId(((BigInteger) row[1]).longValue());
+				vo.setSalutation((String) row[2]);
+				vo.setFirstName((String) row[3]);
+				vo.setLastName((String) row[4]);
+				vo.setContPersonName(row[4] + " " + row[3]);
+				if (row[5] != null) vo.setEmail((String) row[5]);
+				if (row[6] != null) vo.setCompanyName((String) row[6]);
+				if (row[7] != null) vo.setCorId(((BigInteger) row[7]).longValue());
+				if (row[8] != null) vo.setCustType((String) row[8]);
+				if (row[9] != null) vo.getAddressVO().setAddr1((String) row[9]);
+				if (row[10] != null) vo.getAddressVO().setAddr2((String) row[10]);
+				if (row[11] != null) vo.getAddressVO().setAddr3((String) row[11]);
+				if (row[12] != null) vo.getAddressVO().setCity((String) row[12]);
+				if (row[13] != null) vo.getAddressVO().setState((String) row[13]);
+				if (row[14] != null) vo.getAddressVO().setPostcode((String) row[14]);
+				if (row[15] != null) vo.getAddressVO().setCountryId(((BigInteger) row[15]).longValue());
+				if (row[16] != null) vo.setCode((String) row[16]);
+				list.add(vo);
+			}
+		}
+		return list;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getCustomerList(java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CustomerVO> getCustomerList(Long companyId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("SELECT distinct ").
+		append("c.id AS 'custId',").
+		append("case when c.pc_type_cd = 'C' then p2.id when c.pc_type_cd = 'P' then p.id  end as personId,").
+		append("case when c.pc_type_cd = 'C' then (case when p2.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p2.salutation_cd else '' end) when c.pc_type_cd = 'P' then (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) end as salutation_cd,").
+		append("case when c.pc_type_cd = 'C' then p2.first_name when c.pc_type_cd = 'P' then p.first_name end as first_name,").
+		append("case when c.pc_type_cd = 'C' then p2.last_name when c.pc_type_cd = 'P' then p.last_name end as last_name,").
+		append("case when c.pc_type_cd = 'C' then p2.email when c.pc_type_cd = 'P' then p.email end as email,").
+		append("o.name AS 'corporate', c.id_pc, c.pc_type_cd,").
+		append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_contact WHERE id_person = p.id) AS 'perContacts',").
+		append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM corporate_contact WHERE id_corporate = c.id_corporate) AS 'corContacts', ").
+		append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_identity WHERE id_person = p.id) AS 'identities',").
+		append("c.corporate_name, c.code ").
+		append(" FROM customer c left join person p on (c.pc_type_cd = 'P' and c.id_pc = p.id) ").
+		append("left join corporate o on (c.pc_type_cd = 'C' AND c.id_corporate = o.id )").
+		append("left join person p2 on (c.pc_type_cd = 'C' and c.id_pc = p2.id)").
+		append(" WHERE id_company = '" + companyId + "' and status_cd = '" + CommonConstant.STATUS_CD_ACTIVE + "' ").
+		append("ORDER BY last_name, first_name");
+		
+		Query query = createSQLQuery(sb.toString());
+		List<Object> objList = query.list();
+		List<CustomerVO> list = new ArrayList<CustomerVO>();
+		
+		if (CollectionUtils.isNotEmpty(objList)) {
+			for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+				Object[] row = (Object[]) it.next();
+				CustomerVO vo = new CustomerVO();
+				vo.setId(((BigInteger) row[0]).longValue()); 
+				vo.setPersonId(((BigInteger) row[1]).longValue());
+				vo.setSalutationCd((String) row[2]);
+				vo.setFirstName((String) row[3]);
+				vo.setLastName((String) row[4]);
+				vo.setEmail((String) row[5]);
+				vo.setCorporate((String) row[6]);
+				vo.setPersCorpId(((BigInteger) row[7]).longValue());
+				vo.setPcTypeCd((String) row[8]);
+				vo.setPerContacts((String) row[9]);
+				vo.setCorContacts((String) row[10]);
+				vo.setIdentities((String) row[11]);
+				vo.setCorporateName((String) row[12]);
+				vo.setCode((String) row[13]);
+				list.add(vo);
+			}
+		}
+		return list;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getCustomer(java.lang.Long)
+	 */
+	@Override
+	public CustomerVO getCustomer(Long idCust) throws BusinessException {
+		Criteria criteria = createCriteria(CustomerVO.class);
+		criteria.add(Restrictions.eq("id", idCust));
+		return (CustomerVO) criteria.uniqueResult();
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getCustomerDetail()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public CustomerVO getCustomerDetail(Long idCust) throws BusinessException {
+		//Query query = null;
+		Long personId;
+		
+		Criteria criteria = createCriteria(CustomerVO.class);
+		criteria.add(Restrictions.eq("id", idCust));
+		CustomerVO vo = (CustomerVO) criteria.uniqueResult();
+		
+		vo.setBillAddressVO(new AddressVO());
+		vo.setMailAddressVO(new AddressVO());
+		vo.setCorBillAddressVO(new CorAddressVO());
+		vo.setCorMailAddressVO(new CorAddressVO());
+		vo.setIdentityList(new ArrayList<IdentityVO>());
+		vo.setPersonLangList(new ArrayList<PersonLangVO>());
+		vo.setPersonMealList(new ArrayList<PersonMealVO>());
+		vo.setPersonContactList(new ArrayList<PersonContactVO>());
+		vo.setCorContactList(new ArrayList<CorContactVO>());
+		vo.setPersonClassList(new ArrayList<PersonClassVO>());
+		vo.setPersonComplicationList(new ArrayList<PersonComplicationVO>());
+		vo.setCustRemarksList(new ArrayList<CustomerRemarksVO>());
+		vo.setAddressList(new ArrayList<AddressVO>());
+		vo.setCorAddressList(new ArrayList<CorAddressVO>());
+		vo.setCorPicList(new ArrayList<CorPersonInChargeVO>());
+		
+		if (vo.getPcTypeCd().equals("C")) {
+			criteria = createCriteria(CorporateVO.class);
+			criteria.add(Restrictions.eq("id", vo.getCorporateId()));
+			CorporateVO corporateVO = (CorporateVO) criteria.uniqueResult();
+			vo.setCorporateVO(corporateVO);
+			
+			criteria = createCriteria(PersonVO.class);
+			criteria.add(Restrictions.eq("id", vo.getPersCorpId()));
+			PersonVO personVO = (PersonVO) criteria.uniqueResult();
+			if (personVO != null) { 
+				personVO.setSalutation(StringUtils.equals(personVO.getSalutation(), LookupItemConstant.SALUTATION_EMPTY_CD) ? "" : personVO.getSalutation());
+				vo.setPersonVO(personVO); 
+			}
+			
+			personId = corporateVO.getPersonId();
+			
+			criteria = createCriteria(CorAddressVO.class);
+			criteria.add(Restrictions.eq("corporateId", vo.getCorporateVO().getId()));
+			List<CorAddressVO> corAddressList = criteria.list();
+			if (CollectionUtils.isNotEmpty(corAddressList)) vo.setCorAddressList(corAddressList);
+			
+			criteria = createCriteria(CorContactVO.class);
+			criteria.add(Restrictions.eq("corporateId", vo.getCorporateVO().getId()));
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			List<CorContactVO> contactList = criteria.list();
+			if (CollectionUtils.isNotEmpty(contactList)) vo.setCorContactList(contactList);
+			
+			criteria = createCriteria(CorPersonInChargeVO.class);
+			criteria.add(Restrictions.eq("corporateId", vo.getCorporateVO().getId()));
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			List<CorPersonInChargeVO> picList = criteria.list();
+			if (CollectionUtils.isNotEmpty(picList)) vo.setCorPicList(picList);
+			
+		} else {
+			criteria = createCriteria(CorporateVO.class);
+			criteria.add(Restrictions.eq("id", vo.getCorporateId()));
+			CorporateVO corporateVO = (CorporateVO) criteria.uniqueResult();
+			if(corporateVO == null) {
+				vo.setCorporateVO(new CorporateVO());
+			}else
+				vo.setCorporateVO(corporateVO);
+			
+			criteria = createCriteria(PersonVO.class);
+			criteria.add(Restrictions.eq("id", vo.getPersCorpId()));
+			PersonVO personVO = (PersonVO) criteria.uniqueResult();
+			if (personVO != null) {
+				personVO.setSalutation(StringUtils.equals(personVO.getSalutation(), LookupItemConstant.SALUTATION_EMPTY_CD) ? "" : personVO.getSalutation());
+				vo.setPersonVO(personVO); 
+			}
+			
+			personId = vo.getPersCorpId();
+			
+			criteria = createCriteria(AddressVO.class);
+			criteria.add(Restrictions.eq("personId", vo.getPersonVO().getId()));
+			List<AddressVO> addressList = criteria.list();
+			if (CollectionUtils.isNotEmpty(addressList)) vo.setAddressList(addressList);
+			
+			criteria = createCriteria(PersonContactVO.class);
+			criteria.add(Restrictions.eq("personId", vo.getPersonVO().getId()));
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			List<PersonContactVO> contactList = criteria.list();
+			if (CollectionUtils.isNotEmpty(contactList)) {
+				vo.setPersonContactList(contactList);
+				for(PersonContactVO pcVO: vo.getPersonContactList()) {
+					pcVO.setFullPhoneNo(FunctionUtils.phoneNumber(pcVO.getCountryCd(), pcVO.getNumber()));
+				}
+			}
+			
+			criteria = createCriteria(PersonAttachmentVO.class);
+			criteria.add(Restrictions.eq("personId", vo.getPersonVO().getId()));
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			List<PersonAttachmentVO> attachmentList = criteria.list();
+			if (CollectionUtils.isNotEmpty(attachmentList)) vo.setPersonAttachmentList(attachmentList);
+		}
+		
+		criteria = createCriteria(IdentityVO.class);
+		criteria.add(Restrictions.eq("personId", personId));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		List<IdentityVO> identityList = criteria.list();
+        if (CollectionUtils.isNotEmpty(identityList)) {
+        	vo.setIdentityList(identityList);
+        	for (IdentityVO iVO : identityList) {
+        		iVO.setIdentityDetailVO(new IdentityDetailVO());
+        		Query subQuery = createQuery("FROM IdentityDetailVO WHERE id_person_identity = :id");
+        		subQuery.setParameter("id", iVO.getId());
+        		IdentityDetailVO identityDetailVO = (IdentityDetailVO) subQuery.uniqueResult();
+        		if (identityDetailVO != null) iVO.setIdentityDetailVO(identityDetailVO);
+        	}
+        }
+        
+        criteria = createCriteria(PersonLangVO.class);
+        criteria.add(Restrictions.eq("personId", vo.getPersonVO().getId()));
+		List<PersonLangVO> langList = criteria.list();
+		if (CollectionUtils.isNotEmpty(langList)) {
+			vo.setPersonLangList(langList);
+			vo.setLangCdList(new ArrayList<String>());
+			for(PersonLangVO langVO : langList) {
+				vo.getLangCdList().add(langVO.getLangCd());
+			}
+		}
+        
+		criteria = createCriteria(PersonMealVO.class);
+		criteria.add(Restrictions.eq("personId", vo.getPersonVO().getId()));
+		List<PersonMealVO> mealList = criteria.list();
+		
+		if (CollectionUtils.isNotEmpty(mealList)) {
+			vo.setPersonMealList(mealList);
+			vo.setMealList(new ArrayList<String>());
+			for(PersonMealVO mealVO : mealList) {
+				vo.getMealList().add(mealVO.getMealCd());
+			}
+		}
+        
+		criteria = createCriteria(PersonClassVO.class);
+		criteria.add(Restrictions.eq("personId", vo.getPersonVO().getId()));
+		List<PersonClassVO> classList = criteria.list();
+		if (CollectionUtils.isNotEmpty(classList)) {
+			vo.setPersonClassList(classList);
+			vo.setClassList(new ArrayList<String>());
+			for(PersonClassVO classVO : classList) {
+				vo.getClassList().add(classVO.getClassCd());
+			}
+		}
+		
+		criteria = createCriteria(PersonComplicationVO.class);
+		criteria.add(Restrictions.eq("personId", vo.getPersonVO().getId()));
+		List<PersonComplicationVO> complicationList = criteria.list();
+		if (CollectionUtils.isNotEmpty(complicationList)) {
+			vo.setPersonComplicationList(complicationList);
+			vo.setCompliList(new ArrayList<String>());
+			for(PersonComplicationVO compliVO : complicationList) {
+				vo.getCompliList().add(compliVO.getComplicationCd());
+			}
+		}
+		
+		criteria = createCriteria(CustomerRemarksVO.class);
+		criteria.add(Restrictions.eq("custId", vo.getId()));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		List<CustomerRemarksVO> remarkList = criteria.list();
+		if (CollectionUtils.isNotEmpty(remarkList)) vo.setCustRemarksList(remarkList);
+		
+		criteria = createCriteria(PersonEmailVO.class);
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.add(Restrictions.eq("idPerson", vo.getPersonVO().getId()));
+		List<PersonEmailVO> emailList = criteria.list();
+		if (CollectionUtils.isNotEmpty(emailList)) vo.getPersonVO().setEmailList(emailList);
+		
+		return vo;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getCustomerSimpleDetail(java.lang.Long)
+	 */
+	@Override
+	public CustomerVO getCustomerSimpleDetail(Long idCust) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT ").
+			append("custId, personId, (case when salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then salutation_cd else '' end), firstname, lastname, email, corporate, id_pc, pc_type_cd, ").
+			append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_contact WHERE id_person = A.personId AND status_cd = 'A') AS 'perContacts', ").
+			append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM corporate_contact WHERE id_corporate = A.id_corporate AND status_cd = 'A') AS 'corContacts', ").
+			append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_identity WHERE id_person = A.personId AND status_cd = 'A') AS 'identities', ").
+			append("corName, code, nickName, ").
+			append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', country_cd) SEPARATOR ',') FROM person_contact WHERE id_person = A.personId) AS 'country_codes', ").			
+			append(FunctionUtils.fullPhoneNoSQL()).
+			append("FROM person_contact WHERE id_person = A.personId AND status_cd = 'A' AND number IS NOT NULL AND number != '') AS 'fullPhoneNo' ").			
+			append("FROM (").
+			append("SELECT ").
+			append("c.id_corporate, c.status_cd, c.id AS 'custId', p.id  as personId, (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) as salutation_cd, ").
+			append("IFNULL(p.first_name, '') as firstname, IFNULL(p.last_name, '') as lastname, p.nick_name as nickName, ").
+			append("p.email as email, o.name AS 'corporate', c.id_pc, c.pc_type_cd, c.corporate_name AS 'corName', c.code AS 'code' ").
+			append("FROM customer c ").
+			append("left join person p on c.id_pc = p.id ").
+			append("left join corporate o on c.id_corporate = o.id ").
+			append("WHERE c.id = ").append(idCust).append(") A");
+		
+		Query query = createSQLQuery(sb.toString());
+		Object[] row = (Object[]) query.uniqueResult();
+		
+		CustomerVO vo = new CustomerVO();
+		vo.setId(((Number) row[0]).longValue()); 
+		vo.setPersonId(((Number) row[1]).longValue());
+		vo.setSalutationCd((String) row[2]);
+		vo.setFirstName((String) row[3]);
+		vo.setLastName((String) row[4]);
+		vo.setCustName(vo.getLastName() + " " + vo.getFirstName());
+		vo.setEmail((String) row[5]);
+		vo.setCorporate((String) row[6]);
+		vo.setPersCorpId(((BigInteger) row[7]).longValue());
+		vo.setPcTypeCd((String) row[8]);
+		vo.setPerContacts((String) row[9]);
+		vo.setCorContacts((String) row[10]);
+		if (vo.getPerContacts() == null && vo.getCorContacts() != null) vo.setPerContacts(vo.getCorContacts());
+		else if (vo.getPerContacts() != null && vo.getCorContacts() != null) vo.setPerContacts(vo.getPerContacts() + "," + vo.getCorContacts());
+		vo.setIdentities((String) row[11]);
+		vo.setCorporateName((String) row[12]);
+		vo.setCode((String) row[13]);
+		vo.setNickName((String) row[14]);
+		if (StringUtils.isNotBlank((String) row[15])) { vo.setCountryCode((String) row[15]); }
+		vo.setFullPhoneNo((String) row[16]);
+		
+		return vo;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#deleteCustomer(com.bcs.zsg.sales.vo.CustomerVO)
+	 */
+	@Override
+	public void deleteCustomer(CustomerVO customerVO) throws BusinessException {
+		Query query = createQuery("UPDATE CustomerVO SET status = :status WHERE id = :id");
+		query.setString("status", CommonConstant.STATUS_CD_INACTIVE);
+		query.setLong("id", customerVO.getId());
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updateCustomerStatus(CustomerVO customerVO) throws BusinessException {
+		Query query = createQuery("UPDATE CustomerVO SET status = :status WHERE id = :id");
+		query.setString("status", customerVO.getStatusCode());
+		query.setLong("id", customerVO.getId());
+		query.executeUpdate();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getCountryList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CountryVO> getCountryList() {
+		Criteria criteria = createCriteria(CountryVO.class);
+		return criteria.list();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getCustomerInfo(java.lang.Long)
+	 */
+	@Override
+	public CustomerVO getCustomerInfo(Long idCust) throws BusinessException {
+		Criteria criteria = createCriteria(CustomerVO.class);
+		criteria.add(Restrictions.eq("id", idCust));
+		CustomerVO vo = (CustomerVO) criteria.uniqueResult();
+		
+		Query query = null;
+		if (vo.getPcTypeCd().equals("C")) {
+			query = createQuery("FROM CorporateVO WHERE id = :id");
+			query.setParameter("id", vo.getPersCorpId());
+			CorporateVO corporateVO = (CorporateVO) query.uniqueResult();
+			vo.setCorporateVO(corporateVO);
+			
+			query = createQuery("FROM PersonVO WHERE id = :id");
+			query.setParameter("id", corporateVO.getPersonId());
+			PersonVO personVO = (PersonVO) query.uniqueResult();
+			if (personVO != null) vo.setPersonVO(personVO);
+			
+		} else {
+			query = createQuery("FROM PersonVO WHERE id = :id");
+			query.setParameter("id", vo.getPersCorpId());
+			PersonVO personVO = (PersonVO) query.uniqueResult();
+			if (personVO != null) vo.setPersonVO(personVO);
+		}
+		return vo;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#isIdentityExisted(com.bcs.zsg.purchase.vo.IdentityVO, java.lang.Long)
+	 */
+	@Override
+	public boolean isIdentityExisted(IdentityVO identityVO, Long companyId) throws BusinessException {
+		// Filter by inactive and company id
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT count(*)" +
+			" FROM customer c, person p, person_identity pi" +
+			" WHERE c.id_pc=P.id AND p.id=pi.id_person AND c.pc_type_cd = 'P' and" +
+			" pi.type_cd = :idType AND pi.number = :idNo AND pi.number != '' AND c.id_company = :idCompany AND c.status_cd <> :statusCd AND pi.status_cd = :piStatusCd");
+		if (identityVO.getId() != null) sb.append(" and pi.id <> :idIdentity");
+		
+		Query query = createSQLQuery(sb.toString());
+		if (identityVO.getId() != null) query.setLong("idIdentity", identityVO.getId());
+		query.setString("idType", identityVO.getIdType());
+		query.setString("idNo", identityVO.getIdNo());
+		query.setLong("idCompany", companyId);
+		query.setString("statusCd", CommonConstant.STATUS_CD_INACTIVE);
+		query.setString("piStatusCd", BaseConstant.STATUS_ACTIVE);
+		if (((BigInteger) query.uniqueResult()).intValue() > 0) return true;
+		
+		return false;
+	}
+	
+	public boolean isEmailExisted(String email, Long companyId, Long personId) throws BusinessException {
+	    StringBuilder sb = new StringBuilder();
+	    
+	    sb.append("SELECT count(*)")
+	      .append(" FROM customer c")
+	      .append(" JOIN person_email pe ON c.id_pc = pe.id_person")
+	      .append(" WHERE pe.email = :email")
+	      .append(" AND c.id_company = :idCompany")
+	      .append(" AND c.status_cd <> :statusCd")
+	      .append(" AND pe.status_cd <> :statusCdEmail");
+
+	    // NEW: If personId is provided, exclude that specific record
+	    if (personId != null) {
+	        sb.append(" AND pe.id_person <> :personId");
+	    }
+
+	    Query query = createSQLQuery(sb.toString());
+	    
+	    query.setString("email", email);
+	    query.setLong("idCompany", companyId);
+	    query.setString("statusCd", CommonConstant.STATUS_CD_INACTIVE);
+	    query.setString("statusCdEmail", CommonConstant.STATUS_CD_DELETE);
+	    
+	    // NEW: Set the personId parameter
+	    if (personId != null) {
+	        query.setLong("personId", personId);
+	    }
+	    
+	    return ((BigInteger) query.uniqueResult()).intValue() > 0;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#isCustAvailableToDel(com.bcs.zsg.sales.vo.CustomerVO)
+	 */
+	@Override
+	public boolean isCustNotAbleToDel(CustomerVO customerVO) throws BusinessException {
+		Query query = createSQLQuery("SELECT COUNT(id) FROM invoice WHERE id_company = :idCompany AND id_customer = :idCust AND status_cd NOT IN (:statusCC, :statusVD)");
+		query.setLong("idCompany", customerVO.getCompanyId());
+		query.setLong("idCust", customerVO.getId());
+		query.setString("statusCC", CommonConstant.STATUS_CD_CANCELLED);
+		query.setString("statusVD", CommonConstant.STATUS_CD_VOID);
+		if (((BigInteger) query.uniqueResult()).intValue() > 0) return true;
+		
+		query = createSQLQuery("SELECT COUNT(id) FROM tour_booking WHERE id_company = :idCompany AND id_cust = :idCust AND status_cd NOT IN (:statusCC, :statusVD)");
+		query.setLong("idCompany", customerVO.getCompanyId());
+		query.setLong("idCust", customerVO.getId());
+		query.setString("statusCC", CommonConstant.STATUS_CD_CANCELLED);
+		query.setString("statusVD", CommonConstant.STATUS_CD_VOID);
+		if (((BigInteger) query.uniqueResult()).intValue() > 0) return true;
+		
+		query = createSQLQuery("SELECT COUNT(p.id) FROM invoice_pax p, invoice i WHERE i.id_company = :idCompany AND p.id_cust = :idCust AND p.id_inv = i.id AND p.status_cd = 'A' AND i.status_cd NOT IN (:statusCC, :statusVD)");
+		query.setLong("idCompany", customerVO.getCompanyId());
+		query.setLong("idCust", customerVO.getId());
+		query.setString("statusCC", CommonConstant.STATUS_CD_CANCELLED);
+		query.setString("statusVD", CommonConstant.STATUS_CD_VOID);
+		if (((BigInteger) query.uniqueResult()).intValue() > 0) return true;
+		
+		return false;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getCustomerListSize(java.lang.Long, java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getCustomerListSize(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT count(c.id) ").
+			append("FROM customer c ").
+			append("left join person p on c.id_pc = p.id ").
+			append("left join corporate o on c.pc_type_cd = 'C' AND c.id_corporate = o.id ").
+			append("WHERE id_company = '").append(params.get("idCompany")).append("' ");
+		if (params.get("removeInactive") != null && ((boolean) params.get("removeInactive")) == true) sb.append("AND c.status_cd = 'AC' ");
+		if (params.get("statusCode") != null) sb.append("and status_cd = '").append(params.get("statusCode")).append("' ");
+		if (params.get("custType") != null && StringUtils.isNotEmpty(params.get("custType").toString())) sb.append("and c.pc_type_cd = '").append(params.get("custType")).append("' ");
+
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("AND (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("code".equals(entry.getKey())) sb.append("c.code LIKE '%").append(entry.getValue()).append("%'");
+				else if ("corporateName".equals(entry.getKey())) {
+					sb.append("c.corporate_name LIKE '%").append(entry.getValue()).append("%'");
+				}
+				else if ("identities".equals(entry.getKey())) sb.append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_identity WHERE id_person = p.id) LIKE '%").append(entry.getValue()).append("%'");
+				else if ("emailList".equals(entry.getKey())) sb.append("(SELECT GROUP_CONCAT(email separator ',') FROM person_email WHERE id_person = p.id) LIKE '%").append(entry.getValue()).append("%'");
+				else if ("email".equals(entry.getKey())) sb.append("p.email LIKE '%").append(entry.getValue()).append("%'");
+				else if ("custName".equals(entry.getKey())) {
+					sb.append("CONCAT(IFNULL(p.last_name, ''), ' ', IFNULL(p.first_name, '')) LIKE '%").append(entry.getValue()).append("%'");
+				}
+				else if ("nickName".equals(entry.getKey())) sb.append("p.nick_name LIKE '%").append(entry.getValue()).append("%'");
+				else if ("perContacts".equals(entry.getKey())) sb.append("((SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_contact WHERE id_person = p.id) LIKE '%").append(entry.getValue()).
+																	append("%' OR (SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM corporate_contact WHERE id_corporate = c.id_corporate) LIKE '%").append(entry.getValue()).append("%')");
+				else if ("fullPhoneNo".equals(entry.getKey())) sb.append(
+					    FunctionUtils.fullPhoneNoSQL() + "FROM person_contact " +
+					    "WHERE id_person = p.id AND status_cd = 'A' AND number IS NOT NULL AND number != '') " +
+					    "LIKE '%").
+							append(entry.getValue()).append("%'");
+				else if ("gstRegNo".equals(entry.getKey())) sb.append("o.gst_reg_no LIKE '%").append(entry.getValue()).append("%'");
+				else if ("classes".equals(entry.getKey())) {
+					sb.append("(SELECT GROUP_CONCAT(li.description separator ', ') ").
+						append("FROM person_class pc LEFT JOIN lookup_item li ON pc.class_cd = li.code AND li.lookup_cat_cd = 'cust_class' ").
+						append("WHERE id_person = p.id ").
+					append(") LIKE '%").append(entry.getValue()).append("%'");
+				}
+				else if ("pcTypeDesc".equals(entry.getKey())) sb.append("(case when c.pc_type_cd = 'C' then 'Corporate' else 'Individual' end) LIKE '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(") ");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getCustomerList(java.lang.Long, int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CustomerVO> getCustomerList(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT ").
+			append("custId, personId, (case when salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then salutation_cd else '' end), firstname, lastname, email, corporate, id_pc, pc_type_cd, pc_type_desc, ").
+			append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_contact WHERE id_person = A.personId AND status_cd = 'A') AS 'perContacts', ").
+			append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM corporate_contact WHERE id_corporate = A.id_corporate AND status_cd = 'A') AS 'corContacts', ").
+			append("(SELECT CASE WHEN A.pc_type_cd != 'C' THEN (SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_identity WHERE id_person = A.personId AND status_cd = 'A') ELSE NULL END) AS 'identities', ").
+			append("corName, code, nickName, ").
+			append("gstRegNo, status_cd, is_lock, ").
+			append("(SELECT GROUP_CONCAT(CONCAT(email, CASE WHEN is_primary = 1 THEN ' [P]' ELSE '' END) separator ',') FROM person_email WHERE id_person = A.personId AND status_cd = 'A') AS 'emailList' ").
+			append(", (SELECT update_status FROM customer_profile_update cpu WHERE cpu.id_customer = A.custId AND cpu.status_cd = 'A' ORDER BY cpu.id DESC LIMIT 1) AS 'email_upd_status' ").
+			append(", (SELECT GROUP_CONCAT( ").
+				append("CASE WHEN cpu2.update_status = 'P' THEN ").
+					append("CONCAT('Status Pending Created By ', cpu2.created_by, ' On ', DATE_FORMAT(cpu2.dt_created, '%Y-%m-%d %h:%i:%s %p')) ").
+				append("WHEN cpu2.update_status = 'S' THEN ").
+					append("CONCAT('Status Success Updated By ', cpu2.updated_by, ' On ', DATE_FORMAT(cpu2.dt_update, '%Y-%m-%d %h:%i:%s %p')) ").
+				append("ELSE null END ").
+			append("ORDER BY cpu2.id DESC SEPARATOR '\n') FROM customer_profile_update cpu2 WHERE cpu2.id_customer = A.custId AND cpu2.status_cd = 'A' GROUP BY cpu2.id_customer) AS 'email_upd_remarks' ").
+			append(", ( ").
+		    append("SELECT ").
+		    append("  GROUP_CONCAT( ").
+		    append("    CONCAT(type_cd, '|', country_cd) SEPARATOR ',' ").
+		    append("  ) ").
+		    append("FROM ").
+		    append("  person_contact ").
+		    append("WHERE ").
+		    append("  id_person = A.personId ").
+		    append("  AND status_cd = 'A' ").
+		    append("  AND country_cd IS NOT NULL ").
+		    append("  AND country_cd != '' ").
+		    append(") AS 'country_codes', ").
+		    append(FunctionUtils.fullPhoneNoSQL()).
+		    append(" FROM person_contact ").
+		    append(" WHERE id_person = A.personId AND status_cd = 'A' ").
+		    append(" AND number IS NOT NULL AND number != '') AS 'fullPhoneNo' ");
+
+			if (params.get("classes") != null && ((boolean) params.get("classes")) == true) {
+				sb.append(", (SELECT GROUP_CONCAT(li.description separator ', ') ").
+					append("FROM person_class pc LEFT JOIN lookup_item li ON pc.class_cd = li.code AND li.lookup_cat_cd = 'cust_class' ").
+					append("WHERE id_person = A.personId ").
+				append(") AS 'classes' "); 
+			}
+			sb.append("FROM (SELECT ").
+			append("c.id_corporate, c.status_cd, c.id AS 'custId', p.id  as personId, (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) as salutation_cd, IFNULL(p.first_name, '') as firstname, IFNULL(p.last_name, '') as lastname, ").
+			append("p.nick_name as nickName, p.email as email, o.name AS 'corporate', c.id_pc, c.pc_type_cd, (case when c.pc_type_cd = 'C' then 'Corporate' else 'Individual' end) as pc_type_desc, ").
+			append("c.corporate_name AS 'corName', c.code AS 'code', o.gst_reg_no AS gstRegNo, c.is_lock ").
+			append("FROM customer c ").
+			append("left join person p on c.id_pc = p.id ").
+			append("left join corporate o on c.pc_type_cd = 'C' AND c.id_corporate = o.id ").
+			append("WHERE id_company = '").append(params.get("idCompany")).append("' ");
+			if (params.get("removeInactive") != null && ((boolean) params.get("removeInactive")) == true) {
+				sb.append("AND c.status_cd = 'AC' ");
+			}
+			if (params.get("nonCorporate") != null && ((boolean) params.get("nonCorporate")) == true) {
+				sb.append("AND c.pc_type_cd != 'C' ");
+			}
+		
+		if (params.get("statusCode") != null) sb.append("and status_cd = '").append(params.get("statusCode")).append("' ");
+		if (params.get("custType") != null && StringUtils.isNotEmpty(params.get("custType").toString())) sb.append("and c.pc_type_cd = '").append(params.get("custType")).append("' ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		String filteredName = null;
+		String filteredCor = null;
+		if (!filters.isEmpty()) {
+			sb.append("AND (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("code".equals(entry.getKey())) sb.append("c.code LIKE '%").append(entry.getValue()).append("%'");
+				else if ("corporateName".equals(entry.getKey())) {
+					filteredCor = entry.getValue();
+					sb.append("c.corporate_name LIKE '%").append(entry.getValue()).append("%'");
+				}
+				else if ("identities".equals(entry.getKey())) sb.append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_identity WHERE id_person = p.id) LIKE '%").append(entry.getValue()).append("%'");
+				else if ("emailList".equals(entry.getKey())) sb.append("(SELECT GROUP_CONCAT(email separator ',') FROM person_email WHERE id_person = p.id) LIKE '%").append(entry.getValue()).append("%'");
+				else if ("email".equals(entry.getKey())) sb.append("p.email LIKE '%").append(entry.getValue()).append("%'");
+				else if ("custName".equals(entry.getKey())) {
+					filteredName = entry.getValue();
+					sb.append("CONCAT(IFNULL(p.last_name, ''), ' ', IFNULL(p.first_name, '')) LIKE '%").append(entry.getValue()).append("%'");
+				}
+				else if ("nickName".equals(entry.getKey())) sb.append("p.nick_name LIKE '%").append(entry.getValue()).append("%'");
+				else if ("perContacts".equals(entry.getKey())) sb.append("((SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM person_contact WHERE id_person = p.id) LIKE '%").append(entry.getValue()).
+																	append("%' OR (SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM corporate_contact WHERE id_corporate = c.id_corporate) LIKE '%").append(entry.getValue()).append("%')");
+				else if ("fullPhoneNo".equals(entry.getKey())) sb.append(FunctionUtils.fullPhoneNoSQL() + "FROM person_contact WHERE id_person = p.id AND status_cd = 'A' AND number IS NOT NULL AND number != '') LIKE '%")
+																	.append(entry.getValue()).append("%'");
+				else if ("gstRegNo".equals(entry.getKey())) sb.append("o.gst_reg_no LIKE '%").append(entry.getValue()).append("%'");
+				else if ("classes".equals(entry.getKey())) {
+					sb.append("(SELECT GROUP_CONCAT(li.description separator ', ') ").
+						append("FROM person_class pc LEFT JOIN lookup_item li ON pc.class_cd = li.code AND li.lookup_cat_cd = 'cust_class' ").
+						append("WHERE id_person = p.id ").
+					append(") LIKE '%").append(entry.getValue()).append("%'");
+				}
+				else if ("pcTypeDesc".equals(entry.getKey())) sb.append("(case when c.pc_type_cd = 'C' then 'Corporate' else 'Individual' end) LIKE '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(") ");
+		}
+		sb.append(") A order by ");
+		
+		String sortField = (String) params.get("sortField");
+		if (sortField == null) {
+//			if (filteredName == null) sb.append("lastname, firstname");
+			if (filteredName == null) sb.append("custId desc");
+			else sb.append("case when concat(lastname, ' ', firstname) like '").append(filteredName).append("%' then concat(lastname, ' ', firstname) else concat('{0} ', concat(lastname, ' ', firstname)) end");
+			
+		} else {
+			if ("code".equals(sortField)) sb.append("cast(code as decimal)");
+			else if ("corporateName".equals(sortField)) {
+				if (filteredCor == null) sb.append("corName");
+				else sb.append("case when corName like '").append(filteredName).append("%' then corName else concat('{0} ', corName) end");
+			}
+			else if ("identities".equals(sortField)) sb.append("identities");
+			else if ("emailList".equals(sortField)) sb.append("emailList");
+			else if ("email".equals(sortField)) sb.append("email");
+			else if ("custName".equals(sortField)) {
+				if (filteredName == null) sb.append("concat(lastname, ' ', firstname)");
+				else sb.append("case when concat(lastname, ' ', firstname) like '").append(filteredName).append("%' then concat(lastname, ' ', firstname) else concat('{0} ', concat(lastname, ' ', firstname)) end");
+			}
+			else if ("nickName".equals(sortField)) sb.append("nickName");
+			else if ("perContacts".equals(sortField)) sb.append("concat(case when perContacts is null then '' else perContacts end, ' ', case when corContacts is null then '' else perContacts end)");
+			else if ("fullPhoneNo".equals(sortField)) sb.append("fullPhoneNo");
+			else if ("gstRegNo".equals(sortField)) sb.append("gstRegNo");
+			else if ("classes".equals(sortField)) sb.append("classes");
+			else if ("pcTypeDesc".equals(sortField)) sb.append("pc_type_desc");
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setFirstResult((Integer) params.get("first"));
+		query.setMaxResults((Integer) params.get("pageSize"));
+		List<Object> objList = query.list();
+		List<CustomerVO> list = new ArrayList<CustomerVO>();
+		
+		if (CollectionUtils.isNotEmpty(objList)) {
+			for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+				Object[] row = (Object[]) it.next();
+				CustomerVO vo = new CustomerVO();
+				vo.setId(((BigInteger) row[0]).longValue());
+				if (row[1] != null) vo.setPersonId(((BigInteger) row[1]).longValue());
+				vo.setSalutationCd((String) row[2]);
+				vo.setFirstName((String) row[3]);
+				vo.setLastName((String) row[4]);
+				vo.setCustName(vo.getLastName() + " " + vo.getFirstName());
+				vo.setEmail((String) row[5]);
+				vo.setCorporate((String) row[6]);
+				if (row[7] != null) vo.setPersCorpId(((BigInteger) row[7]).longValue());
+				vo.setPcTypeCd((String) row[8]);
+				vo.setPcTypeDesc((String) row[9]);
+				vo.setPerContacts((String) row[10]);
+				vo.setCorContacts((String) row[11]);
+				if (vo.getPerContacts() == null && vo.getCorContacts() != null) vo.setPerContacts(vo.getCorContacts());
+				else if (vo.getPerContacts() != null && vo.getCorContacts() != null) vo.setPerContacts(vo.getPerContacts() + "," + vo.getCorContacts());
+				vo.setIdentities((String) row[12]);
+				vo.setCorporateName((String) row[13]);
+				vo.setCode((String) row[14]);
+				vo.setNickName((String) row[15]);
+				vo.setGstRegNo((String) row[16]);
+				vo.setStatusCode((String) row[17]);
+				if (row[18] != null) vo.setIsLock((Boolean) row[18]);
+				vo.setEmailList((String) row[19]);
+				vo.setEmailUpdStatus((String) row[20]);
+				vo.setEmailUpdRemarks((String) row[21]);
+				vo.setCountryCode((String) row[22]);
+				vo.setFullPhoneNo((String) row[23]);
+				if (params.get("classes") != null && ((boolean) params.get("classes")) == true) {
+					vo.setClasses((String) row[24]);
+				}
+				
+				list.add(vo);
+			}
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getTourHistList(com.bcs.zsg.sales.vo.CustomerVO, java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CustTourHistVO> getTourHistList(CustomerVO vo, Long companyId, Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("SELECT i.id,i.id_tour_dep,i.code,i.attn_to,td.code as tourCode, i.dt_departure as typeDep,u.user_name as user,").
+			append("GROUP_CONCAT(concat_ws(' ',(case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end),p.last_name,p.first_name) separator ',') as passengerList ,").
+			append("tp.type_cd as typeCode, i.doc_type_cd, i.doc_type_status, i.ps_no ").
+			append("from invoice i ").
+			append("left join invoice_pax ip on ip.id_inv=i.id ").
+			append("left join customer c on c.id=ip.id_cust ").
+			append("left join person p on p.id=c.id_pc ").
+			append("left join tour_dep td on td.id=i.id_tour_dep ").
+			append("left join tour_pkg tp on tp.id=td.id_tour_pkg ").
+			append("left join employee e on e.id=i.id_saler ").
+			append("left join sec_user u on u.uuid=e.u_sec_user ").
+//			append("where i.id_customer='"+vo.getId()+"' and i.doc_type_cd='i' and i.id_company="+companyId+ " ");
+			append("where i.id_customer='"+vo.getId()+"' and i.doc_type_cd IN ('I','P') and i.id_company="+companyId+ " ");
+			if (params.get("notViewableCatCode") != null) sb.append("and i.cat_cd not in :notViewableCatCode ");
+			sb.append("group by i.id ").
+			append("union ").
+			append("(SELECT ").
+			append("i.id,i.id_tour_dep,i.code,i.attn_to,td.code as tourCode,td.dt_dep as typeDep,u.user_name as user,").
+			append("GROUP_CONCAT(concat_ws(' ',(case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end),p.last_name,p.first_name) separator ',') as passengerList ,").
+			append("tp.type_cd as typeCode, i.doc_type_cd, i.doc_type_status, i.ps_no ").
+			append("from invoice i ").
+			append("left join invoice_pax ip on ip.id_inv=i.id ").
+			append("left join customer c on c.id=ip.id_cust ").
+			append("left join person p on p.id=c.id_pc ").
+			append("left join tour_dep td on td.id=i.id_tour_dep ").
+			append("left join tour_pkg tp on tp.id=td.id_tour_pkg ").
+			append("left join employee e on e.id=i.id_saler ").
+			append("left join sec_user u on u.uuid=e.u_sec_user ").
+			append("where i.id in (select id_inv from invoice_pax where id_cust='"+vo.getId()+"' and status_cd='A') and i.id_customer!='"+vo.getId()+"' and i.doc_type_cd IN ('I','P') and i.id_company="+companyId+" ");
+//			append("where i.id in (select id_inv from invoice_pax where id_cust='"+vo.getId()+"' and status_cd='A') and i.id_customer!='"+vo.getId()+"' and i.doc_type_cd='i' and i.id_company="+companyId+" ");
+			if (params.get("notViewableCatCode") != null) sb.append("and i.cat_cd not in :notViewableCatCode ");
+			sb.append("group by i.id )");
+		
+		Query query = createSQLQuery(sb.toString());	
+		if (params.get("notViewableCatCode") != null) query.setParameterList("notViewableCatCode", (List<String>) params.get("notViewableCatCode"));
+		List<Object> objList = query.list();
+		List<CustTourHistVO> list = new ArrayList<CustTourHistVO>();
+		
+		if (CollectionUtils.isNotEmpty(objList)) {
+			for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+				Object[] row = (Object[]) it.next();
+				CustTourHistVO custTourVO = new CustTourHistVO();
+				custTourVO.setIdInv(((BigInteger) row[0]).longValue());
+				custTourVO.setIdTourDep(((BigInteger) row[1]).longValue());
+				custTourVO.setCode((String) row[2]); 
+				custTourVO.setAttnTo((String) row[3]);
+				custTourVO.setTourCode((String) row[4]);
+				custTourVO.setDtDep(((Date) row[5]));
+				custTourVO.setSalesPerson((String) row[6]);
+				custTourVO.setPassengers((String) row[7]);
+				custTourVO.setTourPkgtypeCd((String) row[8]);
+				
+				custTourVO.setInvVO(new InvoiceVO());
+				custTourVO.getInvVO().setDocTypeCd((String) row[9]);
+				custTourVO.getInvVO().setDocTypeStatus((String) row[10]);
+				custTourVO.getInvVO().setPsNo((String) row[11]);
+				
+				list.add(custTourVO);
+			}
+		}
+		return list;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#deletePersonLang(java.lang.Long)
+	 */
+	@Override
+	public void deletePersonSubInfo(String table, Long personId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("DELETE FROM ").append(table).append(" WHERE id_person = :personId");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("personId", personId);
+		query.executeUpdate();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#deleteCorporateLang(java.lang.Long)
+	 */
+	@Override
+	public void deleteCorporateSubInfo(String table, Long corpId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("DELETE FROM ").append(table).append(" WHERE id_corporate = :corpId");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("corpId", corpId);
+		query.executeUpdate();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#terminatePersonSubInfo(java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public void terminatePersonSubInfo(String table, Long personId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		if ("customer_remarks".equals(table)) sb.append("UPDATE ").append(table).append(" SET status_cd = :statusCode WHERE id_cust = :personId");
+		else sb.append("UPDATE ").append(table).append(" SET status_cd = :statusCode WHERE id_person = :personId");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setString("statusCode", BaseConstant.STATUS_DELETED);
+		query.setLong("personId", personId);
+		query.executeUpdate();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#terminateCorporateSubInfo(java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public void terminateCorporateSubInfo(String table, Long corId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE ").append(table).append(" SET status_cd = :statusCode WHERE id_corporate = :corId");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setString("statusCode", BaseConstant.STATUS_DELETED);
+		query.setLong("corId", corId);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void terminateInvoicePaxSubInfo(String table, Long invPaxId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE ").append(table).append(" SET status_cd = :statusCode WHERE id_inv_pax = :invPaxId");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setString("statusCode", BaseConstant.STATUS_DELETED);
+		query.setLong("invPaxId", invPaxId);
+		query.executeUpdate();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getIdentityDetail(java.lang.Long)
+	 */
+	@Override
+	public IdentityDetailVO getIdentityDetail(Long idIdentity) throws BusinessException {
+		Criteria criteria = createCriteria(IdentityDetailVO.class);
+		criteria.add(Restrictions.eq("personIdentityId", idIdentity));
+		return (IdentityDetailVO) criteria.uniqueResult();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#isCustomerExisted(com.bcs.zsg.sales.vo.CustDetailsVO, java.lang.Long, java.lang.Boolean)
+	 */
+	@Override
+	public int isCustomerExisted(CustDetailsVO custDetailsVO, Long idCompany, Boolean filterAsIndividual) throws BusinessException {
+		int existedLevel = 0;
+		
+		if (CollectionUtils.isNotEmpty(custDetailsVO.getIdentityList())) {
+			// check identity
+			for (IdentityVO vo : custDetailsVO.getIdentityList()) {
+				if (isIdentityExisted(vo, idCompany)) {
+					existedLevel = 2;
+					break;
+				}
+			}
+			//if (idExisted) return existedLevel;
+		
+		} else if (null != custDetailsVO.getNricIdVO() && StringUtils.isNotBlank(custDetailsVO.getNricIdVO().getIdNo())) {
+			// check identity - NRIC
+			IdentityVO idVO = custDetailsVO.getNricIdVO();
+			if (isIdentityExisted(idVO, idCompany)) {
+				existedLevel = 2;
+			}
+		} else if (null != custDetailsVO.getPassportIdVO()&& StringUtils.isNotBlank(custDetailsVO.getPassportIdVO().getIdNo())) {
+			// check identity - Passport No
+			IdentityVO idVO = custDetailsVO.getPassportIdVO();
+			if (isIdentityExisted(idVO, idCompany)) {
+				existedLevel = 2;
+			}
+			
+		}  else {
+			String sql = "SELECT p.id from customer c, person p WHERE p.last_name = :lastName AND p.first_name = :firstName AND p.id = c.id_pc AND c.status_cd = :statusCode AND c.id_company = :idCompany";
+			
+//			System.out.println("CYY custDetailsVO.getPersonId(): " + custDetailsVO.getPersonId());
+//			System.out.println("CYY custDetailsVO.getCustId(): " + custDetailsVO.getCustId());
+			
+			// skip self record when check from invoice pax
+			if (custDetailsVO.getPersonId() != null) {
+				sql += " and p.id != " + custDetailsVO.getPersonId() + " ";
+			}
+			
+			if (filterAsIndividual != null && filterAsIndividual == true) {
+				sql += " and c.pc_type_cd = 'P'";
+			}
+			
+//			System.out.println(sql);
+			
+			// check customer name
+			Query query = createSQLQuery(sql);
+			query.setString("lastName", custDetailsVO.getLastName().trim());
+			query.setString("firstName", custDetailsVO.getFirstName().trim());
+			query.setString("statusCode", CommonConstant.STATUS_CD_ACTIVE);
+			query.setLong("idCompany", idCompany);
+			query.setMaxResults(1);
+			if (null != query.uniqueResult()) existedLevel = 1;
+		}
+		return existedLevel;
+	}
+	
+	public boolean isEmailExisted(CustDetailsVO custDetailsVO, Long idCompany) throws BusinessException {
+		if (custDetailsVO.getEmailList() != null && !custDetailsVO.getEmailList().isEmpty()) {
+
+		    for (PersonEmailVO emailVO : custDetailsVO.getEmailList()) {
+		        if (isEmailExisted(emailVO.getEmail(), idCompany, emailVO.getIdPerson())) {
+		            
+		            return true;
+		        }
+		    }
+		}
+	    return false;
+	}
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.CustomerDAO#getPersonById(java.lang.Long)
+	 */
+	@Override
+	public PersonVO getPersonById(Long personId) throws BusinessException {
+		Criteria criteria = createCriteria(PersonVO.class);
+		criteria.add(Restrictions.eq("id", personId));
+		return (PersonVO) criteria.uniqueResult();
+	}
+
+	@Override
+	public List<CustomerVO> getCustomerList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		List<CustomerVO> list = new ArrayList<CustomerVO>();
+		
+		try {
+			sb.append("SELECT ").
+				append("c.id AS 'custId', ").
+				append("p.salutation_cd AS salutation_cd, ").
+				append("Ifnull(p.first_name, '') AS firstname, ").
+				append("Ifnull(p.last_name, '') AS lastname, ").
+				append("cty.name AS nationality, ").
+				append("p.email AS email, ").
+				append("p.sex_cd,").
+	            append("c.pc_type_cd, ").
+	            append("o.name AS 'corname', ").
+	            append("o.reg_no, ").
+	            append("o.gst_reg_no, ").
+	            append("c.code AS 'customerno', ").
+	            append("p.dt_birth, ").
+	            append("p.nick_name, ").
+	            append("IFNULL(DATE_FORMAT(FROM_DAYS(DATEDIFF(now(),p.dt_birth)), '%Y')+0, '') AS age, ").
+	            append("Concat_ws(', ', (SELECT GROUP_CONCAT(li.description separator ', ') ").
+	            	append("FROM   person_lang pl LEFT JOIN lookup_item li ON pl.lang_cd = li.code AND li.lookup_cat_cd = 'lang_dilc' ").
+	            	append("WHERE  pl.id_person = p.id) ").
+	            append(") AS 'Language', ").
+	            append("Concat_ws(', ', (SELECT GROUP_CONCAT(li.description separator ', ') ").
+	            	append("FROM   person_class pc LEFT JOIN lookup_item li ON pc.class_cd = li.code AND li.lookup_cat_cd = 'cust_class' ").
+	            	append("WHERE  pc.id_person = p.id) ").
+	            append(") AS 'Class', ").
+	            append("Concat_ws(', ', (SELECT GROUP_CONCAT(li.description separator ', ') ").
+	            	append("FROM   person_meal pm LEFT JOIN lookup_item li ON pm.meal_cd = li.code AND li.lookup_cat_cd = 'meal_pref' ").
+	            	append("WHERE  pm.id_person = p.id) ").
+	            append(") AS 'Meal',").
+	            append("Concat_ws(', ', (SELECT GROUP_CONCAT(li.description separator ', ') ").
+	            	append("FROM   person_complication pc LEFT JOIN lookup_item li ON pc.complication_cd = li.code AND li.lookup_cat_cd = 'cust_cmpl' ").
+	            	append("WHERE  pc.id_person = p.id) ").
+	            append(") AS 'Complication', ").
+	            append("(SELECT CONCAT_WS(' ', ").
+	            	append("if(company_name = '', null, company_name), if(addr_1 = '', null, addr_1), if(addr_2 = '', null, addr_2), if(addr_3 = '', null, addr_3), ").
+	            	append("if(city = '', null, city), if(state = '', null, state), if(postcode = '', null, postcode), ").
+	            	append("if(c.name = '', null, c.name)) FROM person_address pa left join country c on c.id = pa.id_country WHERE c.pc_type_cd = 'P' and id_person = p.id AND pa.type_cd = 'bill') AS 'perAddress', ").
+	            append("(SELECT CONCAT_WS(' ', ").
+	            	append("if(company_name = '', null, company_name), if(addr_1 = '', null, addr_1), if(addr_2 = '', null, addr_2), if(addr_3 = '', null, addr_3), ").
+	            	append("if(city = '', null, city), if(state = '', null, state), if(postcode = '', null, postcode), ").
+	            	append("if(c.name = '', null, c.name)) FROM person_address pa left join country c on c.id = pa.id_country WHERE c.pc_type_cd = 'P' and id_person = p.id AND pa.type_cd = 'mail') AS 'perAddress2', ").
+	            append("(SELECT CONCAT_WS(' ', ").
+					append("if(addr_1 = '', null, addr_1), if(addr_2 = '', null, addr_2), if(addr_3 = '', null, addr_3), ").
+					append("if(city = '', null, city), if(state = '', null, state), if(postcode = '', null, postcode), ").
+					append("if(c.name = '', null, c.name)) FROM corporate_address pa left join country c on c.id = pa.id_country WHERE c.pc_type_cd = 'C' and id_corporate = o.id AND pa.type_cd = 'bill') AS 'corAddress', ").
+				append("(SELECT CONCAT_WS(' ', ").
+				append("if(addr_1 = '', null, addr_1), if(addr_2 = '', null, addr_2), if(addr_3 = '', null, addr_3), ").
+				append("if(city = '', null, city), if(state = '', null, state), if(postcode = '', null, postcode), ").
+				append("if(c.name = '', null, c.name)) FROM corporate_address pa left join country c on c.id = pa.id_country WHERE c.pc_type_cd = 'C' and id_corporate = o.id AND pa.type_cd = 'mail') AS 'corAddress2', ").
+				append("(SELECT GROUP_CONCAT(CONCAT(type_cd, ': ', number) separator ', ') FROM person_contact WHERE id_person = p.id AND status_cd = 'A') AS 'perContacts', ").
+				append("(SELECT GROUP_CONCAT(CONCAT(type_cd, ': ', number) separator ', ') FROM corporate_contact WHERE id_corporate = o.id AND status_cd = 'A') AS 'corContacts', ").
+				append("(SELECT GROUP_CONCAT(cr.remarks separator '\n') FROM customer_remarks cr WHERE c.id = cr.id_cust AND cr.status_cd = 'A') as remarks, ").
+				append("if(c.pc_type_cd = 'C', o.tax_id_no, p.tax_id_no) AS 'tax_id_no' ").
+			append("FROM customer c ").
+				append("LEFT JOIN person p ON c.id_pc = p.id ").
+				append("LEFT JOIN corporate o on (c.pc_type_cd = 'C' AND c.id_corporate = o.id) ").
+				append("LEFT JOIN country cty on cty.id = p.id_country ").
+			append("WHERE c.id_company = :idCompany ").
+			append("AND c.status_cd = :statusCd ");
+			
+			if (searchParamVO.getObj7() != null && StringUtils.isNotEmpty(searchParamVO.getObj7().toString())) {
+				sb.append("AND c.id in (").append(searchParamVO.getObj7().toString()).append(") ");
+			}
+			if (searchParamVO.getObj2() != null && StringUtils.isNotEmpty(searchParamVO.getObj2().toString())) {
+				sb.append("AND c.pc_type_cd = '").append(searchParamVO.getObj2().toString()).append("' ");
+			}
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			if (searchParamVO.getFromDate() != null) sb.append("AND DATE(c.dt_created) >= DATE('" + sdf.format((Date)searchParamVO.getFromDate()) + "') ");
+			if (searchParamVO.getToDate() != null) sb.append("AND DATE(c.dt_created) <= DATE('" + sdf.format((Date)searchParamVO.getToDate()) + "') ");
+			sb.append("ORDER BY cast(c.code AS decimal) ASC ");
+			
+//			System.out.println("##############sql: " + sb.toString());
+			Query query = createSQLQuery(sb.toString());
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("statusCd", CommonConstant.STATUS_CD_ACTIVE);
+			List<Object> objList = query.list();
+			
+			if (CollectionUtils.isNotEmpty(objList)) {
+				for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+					Object[] row = (Object[]) it.next();
+					CustomerVO vo = new CustomerVO();
+					vo.setId(((BigInteger) row[0]).longValue()); 
+					vo.setSalutationCd((String) row[1]);
+					vo.setFirstName((String) row[2]);
+					vo.setLastName((String) row[3]);
+					vo.setCustName(vo.getSalutationCd().toUpperCase() + " " + vo.getLastName() + " " + vo.getFirstName());
+					vo.setNationality((String) row[4]);
+					vo.setEmail((String) row[5]);
+					vo.setSexCd((String) row[6]);
+					vo.setPcTypeCd((String) row[7]);
+					vo.setCorporate((String) row[8]);
+					vo.setRegNo((String) row[9]);
+					vo.setGstRegNo((String) row[10]);
+					vo.setCode((String) row[11]);
+					vo.setDtDOB((Date) row[12]);
+					vo.setNickName((String) row[13]);
+					vo.setAge((String) row[14]);
+					vo.setLanguageName((String) row[15]);
+					vo.setClassName((String) row[16]);
+					vo.setMealName((String) row[17]);
+					vo.setComplicationName((String) row[18]);
+					if (searchParamVO.getObj2() != null && StringUtils.isNotEmpty(searchParamVO.getObj2().toString()) &&
+						"P".equals(searchParamVO.getObj2().toString())) {
+						vo.setPerAddress((String) row[19]);
+						vo.setPerAddress2((String) row[20]);
+						vo.setPerContacts((String) row[23]);
+						if (vo.getPerContacts() != null) {
+							vo.setPerContacts(vo.getPerContacts().replace("mobile", LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "mobile"))
+									.replace("office",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "office"))
+									.replace("home",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "home"))
+									.replace("fax",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "fax")));
+						}
+					} else {
+						vo.setPerAddress((String) row[21]);
+						vo.setPerAddress2((String) row[22]);
+						vo.setPerContacts((String) row[24]);
+						if (vo.getPerContacts() != null) {
+							vo.setPerContacts(vo.getPerContacts().replace("mobile", LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "mobile"))
+									.replace("office",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "office"))
+									.replace("home",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "home"))
+									.replace("fax",  LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, "fax")));
+						}
+					}
+					vo.setRemarks((String) row[25]);
+					vo.setTaxIdNo((String) row[26]);
+					list.add(vo);
+				}
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+		
+		return list;
+	}
+	
+	@Override
+	public void unlockCustomer(Long idCust, boolean isLock) throws BusinessException {
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE CustomerVO SET isLock = :isLock WHERE id = :idCust");
+		
+		Query query = createQuery(sb.toString());
+		query.setBoolean("isLock", isLock);
+		query.setLong("idCust", idCust);
+		query.executeUpdate();
+	}
+
+	@Override
+	public CountryVO getCountryById(Long countryId) throws BusinessException {
+		Criteria criteria = createCriteria(CountryVO.class);
+		criteria.add(Restrictions.eq("id", countryId));
+		return (CountryVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public void insertCustomerHistory(Long idCust, String actionCd, String reason) throws BusinessException {
+		Query query = createSQLQuery("CALL prc_customer(:p_id, :p_action, :p_reason, @r_status_code)");
+		query.setParameter("p_id", idCust);
+		query.setParameter("p_action", actionCd);
+		query.setParameter("p_reason", reason);
+		query.executeUpdate();
+		
+		// Get the output parameter
+		BigInteger returnStatusCode = (BigInteger) createSQLQuery("SELECT @r_status_code").uniqueResult();
+        System.out.println("###################return status: " + returnStatusCode);
+	}
+	
+	@Override
+	public void updateCrmId(Long customerId, String crmId) throws BusinessException {
+	    Session session = getSessionFactory().openSession();
+	    try {
+	    	CustomerVO customerVO =
+	    	        (CustomerVO) getSessionFactory()
+	    	            .getCurrentSession()
+	    	            .get(CustomerVO.class, customerId);
+	    	customerVO.setCrmId(crmId);
+	    } catch (Exception e) {
+	        if (session.getTransaction() != null) {
+	            session.getTransaction().rollback();
+	        }
+	        throw e;
+	    } finally {
+	        session.close();
+	    }
+	}
+}

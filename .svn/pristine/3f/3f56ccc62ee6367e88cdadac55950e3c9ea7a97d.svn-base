@@ -1,0 +1,212 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varIDDialog.show();
+		} else {
+			varIDDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid id="idIdentityDetail">
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idIDType">ID Type <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+		<h:selectOneMenu id="idIDType" label="ID Type" value="#{custBean.identityVO.idType}" required="true"  disabled="#{not custBean.identityAdd}">  
+            <f:selectItem itemLabel="Select One" itemValue=""/>
+            <f:selectItems value="#{bterp:lookupItemList('id_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+            <p:ajax event="change" update="idIdentityDetail"/>
+        </h:selectOneMenu>
+        </p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'nric'}">
+        <p:column>
+			<h:outputLabel for="idID">ID Number <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<!-- <p:inputText id="idID" label="ID No" value="#{custBean.identityVO.idNo}" required="true"/> -->
+			<p:inputMask id="idID" label="ID No"  value="#{custBean.identityVO.idNo}" required="true" mask="999999-99-9999"/>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'pss_prt'}">
+        <p:column>
+			<h:outputLabel for="idPassportNo">Passport No <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idPassportNo" label="Passport No" value="#{custBean.identityVO.idNo}" required="true" maxlength="20" onkeypress="return rtnAlphaNumeric(event);"/>
+		</p:column>
+		<!-- <p:column>
+			<h:outputLabel for="idDateIssue">Date of Issue</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:calendar id="idDateIssue" label="Date of Issue" value="#{custBean.identityVO.identityDetailVO.dtIssued}" navigator="true" showButtonPanel="true" yearRange="#{config['date.passport.expiry']}" pattern="dd-MMM-yyyy"/>
+		</p:column> -->
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'pss_prt'}">
+        <p:column>
+	  		<h:outputLabel for="idDateExpiry">Date of Expiry <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:calendar id="idDateExpiry" label="Date of Expiry" value="#{custBean.identityVO.identityDetailVO.dtExpired}" required="true" navigator="true" showButtonPanel="true" yearRange="#{config['date.passport.expiry']}" pattern="dd-MMM-yyyy"/>
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idPlaceIssue">Nationality</h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idPlaceIssue" label="Nationality" value="#{custBean.identityVO.identityDetailVO.idCountry}">  
+				<f:selectItem itemLabel="Select One" itemValue="" />  
+				<f:selectItems value="#{custBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}" />  
+            </h:selectOneMenu>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'pss_prt'}">
+		<p:column>
+			<h:outputLabel>Scanned Copy</h:outputLabel>
+		</p:column>
+        <p:column colspan="3">
+			<p:panelGrid id="idPassportScannedCopy" style="border:0">
+				<p:row rendered="#{empty custBean.uploadedFile}">
+					<p:column>
+						<p:fileUpload id="idScannedCopy" fileUploadListener="#{custBean.handleFileUpload}" mode="advanced" auto="true" sizeLimit="10000000" allowTypes="/(\.|\/)(pdf|jpg|jpeg|png)$/" description="*.pdf;*.jpg;*.jpeg" update="msg,:idIDForm:idPassportScannedCopy" oncomplete="varStatusDialog.hide()"/>
+					</p:column>
+				</p:row>
+				<p:row rendered="#{not empty custBean.uploadedFile}">
+					<p:column style="width:15px;"><p:commandLink styleClass="ui-icon ui-icon-close" onclick="varDelScannedCopyDialog.show()"/></p:column>
+					<p:column>
+						<h:outputText value="#{custBean.identityVO.identityDetailVO.scannedPath}" rendered="#{empty custBean.identityVO.identityDetailVO.id}"/>
+						<h:outputLink target="_blank" value="#{request.contextPath}#{custBean.destinationPassportPath}/#{custBean.identityVO.identityDetailVO.filePath}" rendered="#{not empty custBean.identityVO.identityDetailVO.id}">
+							<h:outputText value="#{custBean.identityVO.identityDetailVO.scannedPath}"/>
+						</h:outputLink>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'visa'}">
+        <p:column>
+			<h:outputLabel for="idVisaNo">Visa No</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idVisaNo" label="Visa No" value="#{custBean.identityVO.idNo}" maxlength="20" onkeypress="return rtnAlphaNumeric(event);"/>
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idVisaType">Visa Type</h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idVisaType" label="Visa Type" value="#{custBean.identityVO.identityDetailVO.typeCd}">  
+				<f:selectItem itemLabel="Select One" itemValue="" />
+				<f:selectItem itemLabel="Business" itemValue="B" />
+				<f:selectItem itemLabel="Social" itemValue="S" />
+            </h:selectOneMenu>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'visa'}">
+		<p:column>
+			<h:outputLabel for="idVisaEntry">Visa Entry</h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idVisaEntry" label="Visa Entry " value="#{custBean.identityVO.identityDetailVO.entryCd}">  
+				<f:selectItem itemLabel="Select One" itemValue="" />
+				<f:selectItem itemLabel="Single" itemValue="S" />
+				<f:selectItem itemLabel="Multiple" itemValue="M" />
+            </h:selectOneMenu>
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idVisaDateIssue">Date of Issue</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:calendar id="idVisaDateIssue" label="Date of Issue" value="#{custBean.identityVO.identityDetailVO.dtIssued}" navigator="true" showButtonPanel="true" yearRange="#{config['date.passport.expiry']}" pattern="dd-MMM-yyyy"/>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'visa'}">
+        <p:column>
+			<h:outputLabel for="idVisaDateExpiry">Date of Expiry</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:calendar id="idVisaDateExpiry" label="Date of Expiry" value="#{custBean.identityVO.identityDetailVO.dtExpired}" navigator="true" showButtonPanel="true" yearRange="#{config['date.passport.expiry']}" pattern="dd-MMM-yyyy"/>
+		</p:column>
+		<p:column>
+			<h:outputLabel for="idVisaPlaceIssue">Nationality <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idVisaPlaceIssue" label="Nationality" value="#{custBean.identityVO.identityDetailVO.idCountry}" required="true">  
+				<f:selectItem itemLabel="Select One" itemValue="" />  
+				<f:selectItems value="#{custBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}" />  
+            </h:selectOneMenu>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'visa'}">
+        <p:column>
+			<h:outputLabel>Scanned Copy</h:outputLabel>
+		</p:column>
+		<p:column colspan="3">
+			<p:panelGrid id="idVisaScannedCopy" style="border:0">
+				<p:row rendered="#{empty custBean.uploadedFile}">
+					<p:column>
+						<p:fileUpload id="idVScannedCopy" fileUploadListener="#{custBean.handleFileUpload}" mode="advanced" auto="true" sizeLimit="10000000" allowTypes="/(\.|\/)(pdf|jpg|jpeg|png)$/" description="*.pdf;*.jpg;*.jpeg" update="msg,:idIDForm:idVisaScannedCopy" oncomplete="varStatusDialog.hide()"/>
+					</p:column>
+				</p:row>
+				<p:row rendered="#{not empty custBean.uploadedFile}">
+					<p:column style="width:15px;"><p:commandLink styleClass="ui-icon ui-icon-close" onclick="varDelScannedCopyDialog.show()"/></p:column>
+					<p:column>
+						<h:outputText value="#{custBean.identityVO.identityDetailVO.scannedPath}" rendered="#{empty custBean.identityVO.identityDetailVO.id}"/>
+						<h:outputLink target="_blank" value="#{request.contextPath}#{custBean.destinationVisaPath}/#{custBean.identityVO.identityDetailVO.filePath}" rendered="#{not empty custBean.identityVO.identityDetailVO.id}">
+							<h:outputText value="#{custBean.identityVO.identityDetailVO.scannedPath}"/>
+						</h:outputLink>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'onecard'}">
+        <p:column>
+			<h:outputLabel>One Card No.</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idOneCardNo" label="One Card No" value="#{custBean.identityVO.idNo}" maxlength="20" onkeypress="return rtnAlphaNumeric(event);"/>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.identityVO.idType == 'apple'}">
+        <p:column>
+			<h:outputLabel>Apple Membership</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAppleMember" label="Apple Membership" value="#{custBean.identityVO.idNo}" maxlength="20" onkeypress="return rtnAlphaNumeric(event);"/>
+		</p:column>
+	</p:row>
+	
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{custBean.addIdentity}" update="@form,:idEditCustForm:idIDListPanel,:idEditCustForm:idDOB,:idEditCustForm:idAge" rendered="#{custBean.identityAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{custBean.updateIdentity}" update="@form,:idEditCustForm:idIDListTable,:idEditCustForm:idDOB,:idEditCustForm:idAge" oncomplete="onValidation(xhr, status, args)" rendered="#{not custBean.identityAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{custBean.resetIdentityForm}" update="@form" process="@this" oncomplete="varIDDialog.hide()" global="false">
+		<pe:resetEditableValues for="idIDForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

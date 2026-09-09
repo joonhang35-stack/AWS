@@ -1,0 +1,210 @@
+package com.bcs.zsg.product.web.bean;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.faces.context.FacesContext;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.primefaces.event.SelectEvent;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.product.bo.ProductReportBO;
+import com.bcs.zsg.product.bo.TourPackageBO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.purchase.bo.BillPymtBO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.vo.InvoicePaxVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+import net.sf.jasperreports.engine.JasperPrint;
+
+public class ProductReportBean extends AppBackingBean {
+	
+	private static final long serialVersionUID = 1L;
+	
+	@Autowired
+	private transient TourPackageBO tourPkgBO;
+	@Autowired
+	private transient CorporateProfileBO corporateProfileBO;
+	@Autowired
+	private transient ProductReportBO productReportBO;
+	@Autowired
+	protected transient BillPymtBO billPymtBO;
+	@Autowired
+	protected transient InvoiceBO invoiceBO;
+	
+	private List<TourDepartureVO> tourDepVOList;
+	
+	private TourDepartureVO tourDepVO;
+	
+	private String reportType;
+
+	@Override
+	public void resetForm() {
+		tourDepVO = new TourDepartureVO();
+	}
+	
+	public void init() {
+		resetForm();
+	}
+	
+	/*
+	 * Load tour list
+	 */
+	public void loadTour() throws BusinessException{
+		tourDepVOList = tourPkgBO.getTourDepListV2();
+	}
+	
+	public void handleTourCodeSelect(SelectEvent event){
+		tourDepVO = (TourDepartureVO) event.getObject();
+	}
+	
+	public void printReport(String xlsOrPDf) {	
+		TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+		trackingLogUtils.startLogs();
+		try {
+			
+			List<InvoiceVO> tourProfitLossReport = new ArrayList<>();
+			
+			tourProfitLossReport = productReportBO.getTourProfitLossReport(tourDepVO.getId());
+			
+			if (CollectionUtils.isEmpty(tourProfitLossReport)) throw new BusinessException("ERR_NO_RESULT");
+			
+			TourDepartureVO tempTourDepVO = productReportBO.getTourDepVOWithRoomingInfoForReport(tourDepVO.getId());
+			
+			Map<String, Object> map = new HashMap<String, Object>();
+			CompanyVO companyVO = new CompanyVO();
+			companyVO = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			
+			map.put("companyName", companyVO.getName());
+			map.put("slogan", companyVO.getSlogan());
+			map.put("dtPrint", new Date());
+			if (StringUtils.equals(reportType, "PLS")) {
+				map.put("title", "Tour Profit & Loss (Summary)");
+			} else if (StringUtils.equals(reportType, "PLD")) {
+				map.put("title", "Tour Profit & Loss (Details)");
+			}
+			
+			if (tempTourDepVO == null) throw new BusinessException("ERR_NO_RESULT");
+			
+			if (tempTourDepVO != null) {
+				map.put("tourCode", tempTourDepVO.getCode());
+				map.put("dtDep", tempTourDepVO.getDtDep());
+				map.put("tourManager", tempTourDepVO.getTourManager());
+				map.put("tourLead", tempTourDepVO.getTourLead());
+				map.put("category", tempTourDepVO.getTourCategory());
+				map.put("countryTheme", tempTourDepVO.getTourTheme());
+				
+				SupplierVO supplierVO = null;
+				if (tempTourDepVO.getIdSupplier() != null) {
+					supplierVO = billPymtBO.getSupplier(tempTourDepVO.getIdSupplier(), getSessionInfoBean().getCompanyVO().getId());
+				}
+				map.put("landOperator", supplierVO != null ? supplierVO.getFullName() : "");
+				
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("idTourDep", tempTourDepVO.getId());
+				List<InvoicePaxVO> invoicePaxList = invoiceBO.getInvoicePaxListWithDepId(params);
+				params.put("inclInvCC", "Y");
+				List<InvoicePaxVO> invoiceCancelledPaxList = invoiceBO.getInvoicePaxListWithDepId(params);
+				
+				int seq = 0; // For show report "Passenger Name" numbering
+				for (InvoicePaxVO pax : invoicePaxList) {
+					seq++;
+			    	pax.setSeq(seq);
+				}
+				seq = 0;
+				for (InvoicePaxVO pax : invoiceCancelledPaxList) {
+					seq++;
+			    	pax.setSeq(seq);
+				}
+				
+				map.put("paxCount", invoicePaxList.size());
+				map.put("paxList", invoicePaxList);
+				map.put("cancelledPaxList", invoiceCancelledPaxList);
+				
+				double totalSales = 0.0;
+				double totalCost = 0.0;
+				for (InvoiceVO tourPnLVO : tourProfitLossReport) {
+					if (StringUtils.equals(tourPnLVO.getTypeCd(), "SALES")) {
+						totalSales = totalSales + tourPnLVO.getAmount();
+					} else {
+						totalCost = totalCost + tourPnLVO.getAmount();
+					}
+				}
+				
+				map.put("totalSales", totalSales);
+				map.put("totalCost", totalCost);
+				map.put("grossProfit", totalSales - totalCost);
+				map.put("gpMargin", totalSales > 0 ? ((totalSales - totalCost) / totalSales) : 0.0);
+				map.put("yieldPerPax", (totalSales - totalCost) / invoicePaxList.size());
+				
+				String jasperFileName = null;
+				String reportName = null;
+				
+				if (StringUtils.equals(reportType, "PLS")) {
+					jasperFileName = CommonConstant.JAS_RPT_TOUR_PNL_SUMMRY;
+					reportName = CommonConstant.PDF_RPT_TOUR_PNL_SUMMRY;
+				} else {
+					jasperFileName = CommonConstant.JAS_RPT_TOUR_PNL_DETAIL;
+					reportName = CommonConstant.PDF_RPT_TOUR_PNL_DETAIL;
+				}
+				
+				JasperPrint jasperPrint = ReportUtils.getJasperPrint(tourProfitLossReport, map, jasperFileName);
+				if (xlsOrPDf.equals("PDF")) {
+					ReportUtils.printReport(jasperPrint, reportName);
+				} else {
+					ReportUtils.printReportExcel(jasperPrint, reportName);
+				}
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("ProductReportBean.printReport");
+		}
+	}
+	
+	public void clearTourCode() {
+		tourDepVO = new TourDepartureVO();
+	}
+
+	public List<TourDepartureVO> getTourDepVOList() {
+		return tourDepVOList;
+	}
+
+	public void setTourDepVOList(List<TourDepartureVO> tourDepVOList) {
+		this.tourDepVOList = tourDepVOList;
+	}
+
+	public TourDepartureVO getTourDepVO() {
+		return tourDepVO;
+	}
+
+	public void setTourDepVO(TourDepartureVO tourDepVO) {
+		this.tourDepVO = tourDepVO;
+	}
+
+	public String getReportType() {
+		return reportType;
+	}
+
+	public void setReportType(String reportType) {
+		this.reportType = reportType;
+	}
+}

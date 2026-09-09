@@ -1,0 +1,238 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddBookingDialog.hide();
+		}
+	}
+	function onAddValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddBookingDialog.hide();
+		}
+	}
+	function handleComplete(tourDepId) {
+		var tableRows = $("#idAddInvoiceForm\\:idTourCabinListTable tbody tr"); // get all rows in cabin booking table
+		
+		var rows = [];
+		tableRows.each(function(index, row) {
+		    // Get the values of each cell in the current row
+		    var rowData = $(row).find("td").map(function() {
+		        return $(this).text();
+		    }).get();
+		    
+		    rows.push(rowData)
+		});
+		// console.log(rows);
+		
+		var params = "&amp;cabinPax=" + encodeURIComponent(JSON.stringify(rows)); // encode booking into string and pass to url
+		
+		window.open('#{request.contextPath}/app/emailtmp/cruisebookingemailtmp?tourDepId=' + tourDepId + params);
+	}
+	function onBookingTransferValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAvailableTourDepListDialog.show();
+		}
+	}
+</script>
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputText value="Tour Code"/></p:column>
+		<p:column><h:outputText value="#{cruiseBookingBean.tourDepVO.code}"></h:outputText></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputText value="Dep Date"/></p:column>
+		<p:column><h:outputText value="#{cruiseBookingBean.tourDepVO.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputText value="Tour Name"/></p:column>
+		<p:column><h:outputText value="#{cruiseBookingBean.tourPkgVO.numDays}D/#{cruiseBookingBean.tourPkgVO.numNights}N "/><h:outputText value="#{cruiseBookingBean.tourPkgVO.nameEn}"/> <h:outputText value=" [#{cruiseBookingBean.tourDepVO.desc}]"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputText value="Invoice No."/></p:column>
+		<p:column><h:outputText value="#{cruiseBookingBean.bookingVO.invoiceVO.code}" rendered="#{not empty cruiseBookingBean.bookingVO.invoiceVO}"/></p:column>
+	</p:row>
+</p:panelGrid>
+<p:panel>
+	<p:panelGrid>
+		<p:row>
+			<p:column style="width: 100px;"><h:outputLabel>Sales Person</h:outputLabel></p:column>
+			<p:column style="width: 140px;">
+				<p:inputText value="#{cruiseBookingBean.sessionInfoBean.userVO.name}" readonly="true" style="background:#ccc" rendered="#{cruiseBookingBean.bookBoolean.add and not cruiseBookingBean.salesPersonAuth}"/>
+				<p:inputText value="#{cruiseBookingBean.bookingVO.employeeViewVO.userVO.name}" readonly="true" style="background:#ccc" rendered="#{cruiseBookingBean.bookBoolean.upd and not cruiseBookingBean.salesPersonAuth}"/>
+				<h:selectOneMenu value="#{cruiseBookingBean.bookingVO.idEmployee}" rendered="#{(cruiseBookingBean.bookBoolean.add or cruiseBookingBean.bookBoolean.upd) and cruiseBookingBean.salesPersonAuth}">
+					<f:selectItems value="#{cruiseBookingBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+				</h:selectOneMenu>
+			</p:column>
+			<p:column style="width: 80px;">
+				<h:outputLabel for="idAddSurvey">Survey</h:outputLabel>
+			</p:column>
+			<p:column style="padding-top: 10px;padding-bottom: 0px;width: 300px;">
+				<p:selectCheckboxMenu id="idAddSurvey" label="Select" onHide="updateSurveyDesc();"
+					value="#{cruiseBookingBean.bookingVO.idSurveyList}" filter="true" filterMatchMode="contains">
+					<f:selectItems value="#{bterp:lookupItemList('survey_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+				</p:selectCheckboxMenu>
+				<p:remoteCommand name="updateSurveyDesc" update="idSurveyDesc" global="false"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel>Order Source</h:outputLabel></p:column>
+			<p:column>
+				<h:selectOneMenu id="idOrdrSrc" value="#{cruiseBookingBean.bookingVO.orderTypeCd}" effect="fade">
+					<f:selectItems value="#{bterp:lookupItemList('ordr_sorc')}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}"/>
+				</h:selectOneMenu>
+			</p:column>
+			<p:column colspan="2" style="width: 300px;">
+				<p:outputLabel id="idSurveyDesc" value="#{cruiseBookingBean.bookingVO.surveyDesc}" />
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idCustDetails">Customer <span class="required">*</span></h:outputLabel></p:column>
+			<p:column colspan="3">
+				<p:inputText size="35" id="idCustDetails" label="Customer" value="#{cruiseBookingBean.custDetailsVO.contPersonName}" required="true" readonly="true" style="background:#ccc; text-transform:uppercase;"/>&nbsp;
+				<p:commandButton icon="ui-icon-search" oncomplete="varCustListDialog.show()" update=":idCustListDialog"/>
+				<p:commandButton icon="ui-icon-plus" oncomplete="varAddCustDialog.show()" update=":idAddCustDialog"/>
+				<h:inputHidden id="idAttTo"/>
+				<h:inputHidden id="idTotalUPoint"/>
+				<h:inputHidden id="idTotalVoucher"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column colspan="4">
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:commandButton value="Add" actionListener="#{cruiseBookingBean.onAddCruiseCabin}" oncomplete="varAddCruiseCabinDialog.show()" update=":idAddCruiseCabinDialog" immediate="true"/>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<div style="height:250px;overflow:auto;">
+				<p:dataTable id="idTourCabinListTable" value="#{cruiseBookingBean.bookingVO.tourCruiseCabinList}" var="cabinVO" paginator="true" rows="5" 
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+					rowsPerPageTemplate="5">
+					<p:column headerText="Edit" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-pencil" actionListener="#{cruiseBookingBean.onCruiseCabinSelected(cabinVO)}" oncomplete="varAddCruiseCabinDialog.show()" update=":idAddCruiseCabinDialog" process="@this"/>
+					</p:column>
+					<p:column headerText="Delete" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-close" actionListener="#{cruiseBookingBean.deleteCruiseCabin(cabinVO)}" update=":idAddInvoiceForm:idTourCabinListTable,:idAddInvoiceForm:idTotalAmtGroup" process="@this"/>
+					</p:column>
+					<p:column headerText="Cabin Type">
+						<h:outputText value="#{cabinVO.cruiseCabinCd}"/>
+					</p:column>
+					<p:column headerText="Pax 1ST/2ND" style="text-align:center;">
+						<h:outputText value="#{cabinVO.paxTwn}"/>
+					</p:column>
+					<p:column headerText="Pax 3RD" style="text-align:center;">
+						<h:outputText value="#{cabinVO.pax3}"/>
+					</p:column>
+					<p:column headerText="Pax 4TH" style="text-align:center;">
+						<h:outputText value="#{cabinVO.pax4}"/>
+					</p:column>
+					<p:column headerText="Pax SGL" style="text-align:center;">
+						<h:outputText value="#{cabinVO.paxSgl}"/>
+					</p:column>
+					<p:column headerText="Child 3RD" style="text-align:center;">
+						<h:outputText value="#{cabinVO.pax3Chd}"/>
+					</p:column>
+					<p:column headerText="Child 4TH" style="text-align:center;">
+						<h:outputText value="#{cabinVO.pax4Chd}"/>
+					</p:column>
+					<p:column headerText="Pax INFT" style="text-align:center;">
+						<h:outputText value="#{cabinVO.paxInf}"/>
+					</p:column>
+					<p:column headerText="Total Cabin" style="text-align:center;">
+						<h:outputText value="#{cabinVO.ttlCabin}"/>
+					</p:column>
+				</p:dataTable>
+				</div>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column />
+			<p:column colspan="3">
+				<p:panelGrid id="idTotalAmtGroup">
+					<p:row>
+						<p:column style="text-align:right">
+							<h:outputLabel>
+							Total Amount:
+							</h:outputLabel>&nbsp;
+							<p:inputText id="idTotalAmount" value="#{cruiseBookingBean.bookingVO.totalAmount}"
+								label="Total Amount" required="true" readonly="true" 
+								style="background:#ccc; text-transform:uppercase;">
+								<f:convertNumber pattern="#,##0.00"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="text-align:right">
+							<h:outputLabel>
+							Discount Amount:
+							</h:outputLabel>&nbsp;
+							<p:inputText id="idDiscountAmount" value="#{cruiseBookingBean.bookingVO.discountAmount}"
+								label="Discount Amount" required="true" readonly="true" 
+								style="background:#ccc; text-transform:uppercase;">
+								<f:convertNumber pattern="#,##0.00"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="text-align:right">
+							<h:outputLabel>
+							Deposit Amount:
+							</h:outputLabel>&nbsp;
+							<p:inputText id="idDepositAmount" value="#{cruiseBookingBean.bookingVO.depositAmount}"
+								label="Deposit Amount" required="true" readonly="true" 
+								style="background:#ccc; text-transform:uppercase;">
+								<f:convertNumber pattern="#,##0.00"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="text-align:right">
+							<h:outputLabel>
+							Total Amount Payable:
+							</h:outputLabel>&nbsp;
+							<p:inputText id="idTotalAmountPayable" value="#{cruiseBookingBean.bookingVO.amountPayable}"
+								label="Total Amount Payable" required="true" readonly="true" 
+								style="background:#ccc; text-transform:uppercase;">
+								<f:convertNumber pattern="#,##0.00"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+</p:panel>
+<h:panelGrid columns="6" style="width:1px;white-space:nowrap;">
+	<p:commandButton value="Book" actionListener="#{cruiseBookingBean.addBooking}"
+		update="@form,:idTourDepListForm"
+		oncomplete="onAddValidation(xhr, status, args)" rendered="#{cruiseBookingBean.bookBoolean.add}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{cruiseBookingBean.updBooking}"
+		update="@form,:idTourDepListForm,:idBookingListForm,:idBookingListSearchForm"
+		oncomplete="onValidation(xhr, status, args)"
+		rendered="#{cruiseBookingBean.bookBoolean.upd and not cruiseBookingBean.fromBookingPage}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{cruiseBookingBean.updBooking2}"
+		update="@form,:idBookingListForm:idBookingList,:idAddInvoiceForm" oncomplete="onValidation(xhr, status, args)" 
+		rendered="#{(cruiseBookingBean.bookBoolean.upd and cruiseBookingBean.fromBookingPage) and (cruiseBookingBean.bookingVO.statusCode ne 'CC' and cruiseBookingBean.bookingVO.statusCode ne 'VD')}"/>	
+		
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBookingBean.resetBookingForm}" update="@form" process="@this" oncomplete="varAddBookingDialog.hide()" rendered="#{not cruiseBookingBean.fromBookingPage}">
+		<pe:resetEditableValues for="idAddInvoiceForm"/>
+	</p:commandButton>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" update="@form,:idAddInvoiceForm:idCustDetails" oncomplete="varAddBookingDialog.hide()" rendered="#{cruiseBookingBean.fromBookingPage}"/>
+	<p:commandButton value="Select Transfer" actionListener="#{cruiseBookingBean.handleSelectTransfer}" oncomplete="onBookingTransferValidation(xhr, status, args)" update=":idAvailableTourDepList:idTourDepList" process="@this" rendered="#{not empty cruiseBookingBean.bookingVO.id and not sessionInfoBean.employeeVO.department.contains('sale')}"/> 
+</h:panelGrid>
+
+</ui:composition>

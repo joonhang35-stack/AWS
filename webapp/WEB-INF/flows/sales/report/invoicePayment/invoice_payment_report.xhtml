@@ -1,0 +1,246 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+
+<script language="javascript" src="#{request.contextPath}/js/PFCustomExt.js"  />
+<script type="text/javascript">
+	//<![CDATA[
+	$(document).ready(function() {
+		//First time set to today's Month and Year
+   		$("#ui-datepicker-div .ui-datepicker-month :selected").val();
+   		$("#ui-datepicker-div .ui-datepicker-year :selected").val();
+		RefreshScreen();
+	});
+		
+    function RefreshScreen() {
+	    $('.date-picker-month-year').datepicker( {
+	        changeMonth: true,
+	        changeYear: true,
+	        showButtonPanel: true,
+	        dateFormat: 'M yy',
+			maxDate: new Date(), 
+			beforeShow: function(input) {
+				/* $(input).datepicker("widget").addClass('hide-calendar'); */
+		      	if ((selDate = $(this).val()).length > 0) {
+		      		year = selDate.substring(selDate.length - 4, selDate.length);
+		      		month = jQuery.inArray(selDate.substring(0, selDate.length - 5), $(this).datepicker('option', 'monthNamesShort'));
+	          		$(this).datepicker('option', 'defaultDate', new Date(year, month, 1));
+	          		$(this).datepicker('setDate', new Date(year, month, 1));
+				}
+		    },
+	        onClose: function(dateText, inst) { 
+	            var month = $("#ui-datepicker-div .ui-datepicker-month :selected").val();
+	            var year = $("#ui-datepicker-div .ui-datepicker-year :selected").val();
+	            
+	            $(this).datepicker('setDate', new Date(year, month, 1));
+	        }
+	    });
+	    
+    }
+    
+    function monitorExporting(start, complete) {
+    	if (start) {
+    		start();
+    	}
+
+    	window.pdfExportingMonitor = setInterval(function() {
+    		var exportingComplete = $.cookie('cookie.pdf.exporting');
+
+    		if (exportingComplete === 'true') {
+    			if (complete) {
+    				stop();
+    			}
+    			$.cookie('cookie.pdf.exporting', null);
+    			clearInterval(window.pdfExportingMonitor);
+    		}
+    	}, 500);
+    }
+
+    function start() {
+    	statusDialog.show();
+    }
+
+    function stop() {
+    	statusDialog.hide();
+    }
+	//]]>
+</script>
+<style>
+	.hide-calendar .ui-datepicker-calendar {
+	    display: none;
+	}
+	.ui-selectonemenu-item .ui-selectonemenu-list-item:hover {
+		
+	}
+</style>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Report Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the report is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+<p:panel header="Invoice/Payment Report" toggleable="true" toggleSpeed="500">
+	<h:form id="idForm">
+		<p:growl id="msg"/>
+		
+		<p:panelGrid id="idPanelFilter" style="width:550px;">
+			<p:row>
+				<p:column>
+					<p:outputLabel value="Date Range" />
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:300px">
+					<h:selectOneMenu id="idSelDateRange" label="Date Range" value="#{invoicePaymentReportBean.dateRange}" effect="fade" style="margin-right: 20px;">
+						<f:selectItem itemLabel = "Daily" itemValue= "D" />
+						<f:selectItem itemLabel = "Monthly" itemValue= "M" />
+						<f:selectItem itemLabel = "Quarterly" itemValue= "Q" />
+						<f:selectItem itemLabel = "Yearly" itemValue= "Y" />
+						<f:selectItem itemLabel = "Custom" itemValue= "C" />
+						<p:ajax event="change" listener="#{invoicePaymentReportBean.handleDateRangeChange}" update="idPanelFilter" oncomplete="RefreshScreen();" global="false"/>
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+					<!-- <p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{invoicePaymentReportBean.print('PDF')}" ajax="false" onclick="monitorExporting(start,stop)"/>&nbsp; -->
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{invoicePaymentReportBean.print('XLS')}" ajax="false" style="width:120px" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<p:outputLabel value="Invoice Date" />
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:110px;" rendered="#{invoicePaymentReportBean.dateRange eq 'Y'}">
+					<h:selectOneMenu id="idSelYear" value="#{invoicePaymentReportBean.year}" effect="fade" required="true">
+			            <f:selectItems value="#{invoicePaymentReportBean.yearList}" var="#{year}" itemLabel="#{year}" itemValue="#{year}"/>
+			            <p:ajax event="change" listener="#{invoicePaymentReportBean.handleYearChange}" update="idPanelFilter" global="false"/>
+			        </h:selectOneMenu>
+				</p:column>
+				<p:column style="width:110px;" rendered="#{invoicePaymentReportBean.dateRange eq 'Q'}">
+					<h:selectOneMenu id="idSelQuarter" value="#{invoicePaymentReportBean.quarter}" effect="fade" 
+			        	autoWidth="false" style="width:105px;">
+						<f:selectItem itemLabel = "First Quarter" itemValue= "1" />
+						<f:selectItem itemLabel = "Second Quarter" itemValue= "2" />
+						<f:selectItem itemLabel = "Third Quarter" itemValue= "3" />
+						<f:selectItem itemLabel = "Forth Quarter" itemValue= "4" />
+						<p:ajax event="change" listener="#{invoicePaymentReportBean.handleQuarterChange}" update="idPanelFilter" global="false"/>
+			        </h:selectOneMenu>
+				</p:column>
+				<p:column rendered="#{invoicePaymentReportBean.dateRange eq 'M'}">
+					<p:inputText id="idDtMonthYear" value="#{invoicePaymentReportBean.monthYear}" required="true"
+			    		styleClass="date-picker-month-year" style="width:88px;">
+						<f:convertDateTime pattern="MMM yyyy"/>
+					</p:inputText>
+				</p:column>
+				<p:column rendered="#{invoicePaymentReportBean.dateRange eq 'D'}">
+					<p:calendar id="idDtDaily" label="Date" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{invoicePaymentReportBean.dateFrom}" required="true" size="12"/>
+					<p:watermark for="idDtDaily" value="Date" />
+				</p:column>
+				<p:column style="width:110px;" rendered="#{invoicePaymentReportBean.dateRange ne 'D' and invoicePaymentReportBean.dateRange ne 'M'and invoicePaymentReportBean.dateRange ne 'C'}">
+					<p:inputText id="idDtFrom" value="#{invoicePaymentReportBean.dateFrom}" readonly="true" style="background:#ccc">
+						<f:convertDateTime pattern="dd-MMM-yyyy"/>
+					</p:inputText>
+				</p:column>
+				<p:column rendered="#{invoicePaymentReportBean.dateRange ne 'D' and invoicePaymentReportBean.dateRange ne 'M' and invoicePaymentReportBean.dateRange ne 'C'}">
+					<p:inputText id="idDtTo" value="#{invoicePaymentReportBean.dateTo}" readonly="true" style="background:#ccc">
+						<f:convertDateTime pattern="dd-MMM-yyyy"/>
+					</p:inputText>
+				</p:column>
+				<p:column style="width:110px;" rendered="#{invoicePaymentReportBean.dateRange eq 'C'}">
+					<p:calendar id="idDtFromCustom" pattern="dd-MMM-yyyy" value="#{invoicePaymentReportBean.dateFrom}" navigator="true" showButtonPanel="true" maxdate="#{invoicePaymentReportBean.dateTo}">
+						<p:ajax event="dateSelect" global="false" update=":idForm:idDtToCustom"/>
+					</p:calendar>
+					<p:watermark for="idDtFromCustom" value="Date To"/>
+				</p:column>
+				<p:column rendered="#{invoicePaymentReportBean.dateRange eq 'C'}">
+					<p:calendar id="idDtToCustom" pattern="dd-MMM-yyyy" value="#{invoicePaymentReportBean.dateTo}" navigator="true" showButtonPanel="true" mindate="#{invoicePaymentReportBean.dateFrom}">
+						<p:ajax event="dateSelect" global="false" update=":idForm:idDtFromCustom"/>
+					</p:calendar>
+					<p:watermark for="idDtToCustom" value="Date To"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Payment Date <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:110px;">
+					<p:calendar id="idPmntDateFrom" pattern="dd-MMM-yyyy" value="#{invoicePaymentReportBean.paymentDateFrom}" 
+						navigator="true" showButtonPanel="true" maxdate="#{invoicePaymentReportBean.paymentDateTo}">
+						<p:ajax event="dateSelect" global="false" update=":idForm:idPmntDateTo"/>
+					</p:calendar>
+					<p:watermark for="idPmntDateFrom" value="Payment Date To"/>
+				</p:column>
+				<p:column>
+					<p:calendar id="idPmntDateTo" pattern="dd-MMM-yyyy" value="#{invoicePaymentReportBean.paymentDateTo}" 
+						navigator="true" showButtonPanel="true" mindate="#{invoicePaymentReportBean.paymentDateFrom}">
+						<p:ajax event="dateSelect" global="false" update=":idForm:idPmntDateFrom"/>
+					</p:calendar>
+					<p:watermark for="idPmntDateTo" value="Payment Date To"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Sales Person <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+				 	<h:selectOneMenu id="idSalesPerson" label="Sales Person" value="#{invoicePaymentReportBean.salesPerson}" effect="fade" >
+						<f:selectItem itemLabel="All" itemValue=""/>
+						<f:selectItems value="#{invoicePaymentReportBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column style="width:160px;">
+					<p:outputLabel value="Region" />
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu id="idRegion" value="#{invoicePaymentReportBean.idRegionList}"
+						label="Region List" filter="true" filterMatchMode="startsWith">
+				        <f:selectItems value="#{invoicePaymentReportBean.tourCatViewVOList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.desc}"/>
+				    </p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<p:outputLabel value="Country" />
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu id="idCountry" value="#{invoicePaymentReportBean.idCountryList}"
+						label="Country List" filter="true" filterMatchMode="startsWith">
+				        <f:selectItems value="#{invoicePaymentReportBean.tourCountryVOList}" var="vo" itemValue="#{vo.idCountry}" itemLabel="#{vo.desc}"/>
+				    </p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	</h:form>
+</p:panel>
+	
+</ui:define>
+</ui:composition>

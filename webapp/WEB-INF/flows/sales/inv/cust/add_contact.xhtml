@@ -1,0 +1,101 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varContactDialog.show();
+		} else {
+			varContactDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+		<p:column>
+			<h:outputLabel>Contact Type <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idContactType" label="Contact Type" value="#{custBean.personContactVO.typeCd}" required="true" rendered="#{custBean.customerVO.pcTypeCd != 'C'}">  
+	            <f:selectItem itemLabel="Select One" itemValue=""/>
+				<f:selectItems value="#{bterp:lookupItemList('cntc_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu>
+        </p:column>
+        <p:column>
+			<h:outputLabel for="idNumber">Number <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAreaCode" label="Area Code" value="#{custBean.personContactVO.areaCode}" required="true" maxlength="5" size="5" onkeypress="return rtnPhoneNo(event);">
+				<p:watermark for="idAreaCode" value="Ext"/>
+				<f:validateLength maximum="5"/> 
+			</p:inputText>
+			<h:outputLabel> - </h:outputLabel>
+			<p:inputText id="idNumber" label="Number" value="#{custBean.personContactVO.pNumber}" required="true" maxlength="14" size="20" onkeypress="return rtnPhoneNo(event);">
+				<p:watermark for="idNumber" value="Number"/>
+				<f:validateLength maximum="14"/> 
+			</p:inputText>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+        <p:column>
+			<h:outputLabel for="idAtt">Attention</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAtt" label="Attention" value="#{custBean.personContactVO.attention}" maxlength="100"/>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+		<p:column>
+			<h:outputLabel for="idCorpContactType">Contact Type <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+	        <h:selectOneMenu id="idCorpContactType" label="Contact Type" value="#{custBean.corContactVO.contactType}" required="true">  
+	            <f:selectItem itemLabel="Select One" itemValue=""/>
+	            <f:selectItems value="#{bterp:lookupItemList('cntc_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+	        </h:selectOneMenu>
+        </p:column>
+        <p:column>
+			<h:outputLabel for="idCorpNumber">Number <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCorpAreaCode" label="Area Code" value="#{custBean.corContactVO.areaCode}" required="true" maxlength="5" size="5" onkeypress="return rtnPhoneNo(event);">
+				<f:validateLength maximum="5"/> 
+			</p:inputText>
+			<h:outputLabel> - </h:outputLabel>
+			<p:inputText id="idCorpNumber" label="Number" value="#{custBean.corContactVO.pNumber}" required="true" maxlength="14" size="20" onkeypress="return rtnPhoneNo(event);">
+				<f:validateLength maximum="14"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	
+	<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+        <p:column>
+			<h:outputLabel for="idCorpAtt">Attention</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idCorpAtt" label="Attention" value="#{custBean.corContactVO.attention}" maxlength="100"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{custBean.addContact}" update="@form,:idEditCustForm:idContactListPanel,:idEditCustForm:idCorpContactListPanel" rendered="#{custBean.contactAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{custBean.updateContact}" update="@form,:idEditCustForm:idContactListPanel,:idEditCustForm:idCorpContactListPanel" oncomplete="onValidation(xhr, status, args)" rendered="#{not custBean.contactAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{custBean.resetContactForm}" update="@form" process="@this" oncomplete="varContactDialog.hide()" global="false">
+		<pe:resetEditableValues for="idContactForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

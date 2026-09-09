@@ -1,0 +1,72 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idCabinType">Cruise Cabin Type <span class="required">*</span></h:outputLabel></p:column>
+		<p:column style="width: 300px;">
+			<h:selectOneMenu id="idCabinType" label="Cruise Cabin Type"
+				value="#{tourPkgBean.tourCabinBookingVO.idTourCruiseCabin}" effect="fade" required="true">
+				<f:selectItem itemLabel="Select One" />
+				<f:selectItems value="#{tourPkgBean.tourDepVO.tourCruiseCabinList}" var="vo"
+					itemLabel="#{vo.cruiseCabinCd} - #{vo.cruiseCabinDesc}" itemValue="#{vo.id}" />
+				<p:ajax event="change" listener="#{tourPkgBean.handleCabinTypeSelect}" update="@form" />
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>No. Of Pax <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:panelGrid columns="5">
+				<h:outputLabel>1ST/2ND</h:outputLabel>
+				<h:outputLabel>3RD</h:outputLabel>
+				<h:outputLabel>4TH</h:outputLabel>
+				<h:outputLabel>SGL</h:outputLabel>
+				<h:outputLabel>INFT</h:outputLabel>
+				<p:inputText label="TWN" id="idPaxTwn" value="#{tourPkgBean.tourCabinBookingVO.paxTwn}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="Pax 3" id="idPax3" value="#{tourPkgBean.tourCabinBookingVO.pax3}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="Pax 4" id="idPax4" value="#{tourPkgBean.tourCabinBookingVO.pax4}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="SGL" id="idPaxSgl" value="#{tourPkgBean.tourCabinBookingVO.paxSgl}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="INFT" id="idPaxInf" value="#{tourPkgBean.tourCabinBookingVO.paxInf}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				
+				<h:outputText value="#{tourPkgBean.tourCabinBookingVO.priceTwn}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{tourPkgBean.tourCabinBookingVO.price3}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{tourPkgBean.tourCabinBookingVO.price4}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{tourPkgBean.tourCabinBookingVO.priceSgl}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{tourPkgBean.tourCabinBookingVO.priceInf}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+			</h:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column/>
+		<p:column>
+			
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{tourPkgBean.tourCabinBookingVO.id == null ? msg['common.button.label.save'] : msg['common.button.label.update']}" actionListener="#{tourPkgBean.saveBookingCruiseCabin}"
+				update="@form,:idAddInvoiceForm:idTourCabinListTable,:idAddInvoiceForm:idTotalAmtGroup" oncomplete="if (!args.validationFailed) varAddBookingCruiseCabinDialog.hide()"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{tourPkgBean.resetTourCabinForm}" onclick="varAddBookingCruiseCabinDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddBookingCruiseCabinForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

@@ -1,0 +1,182 @@
+package com.bcs.zsg.acct.service;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.dao.EInvoiceDAO;
+import com.bcs.zsg.acct.dao.EInvoiceSchedulerDAO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.acct.vo.PendingEInvoiceVO;
+import com.bcs.zsg.cfg.sec.dao.UserDAO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.DatesUtils;
+import com.bcs.zsg.common.helper.EInvoiceConstant;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.mail.service.EmailingService;
+import com.bcs.zsg.maintenance.dao.SystemNumberGenerationDAO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.purchase.dao.BillPymtDAO;
+import com.bcs.zsg.sales.dao.InvoiceDAO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.web.object.EInvoiceDocument;
+
+public class EInvoiceSchedulerServiceImpl implements EInvoiceSchedulerService {
+	
+	@Autowired
+	private EInvoiceDAO eInvoiceDAO;
+	@Autowired
+	private EInvoiceSchedulerDAO eInvoiceSchedulerDAO;
+	@Autowired
+	private SystemNumberGenerationDAO systemNumberGenerationDAO;
+	@Autowired
+	private InvoiceDAO invoiceDAO;
+	@Autowired
+	private BillPymtDAO billPymtDAO;
+	@Autowired
+	private UserDAO userDAO;
+	@Autowired
+	private EmailingService emailingService;
+
+	@Override
+	public void insertPendingEInvoice(List<InvoiceVO> invoiceList) throws BusinessException {
+		
+		for (InvoiceVO invoiceVO : invoiceList) {
+			
+			SystemNumberGenerationVO sysVO = systemNumberGenerationDAO.getSystemNumberGeneration(CommonConstant.SYS_NUM_CD_INVC, invoiceVO.getCompanyId());
+					
+			PendingEInvoiceVO pendingEInvoiceVO = new PendingEInvoiceVO();
+			
+			pendingEInvoiceVO.setIdCompany(invoiceVO.getCompanyId());
+			pendingEInvoiceVO.setDtProcess(new Date()); // or dep dt?
+			
+			pendingEInvoiceVO.setSysDocType(CommonConstant.SYS_NUM_CD_INVC);
+			pendingEInvoiceVO.setSysPrefix(sysVO.getPrefixid());
+			pendingEInvoiceVO.setRefNo(invoiceVO.getCode());
+			pendingEInvoiceVO.setRefId(invoiceVO.getId());
+			
+			pendingEInvoiceVO.setProcessStatus(CommonConstant.EMAIL_PMNT_PENDING);
+			pendingEInvoiceVO.setSubmitStatus(CommonConstant.EMAIL_PMNT_PENDING);
+			pendingEInvoiceVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			
+			eInvoiceSchedulerDAO.insert(pendingEInvoiceVO);
+			invoiceVO.setIdPendingEInvoice(pendingEInvoiceVO.getId());
+		}
+	}
+	
+	@Override
+	public void updatePendingEInvoiceStatus(List<InvoiceVO> resList) throws BusinessException {
+		
+		for (InvoiceVO invoiceVO : resList) {
+			
+			PendingEInvoiceVO pendingEInvoiceVO = eInvoiceSchedulerDAO.getPendingEInvoiceVO(invoiceVO.getId(),
+					CommonConstant.EMAIL_PMNT_PENDING, CommonConstant.EMAIL_PMNT_PENDING,
+					DatesUtils.getDayTimeStart(new Date()).getTime());
+			
+			if (pendingEInvoiceVO == null)	continue;
+			
+			if (invoiceVO.geteInvoiceDocument() != null) {
+				if (StringUtils.isNotBlank(invoiceVO.geteInvoiceDocument().getStatus())) {
+					EInvoiceDocument eInvDoc = invoiceVO.geteInvoiceDocument();
+					if (StringUtils.equalsIgnoreCase(eInvDoc.getStatus(), EInvoiceConstant.E_INV_STATUS_SUBMIT)) {
+						pendingEInvoiceVO.setProcessStatus(CommonConstant.EMAIL_PMNT_SUCCESS);
+						pendingEInvoiceVO.setSubmitStatus(CommonConstant.EMAIL_PMNT_SUCCESS);
+					} else if (StringUtils.equalsIgnoreCase(eInvDoc.getStatus(), EInvoiceConstant.E_INV_STATUS_REJECTED)) {
+						pendingEInvoiceVO.setProcessStatus(CommonConstant.EMAIL_PMNT_SUCCESS);
+						pendingEInvoiceVO.setSubmitStatus(CommonConstant.EMAIL_PMNT_FAILED);
+						pendingEInvoiceVO.setReason(eInvDoc.getDocumentStatusReason());
+					} else if (StringUtils.equalsIgnoreCase(eInvDoc.getStatus(), EInvoiceConstant.E_INV_STATUS_INVALID)) {
+						pendingEInvoiceVO.setAllFail(eInvDoc.getDocumentStatusReason());
+					}
+				} else {
+					pendingEInvoiceVO.setAllFail("updatePendingEInvoice invoiceVO.geteInvoiceDocument().getStatus() == null");
+				}
+			} else {
+				pendingEInvoiceVO.setAllFail("updatePendingEInvoice invoiceVO.geteInvoiceDocument() == null");
+			}
+			
+			eInvoiceSchedulerDAO.update(pendingEInvoiceVO);
+		}
+	}
+	
+	@Override
+	public List<PendingEInvoiceVO> getPendingEInvoiceList(Date dtProcess) {
+		return eInvoiceSchedulerDAO.getPendingEInvoiceList(dtProcess);
+	}
+	
+	@Override
+	public List<InvoiceVO> getPendingInvoiceForEInvoiceByDate(Date dtProcess) throws BusinessException {
+		List<PendingEInvoiceVO> pendingEInvoiceList = getPendingEInvoiceList(dtProcess);
+		
+		if(CollectionUtils.isEmpty(pendingEInvoiceList)) {
+			return new ArrayList<InvoiceVO>();
+		}
+		
+		List<Long> invIdList  = new ArrayList<Long>();
+		for (PendingEInvoiceVO vo : pendingEInvoiceList) {
+			if (StringUtils.equalsIgnoreCase(CommonConstant.SYS_NUM_CD_INVC, vo.getSysDocType())) {
+				invIdList.add(vo.getRefId());
+			}
+		}
+		
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		map.put("invIdList", invIdList);
+		
+		List<InvoiceVO> invList = invoiceDAO.getInvoiceListByParams(map);
+		return invList;
+	}
+	
+	@Override
+	public int getPendingEInvoiceListSize(Map<String, Object> params) throws BusinessException {
+		return eInvoiceSchedulerDAO.getPendingEInvoiceListSize(params);
+	}
+	
+	@Override
+	public List<PendingEInvoiceVO> getPendingEInvoiceList(Map<String, Object> params) throws BusinessException {
+		return eInvoiceSchedulerDAO.getPendingEInvoiceList(params);
+	}
+
+	@Override
+	public void notifyNonSubmittedEInvoice(List<InvoiceVO> resList) throws Exception {
+		for (InvoiceVO invoiceVO : resList) {
+			if (invoiceVO.geteInvoiceDocument() != null) {
+				if (!StringUtils.equalsIgnoreCase(invoiceVO.geteInvoiceDocument().getStatus(), EInvoiceConstant.E_INV_STATUS_SUBMIT)) {
+					EmployeeViewVO employeeViewVO = userDAO.getEmployeeView(invoiceVO.getSalerId());
+					if (employeeViewVO != null) {
+						if (employeeViewVO.getUserVO() != null) {
+							if (StringUtils.isNotBlank(employeeViewVO.getUserVO().getEmailAddress())) {
+								emailingService.sendEInvNotifyEmail(invoiceVO, employeeViewVO.getUserVO().getEmailAddress(), null);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	@Override
+	public void notifyInvalidEInvoice(EInvoiceDocumentVO docVO) throws Exception {
+		if (StringUtils.equalsIgnoreCase(docVO.getSysDocType(), CommonConstant.SYS_NUM_CD_INVC)) {
+			InvoiceVO invoiceVO = invoiceDAO.getInvoiceById(docVO.getRefId());
+			if (invoiceVO != null) {
+				EmployeeViewVO employeeViewVO = userDAO.getEmployeeView(invoiceVO.getSalerId());
+				if (employeeViewVO != null) {
+					if (employeeViewVO.getUserVO() != null) {
+						if (StringUtils.isNotBlank(employeeViewVO.getUserVO().getEmailAddress())) {
+							emailingService.sendEInvNotifyEmail(docVO.getRefNo(), docVO.getStatusCode(),
+									docVO.getDocStatusReason(), employeeViewVO.getUserVO().getEmailAddress(), null);
+						}
+					}
+				}
+			}
+		}
+	}
+}

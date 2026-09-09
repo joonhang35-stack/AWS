@@ -1,0 +1,401 @@
+package com.bcs.zsg.maintenance.web.bean;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.primefaces.json.JSONException;
+import org.primefaces.json.JSONObject;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.helper.CRMUtils;
+import com.bcs.zsg.common.helper.JwtVerifierService;
+import com.bcs.zsg.common.helper.KeycloakUtils;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.crm.bo.CRMMembershipBO;
+import com.bcs.zsg.crm.helper.KeycloakProperties;
+import com.bcs.zsg.crm.sec.vo.CRMMembershipVO;
+import com.bcs.zsg.crm.sec.vo.KeycloakAccessTokenClaimVO;
+import com.bcs.zsg.crm.sec.vo.KeycloakAccessTokenVO;
+import com.bcs.zsg.crm.sec.vo.KeycloakUserVO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.nimbusds.jose.JWSObject;
+
+public class KeycloakConfigBean extends AppBackingBean {
+	
+	private static final long serialVersionUID = 1L;
+	
+	@Autowired
+	private transient RegionBO regionBO;
+	@Autowired
+	private transient CRMMembershipBO crmMembershipBO;
+	
+	// keycloak
+	private List<KeycloakUserVO> keycloakUserList;
+	
+	private KeycloakUserVO keycloakUserVO;
+	
+	// required data
+	private List<CountryVO> countryList;
+	
+	// membership
+	private LazyDataModel<CRMMembershipVO> lazyCRMMembershipDataModel;
+	
+	// expose access token or not
+	private boolean testing = false;
+	private KeycloakAccessTokenVO tokenVO;
+	
+	@Override
+	public void resetForm() {
+		
+	}
+	
+	public void init() {
+		resetForm();
+		
+		try {
+			testing = KeycloakProperties.isTesting();
+			loadCountry();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+		
+		System.out.println("CYY getKeycloakRegisterForm: " + getKeycloakRegisterForm());
+	}
+	
+	@SuppressWarnings("unused")
+	private Map<String, Object> generateSearchParams() {
+		Map<String, Object> params = new HashMap<String, Object>();
+				
+		params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+		
+//		if (StringUtils.isNotBlank(orderSourceCode))	params.put("orderSourceCode", orderSourceCode);
+//		if (ArrayUtils.isNotEmpty(paymentStatusList))	params.put("paymentStatusList", paymentStatusList);
+//		if (ArrayUtils.isNotEmpty(eInvoiceStatusList))	params.put("eInvoiceStatusList", eInvoiceStatusList);
+//		if (fromDate != null)							params.put("fromDate", fromDate);
+//		if (toDate != null)								params.put("toDate", toDate);
+//		if (departureDateFr != null)					params.put("departureDateFr", departureDateFr);
+//		if (departureDateTo != null)					params.put("departureDateTo", departureDateTo);
+		
+		return params;
+	}
+	
+	public void getAccessToken() throws JSONException {
+		try {
+			KeycloakAccessTokenVO tokenVO = KeycloakUtils.getAccessToken(getSessionInfoBean().getCompanyVO());
+			System.out.println("CYY tokenVO.getAccessToken(): " + tokenVO.getAccessToken());
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+
+	}
+	
+	public void getUsersList() throws JSONException {
+		try {
+			keycloakUserList = KeycloakUtils.getUsersList(getSessionInfoBean().getCompanyVO());
+//			KeycloakAccessTokenVO tokenVO = KeycloakUtils.getAccessToken();
+//			System.out.println("CYY tokenVO.getAccess_token(): " + tokenVO.getAccess_token());
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+
+	}
+	
+	public void onAddKeycloakUser() {
+		keycloakUserVO = new KeycloakUserVO();
+		keycloakUserVO.setEnabled(true);
+		keycloakUserVO.setEmailVerified(true);	
+	}
+	
+	public void addKeycloakUser() {
+		System.out.println("KeycloakConfigBean.addKeycloakUser()");
+		try {
+			KeycloakUtils.addKeycloakUserWithPassword(keycloakUserVO, getSessionInfoBean().getCompanyVO());
+			successResult();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void addKeycloakAdvUser() {
+		System.out.println("KeycloakConfigBean.addKeycloakAdvUser()");
+		try {
+			KeycloakUtils.addKeycloakUserWithPassword(keycloakUserVO, getSessionInfoBean().getCompanyVO());
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void deleteKeycloakUser(KeycloakUserVO vo) {
+		try {
+			KeycloakUtils.deleteUser(vo.getId(), getSessionInfoBean().getCompanyVO());
+			keycloakUserList = KeycloakUtils.getUsersList(getSessionInfoBean().getCompanyVO());
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onLogin() {
+		keycloakUserVO = new KeycloakUserVO();
+	}
+	
+	public void login() {
+		try {
+			KeycloakAccessTokenVO tokenVO = KeycloakUtils.login(keycloakUserVO.getUsername(),
+					keycloakUserVO.getPassword(), null, null, getSessionInfoBean().getCompanyVO());
+			
+			this.tokenVO = tokenVO; // temp testing code, to copy access token
+			
+			JwtVerifierService verifier =
+			        new JwtVerifierService(
+			        		KeycloakProperties.ENV_BASE_URL_SANDBOX + KeycloakProperties.API_CERT
+			        );
+
+			boolean valid = verifier.verifyToken(tokenVO.getAccessToken());
+			
+			System.out.println("CYY valid: " + valid);
+			
+			JWSObject jwsObject = JWSObject.parse(tokenVO.getAccessToken());
+
+	        Map<String, Object> payload =
+	                jwsObject.getPayload().toJSONObject();
+
+	        JSONObject xJsonObject = new JSONObject(payload);
+	        System.out.println(xJsonObject.toString(4));
+	        
+	        Gson gson = new GsonBuilder()
+		            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+		            .create();
+	        KeycloakAccessTokenClaimVO keycloakAccessTokenClaimVO = gson.fromJson(xJsonObject.toString(), KeycloakAccessTokenClaimVO.class);
+		    
+			System.out.println("CYY claimVO.getExp(): " + keycloakAccessTokenClaimVO.getExp());
+			System.out.println("CYY claimVO.getEmail(): " + keycloakAccessTokenClaimVO.getEmail());
+			System.out.println("CYY claimVO.getFamilyName(): " + keycloakAccessTokenClaimVO.getFamilyName());
+			System.out.println("CYY claimVO.getGivenName(): " + keycloakAccessTokenClaimVO.getGivenName());
+	        
+			KeycloakUserVO keycloakUserVO = KeycloakUtils.getUser(keycloakAccessTokenClaimVO.getSub(), getSessionInfoBean().getCompanyVO());
+			System.out.println("CYY keycloakUserVO.getUsername(): " + keycloakUserVO.getUsername());
+			
+			successResult();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onForgetPassword() {
+		keycloakUserVO = new KeycloakUserVO();
+	}
+	
+	public void forgetPassword() {
+		try {
+			keycloakUserList = KeycloakUtils.getUsersByParam(keycloakUserVO, getSessionInfoBean().getCompanyVO());
+			if (CollectionUtils.isNotEmpty(keycloakUserList) && keycloakUserList.size() == 1) {
+				KeycloakUtils.forgetPassword(keycloakUserList.get(0).getId(), getSessionInfoBean().getCompanyVO());
+				successResult();
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void sendVerifyEmail(KeycloakUserVO userVO) {
+		try {
+			KeycloakUtils.sendVerifyEmail(userVO.getId(), getSessionInfoBean().getCompanyVO());
+			successResult();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void manualVerifyEmail(KeycloakUserVO userVO) {
+		try {
+			KeycloakUtils.manualVerifyEmail(userVO.getId(), getSessionInfoBean().getCompanyVO());
+			getUsersList();
+			successResult();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void loadCRMMembershipList() {
+		try {
+			lazyCRMMembershipDataModel = new LazyCRMMembershipDataModel();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+
+	}
+	
+	public void delCRMMembership(CRMMembershipVO vo) {
+		try {
+			crmMembershipBO.delCRMMembership(vo);
+			loadCRMMembershipList();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void unlinkCRMMembership(CRMMembershipVO vo) {
+		try {
+			crmMembershipBO.unlinkCRMMembership(vo);
+			loadCRMMembershipList();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void getRedemptionCatalog() {
+		try {
+//			CRMUtils.getRedemptionCatalog();
+			CRMUtils.getClaimedVoucher(287473L);
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**********************
+	 * Lazy loading model *
+	 **********************/
+	class LazyCRMMembershipDataModel extends LazyDataModel<CRMMembershipVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+	
+		@Override
+		public List<CRMMembershipVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			try {
+//				trackingLogUtils.startLogs();
+				
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+				params.put("statusCd", BaseConstant.STATUS_ACTIVE);				
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", sortField);
+				params.put("sortOrder", sortOrder);
+				params.put("filters", filters);
+				
+				int size = crmMembershipBO.getCRMMembershipListSize(params);
+				setRowCount(size);
+				
+				if (0 < getRowCount()) {
+					List<CRMMembershipVO> crmMembershipList = crmMembershipBO.getCRMMembershipList(params);
+					return crmMembershipList;
+				}
+				
+			} catch (Throwable t) {
+				t.printStackTrace();
+				errorResult(t);
+			} finally {
+//				trackingLogUtils.endLogs("LazyInvoiceDataModel");
+			}
+			return new ArrayList<CRMMembershipVO>();
+		}
+		
+		@Override
+		public void setRowIndex(int rowIndex) {
+			/*
+			 * The following is in ancestor (LazyDataModel):
+			 * this.rowIndex = rowIndex == -1 ? rowIndex : (rowIndex % pageSize);
+			 */
+			if (rowIndex == -1 || getPageSize() == 0) {
+				super.setRowIndex(-1);
+			} else super.setRowIndex(rowIndex % getPageSize());
+		}
+		
+	}
+	
+	public String getKeycloakRegisterForm() {
+//		String keycloakRealm = "myrealm";
+		String keycloakClientId = "myclient";
+		
+		StringBuilder url = new StringBuilder();
+
+	    url.append(KeycloakProperties.ENV_BASE_URL_SANDBOX)
+//	       .append("/realms/")
+//	       .append(keycloakRealm)
+//	       .append("/protocol/openid-connect/registrations")
+	       .append(KeycloakProperties.API_REGISTER)
+	       .append("?client_id=").append(keycloakClientId)
+	       .append("&response_type=code")
+	       .append("&scope=openid")
+	       .append("&redirect_uri=").append(KeycloakUtils.getCallbackUrl());
+
+	    return url.toString();
+	}
+	
+	private void loadCountry() throws BusinessException {
+		countryList = regionBO.getActualCountryList();
+	}
+	
+	public KeycloakUserVO getKeycloakUserVO() {
+		return keycloakUserVO;
+	}
+
+	public void setKeycloakUserVO(KeycloakUserVO keycloakUserVO) {
+		this.keycloakUserVO = keycloakUserVO;
+	}
+
+	public List<KeycloakUserVO> getKeycloakUserList() {
+		return keycloakUserList;
+	}
+
+	public void setKeycloakUserList(List<KeycloakUserVO> keycloakUserList) {
+		this.keycloakUserList = keycloakUserList;
+	}
+
+	public List<CountryVO> getCountryList() {
+		return countryList;
+	}
+
+	public void setCountryList(List<CountryVO> countryList) {
+		this.countryList = countryList;
+	}
+
+	public LazyDataModel<CRMMembershipVO> getLazyCRMMembershipDataModel() {
+		return lazyCRMMembershipDataModel;
+	}
+
+	public void setLazyCRMMembershipDataModel(LazyDataModel<CRMMembershipVO> lazyCRMMembershipDataModel) {
+		this.lazyCRMMembershipDataModel = lazyCRMMembershipDataModel;
+	}
+
+	public boolean isTesting() {
+		return testing;
+	}
+
+	public void setTesting(boolean testing) {
+		this.testing = testing;
+	}
+
+	public KeycloakAccessTokenVO getTokenVO() {
+		return tokenVO;
+	}
+
+	public void setTokenVO(KeycloakAccessTokenVO tokenVO) {
+		this.tokenVO = tokenVO;
+	}
+}

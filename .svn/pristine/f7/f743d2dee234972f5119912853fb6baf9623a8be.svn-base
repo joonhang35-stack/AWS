@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.bcs.zsg.crm.vo">
+
+    <class table="invoice_pos_sales" name="InvoicePosSalesVO" polymorphism="explicit">
+		<id name="id" type="long" column="ID">
+			<generator class="identity"></generator>
+		</id>
+		<property name="idCompany" type="long" column="id_company"/>
+		<property name="idInvoice" type="long" column="id_invoice"/>
+		<property name="idCustomer" type="long" column="id_customer"/>
+		<property name="idBooking" type="long" column="id_tour_booking"/>
+		<property name="invoiceDt" type="timestamp" column="dt_inv"/>
+		<property name="invNo" type="string" column="inv_no"/>
+		<property name="psNo" type="string" column="ps_no"/>
+		<property name="docTypeCd" type="string" column="doc_type_cd"/>
+		<property name="departureDt" type="timestamp" column="dt_departure"/>
+		<property name="catCd" type="string" column="cat_cd"/>
+		<property name="orderCd" type="string" column="order_cd"/>
+		<property name="amount" type="double" column="AMOUNT"/>
+		<property name="is1utama" type="boolean" column="is_1utama"/>
+		<property name="postingStatus" type="string" column="posting_status"/>
+		<property name="paymentStatus" type="string" column="payment_status"/>
+		
+        <set name="invPosSalesItemSet" table="invoice_pos_sales_item" inverse="true" lazy="false" fetch="select" order-by="id">
+        	<key><column name="id_pos_sales"/></key>
+        	<one-to-many class="com.bcs.zsg.crm.vo.InvoicePosSalesItemVO" />
+        </set>
+        
+        <!-- BaseVO attributes -->
+        <property name="remarks" type="string" column="REMARKS"/>
+        <property name="statusCode" type="string" column="STATUS_CD"/>
+		<property name="createdDate" type="timestamp" column="DT_CREATED" update="false"/>
+		<property name="createdBy" type="string" column="CREATED_BY"/>
+		<property name="updatedDate" type="timestamp" column="DT_UPD"/>
+		<property name="updatedBy" type="string" column="UPD_BY"/>
+    </class>
+
+</hibernate-mapping>

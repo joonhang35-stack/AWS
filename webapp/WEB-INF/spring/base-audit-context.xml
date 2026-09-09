@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <!-- App Audit -->
+    <bean id="auditLogManager" class="com.bcs.zsg.component.audit.manager.impl.AuditLogManagerImpl">
+        <property name="auditLogProcessor" ref="dbAuditLogProcessor"/>
+    </bean>
+
+    <!-- Base audit log processor -->
+    <bean id="auditLogProcessor" class="com.bcs.zsg.component.audit.processor.impl.AuditLogProcessorImpl">
+        <property name="auditTemplateManager" ref="auditTemplateSQLManager"/>
+        <property name="auditLogDAO" ref="sqlAuditLogDAO"/>
+    </bean>
+
+    <bean id="dbAuditLogProcessor" class="com.bcs.zsg.component.audit.processor.impl.DBAuditLogProcessorImpl" parent="auditLogProcessor">
+        <property name="auditTemplateManager" ref="auditTemplateSQLManager"/>
+    </bean>    
+
+    <!-- Base audit log manager -->
+    <bean id="auditTemplateManager" class="com.bcs.zsg.component.audit.manager.impl.AuditTemplateManagerImpl">
+        <property name="configList" ref="auditConfigList"/>
+    </bean>
+
+	<bean id="auditTemplateSQLManager" class="com.bcs.zsg.component.audit.manager.impl.AuditTemplateSQLManagerImpl" parent="auditTemplateManager"/>
+
+    <!-- Base audit log resources -->
+    <bean id="sqlAuditLogDAO" class="com.bcs.zsg.component.audit.dao.impl.AsyncSQLAuditLogDAOImpl">
+        <property name="jdbcTemplate" ref="jdbcTemplate"/>
+    </bean>
+
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <constructor-arg ref="dataSource"/>
+    </bean>
+
+</beans>

@@ -1,0 +1,25 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="idListMsg"/>
+
+<p:pickList id="idUserRolePickList" value="#{userBean.roleListModel}" var="vo" itemValue="#{vo}" itemLabel="#{vo.roleName}"
+	converter="#{userBean.roleConverter}" style="width:35%">
+	<f:facet name="sourceCaption">Available Role(s)</f:facet>
+	<f:facet name="targetCaption">Assigned Role(s)</f:facet>
+</p:pickList>
+
+<h:panelGrid columns="2" style="width:1px">
+	<p:commandButton value="Save" update="idListMsg,idUserRolePickList,:idDataForm:idUserList" actionListener="#{userBean.updateUserRole}"/>
+	<p:commandButton value="Cancel" actionListener="#{userBean.resetForm}" update="@form" process="@this" oncomplete="varUserRoleDialog.hide()" global="false">
+		<pe:resetEditableValues for="idUserRoleForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

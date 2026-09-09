@@ -1,0 +1,226 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<style>
+.ui-state-full {
+	border: 1px solid #999999 !important;
+    background: #dadada !important;
+    font-weight: normal !important;
+    color: #212121 !important;
+}
+.badge-transferred {
+	background-color: #ffa500; /* Orange color similar to the screenshot */
+}
+.badge-payment-req {
+ 	background-color: red; 
+}
+.badge-payment-req,
+.badge-transferred {
+	color: white;
+    padding: 1px 4px; /* Adjusted padding to make the badge smaller */
+    margin-left: 5px;
+    border-radius: 50%;
+    font-size: 0.75em; /* Adjusted font size to make the badge text smaller */
+    font-weight: bold;
+}
+</style>
+
+<script type="text/javascript">
+	function onTransferValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAvailableTourDepListDialog.hide();
+			varTransferConfirmationDialog.hide();
+			varAddBookingDialog.hide();
+		}
+	}
+	
+	document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+	
+	function setEnterKeyHint() {
+	    var filters = document.querySelectorAll('input.ui-column-filter');
+	    filters.forEach(function(filter) {
+	        filter.setAttribute('enterkeyhint', 'enter');
+	    });
+	}
+</script>
+<p:panel header="Booking List" toggleable="true" toggleSpeed="500">
+	<h:form id="idBookingListForm">
+		<p:growl id="growl"/>
+		
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width: 100px;">
+					<h:selectOneMenu id="idTypeCd" value="#{salesBean.searchParamVO.obj1}" effect="fade">  
+						<f:selectItems value="#{zsg:referenceDataList('BOOK_PMNT_STATUS')}" var="n" itemLabel="#{n.value}" itemValue="#{n.code}"/>
+						<p:ajax event="change" listener="#{salesBean.handleBookTypeSelect}" oncomplete="varBookingList.clearFilters(); setEnterKeyHint();" update="@form"/><!--  oncomplete="varBookingList.clearFilters()" -->
+					</h:selectOneMenu>
+				</p:column>
+				<p:column style="width: 5px;">
+					<p:selectBooleanCheckbox value="#{salesBean.isPersonal}">  
+		            	<p:ajax update="growl, :idBookingListForm:idBookingList" listener="#{salesBean.bookingSearch}"/>  
+		        	</p:selectBooleanCheckbox> 
+				</p:column>
+				<p:column style="width: 10px;padding-left: 0px;">
+					<h:outputText value="Personal" />
+				</p:column>
+				<p:column style="width: 10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width: 80px;">
+					<h:outputText value="Booking Type" />
+				</p:column>		
+				<p:column style="width: 80px;">
+					<h:selectOneMenu value="#{salesBean.searchParamVO.obj2}" effect="fade">
+						<f:selectItem itemLabel="All" itemValue="#{null}"/>
+						<f:selectItems value="#{bterp:lookupItemList('ordr_sorc')}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}"/>
+						<p:ajax event="change" listener="#{salesBean.handleOrderTypeSelect}" oncomplete="varBookingList.clearFilters()" update="@form"/>
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+					<p:commandButton icon="ui-icon-print" value="Export" actionListener="#{salesBean.printBookingList()}" ajax="false"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:dataTable id="idBookingList" value="#{salesBean.lazyDataModel}" var="vo" widgetVar="varBookingList" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="10, 20, 30" lazy="true" filterEvent="enter">
+			<p:column headerText="Edit" style="width:50px;">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.setBookingViewVO(vo)}" oncomplete="varAddBookingDialog.show()" update=":idBookingListForm:idBookingList, :idAddBookingDialog" disabled="#{vo.pmntStatusCd eq 'KIVEXP' or (vo.statusCode eq 'CC' or vo.statusCode eq 'VD') or (sessionInfoBean.employeeVO.department.contains('sale') and not salesBean.salesManager)}"/>
+			</p:column>
+			<p:column headerText="Delete" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.setBookingViewVO(vo)}" oncomplete="varCancelBookingDialog.show()" disabled="#{vo.pmntStatusCd eq 'KIVEXP' or (vo.statusCode eq 'CC' or vo.statusCode eq 'VD') or (sessionInfoBean.employeeVO.department.contains('sale') and not salesBean.salesManager)}"/>
+			</p:column>
+			<p:column headerText="Booking ID" filterBy="#{vo.id}" sortBy="#{vo.id}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.id}"/>
+		        <h:outputText id="idTransferred" value="T" styleClass="badge-transferred" rendered="#{not empty vo.transferredDate}" />
+				<pe:tooltip for="idTransferred" shared="true" showDelay="3000"  position="top right"
+					rendered="#{not empty vo.transferredDate}">
+					<h:outputText value="Transferred" escape="true" style="white-space: pre-wrap"/>
+				</pe:tooltip>
+			</p:column>
+			<p:column headerText="Staff" filterBy="#{vo.staff}" sortBy="#{vo.staff}" styleClass="txt_center">
+				<h:outputText value="#{vo.staff}"/>
+			</p:column>
+			<p:column headerText="Tour Code" filterBy="#{vo.tourCode}" sortBy="#{vo.tourCode}" styleClass="txt_center">
+				<h:outputText value="#{vo.tourCode}"/>
+			</p:column>
+			<p:column headerText="Pmnt Status" filterBy="#{vo.pmntStatusCd}" sortBy="#{vo.pmntStatusCd}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.pmntStatusCd}"/>
+			</p:column>
+			<p:column headerText="Status" filterBy="#{vo.statusCode}" sortBy="#{vo.statusCode}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.statusCode}"/>
+			</p:column>
+			<p:column headerText="Total Pax" filterBy="#{vo.quantity}" sortBy="#{vo.quantity}" style="width:50px; text-align:center;">
+				<h:outputText value="#{vo.quantity}"/>
+			</p:column>
+			<p:column headerText="Customer Name" filterBy="#{vo.lastName} #{vo.firstName}" sortBy="#{vo.lastName} #{vo.firstName}" styleClass="txt_center">
+				<p:commandLink actionListener="#{salesBean.setBookingViewVO(vo)}" update=":idBookingDetailsDialog" oncomplete="varBookingDetailsDialog.show()" style="color:#CC2EFA;">
+					<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.salutationCd)} #{vo.lastName} #{vo.firstName}" style="text-transform:uppercase;"/>
+				</p:commandLink>
+			</p:column>
+			<p:column headerText="Booking Date" filterBy="#{vo.createdDate}" sortBy="#{vo.createdDate}" styleClass="txt_center"><h:outputText value="#{vo.createdDate}"><f:convertDateTime pattern="#{config['date.display.pattern2']}"/></h:outputText></p:column>
+			<p:column headerText="Expiry Date" filterBy="#{vo.dtExp}" sortBy="#{vo.dtExp}" styleClass="txt_center"><h:outputText value="#{vo.dtExp}" rendered="#{vo.pmntStatusCd eq 'KIV' or vo.pmntStatusCd eq 'KIVEXP'}"><f:convertDateTime pattern="#{config['date.display.pattern2']}"/></h:outputText></p:column>
+			<p:column style="width:50px;">
+				<p:commandButton styleClass="#{vo.pmntStatusCd eq 'FULL' ? 'ui-state-full' : 'ui-state-default'}" value="#{vo.pmntStatusCd eq 'FULL' ? 'Inv' : 'Pay'}" actionListener="#{salesBean.makeBookingPayment_eInvoice(vo)}" disabled="#{((vo.pmntStatusCd eq 'KIVEXP') and vo.idCompany eq sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIVEXP' or vo.pmntStatusCd eq 'FULL') and vo.idCompany ne sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIV' or vo.pmntStatusCd eq 'DEP') and vo.idCompany ne sessionInfoBean.companyVO.id) or (vo.statusCode eq 'CC' or vo.statusCode eq 'VD')}"/><!-- salesBean.searchParamVO.obj1 eq 'CC' -->
+				<p:commandButton rendered="#{false}" styleClass="#{vo.pmntStatusCd eq 'FULL' ? 'ui-state-full' : 'ui-state-default'}" value="#{vo.pmntStatusCd eq 'FULL' ? 'Inv' : 'Pay'}" actionListener="#{salesBean.makeBookingPayment_eInvoice(vo)}" disabled="#{((vo.pmntStatusCd eq 'KIVEXP') and vo.idCompany eq sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIVEXP' or vo.pmntStatusCd eq 'FULL') and vo.idCompany ne sessionInfoBean.companyVO.id) or ((vo.pmntStatusCd eq 'KIV' or vo.pmntStatusCd eq 'DEP') and vo.idCompany ne sessionInfoBean.companyVO.id) or (vo.statusCode eq 'CC' or vo.statusCode eq 'VD')}"/>
+			</p:column>
+			<p:column headerText="Mail" style="width:1px; font-size:10px; text-align:center;"><h:outputLink styleClass="ui-icon ui-icon-mail-closed" value="#{request.contextPath}/app/emailtmp/bookingemailtmp?tourDepId=#{vo.id}&amp;bookingId=#{vo.id}" target="_blank"/></p:column>
+		</p:dataTable>
+	</h:form>
+</p:panel>
+
+<!--
+	DIALOG - BOOKING DETAILS
+-->
+<p:dialog id="idBookingDetailsDialog" header="Booking Details" widgetVar="varBookingDetailsDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idBookingDetailsForm">
+		<ui:include src="booking_details.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ADD BOOKING
+-->
+<p:dialog id="idAddBookingDialog" header="Book Tour" widgetVar="varAddBookingDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddInvoiceForm">
+		<ui:include src="../reserve/add_booking.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - CUSTOMER LIST
+-->
+<p:dialog id="idCustListDialog" header="Customer List" widgetVar="varCustListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idCustListForm">
+		<ui:include src="../../common/customer_list.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ADD CUSTOMER
+-->
+<p:dialog id="idAddCustDialog" header="Customer" widgetVar="varAddCustDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddCustForm">
+		<ui:include src="../reserve/add_customer.xhtml" />
+	</h:form>
+</p:dialog>
+
+	
+<!--
+	DIALOG - CANCEL BOOKING
+-->
+<p:confirmDialog widgetVar="varCancelBookingDialog" message="Are you sure want to cancel this booking?">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{salesBean.cancelBooking}" update="@form,:idBookingListForm" oncomplete="varCancelBookingDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" actionListener="#{salesBean.resetForm}" oncomplete="varCancelBookingDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+<!--
+	DIALOG - AVAILABLE TOUR DEPARTURE LIST
+-->
+<p:dialog header="Select Tour Departure" widgetVar="varAvailableTourDepListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" 
+	hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAvailableTourDepList">
+		<ui:include src="../reserve/available_tour_dep_list.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - TRANSFER CONFIRMATION
+-->
+<p:confirmDialog widgetVar="varTransferConfirmationDialog" header="Confirmation" message="Are you sure want to do transfer?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{salesBean.handleTransfer(true)}" update="@form,:idBookingListForm:idBookingList" oncomplete="onTransferValidation(xhr, status, args)"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" onclick="varTransferConfirmationDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+</ui:define>
+</ui:composition>

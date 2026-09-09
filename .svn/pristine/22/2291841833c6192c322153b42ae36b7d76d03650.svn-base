@@ -1,0 +1,104 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+
+<script type="text/javascript">
+function monitorExporting(start, complete) {
+	if (start) {
+		start();
+	}
+
+	window.pdfExportingMonitor = setInterval(function() {
+		var exportingComplete = $.cookie('cookie.pdf.exporting');
+
+		if (exportingComplete === 'true') {
+			if (complete) {
+				complete();
+			}
+			$.cookie('cookie.pdf.exporting', null);
+			clearInterval(window.pdfExportingMonitor);
+		}
+	}, 500);
+}
+
+function start() {
+	statusDialog.show();
+}
+
+function stop() {
+	statusDialog.hide();
+}
+</script>
+
+<p:dialog modal="true" widgetVar="statusDialog" header="Report Loading"
+        draggable="false" closable="false" resizable="false">
+	<p:panelGrid columns="1">
+		<h:outputLabel>Please wait while the report is being prepared...</h:outputLabel>
+		<p:graphicImage value="/img/ajaxloadingbar.gif" />
+	</p:panelGrid>
+</p:dialog>
+
+<p:panel header="Debtors Statement" toggleable="true" toggleSpeed="500">
+	<h:form id="idFormDebtorsStmtRpt">
+		<p:growl id="msg"/>
+		
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:110px;">
+					<h:outputLabel>Customer <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:200px;" colspan="2">
+					<p:panel id="idCustDetails">
+						<p:inputText id="idSoldToC" label="Customer Details" value="#{debtorsStmtBean.custDetailsVO.companyName}" maxlength="0" onkeydown="preventBackspace()" required="true" style="background:#ccc;" size="30" rendered="#{debtorsStmtBean.custDetailsVO.custType == 'C'}"/>
+						<p:inputText id="idSoldToP" label="Customer Details" value="#{debtorsStmtBean.custDetailsVO.contPersonName}" maxlength="0" onkeydown="preventBackspace()" required="true" style="background:#ccc;" size="30" rendered="#{debtorsStmtBean.custDetailsVO.custType != 'C'}"/>
+						&nbsp;
+						<p:commandButton icon="ui-icon-search" update=":idCustListForm" oncomplete="varCustListDialog.show()" process="@this" rendered="#{empty debtorsStmtBean.custDetailsVO.custId}"/>
+						<p:commandButton icon="ui-icon-close" actionListener="#{debtorsStmtBean.custClear}" update=":idFormDebtorsStmtRpt:idCustDetails" process="@this" rendered="#{not empty debtorsStmtBean.custDetailsVO.custId}"/>
+					</p:panel>
+				</p:column>
+				<p:column>
+					<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{debtorsStmtBean.printDebtorsStmtRpt('PDF')}" ajax="false" onclick="monitorExporting(start,stop)"/>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{debtorsStmtBean.printDebtorsStmtRpt('XLS')}" ajax="false" onclick="monitorExporting(start,stop)"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column style="width:110px;">
+					<h:outputLabel>Report Date <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idReportDateFr" label="Date From" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{debtorsStmtBean.searchParamVO.obj2}" required="true"/>
+					<p:watermark for="idReportDateFr" value="Date From" />
+				</p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idReportDateTo" label="Date To" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{debtorsStmtBean.searchParamVO.obj3}" required="true"/>
+					<p:watermark for="idReportDateTo" value="Date To" />
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	</h:form>
+</p:panel>
+
+<p:dialog header="Customer List" widgetVar="varCustListDialog" modal="true"
+	resizable="false" dynamic="true" draggable="true" closable="false">
+	<h:form id="idCustListForm">
+		<ui:include src="customer_list.xhtml" />
+	</h:form>
+</p:dialog>
+
+</ui:define>
+</ui:composition>

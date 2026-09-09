@@ -1,0 +1,169 @@
+package com.bcs.zsg.sales.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import org.primefaces.model.SortOrder;
+
+import com.bcs.zsg.cfg.sec.vo.EmployeeVO;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.history.vo.TourDepHistoryVO;
+import com.bcs.zsg.product.vo.FeedbackVO;
+import com.bcs.zsg.sales.vo.BookingChargeItemVO;
+import com.bcs.zsg.sales.vo.BookingVO;
+import com.bcs.zsg.sales.vo.BookingViewVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+public interface BookingDAO extends BaseDAO {
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<BookingVO> getBookingList(Long idTourDep) throws BusinessException;
+	
+	public List<String> getSurveyList(Long bookingId) throws BusinessException;
+	
+	public void deleteSurveyList(Long bookingId) throws BusinessException;
+
+	/**
+	 * 
+	 * @param searchParamVO
+	 * @param searchBookingNumber 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<BookingViewVO> getBookingViewList(SearchParamVO searchParamVO, String searchBookingNumber) throws BusinessException;
+
+	/**
+	 * 
+	 * @param searchParamVO
+	 * @param isPersonal
+	 * @param employeeVO
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<BookingViewVO> getBookingViewList(SearchParamVO searchParamVO, Boolean isPersonal, EmployeeVO employeeVO) throws BusinessException;
+
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void updateKIVExpired() throws BusinessException;
+
+	/**
+	 * 
+	 * @param tourDepHistoryVO
+	 * @throws BusinessException
+	 */
+	public void updBookingTourDepHistId(TourDepHistoryVO tourDepHistoryVO) throws BusinessException;
+
+	/**
+	 * 
+	 * @param bookingId
+	 * @throws BusinessException
+	 */
+	public BookingViewVO getBookingView(Long bookingId) throws BusinessException;
+
+	/**
+	 * 
+	 * @param bookingId
+	 * @return
+	 * @throws BusinessException
+	 */
+	public BookingVO getBooking(Long bookingId) throws BusinessException;
+
+	/**
+	 * 
+	 * @param searchParamVO
+	 * @param employeeVO 
+	 * @param isPersonal 
+	 * @param first
+	 * @param pageSize
+	 * @param sortOrder 
+	 * @param sortField 
+	 * @param filters
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<BookingViewVO> getBookingViewList(SearchParamVO searchParamVO, Boolean isPersonal, EmployeeVO employeeVO, int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters, Map<String, Object> params) throws BusinessException;
+
+	/**
+	 * 
+	 * @param searchParamVO
+	 * @return
+	 * @throws BusinessException
+	 */
+	public List<Long> getBookingIdList(SearchParamVO searchParamVO) throws BusinessException;
+
+	/**
+	 * 
+	 * @param idTourDep
+	 * @param idBooking 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public int getTotalBookByTourDep(Long idTourDep, Long idBooking) throws BusinessException;
+
+	/**
+	 * 
+	 * @param searchParamVO
+	 * @param employeeVO 
+	 * @param isPersonal 
+	 * @param filters 
+	 * @return
+	 * @throws BusinessException
+	 */
+	public int getBookingListSize(SearchParamVO searchParamVO, Boolean isPersonal, EmployeeVO employeeVO, Map<String, String> filters, Map<String, Object> params) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	public void updateTourStatusFull(Long idTourDep) throws BusinessException;
+	
+	/**
+	 * 
+	 * @param idTourDep
+	 * @throws BusinessException
+	 */
+	public void updateTourStatusAvailable(Long idTourDep) throws BusinessException;
+
+	/**
+	 * 
+	 * @param id
+	 * @return
+	 * @throws BusinessException
+	 */
+	public String getBookingInvNo(Long id) throws BusinessException;
+	
+	public InvoiceVO getInvoiceInfo(Long id) throws BusinessException;
+	
+	public void updateBookingLockStatus(Long idTourDep, boolean isLock) throws BusinessException;
+	
+	public void updateIndividualBookingLockStatus(Long id, boolean isLock) throws BusinessException;
+	
+	public void insertBookingHistory(Long id, String actionCd, String reason) throws BusinessException;
+
+	public void updateInvoiceOrderSource(Long bookingId, String orderTypeCd) throws BusinessException;
+	
+	public int getTotalCabinByTourDep(Long idTourDep, Long idTourCruiseCabin, Long idBooking) throws BusinessException;
+	
+	public int getTotalBookByTourDep(Long idTourDep, Long idBooking, String tourTypeCode) throws BusinessException;
+	
+	public List<BookingVO> getPassengerListWithNricByidTourDep(Long idTourDep) throws BusinessException;
+	
+	public List<BookingChargeItemVO> getBookingChargeItemList(Long idBooking) throws BusinessException;
+	
+	public List<FeedbackVO> getFeedbackByBookingId(Long idBooking) throws BusinessException;
+
+	public List<InvoiceVO> getSubDocInfo(Long bookingId) throws BusinessException;
+	
+	String getFeedbackStatus(Long idBooking) throws BusinessException;
+
+}

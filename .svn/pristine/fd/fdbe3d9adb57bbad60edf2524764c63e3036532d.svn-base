@@ -1,0 +1,129 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Campaign List" toggleable="true" toggleSpeed="500">
+	<h:form id="idCampaignForm">
+		<p:growl id="msg"/>
+		<h:panelGrid columns="2" style="width:1px;">
+			<p:commandButton value="Add" action="addCampaign" immediate="true"/>
+		</h:panelGrid>
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:100px;"><h:outputLabel for="idDepDateFrom">Campaign From</h:outputLabel></p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idDepDateFrom" value="#{campaignBean.searchParamVO.fromDate}" navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+						<p:ajax event="dateSelect" update="idDepDateTo" global="false"/>
+					</p:calendar>
+				</p:column>
+				<p:column style="width:20px;"><h:outputLabel for="idDepDateTo">To</h:outputLabel></p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idDepDateTo" value="#{campaignBean.searchParamVO.toDate}" mindate="#{salesBean.searchParamVO.fromDate}"
+						navigator="true" showButtonPanel="true" size="12" pattern="dd-MMM-yyyy">
+					</p:calendar>
+				</p:column>
+				<!-- <p:column style="width:50px;"><h:outputLabel for="idTourCat">Category</h:outputLabel></p:column>
+				<p:column style="width:80px;">
+					<h:selectOneMenu id="idTourCat" value="#{campaignBean.searchParamVO.obj2}" effect="fade">
+						<f:selectItem itemLabel="Tour" itemValue="TOUR" />
+						<f:selectItem itemLabel="Umrah" itemValue="UMRAH" />
+						<f:selectItem itemLabel="Cruise" itemValue="CRUISE" />
+					</h:selectOneMenu>
+				</p:column> -->
+				<p:column style="width:60px;">
+					<p:commandButton value="Search" actionListener="#{campaignBean.searchCampaign}" update="@form"/>
+				</p:column>
+				<p:column>
+					<p:commandButton value="Reset" actionListener="#{campaignBean.init}" update="@form"/>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:dataTable id="idCampaignList" value="#{campaignBean.campaignList}" var="vo" paginator="true" rows="20" 
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+			rowsPerPageTemplate="20, 30, 50" filterEvent="enter">
+			
+			<p:column headerText="Edit" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{campaignBean.onCampaignSelected(vo)}" action="addCampaign"/>
+			</p:column>
+			<p:column headerText="Delete" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-close" actionListener="#{campaignBean.setCampaign(vo)}" oncomplete="varDelCampaignDialog.show()"/>
+			</p:column>
+			<!-- <p:column headerText="ID" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains">
+				<h:outputText value="#{vo.code}"/>
+			</p:column> -->
+			<p:column headerText="Campaign Name" sortBy="#{vo.name}" filterBy="#{vo.name}" filterMatchMode="contains">
+				<h:outputText value="#{vo.name}"/>
+			</p:column>
+			<!-- <p:column headerText="Status" sortBy="#{vo.campaignStatus}" filterBy="#{vo.campaignStatus}" filterMatchMode="contains">
+				<h:outputText value="#{vo.campaignStatus}"/>
+			</p:column> -->
+			
+			<p:column headerText="Start" styleClass="txt_center" sortBy="#{vo.startDt}" filterBy="#{vo.startDt}" filterMatchMode="contains">
+				<h:outputText value="#{vo.startDt}"/>
+			</p:column>
+			
+			<p:column headerText="End" styleClass="txt_center" sortBy="#{vo.endDt}" filterBy="#{vo.endDt}" filterMatchMode="contains">
+				<h:outputText value="#{vo.endDt}"/>
+			</p:column>
+			
+			<p:column headerText="Updated By" sortBy="#{vo.updatedBy}" style="width: 70px;" filterStyle="width:70px;" styleClass="txt_center" filterBy="#{vo.updatedBy}">
+				<h:outputText value="#{vo.updatedBy}" />
+			</p:column>
+			
+			<p:column headerText="Updated Date" sortBy="#{vo.updatedDate}" style="width: 70px;" filterStyle="width:70px;" styleClass="txt_center" filterBy="#{vo.updatedDate}">
+				<h:outputText value="#{vo.updatedDate}"><f:convertDateTime pattern="#{config['date.display.pattern']} HH:mm:ss"/></h:outputText>
+			</p:column>
+			
+			<!-- <p:column headerText="Tour Type" styleClass="txt_center" sortBy="#{vo.tourType}" filterBy="#{vo.tourType}" filterMatchMode="contains">
+				<h:outputText value="#{vo.tourType}"/>
+			</p:column> -->
+			
+			<!-- <p:column headerText="Description" sortBy="#{vo.description}" filterBy="#{vo.description}" filterMatchMode="contains">
+				<h:outputText value="#{vo.description}"/>
+			</p:column> -->
+			
+			<!-- <p:column headerText="Full Twn" filterMatchMode="contains">
+				<h:outputText value="#{vo.fullTwn}"/>
+			</p:column>
+			<p:column headerText="Full Sgl" filterMatchMode="contains">
+				<h:outputText value="#{vo.fullSgl}"/>
+			</p:column>
+			<p:column headerText="Full Trpl" filterMatchMode="contains">
+				<h:outputText value="#{vo.fullTrpl}"/>
+			</p:column>
+			<p:column headerText="Full Ctw" filterMatchMode="contains">
+				<h:outputText value="#{vo.fullCtw}"/>
+			</p:column>
+			<p:column headerText="Full Ceb" filterMatchMode="contains">
+				<h:outputText value="#{vo.fullCeb}"/>
+			</p:column>
+			<p:column headerText="Full Cnb" filterMatchMode="contains">
+				<h:outputText value="#{vo.fullCnb}"/>
+			</p:column>
+			<p:column headerText="Full Inft" filterMatchMode="contains">
+				<h:outputText value="#{vo.fullInft}"/>
+			</p:column> -->
+			
+		</p:dataTable>
+		
+	</h:form>
+</p:panel>
+
+<p:confirmDialog id="idDelCampaignDialog" header="Delete Campaign" widgetVar="varDelCampaignDialog" message="Are you sure want to delete this record?" closable="false">
+	<h:form>
+		<p:growl id="msg"/>
+		<p:commandButton value="#{msg['common.button.label.yes']}" actionListener="#{campaignBean.deleteCampaign}" update=":idCampaignForm" oncomplete="varDelCampaignDialog.hide()"/>
+		<p:commandButton value="#{msg['common.button.label.no']}" oncomplete="varDelCampaignDialog.hide()" global="false"/>
+	</h:form>
+</p:confirmDialog>
+
+</ui:define>
+</ui:composition>

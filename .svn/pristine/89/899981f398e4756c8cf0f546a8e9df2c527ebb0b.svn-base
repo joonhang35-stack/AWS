@@ -1,0 +1,440 @@
+package com.bcs.zsg.sales.vo;
+
+import java.util.List;
+
+import com.bcs.zsg.core.vo.BaseVO;
+
+public class InvoicePaxVO extends BaseVO{
+	private static final long serialVersionUID = 1L;
+
+	private Long invId;
+	private Long custId;
+	private String roomTypeCd;
+	private String roomTypeDesc;	// For report
+	private Integer roomPairingNo;
+	private String travelInsType;
+	private String travelInsPolicy;
+	private String travelInsPolicyS;
+	private String travelInsPolicyF;
+	private String ticketNo;
+	private String spclReq;
+	private String langCd;
+	private String langDesc;		// For report
+	private Integer seq;
+
+	private String actRoomTypeCd;
+	private Integer actRoomPairingNo;
+	private String actRoomIndicator;
+	private String actRoomRemarks;
+	private boolean actRoomRemarksFlg; 
+	
+	private CustDetailsVO custDetailsVO;
+	
+	private List<InvoicePaxRefNoVO> invoicePaxRefNoList;
+		
+	// For show reference no list in invoice
+	private String referenceNo;
+	private String referenceNoPreview;
+
+	// For Rooming List
+	private String invoiceNo;
+	private String salesPerson;
+	private String visaDtExp;
+	private String nationality;
+	private String custName;
+	private Integer uPoint;
+	private Integer applePoint;
+	
+	// For Invoice Passenger Editable Lock
+	private Boolean isLock = false;
+	
+	private boolean splitSelected = false; // for split
+	private String itemCode;
+	/**
+	 * @return the actRoomRemarksFlg
+	 */
+	public boolean getActRoomRemarksFlg() {
+		return actRoomRemarksFlg;
+	}
+	
+	public boolean isSplitSelected() {
+		return splitSelected;
+	}
+	
+//	public boolean getSplitSelected() {
+//		return splitSelected;
+//	}
+
+	public void setSplitSelected(boolean splitSelected) {
+		this.splitSelected = splitSelected;
+	}
+
+	/**
+	 * @param actRoomRemarksFlg the actRoomRemarksFlg to set
+	 */
+	public void setActRoomRemarksFlg(boolean actRoomRemarksFlg) {
+		this.actRoomRemarksFlg = actRoomRemarksFlg;
+	}
+	
+	/**
+	 * @return the actRoomRemarks
+	 */
+	public String getActRoomRemarks() {
+		return actRoomRemarks;
+	}
+	
+	/**
+	 * @param actRoomRemarks the actRoomRemarks to set
+	 */
+	public void setActRoomRemarks(String actRoomRemarks) {
+		this.actRoomRemarks = actRoomRemarks;
+	}
+
+	/**
+	 * @return the actRoomIndicator
+	 */
+	public String getActRoomIndicator() {
+		return actRoomIndicator;
+	}
+	
+	/**
+	 * @param actRoomIndicator the actRoomIndicator to set
+	 */
+	public void setActRoomIndicator(String actRoomIndicator) {
+		this.actRoomIndicator = actRoomIndicator;
+	}
+
+	/**
+	 * @return the invId
+	 */
+	public Long getInvId() {
+		return invId;
+	}
+	
+	/**
+	 * @param invId the invId to set
+	 */
+	public void setInvId(Long invId) {
+		this.invId = invId;
+	}
+
+	/**
+	 * @return the custId
+	 */
+	public Long getCustId() {
+		return custId;
+	}
+
+	/**
+	 * @param custId the custId to set
+	 */
+	public void setCustId(Long custId) {
+		this.custId = custId;
+	}
+
+	/**
+	 * @return the custDetailsVO
+	 */
+	public CustDetailsVO getCustDetailsVO() {
+		return custDetailsVO;
+	}
+
+	/**
+	 * @param custDetailsVO the custDetailsVO to set
+	 */
+	public void setCustDetailsVO(CustDetailsVO custDetailsVO) {
+		this.custDetailsVO = custDetailsVO;
+	}
+
+	/**
+	 * @return the roomTypeCd
+	 */
+	public String getRoomTypeCd() {
+		return roomTypeCd;
+	}
+
+	/**
+	 * @param roomTypeCd the roomTypeCd to set
+	 */
+	public void setRoomTypeCd(String roomTypeCd) {
+		this.roomTypeCd = roomTypeCd;
+	}
+
+	/**
+	 * @return the roomPairingNo
+	 */
+	public Integer getRoomPairingNo() {
+		return roomPairingNo;
+	}
+
+	/**
+	 * @param roomPairingNo the roomPairingNo to set
+	 */
+	public void setRoomPairingNo(Integer roomPairingNo) {
+		this.roomPairingNo = roomPairingNo;
+	}
+
+	/**
+	 * @return the ticketNo
+	 */
+	public String getTicketNo() {
+		return ticketNo;
+	}
+
+	/**
+	 * @param ticketNo the ticketNo to set
+	 */
+	public void setTicketNo(String ticketNo) {
+		this.ticketNo = ticketNo;
+	}
+
+	/**
+	 * @return the spclReq
+	 */
+	public String getSpclReq() {
+		return spclReq;
+	}
+
+	/**
+	 * @param spclReq the spclReq to set
+	 */
+	public void setSpclReq(String spclReq) {
+		this.spclReq = spclReq;
+	}
+
+	/**
+	 * @return the langCd
+	 */
+	public String getLangCd() {
+		return langCd;
+	}
+
+	/**
+	 * @param langCd the langCd to set
+	 */
+	public void setLangCd(String langCd) {
+		this.langCd = langCd;
+	}
+
+	/**
+	 * @return the travelInsType
+	 */
+	public String getTravelInsType() {
+		return travelInsType;
+	}
+
+	/**
+	 * @param travelInsType the travelInsType to set
+	 */
+	public void setTravelInsType(String travelInsType) {
+		this.travelInsType = travelInsType;
+	}
+
+	/**
+	 * @return the travelInsPolicy
+	 */
+	public String getTravelInsPolicy() {
+		return travelInsPolicy;
+	}
+
+	/**
+	 * @param travelInsPolicy the travelInsPolicy to set
+	 */
+	public void setTravelInsPolicy(String travelInsPolicy) {
+		this.travelInsPolicy = travelInsPolicy;
+	}
+
+	/**
+	 * @return the travelInsPolicyS
+	 */
+	public String getTravelInsPolicyS() {
+		return travelInsPolicyS;
+	}
+
+	/**
+	 * @param travelInsPolicyS the travelInsPolicyS to set
+	 */
+	public void setTravelInsPolicyS(String travelInsPolicyS) {
+		this.travelInsPolicyS = travelInsPolicyS;
+	}
+
+	/**
+	 * @return the travelInsPolicyF
+	 */
+	public String getTravelInsPolicyF() {
+		return travelInsPolicyF;
+	}
+
+	/**
+	 * @param travelInsPolicyF the travelInsPolicyF to set
+	 */
+	public void setTravelInsPolicyF(String travelInsPolicyF) {
+		this.travelInsPolicyF = travelInsPolicyF;
+	}
+
+	/**
+	 * @return the roomTypeDesc
+	 */
+	public String getRoomTypeDesc() {
+		return roomTypeDesc;
+	}
+
+	/**
+	 * @param roomTypeDesc the roomTypeDesc to set
+	 */
+	public void setRoomTypeDesc(String roomTypeDesc) {
+		this.roomTypeDesc = roomTypeDesc;
+	}
+
+	/**
+	 * @return the langDesc
+	 */
+	public String getLangDesc() {
+		return langDesc;
+	}
+
+	/**
+	 * @param langDesc the langDesc to set
+	 */
+	public void setLangDesc(String langDesc) {
+		this.langDesc = langDesc;
+	}
+
+	/**
+	 * @return the seq
+	 */
+	public Integer getSeq() {
+		return seq;
+	}
+
+	/**
+	 * @param seq the seq to set
+	 */
+	public void setSeq(Integer seq) {
+		this.seq = seq;
+	}
+
+	/**
+	 * @return the roomTypeCd
+	 */
+	public String getActRoomTypeCd() {
+		return actRoomTypeCd;
+	}
+
+	/**
+	 * @param roomTypeCd the roomTypeCd to set
+	 */
+	public void setActRoomTypeCd(String actRoomTypeCd) {
+		this.actRoomTypeCd = actRoomTypeCd;
+	}
+
+	/**
+	 * @return the roomPairingNo
+	 */
+	public Integer getActRoomPairingNo() {
+		return actRoomPairingNo;
+	}
+
+	/**
+	 * @param roomPairingNo the roomPairingNo to set
+	 */
+	public void setActRoomPairingNo(Integer actRoomPairingNo) {
+		this.actRoomPairingNo = actRoomPairingNo;
+	}
+
+	public String getInvoiceNo() {
+		return invoiceNo;
+	}
+
+	public void setInvoiceNo(String invoiceNo) {
+		this.invoiceNo = invoiceNo;
+	}
+
+	public String getSalesPerson() {
+		return salesPerson;
+	}
+
+	public void setSalesPerson(String salesPerson) {
+		this.salesPerson = salesPerson;
+	}
+
+	public String getVisaDtExp() {
+		return visaDtExp;
+	}
+
+	public void setVisaDtExp(String visaDtExp) {
+		this.visaDtExp = visaDtExp;
+	}
+
+	public String getNationality() {
+		return nationality;
+	}
+
+	public void setNationality(String nationality) {
+		this.nationality = nationality;
+	}
+
+	public String getCustName() {
+		return custName;
+	}
+
+	public void setCustName(String custName) {
+		this.custName = custName;
+	}
+
+	public Integer getuPoint() {
+		return uPoint;
+	}
+
+	public void setuPoint(Integer uPoint) {
+		this.uPoint = uPoint;
+	}
+
+	public Integer getApplePoint() {
+		return applePoint;
+	}
+
+	public void setApplePoint(Integer applePoint) {
+		this.applePoint = applePoint;
+	}
+
+	public Boolean getIsLock() {
+		return isLock;
+	}
+
+	public void setIsLock(Boolean isLock) {
+		this.isLock = isLock;
+	}
+
+	public List<InvoicePaxRefNoVO> getInvoicePaxRefNoList() {
+		return invoicePaxRefNoList;
+	}
+
+	public void setInvoicePaxRefNoList(List<InvoicePaxRefNoVO> invoicePaxRefNoList) {
+		this.invoicePaxRefNoList = invoicePaxRefNoList;
+	}
+
+	public String getReferenceNo() {
+		return referenceNo;
+	}
+
+	public String getReferenceNoPreview() {
+		return referenceNoPreview;
+	}
+
+	public void setReferenceNo(String referenceNo) {
+		this.referenceNo = referenceNo;
+	}
+
+	public void setReferenceNoPreview(String referenceNoPreview) {
+		this.referenceNoPreview = referenceNoPreview;
+	}
+
+	public String getItemCode() {
+		return itemCode;
+	}
+
+	public void setItemCode(String itemCode) {
+		this.itemCode = itemCode;
+	}
+}

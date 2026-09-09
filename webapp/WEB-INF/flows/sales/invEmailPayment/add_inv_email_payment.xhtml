@@ -1,0 +1,180 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+<p:panelGrid style="margin-bottom:10px;">
+	<p:row>
+		<p:column style="width:140px">
+			<p:outputLabel value="Merchant" for="idHiddenMerchant"/>
+		</p:column>
+		<p:column>
+			<h:inputHidden id="idHiddenMerchant" value="#{invEmailPmntBean.invoiceEmailPaymentVO.ipayConfigComment}" required="true"/>
+			<p:inputText id="idMerchant" value="#{invEmailPmntBean.invoiceEmailPaymentVO.ipayConfigComment}" required="true" readonly="true" style="background:#ccc"/>
+			<p:commandButton icon="ui-icon-search" actionListener="#{invEmailPmntBean.loadIpayConfigList}" oncomplete="varIpayConfigListDialog.show()" 
+				update=":idIpayConfigListDialog" process="@this" style="margin-left: 5px;" disabled="#{invEmailPmntBean.invoiceEmailPaymentVO.paymentStatus ne 'P'}"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Invoice No." for="idTxtInvoiceNo"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTxtInvoiceNo" value="#{invEmailPmntBean.invoiceEmailPaymentVO.prefix} #{invEmailPmntBean.invoiceEmailPaymentVO.invoiceNo}" required="true" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Invoice Status" for="idTxtInvoiceStatus"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTxtInvoiceStatus" value="#{zsg:referenceDataValue('INV_STATUS', invEmailPmntBean.invoiceEmailPaymentVO.invoiceStatus)}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+	<!-- <p:row>
+		<p:column>
+			<p:outputLabel value="Admin Charges Invoice No." for="idTxtAdminChargesInvoiceNo"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTxtAdminChargesInvoiceNo" value="#{invEmailPmntBean.invoiceEmailPaymentVO.prefixAdminCharges} #{invEmailPmntBean.invoiceEmailPaymentVO.invoiceAdminChargesNo}" readonly="true" style="background:#ccc"/>
+			<p:commandButton icon="ui-icon-search" actionListener="#{invEmailPmntBean.loadInvoiceList}" oncomplete="varInvNoDialog.show()" 
+				update=":idInvNoDialog" process="@this" style="margin-left: 5px;" />
+			<p:commandButton icon="ui-icon-close" actionListener="#{invEmailPmntBean.removeInvoiceAdminCharges}" update="idTxtAdminChargesInvoiceNo"/>
+		</p:column>
+	</p:row> -->
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Customer Email" for="idEmail"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idEmail" value="#{invEmailPmntBean.invoiceEmailPaymentVO.email}" required="true" maxlength="50"
+				validatorMessage="Invalid email format" 
+				readonly="#{invEmailPmntBean.invoiceEmailPaymentVO.paymentStatus ne 'P'}"
+				style="width: 250px;background:#{invEmailPmntBean.invoiceEmailPaymentVO.paymentStatus ne 'P' ? '#ccc' : ''}">
+				<f:validateRegex pattern="#{config['email.format.pattern']}" />
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Payment Amount" for="idPaymentAmt"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idPaymentAmt" value="#{invEmailPmntBean.invoiceEmailPaymentVO.paymentAmt}" required="true" 
+				readonly="#{invEmailPmntBean.invoiceEmailPaymentVO.paymentStatus ne 'P'}"
+				style="background:#{invEmailPmntBean.invoiceEmailPaymentVO.paymentStatus ne 'P' ? '#ccc' : ''}">
+				<p:ajax event="change" listener="#{invEmailPmntBean.handleAdminChargesPercentageChange}" 
+					process="@this, idAdminCharges" update="idAdminCharges, idTotalPayment"/>
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Admin Fee (%)" for="idAdminChargesPercent"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAdminChargesPercent" value="#{invEmailPmntBean.invoiceEmailPaymentVO.adminChargesPercentage}" maxlength="5" required="true" 
+				readonly="true" style="background: #ccc">
+				<p:ajax event="change" listener="#{invEmailPmntBean.handleAdminChargesPercentageChange}" 
+					process="@this, idPaymentAmt" update="idAdminCharges, idTotalPayment"/>
+				<f:convertNumber pattern="0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Admin Fee" for="idAdminCharges"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAdminCharges" value="#{invEmailPmntBean.invoiceEmailPaymentVO.adminCharges}" required="true"
+				readonly="true" style="background: #ccc">
+				<p:ajax event="change" listener="#{invEmailPmntBean.calculateTotalPaymentAmt}" 
+					process="@this, idPaymentAmt" update="idTotalPayment"/>
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Total Payment" for="idTotalPayment"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTotalPayment" value="#{invEmailPmntBean.invoiceEmailPaymentVO.totalPaymentAmt}" readonly="true" style="background:#ccc">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Status" for="idTxtStatus"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTxtStatus" value="#{invEmailPmntBean.invoiceEmailPaymentVO.paymentStatus eq 'P' ? 'Pending' : 'Success'}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Trans No." for="idTransNo"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTransNo" value="#{invEmailPmntBean.invoiceEmailPaymentVO.transId}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panel header="Credit Card Info">
+	<p:panelGrid>
+		<p:row>
+			<p:column style="width:110px">
+				<p:outputLabel value="CC Name" for="idCCName"/>
+			</p:column>
+			<p:column style="width:150px">
+				<p:inputText id="idCCName" value="#{invEmailPmntBean.invoiceEmailPaymentVO.ccName}" readonly="true" style="background:#ccc"/>
+			</p:column>
+			<p:column style="width:110px">
+				<p:outputLabel value="CC No." for="idCCNo"/>
+			</p:column>
+			<p:column>
+				<p:inputText id="idCCNo" value="#{invEmailPmntBean.invoiceEmailPaymentVO.ccNo}" readonly="true" style="background:#ccc"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<p:outputLabel value="CC Bank" for="idSBank"/>
+			</p:column>
+			<p:column>
+				<p:inputText id="idSBank" value="#{invEmailPmntBean.invoiceEmailPaymentVO.sBankName}" readonly="true" style="background:#ccc"/>
+			</p:column>
+			<p:column>
+				<p:outputLabel value="CC Country" for="idSCountry"/>
+			</p:column>
+			<p:column>
+				<p:inputText id="idSCountry" value="#{invEmailPmntBean.invoiceEmailPaymentVO.sCountry}" readonly="true" style="background:#ccc"/>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+</p:panel>
+<p:panelGrid id="idButtonGrid" columns="3" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{invEmailPmntBean.save}" 
+		update=":idForm" />
+	<p:commandButton value="#{msg['common.button.label.cancel']}" process="@this" oncomplete="varEmailPayment.hide();">
+		<pe:resetEditableValues for="idEmailPaymentForm"/>
+	</p:commandButton>
+	<p:commandButton icon="ui-icon-mail-closed" value="Resend" actionListener="#{invEmailPmntBean.resendEmail}" 
+		update=":idForm" 
+		disabled="#{invEmailPmntBean.invoiceEmailPaymentVO.paymentStatus ne 'P' || 
+					invEmailPmntBean.invoiceEmailPaymentVO.invoiceStatus eq 'VD' || invEmailPmntBean.invoiceEmailPaymentVO.invoiceStatus eq 'CC'}"
+		oncomplete="if (args &amp;&amp; !args.validationFailed) varEmailPayment.hide();">
+	</p:commandButton>
+</p:panelGrid>
+
+
+		
+</ui:composition>

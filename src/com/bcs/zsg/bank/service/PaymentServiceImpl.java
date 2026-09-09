@@ -1,0 +1,449 @@
+package com.bcs.zsg.bank.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.dao.ChartOfAcctDAO;
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.acct.service.AccountService;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctTransViewVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.bank.dao.PaymentDAO;
+import com.bcs.zsg.bank.vo.BankAcctVO;
+import com.bcs.zsg.bank.vo.CashBookVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.EInvoiceConstant;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.maintenance.dao.SystemNumberGenerationDAO;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+import com.bcs.zsg.zextra.backend.helper.SysNumGenUtil;
+
+public class PaymentServiceImpl implements PaymentService {
+
+	@Autowired
+	private PaymentDAO paymentDAO;
+	@Autowired
+	private ChartOfAcctDAO chargOfAcctDAO;
+	@Autowired
+	private SystemNumberGenerationDAO sysNumGenDAO;
+	@Autowired
+	private AccountService accountService;
+	
+
+	@Override
+	public List<AcctTransVO> getAcctTransList(Long CompId) throws BusinessException {
+		return paymentDAO.getAcctTransList(CompId);
+	}
+
+	@Override
+	public List<CashBookVO> getCashBookList() throws BusinessException {
+		return paymentDAO.getCashBookList();
+	}
+
+	@Override
+	public List<BankAcctVO> getBankAcctList() throws BusinessException {
+		return paymentDAO.getBankAcctList();
+	}
+
+
+	@Override
+	public List<AcctVO> getAcctList(Long idCompany,String strAutoComplete) throws BusinessException {
+		return paymentDAO.getAcctList(idCompany,strAutoComplete);
+	}
+
+	@Override
+	public AcctVO getAcctDescList(String acctCd,String acctSubCd,Long CompId) throws BusinessException {
+		return paymentDAO.getAcctDescList(acctCd,acctSubCd,CompId);
+	}
+
+	@Override
+	public void addPayment(CashBookVO cashBookVO, Long idCompany, BankAcctVO bankAcctSearchVO, LookupItemVO lookupItemBT, LookupItemVO lookupItemCBT, AcctVO acctVO) throws BusinessException, QueueException {
+		SystemNumberGenerationVO sysNumGenVO = new SystemNumberGenerationVO();
+		sysNumGenVO.setCode(CommonConstant.SYS_NUM_CD_BANK_PMNT);
+		sysNumGenVO.setIdCompany(idCompany);
+		sysNumGenVO = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(sysNumGenVO));
+		
+		//cashBookVO.setDtTrans(transDate);
+		cashBookVO.setSysCode(sysNumGenVO.getCode());
+		cashBookVO.setSysPrefix(sysNumGenVO.getPrefixid());
+		cashBookVO.setSysNo(String.valueOf(sysNumGenVO.getNextnumber()));
+		cashBookVO.setTransTypeCd(lookupItemBT.getCode());
+		cashBookVO.setDebit(0.00);
+		cashBookVO.setIsClear(false);
+		cashBookVO.setIsMark(false);
+		cashBookVO.setTypeCd(lookupItemCBT.getCode());
+		cashBookVO.setGroupNo(null);
+		cashBookVO.seteInvoiceStatus(EInvoiceConstant.E_INV_STATUS_NOT_SUBMIT);
+		cashBookVO.setStatusCode(BaseConstant.STATUS_ACTIVE);
+		paymentDAO.insert(cashBookVO);
+
+		AcctTransVO acctTransVO1=new AcctTransVO();
+		acctTransVO1.setCompanyId(idCompany);
+		acctTransVO1.setAcctId(bankAcctSearchVO.getIdAcct());
+		acctTransVO1.setRefNo(cashBookVO.getRefNo());
+		acctTransVO1.setCredit(cashBookVO.getCredit());
+		acctTransVO1.setDesc(null);
+		acctTransVO1.setDebit(0.00);
+		if (StringUtils.isEmpty(acctVO.getSubCode())) acctTransVO1.setCode(acctVO.getCode());
+		else acctTransVO1.setCode(acctVO.getCode() + "-" + acctVO.getSubCode());
+		
+		if (StringUtils.isEmpty(acctVO.getSubDesc())) acctTransVO1.setDesc(acctVO.getDesc());
+		else acctTransVO1.setDesc(acctVO.getDesc()+","+acctVO.getSubDesc());
+		
+		acctTransVO1.setType(lookupItemBT.getCode());
+		acctTransVO1.setTransDt(cashBookVO.getDtTrans());
+		acctTransVO1.setSysPrefix(sysNumGenVO.getPrefixid());
+		acctTransVO1.setSysCode(sysNumGenVO.getCode());
+		acctTransVO1.setSysNo(String.valueOf(sysNumGenVO.getNextnumber()));
+		acctTransVO1.setSource("BP-"+acctTransVO1.getSysNo()+"-"+bankAcctSearchVO.getName());
+		acctTransVO1.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+		accountService.auditAcctTrans(CommonConstant.ACTION_CD_ADD,acctTransVO1);
+		
+		AccountHelper.roundingAndTaxUpdate(cashBookVO.getAmountCalcViewVO(), acctTransVO1);
+		
+		if(CollectionUtils.isNotEmpty(cashBookVO.getAcctTransList())) {
+			
+			for(int i=0; i < cashBookVO.getAcctTransList().size();i++) {
+				AcctTransVO acctTransVO = new AcctTransVO();
+				acctTransVO.setCompanyId(idCompany);
+				acctTransVO.setAcctId(cashBookVO.getAcctTransList().get(i).getAcctViewVO().getId());
+				acctTransVO.setRefNo(cashBookVO.getRefNo());
+				
+				if (cashBookVO.getAcctTransList().get(i).getAmount() > 0) {
+					acctTransVO.setCredit(0.00);
+					acctTransVO.setDebit(cashBookVO.getAcctTransList().get(i).getAmount());
+				} else {
+					acctTransVO.setCredit(-cashBookVO.getAcctTransList().get(i).getAmount());
+					acctTransVO.setDebit(0.00);
+				}
+				
+				if (StringUtils.isEmpty(cashBookVO.getAcctTransList().get(i).getAcctViewVO().getSubCode())) {
+					acctTransVO.setCode(cashBookVO.getAcctTransList().get(i).getAcctViewVO().getCode().toString());
+				} else {
+					acctTransVO.setCode(cashBookVO.getAcctTransList().get(i).getAcctViewVO().getCode()+ "-" +cashBookVO.getAcctTransList().get(i).getAcctViewVO().getSubCode());
+				}
+				acctTransVO.setDesc(cashBookVO.getAcctTransList().get(i).getDesc());
+				acctTransVO.setType(lookupItemCBT.getCode());
+				acctTransVO.setTransDt(cashBookVO.getDtTrans());
+				acctTransVO.setSysPrefix(sysNumGenVO.getPrefixid());
+				acctTransVO.setSysCode(sysNumGenVO.getCode());
+				acctTransVO.setSysNo(String.valueOf(sysNumGenVO.getNextnumber()));
+				acctTransVO.setSource("BP-"+acctTransVO.getSysNo()+"-"+bankAcctSearchVO.getName());
+				acctTransVO.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+				acctTransVO.seteInvoiceClassCode(cashBookVO.getAcctTransList().get(i).geteInvoiceClassCode());
+				
+				acctTransVO = AccountHelper.updateAcctTransTaxRelated(acctTransVO, cashBookVO.getAcctTransList().get(i));
+				
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_ADD,acctTransVO);
+			}
+		}
+		//sysNumGenVO.setNextnumber(sysNumGenVO.getNextnumber()+1);
+		//paymentDAO.update(sysNumGenVO);
+
+	}
+	
+	@Override
+	public void deletePaymentList(CashBookVO cashBookVO, Long idCompany) throws BusinessException {
+		//if (LookupItemUtils.isDateInFinPeriodClosed(idCompany, cashBookVO.getDtTrans())) throw new BusinessException(CommonErrConstant.ERR_ACCT_FIN_PERIOD_CLOSED_CANNOT_DEL);
+		
+		List<AcctTransViewVO> acctTransList = getAcctTransSysNoList(cashBookVO.getSysNo(), cashBookVO.getSysCode(), idCompany);
+		for(int i = 0; i < acctTransList.size(); i++) {
+			AcctTransViewVO acctTransVO = acctTransList.get(i);
+			acctTransVO.setAcctId(acctTransList.get(i).getAcctViewVO().getId());
+			accountService.auditAcctTrans(CommonConstant.ACTION_CD_DEL,acctTransVO);
+			//acctTransList.remove(acctTransVO);
+		}
+		cashBookVO.setStatusCode(BaseConstant.STATUS_TERMINATED);
+		paymentDAO.update(cashBookVO);
+	}
+
+	@Override
+	public void updatePayment(CashBookVO cashBookVO, List<AcctTransVO> acctTransList) throws BusinessException {
+		paymentDAO.update(cashBookVO);
+	}
+
+	@Override
+	public BankAcctVO getBankAcctSearchList(Long idBank) throws BusinessException {
+		return paymentDAO.getBankAcctSearchList(idBank);
+	}
+
+	@Override
+	public void updTransList(List<AcctTransViewVO> addTransList,
+			List<AcctTransViewVO> updTransist, List<AcctTransViewVO> delTransList,CashBookVO cashBookVO,Long idCompany,BankAcctVO bankAcctSearchVO, AcctTransViewVO acctTransCashBookVO, LookupItemVO lookupItemCBT,SystemNumberGenerationVO sysGenCodeVO,List<AcctTransViewVO> acctTransListView)
+					throws BusinessException {
+	/*System.out.println("\n\n updCompTranslist size is :"+updCompTranslist.size());
+		if (CollectionUtils.isNotEmpty(updCompTranslist)) {
+			for (AcctTransVO vo : updCompTranslist) {
+				vo.setCompanyId(idCompany);
+				vo.setRefNo(cashBookVO.getRefNo());
+				vo.setSource("BP-"+vo.getSysNo()+"-"+bankAcctSearchVO.getName());
+				vo.setDestination("Memo-"+cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD,vo);
+			}
+		}*/
+		
+	
+		if (CollectionUtils.isNotEmpty(addTransList)) {
+			for (AcctTransViewVO vo : addTransList) 
+			{
+				/*String credit=Double.toString(vo.getCredit());
+				if(vo.getCredit()<0.00)
+				{
+					StringBuffer sb=new StringBuffer(credit);
+					sb.deleteCharAt(0);
+					credit=sb.toString();
+					vo.setCredit(Double.parseDouble(credit));
+				}*/	
+				vo.setCompanyId(idCompany);
+				vo.setAcctId(vo.getAcctViewVO().getId());
+				vo.setTransDt(cashBookVO.getDtTrans());
+				vo.setSysCode(sysGenCodeVO.getCode());
+				vo.setSysPrefix(cashBookVO.getSysPrefix());
+				vo.setSysNo(cashBookVO.getSysNo());
+				vo.setRefNo(cashBookVO.getRefNo());
+				vo.setSource("BP-"+vo.getSysNo()+"-"+bankAcctSearchVO.getName());
+				vo.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+				vo.setType(lookupItemCBT.getCode());
+				//vo.setCredit(0.00);
+				
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_ADD,vo);
+			}
+		}
+	
+		// update contacts
+		if (CollectionUtils.isNotEmpty(updTransist)) {
+			for (AcctTransViewVO vo : updTransist) 
+			{
+				
+				//vo.setCompanyId(idCompany);
+				vo.setAcctId(vo.getAcctViewVO().getId());
+				vo.setTransDt(cashBookVO.getDtTrans());
+				vo.setRefNo(cashBookVO.getRefNo());
+				vo.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+				//vo.setSource("BP-"+vo.getSysNo()+"-"+bankAcctSearchVO.getName());
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD,vo);
+			}
+		}
+		// delete contacts
+		if (CollectionUtils.isNotEmpty(delTransList)) {
+			for (AcctTransViewVO vo : delTransList) 
+			{
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_DEL,vo);
+			}
+		}
+
+		//acctTransCashBookVO.setDestination(cashBookVO.getPayee()+"--"+cashBookVO.getRemarks());
+		acctTransCashBookVO.setTransDt(cashBookVO.getDtTrans());
+		acctTransCashBookVO.setRefNo(cashBookVO.getRefNo());
+		acctTransCashBookVO.setCompanyId(idCompany);
+		acctTransCashBookVO.setAcctId(bankAcctSearchVO.getIdAcct());
+		acctTransCashBookVO.setCredit(cashBookVO.getCredit());
+		acctTransCashBookVO.setSource("BP-"+acctTransCashBookVO.getSysNo()+"-"+bankAcctSearchVO.getName());
+		acctTransCashBookVO.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+		accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD,acctTransCashBookVO);
+		
+		if (CollectionUtils.isNotEmpty(acctTransListView)) {
+			for (AcctTransViewVO vo : acctTransListView) {
+				vo.setTransDt(cashBookVO.getDtTrans());
+				vo.setRefNo(cashBookVO.getRefNo());
+				vo.setAcctId(vo.getAcctViewVO().getId());
+				vo.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD,vo);
+			}
+		}
+	}
+
+	@Override
+	public List<AcctVO> getAcctCodeList(Long idAccount) throws BusinessException {
+		return paymentDAO.getAcctCodeList(idAccount);
+	}
+
+	@Override
+	public List<AcctTransViewVO> getAcctTransListView() throws BusinessException {
+		return paymentDAO.getAcctTransListView();
+	}
+
+	@Override
+	public List<AcctTransViewVO> getAcctTransViewTableList(String sysNo, String transTypeCd, String sysCode,String statusActive,Long CompId) throws BusinessException {
+		return paymentDAO.getAcctTransViewTableList(sysNo,transTypeCd,sysCode,statusActive,CompId);
+	}
+
+	@Override
+	public List<AcctTransViewVO> getAcctTransSysNoList(String sysNo,String sysCode, Long CompId) throws BusinessException {
+		return paymentDAO.getAcctTransSysNoList(sysNo,sysCode,CompId);
+	}
+	
+	@Override
+	public LookupItemVO getlookupItemBT(String cd) throws BusinessException {
+		return paymentDAO.getlookupItemBT(cd);
+	}
+
+	@Override
+	public LookupItemVO getlookupItemCBT(String gd) throws BusinessException {
+		return paymentDAO.getlookupItemCBT(gd);
+	}
+
+	@Override
+	public SupplierVO getSupplier(Long supplierId, Long idCompany) throws BusinessException {
+		return paymentDAO.getSupplier(supplierId,idCompany);
+	}
+
+	@Override
+	public AcctVO getAcctSearchList(Long idAcct) throws BusinessException {
+		return paymentDAO.getAcctSearchList(idAcct);
+	}
+
+	@Override
+	public List<CashBookVO> getBankCashBookList(String sysNumCdBankPmnt, Long idCompany, SearchParamVO searchParamVO, Map<String, Object> params) throws BusinessException {
+		return paymentDAO.getBankCashBookList(sysNumCdBankPmnt, idCompany, searchParamVO, params);
+	}
+	
+	@Override
+	public int getBankCashBookListSize(String sysNumCdBankPmnt, Long idCompany, SearchParamVO searchParamVO, Map<String, Object> params) throws BusinessException {
+		return paymentDAO.getBankCashBookListSize(sysNumCdBankPmnt, idCompany, searchParamVO, params);
+	}
+	
+	@Override
+	public int getCashBookListSize(Map<String, Object> params) throws BusinessException {
+		return paymentDAO.getCashBookListSize(params);
+	}
+	
+	@Override
+	public List<CashBookVO> getCashBookList(Map<String, Object> params) throws BusinessException {
+		return paymentDAO.getCashBookList(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.bank.service.PaymentService#updatePayment(com.bcs.zsg.bank.vo.CashBookVO, com.bcs.zsg.acct.vo.AcctTransViewVO, com.bcs.zsg.bank.vo.BankAcctVO)
+	 */
+	@Override
+	public void updatePayment(CashBookVO cashBookVO, AcctTransViewVO acctTransCashBookVO, BankAcctVO bankAcctSearchVO) throws BusinessException {
+	
+		SystemNumberGenerationVO sysGenCodeVO=sysNumGenDAO.getSystemNumberGeneration(cashBookVO.getSysCode(),bankAcctSearchVO.getIdCompany());
+		// update casch book
+		paymentDAO.update(cashBookVO);
+		acctTransCashBookVO.setTransDt(cashBookVO.getDtTrans());
+		acctTransCashBookVO.setRefNo(cashBookVO.getRefNo());
+		acctTransCashBookVO.setCompanyId(bankAcctSearchVO.getIdCompany());
+		acctTransCashBookVO.setAcctId(bankAcctSearchVO.getIdAcct());
+		acctTransCashBookVO.setCredit(cashBookVO.getCredit());
+		acctTransCashBookVO.setSource("BP-"+acctTransCashBookVO.getSysNo()+"-"+bankAcctSearchVO.getName());
+		acctTransCashBookVO.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+		accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD,acctTransCashBookVO);
+		
+		// terminate account trans
+		//chargOfAcctDAO.terminateAcctTrans(cashBookVO.getSysCode(), cashBookVO.getSysNo(), "Debit", bankAcctSearchVO.getIdCompany());
+
+		AccountHelper.roundingAndTaxUpdate(cashBookVO.getAmountCalcViewVO(), acctTransCashBookVO);
+		
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("companyId", acctTransCashBookVO.getCompanyId());
+		params.put("sysCode", acctTransCashBookVO.getSysCode());
+		params.put("sysNo", acctTransCashBookVO.getSysNo());
+		params.put("statusCode", BaseConstant.STATUS_ACTIVE);
+		params.put("type", "gnrl_pymt");
+		//params.put("credit", 0.0);
+		List<AcctTransVO> acctTransList = accountService.getAccountTransList(params);
+		
+		// add / update account trans
+		if (CollectionUtils.isNotEmpty(cashBookVO.getAcctTransList())) {
+			for (AcctTransViewVO vo : cashBookVO.getAcctTransList()) {
+				if (vo.getId() == null) {
+					vo.setCompanyId(bankAcctSearchVO.getIdCompany());
+					vo.setAcctId(vo.getAcctViewVO().getId());
+					vo.setTransDt(cashBookVO.getDtTrans());
+					vo.setSysCode(sysGenCodeVO.getCode());
+					vo.setSysPrefix(cashBookVO.getSysPrefix());
+					vo.setSysNo(cashBookVO.getSysNo());
+					vo.setRefNo(cashBookVO.getRefNo());
+					vo.setSource("BP-"+vo.getSysNo()+"-"+bankAcctSearchVO.getName());
+					vo.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+					if (vo.getAmount() > 0) {
+						vo.setCredit(0.00);
+						vo.setDebit(vo.getAmount());
+					} else {
+						vo.setCredit(-vo.getAmount());
+						vo.setDebit(0.00);
+					}
+					accountService.auditAcctTrans(CommonConstant.ACTION_CD_ADD,vo);
+					
+				} else {
+					if (CollectionUtils.isNotEmpty(acctTransList)) {
+						for (int i = acctTransList.size() - 1 ; i >= 0 ; i--) {
+							AcctTransVO vo1 = acctTransList.get(i);
+							
+							if (vo1.getId().longValue() == vo.getId().longValue()) {
+								vo1.setAcctId(vo.getAcctViewVO().getId());
+								vo1.setTransDt(cashBookVO.getDtTrans());
+								vo1.setRefNo(cashBookVO.getRefNo());
+								vo1.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+								vo1.setTaxCode(vo.getTaxCode());
+								vo1.setTaxAmount(vo.getTaxAmount());
+								vo1.setTaxRate(vo.getTaxRate());
+								vo1.setAmount(vo.getAmount());
+								vo1.setDebit(vo.getDebit());
+								vo1.setCredit(vo.getCredit());
+								
+								if (vo.getAmount() > 0) {
+									vo1.setCredit(0.00);
+									vo1.setDebit(vo.getAmount());
+								} else {
+									vo1.setCredit(-vo.getAmount());
+									vo1.setDebit(0.00);
+								}
+								vo1.setCode(vo.getCode());
+								vo1.setDesc(vo.getDesc());
+								vo1.seteInvoiceClassCode(vo.geteInvoiceClassCode());
+								
+								accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD, vo1);
+								acctTransList.remove(i);
+								break;
+							}
+						}
+					} else {
+						vo.setAcctId(vo.getAcctViewVO().getId());
+						vo.setTransDt(cashBookVO.getDtTrans());
+						vo.setRefNo(cashBookVO.getRefNo());
+						vo.setDestination(cashBookVO.getRemarks()+" To-"+cashBookVO.getPayee());
+						
+						if (vo.getAmount() > 0) {
+							vo.setCredit(0.00);
+							vo.setDebit(vo.getAmount());
+						} else {
+							vo.setCredit(-vo.getAmount());
+							vo.setDebit(0.00);
+						}
+						accountService.auditAcctTrans(CommonConstant.ACTION_CD_UPD,vo);
+					}
+				}
+			}
+		}
+		// terminate account trans
+		if (CollectionUtils.isNotEmpty(acctTransList)) {
+			for (AcctTransVO vo1 : acctTransList) {
+				if (CommonConstant.SYS_NUM_CD_TAX.equals(vo1.getType()) || 
+						CommonConstant.SYS_NUM_CD_NCT.equals(vo1.getType()) || 
+						CommonConstant.SYS_NUM_CD_ROUNDING.equals(vo1.getType())) {
+					continue;
+				}
+				accountService.auditAcctTrans(CommonConstant.ACTION_CD_DEL,vo1);
+			}
+		}
+		
+		// update invoice payment
+		//depositDAO.updateInvoicePmnt(cashBookVO);
+	}
+
+}

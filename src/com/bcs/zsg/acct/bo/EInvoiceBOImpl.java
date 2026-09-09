@@ -1,0 +1,375 @@
+package com.bcs.zsg.acct.bo;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import org.primefaces.json.JSONException;
+import org.primefaces.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.service.EInvoiceService;
+import com.bcs.zsg.acct.vo.EInvoiceAccessTokenVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotTransVO;
+import com.bcs.zsg.acct.vo.EInvoiceApiDailySnapshotVO;
+import com.bcs.zsg.acct.vo.EInvoiceBuyerVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateNumGenVO;
+import com.bcs.zsg.acct.vo.EInvoiceConsolidateVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentItemVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.acct.vo.EInvoiceSubmissionVO;
+import com.bcs.zsg.acct.vo.EInvoiceSupplierVO;
+import com.bcs.zsg.bank.vo.CashBookVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.vo.BaseVO;
+import com.bcs.zsg.einvoice.vo.ApiDocumentQueryResponseVO;
+import com.bcs.zsg.einvoice.vo.ApiGetSubmissionResponseVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.web.object.EInvoiceDocument;
+
+import oasis.names.specification.ubl.schema.xsd.invoice_21.InvoiceType;
+
+public class EInvoiceBOImpl implements EInvoiceBO {
+
+	@Autowired
+	private EInvoiceService eInvoiceService;
+
+	@Override
+	public void insertInvoice(EInvoiceDocumentVO eInvoiceVO, InvoiceVO invoiceVO, String eInvoiceDocType)
+			throws BusinessException {
+		eInvoiceService.insertInvoice(eInvoiceVO, invoiceVO, eInvoiceDocType);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertInvoice(String docUuid, String submissionUid, String docStatus, InvoiceVO invoiceVO, String eInvoiceDocType)
+			throws BusinessException {
+		return eInvoiceService.insertInvoice(docUuid, submissionUid, docStatus, invoiceVO, eInvoiceDocType);
+	}
+	
+	@Override
+	public void insertSubmission(String submissionUid, Long idCompany, Integer submissionDocCnt) {
+		eInvoiceService.insertSubmission(submissionUid, idCompany, submissionDocCnt);
+	}
+
+	@Override
+	public List<EInvoiceDocumentVO> getEInvoiceList(Long idCompany) {
+		return eInvoiceService.getEInvoiceList(idCompany);
+	}
+
+	@Override
+	public EInvoiceDocumentVO getEInvoiceByUUID(String uuid) {
+		return eInvoiceService.getEInvoiceByUuid(uuid);
+	}
+
+	@Override
+	public void insertExOrderBill(EInvoiceDocumentVO eInvoiceVO, ExOrderBillVO exOrderBillVO, String eInvoiceDocType)
+			throws BusinessException {
+		eInvoiceService.insertExOrderBill(eInvoiceVO, exOrderBillVO, eInvoiceDocType);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertExOrderBill(String docUuid, String submissionUid, String docStatus, ExOrderBillVO exOrderBillVO, String eInvoiceDocType)
+			throws BusinessException {
+		return eInvoiceService.insertExOrderBill(docUuid, submissionUid, docStatus, exOrderBillVO, eInvoiceDocType);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertConsolidateInvoice(String docUuid, String submissionUid, String docStatus,
+			List<InvoiceVO> consolidateInvoiceList, String eInvoiceDocType, String sysDocType, String refNo, Long idCompany)
+			throws BusinessException {
+		return eInvoiceService.insertConsolidateInvoice(docUuid, submissionUid, docStatus, consolidateInvoiceList, eInvoiceDocType, sysDocType, refNo, idCompany);
+	}
+	
+	@Override
+	public EInvoiceConsolidateNumGenVO getEInvoiceConsolidateNumGenVO(Integer year, Integer month, String code, Long idCompany) {
+		return eInvoiceService.getEInvoiceConsolidateNumGenVO(year, month, code, idCompany);
+	}
+	
+	@Override
+	public void insertVO(BaseVO vo) {
+		eInvoiceService.insertVO(vo);
+	}
+	
+	@Override
+	public void updateVO(BaseVO vo) {
+		eInvoiceService.updateVO(vo);
+	}
+	
+	@Override
+	public EInvoiceAccessTokenVO getValidAccessToken(Long idCompany) throws BusinessException {
+		return eInvoiceService.getValidAccessToken(idCompany);
+	}
+
+	@Override
+	public void insertAccessToken(EInvoiceAccessTokenVO eInvoiceAccessTokenVO) throws BusinessException {
+		eInvoiceService.insertAccessToken(eInvoiceAccessTokenVO);
+	}
+	
+	@Override
+	public void updEInvoiceDocumentVO(EInvoiceDocumentVO eInvoiceDocumentVO, EInvoiceDocument eInvoiceDocument) throws BusinessException, ParseException {
+		eInvoiceService.updEInvoiceDocumentVO(eInvoiceDocumentVO, eInvoiceDocument);
+	}
+	
+	@Override 
+	public void cancelEInvoiceDocument(String eInvoiceDocumentUuid) throws BusinessException {
+		eInvoiceService.cancelEInvoiceDocument(eInvoiceDocumentUuid);
+	}
+	
+	@Override 
+	public void cancelEInvoiceRefundNote(String eInvoiceDocumentUuid) throws BusinessException {
+		eInvoiceService.cancelEInvoiceRefundNote(eInvoiceDocumentUuid);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertConsolidateExOrderBill(String docUuid, String submissionUid, String docStatus,
+			List<ExOrderBillVO> consolidateBillList, String eInvoiceDocType, String sysDocType, String refNo,
+			Long idCompany) throws BusinessException {
+		return eInvoiceService.insertConsolidateExOrderBill(docUuid, submissionUid, docStatus, consolidateBillList, eInvoiceDocType, sysDocType, refNo, idCompany);
+	}
+	
+	@Override
+	public List<EInvoiceConsolidateVO> getEInvConsolDetailsList(String documentUuid) {
+		return eInvoiceService.getEInvConsolDetailsList(documentUuid);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertDocument(String docUuid, String submissionUid, String docStatus, Long refId, String refNo,
+			String sysDocType, String eInvoiceDocType, Long idCompany, Integer submissionDocCnt, Boolean isConsolEInv)
+			throws BusinessException {
+		return eInvoiceService.insertDocument(docUuid, submissionUid, docStatus, refId, refNo, sysDocType, eInvoiceDocType, idCompany, submissionDocCnt, isConsolEInv);
+	}
+	
+	@Override
+	public void insertDocumentDetails(InvoiceType invoiceType, EInvoiceDocumentVO eInvoiceDocumentVO) throws BusinessException {
+		eInvoiceService.insertDocumentDetails(invoiceType, eInvoiceDocumentVO);
+	}
+	
+	@Override
+	public List<EInvoiceDocumentItemVO> getEInvoiceDocumentItemList(Long idEInv) {
+		return eInvoiceService.getEInvoiceDocumentItemList(idEInv);
+	}
+	
+	@Override
+	public EInvoiceBuyerVO getEInvoiceBuyer(Long id) {
+		return eInvoiceService.getEInvoiceBuyer(id);
+	}
+	
+	@Override
+	public EInvoiceSupplierVO getEInvoiceSupplier(Long id) {
+		return eInvoiceService.getEInvoiceSupplier(id);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO getEInvoiceDetails(EInvoiceDocumentVO eInvoiceDocumentVO) throws BusinessException {
+		return eInvoiceService.getEInvoiceDetails(eInvoiceDocumentVO);
+	}
+	
+	@Override
+	public void updateEInvoiceParty(@Nonnull Long idEInvDoc, @Nullable Long idCust, @Nullable Long idSupplier, @Nullable Long idEInvoiceBuyer, @Nullable Long idEInvoiceSupplier)
+			throws BusinessException {
+		eInvoiceService.updateEInvoiceParty(idEInvDoc, idCust, idSupplier, idEInvoiceBuyer, idEInvoiceSupplier);
+	}
+	
+	@Override
+	public EInvoiceBuyerVO populateAddress(EInvoiceBuyerVO buyerVO) throws BusinessException {
+		return eInvoiceService.populateAddress(buyerVO);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertCreditNote(String docUuid, String submissionUid, String docStatus, InvoiceVO invoiceVO,
+			Integer submissionDocCnt) throws BusinessException {
+		return eInvoiceService.insertCreditNote(docUuid, submissionUid, docStatus, invoiceVO, submissionDocCnt);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertRefundNote(String docUuid, String submissionUid, String docStatus, InvoiceVO invoiceVO,
+			Integer submissionDocCnt) throws BusinessException {
+		return eInvoiceService.insertRefundNote(docUuid, submissionUid, docStatus, invoiceVO, submissionDocCnt);
+	}
+	
+	@Override
+	public void updateRecentDocumentsToApiDailySnapshot(List<ApiDocumentQueryResponseVO> responseList, Date dtTrans, CompanyVO companyVO) throws KeyManagementException, BusinessException,
+			NoSuchAlgorithmException, IOException, JSONException, ParseException {
+		eInvoiceService.updateRecentDocumentsToApiDailySnapshot(responseList, dtTrans, companyVO);
+	}
+	
+	@Override
+	public void insertApiDocumentQueryResponse(List<ApiDocumentQueryResponseVO> responseList, Date d, Long idCompany) {
+		eInvoiceService.insertApiDocumentQueryResponse(responseList, d, idCompany);
+	}
+	
+	@Override
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Map<String, Object> params) {
+		return eInvoiceService.getApiDailySnapshotList(params);
+	}
+	
+	@Override
+	public List<EInvoiceApiDailySnapshotVO> getApiDailySnapshotList(Date dtTrans) {
+		return eInvoiceService.getApiDailySnapshotList(dtTrans);
+	}
+	
+	@Override
+	public void insertEInvoiceApiDailySnapshotTransactions(List<ApiDocumentQueryResponseVO> responseList, Date d, Long idCompany) {
+		eInvoiceService.insertEInvoiceApiDailySnapshotTransactions(responseList, d, idCompany);
+	}
+	
+	@Override
+	public List<EInvoiceApiDailySnapshotTransVO> getApiDailySnapshotTransList(Long idCompany, Date dtTrans) {
+		return eInvoiceService.getApiDailySnapshotTransList(idCompany, dtTrans);
+	}
+	
+	@Override
+	public List<ApiDocumentQueryResponseVO> getRecentDocuments(Date getRecentDocumentsDate, CompanyVO companyVO) throws KeyManagementException, BusinessException, NoSuchAlgorithmException, IOException, JSONException, ParseException {
+		return eInvoiceService.getRecentDocuments(getRecentDocumentsDate, companyVO);
+	}
+	
+	@Override
+	public void updateApiDailySnapshotTransStatus(Long idTrans, String existsInLocalStatus, String processStatus,
+			String statusReason) {
+		eInvoiceService.updateApiDailySnapshotTransStatus(idTrans, existsInLocalStatus, processStatus, statusReason);
+	}
+	
+	@Override
+	public JSONObject submitCreditNoteType(EInvoiceDocumentVO vo) throws BusinessException, KeyManagementException, NoSuchAlgorithmException, IOException, JSONException {
+		return eInvoiceService.submitCreditNoteType(vo);
+	}
+	
+	@Override
+	public List<EInvoiceSubmissionVO> getEInvoiceSubmissionByStatus(String statusCd, Long idCompany) {
+		return eInvoiceService.getEInvoiceSubmissionByStatus(statusCd, idCompany);
+	}
+	
+	@Override
+	public List<EInvoiceSubmissionVO> getEInvoiceSubmissionByStatus(String[] statusList, Long idCompany) {
+		return eInvoiceService.getEInvoiceSubmissionByStatus(statusList, idCompany);
+	}
+	
+	@Override
+	public ApiGetSubmissionResponseVO getSubmission(String submissionUid, Long idCompany) throws KeyManagementException, BusinessException, NoSuchAlgorithmException, IOException, JSONException, ParseException {
+		return eInvoiceService.getSubmission(submissionUid, idCompany);
+	}
+	
+	/**
+	 * update document and related table details when user refresh E-Invoice status
+	 * 
+	 * @param docUuid
+	 * @param accessToken
+	 * @return
+	 * @throws KeyManagementException
+	 * @throws NoSuchAlgorithmException
+	 * @throws MalformedURLException
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws BusinessException
+	 * @throws ParseException
+	 */
+	@Override
+	public EInvoiceDocumentVO updDocumentDetails(String docUuid, String accessToken)
+			throws KeyManagementException, NoSuchAlgorithmException, MalformedURLException, IOException, JSONException,
+			BusinessException, ParseException {
+		return eInvoiceService.updDocumentDetails(docUuid, accessToken);
+	}
+	
+	/**
+	 * @param tin - company TIN
+	 * @param isOnBehalf
+	 * @param companyVO - to get myInvoisClientId, myInvoisClientSecret1, myInvoisClientSecret2
+	 * @return
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws BusinessException
+	 * @throws KeyManagementException 
+	 * @throws NoSuchAlgorithmException 
+	 */
+	@Override
+	public String getAuthAccessToken(CompanyVO companyVO, Boolean isOnBehalf)
+			throws IOException, JSONException, BusinessException, KeyManagementException, NoSuchAlgorithmException {
+		return eInvoiceService.getAuthAccessToken(companyVO, isOnBehalf);
+	}
+	
+	@Override
+	public String getAccessToken(CompanyVO companyVO, Boolean isOnBehalf)
+			throws BusinessException, IOException, JSONException, KeyManagementException, NoSuchAlgorithmException {
+		return eInvoiceService.getAccessToken(companyVO, isOnBehalf);
+	}
+	
+	@Override
+	public String getAccessToken(InvoiceVO invoiceVO, Boolean isOnBehalf, CompanyVO companyVO)
+			throws BusinessException, IOException, JSONException, KeyManagementException, NoSuchAlgorithmException {
+		return eInvoiceService.getAccessToken(invoiceVO, isOnBehalf, companyVO);
+	}
+
+	@Override
+	public String getAccessToken(SupplierVO supplierVO, Boolean isOnBehalf, CompanyVO companyVO)
+			throws BusinessException, IOException, JSONException, KeyManagementException, NoSuchAlgorithmException {
+		return eInvoiceService.getAccessToken(supplierVO, isOnBehalf, companyVO);
+	}
+	
+	@Override
+	public EInvoiceDocumentVO insertCashBook(String docUuid, String submissionUid, String docStatus, CashBookVO cashBookVO,
+			String eInvoiceDocType, Long idCompany) throws BusinessException {
+		return eInvoiceService.insertCashBook(docUuid, submissionUid, docStatus, cashBookVO, eInvoiceDocType, idCompany);
+	}
+	
+	@Override
+	public JSONObject submitInvoice(InvoiceVO invoiceVO) throws Exception {
+		return eInvoiceService.submitInvoice(invoiceVO);
+	}
+	
+	/**
+	 * <pre>
+	 * Submit Invoice as Invoice to E-Invoice API
+	 * Multiple submission
+	 * https://sdk.myinvois.hasil.gov.my/einvoicingapi/02-submit-documents/
+	 * </pre>
+	 * 
+	 * @param invList
+	 * @param companyVO
+	 * @return
+	 * @throws Exception
+	 * @throws BusinessException
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws NoSuchAlgorithmException
+	 */
+	@Override
+	public JSONObject submitInvoices(List<InvoiceVO> invList, Long idCompany)
+			throws Exception, BusinessException, IOException, JSONException, NoSuchAlgorithmException {
+		return eInvoiceService.submitInvoices(invList, idCompany);
+	}
+	
+	@Override
+	public InvoiceType generateInvoiceType(InvoiceVO invoiceVO, CompanyVO companyVO) throws BusinessException {
+		return eInvoiceService.generateInvoiceType(invoiceVO, companyVO);
+	}
+	
+	/**
+	 * @param docUuid
+	 * @param submissionUid
+	 * @param docStatus
+	 * @param consolidateCashBookList
+	 * @param eInvoiceDocType
+	 * @param sysDocType
+	 * @param refNo - e-Invoice Code / Number of consolidate invoice submitted to MyInvois
+	 * @param idCompany
+	 * @return 
+	 * @throws BusinessException
+	 */
+	@Override
+	public EInvoiceDocumentVO insertConsolidateCashBook(String docUuid, String submissionUid, String docStatus,
+			List<CashBookVO> consolidateCashBookList, String eInvoiceDocType, String sysDocType, String refNo,
+			Long idCompany) throws BusinessException {
+		return eInvoiceService.insertConsolidateCashBook(docUuid, submissionUid, docStatus, consolidateCashBookList, eInvoiceDocType, sysDocType, refNo, idCompany);
+	}
+}

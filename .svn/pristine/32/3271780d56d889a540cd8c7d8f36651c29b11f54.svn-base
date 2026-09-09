@@ -1,0 +1,819 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<c:set var="contextPath" value="${request.contextPath}" />
+<f:view contentType="text/html" locale="#{localeBean.locale}">
+	<h:head>
+		<f:facet name="first">
+			<meta http-equiv="X-UA-Compatible" content="EmulateIE8" />
+			<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+			<title>Booking</title>
+		</f:facet>
+	</h:head>
+
+<body id="body">
+	<style type="text/css">
+	body,td,th {
+	    font-family: Gotham, "Helvetica Neue", Helvetica, Arial, sans-serif;
+	    font-size: 14px;
+	}
+	</style>
+
+	<div id="template">
+	<table width="800" border="0" align="left" cellpadding="0" cellspacing="0">
+		<tbody>
+			<tr>
+				<td>
+					<p>
+						Dear Sir/Madam,<br />
+						Thank you for giving us the opportunity to serve you.<br />
+						Attached herewith the requested details for your kind reference
+					</p>
+					<c:if test="#{bterpBean.templateType eq 'BOOKING'}">
+					<table width="800" border="1" cellspacing="0" cellpadding="0">
+						<tbody>
+
+							<tr>
+								<td height="38" colspan="4" style="background-color: #ABABAB;">
+							        <span style="color: white; font-weight: bold;"> BOOKING DETAILS
+							        </span>
+							    </td>
+							</tr>
+							<tr>
+								<td width="130">Sales Person</td>
+								<td width="265">
+									<strong>
+										<h:outputText value="#{bterpBean.bookingViewVO.employeeViewVO.userVO.name}" />
+									</strong>
+								</td>
+								<td width="130">Date</td>
+								<td width="265">
+									<strong>
+										<h:outputText value="#{bterpBean.bookingViewVO.createdDate}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr>
+							<tr>
+								<td>Booking ID</td>
+								<td>
+									<strong><h:outputText value="#{bterpBean.bookingViewVO.id}" /></strong>
+								</td>
+								<td>Expiry Date</td>
+								<td>
+									<strong>
+										<h:outputText value="#{bterpBean.bookingViewVO.dtExp}"
+											rendered="#{bterpBean.bookingViewVO.pmntStatusCd eq 'KIV'}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr>
+							<tr>
+								<td>Tour Code</td>
+								<td>
+									<strong><h:outputText value="#{bterpBean.bookingViewVO.tourDepViewVO.code}" /></strong>
+								</td>
+								<td>Status</td>
+								<td>
+									<strong><h:outputText value="#{bterpBean.bookingViewVO.pmntStatusCd}" /></strong>
+								</td>
+							</tr>
+							<tr>
+								<td>Itinerary</td>
+								<td colspan="3">
+									<strong>
+									<c:set var="idx" value="0" />
+									<c:forEach items="#{bterpBean.bookingViewVO.tourDepViewVO.tourItineryList}" var="itineryVO">
+										<c:if test="#{idx eq '1'}">
+											<h:outputText value=" or " />
+											<c:set var="idx" value="2" />
+										</c:if>
+										<c:if
+											test="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'EN'}">
+											<a target="_blank"
+												href="#{request.contextPath}#{itineryVO.path}/#{bterpBean.urlEncoder(itineryVO.name)}"
+												style="color: #0040FF;">Find out more</a>
+											<c:if test="#{idx eq '0'}">
+												<c:set var="idx" value="1" />
+											</c:if>
+										</c:if>
+										<c:if
+											test="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'ZH'}">
+											<a target="_blank"
+												href="#{request.contextPath}#{itineryVO.path}/#{bterpBean.urlEncoder(itineryVO.name)}"
+												style="color: #0040FF;">Find out more</a>
+											<c:if test="#{idx eq '0'}">
+												<c:set var="idx" value="1" />
+											</c:if>
+										</c:if>
+									</c:forEach>
+									</strong>
+								</td>
+							</tr>
+							<tr>
+								<td height="38">Tour Package</td>
+								<td colspan="3">
+									<strong>
+										<h:outputText value="#{bterpBean.bookingViewVO.tourDepViewVO.numDays}D#{bterpBean.bookingViewVO.tourDepViewVO.numNights}N #{bterpBean.bookingViewVO.tourDepViewVO.tourPkgVO.nameEn} #{bterpBean.bookingViewVO.tourDepViewVO.tourPkgVO.nameZh} #{bterpBean.bookingViewVO.tourDepViewVO.tourPkgVO.nameOther}" />
+									</strong>
+								</td>
+							</tr>
+							<tr>
+								<td>Check-in Date</td>
+								<td>
+									<strong>
+										<h:outputText value="#{bterpBean.bookingViewVO.tourDepViewVO.dtDep}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</strong>
+								</td>
+								<td>Cruise</td>
+								<td><strong><h:outputText value="#{bterpBean.bookingViewVO.tourDepViewVO.cruiseVO.desc}" /></strong></td>
+							</tr>
+						</tbody>
+					</table> <br /> <br />
+					<table width="800" border="1" cellspacing="0" cellpadding="0">
+						<tbody>
+							<tr>
+								<td height="38" colspan="4" style="background-color: #ABABAB;">
+							        <span style="color: white; font-weight: bold;"> BILLING PERSON
+							        </span>
+							    </td>
+							</tr>
+							<tr>
+								<td width="130">Name</td>
+								<td colspan="3">
+									<strong><h:outputText value="#{bterp:lookupItemDesc('salutatn', bterpBean.bookingViewVO.customerVO.personVO.salutation)} #{bterpBean.bookingViewVO.customerVO.personVO.lastName} #{bterpBean.bookingViewVO.customerVO.personVO.givenName}" /></strong>
+								</td>
+							</tr>
+							<tr>
+								<td>Nickname</td>
+								<td width="265"><strong><h:outputText value="#{bterpBean.bookingViewVO.customerVO.personVO.nickName}" /></strong></td>
+								<td width="130">&nbsp;</td>
+								<td width="265">&nbsp;</td>
+							</tr>
+							<tr>
+								<td>Email address</td>
+								<td><strong><h:outputText value="#{bterpBean.bookingViewVO.customerVO.personVO.email}" /></strong></td>
+								<td>Contact Number</td>
+								<td>
+									<strong>
+										<ui:repeat value="#{bterpBean.bookingViewVO.customerVO.personContactList}" var="tel">
+											<h:outputText value="#{tel.number}" rendered="#{tel.typeCd eq 'mobile'}" />
+										</ui:repeat>
+										<ui:repeat value="#{bterpBean.bookingViewVO.customerVO.corContactList}" var="tel">
+											<h:outputText value="#{tel.contactNo}" rendered="#{tel.contactType eq 'mobile'}" />
+										</ui:repeat>
+									</strong>
+								</td>
+							</tr>
+						</tbody>
+					</table> <br /> <br />
+					</c:if>
+					<c:if test="#{bterpBean.templateType eq 'ENQUIRY' or bterpBean.templateType eq 'ENQUIRYWITHOUTPAX'}">
+					<table width="800" border="1" cellspacing="0" cellpadding="0">
+						<tbody>
+							<tr>
+								<td height="38" colspan="4" ><font
+									color="black">
+									<strong>INQUIRY DETAILS</strong></font></td>
+							</tr>
+							<tr>
+								<td width="130">Sales Person</td>
+								<td width="265">
+									<strong>
+										<h:outputText value="#{bterpBean.sessionInfoBean.userVO.name}" />
+									</strong>
+								</td>
+								<td width="130">Date</td>
+								<td width="265">
+									<strong>
+										<h:outputText value="#{bterpBean.today}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr>
+							<tr>
+								<td>Tour Code</td>
+								<td>
+									<strong>
+										<h:outputText value="#{bterpBean.tourDepVO.code}" />
+									</strong>
+								</td>
+								<td>Itinerary</td>
+								<td>
+									<strong>
+									<c:set var="idx" value="0" />
+									<c:forEach items="#{bterpBean.tourDepVO.tourItineryList}" var="itineryVO">
+										<c:if test="#{idx eq '1'}">
+											<h:outputText value=" or " />
+											<c:set var="idx" value="2" />
+										</c:if>
+										<c:if test="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'EN'}">
+											<a target="_blank"
+												href="#{request.contextPath}#{itineryVO.path}/#{bterpBean.urlEncoder(itineryVO.name)}"
+												style="color: #0040FF;">Find out more</a>
+											<c:if test="#{idx eq '0'}">
+												<c:set var="idx" value="1" />
+											</c:if>
+										</c:if>
+										<c:if test="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'ZH'}">
+											<a target="_blank"
+												href="#{request.contextPath}#{itineryVO.path}/#{bterpBean.urlEncoder(itineryVO.name)}"
+												style="color: #0040FF;">Find out more</a>
+											<c:if test="#{idx eq '0'}">
+												<c:set var="idx" value="1" />
+											</c:if>
+										</c:if>
+									</c:forEach>
+									</strong>
+								</td>
+							</tr>
+							<tr>
+								<td height="38">Tour Package</td>
+								<td colspan="3">
+									<strong>
+										<h:outputText value="#{bterpBean.tourDepVO.numDays}D#{bterpBean.tourDepVO.numNights}N  #{bterpBean.tourPkgVO.nameEn} #{bterpBean.tourPkgVO.nameZh} #{bterpBean.tourPkgVO.nameOther}" />
+									</strong>
+								</td>
+							</tr>
+							<tr>
+								<td>Check-in Date</td>
+								<td>
+									<strong>
+										<h:outputText value="#{bterpBean.tourDepVO.dtDep}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</strong>
+								</td>
+								<td>Cruise</td>
+								<td><strong><h:outputText value="#{bterpBean.tourDepVO.cruiseVO.desc}"/></strong></td>
+							</tr>
+						</tbody>
+					</table> <br/> <br/>
+					</c:if>
+
+					<!-- ENQUIRY/BOOKING -->
+					<table width="800" border="1" cellpadding="0" cellspacing="0">
+						<c:if test="#{bterpBean.templateType ne 'ENQUIRYWITHOUTPAX'}">
+						<tbody>
+							<tr>
+								<td height="38" colspan="4" style="background-color: #ABABAB;">
+							        <span style="color: white; font-weight: bold;"> FARE PARTICULAR
+							        </span>
+							    </td>
+							</tr>
+							<tr>
+								<td width="395"><strong>Fare</strong></td>
+								<td width="165" align="center"><strong>Price
+										(RM)</strong></td>
+								<td width="65" align="center"><strong>Qty</strong></td>
+								<td width="165" align="center"><strong>Amount
+										(RM)</strong></td>
+							</tr>
+							<c:forEach items="#{bterpBean.bookingChargeItemList}" var="vo">
+								<tr>
+									<td height="20"><h:outputText value="#{vo.desc}" /></td>
+									<td align="right">
+										<h:outputText value="#{vo.amount}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</td>
+									<td align="center"><h:outputText value="#{vo.quantity}" /></td>
+									<td align="right">
+										<h:outputText value="#{vo.ttlAmt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</td>
+								</tr>
+							</c:forEach>
+							<tr>
+								<td><strong><em>Subtotal</em></strong></td>
+								<td align="right">&nbsp;</td>
+								<td align="center">&nbsp;</td>
+								<td align="right">
+									<em>
+										<strong>
+											<h:outputText value="#{bterpBean.subTotal}">
+												<f:convertNumber pattern="#,##0.00" />
+											</h:outputText>
+										</strong>
+									</em>
+								</td>
+							</tr>
+							<c:forEach items="#{bterpBean.discountList}" var="vo">
+							<tr>
+								<td><h:outputText value="#{vo.desc}" /></td>
+								<td align="right">
+									<h:outputText value="#{vo.amount}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+								<td align="center"><h:outputText value="#{vo.quantity}" /></td>
+								<td align="right">
+									<h:outputText value="#{vo.ttlAmt}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+							</tr>
+							</c:forEach>
+							<tr>
+								<td><strong><em>Miscellaneous Charges</em></strong></td>
+								<td align="right">&nbsp;</td>
+								<td align="center">&nbsp;</td>
+								<td align="right">&nbsp;</td>
+							</tr>
+							<c:forEach items="#{bterpBean.miscChargesList}" var="vo">
+							<tr>
+								<td><h:outputText value="#{vo.desc}" /></td>
+								<td align="right">
+									<h:outputText value="#{vo.amount}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+								<td align="center"><h:outputText value="#{vo.quantity}" /></td>
+								<td align="right">
+									<h:outputText value="#{vo.ttlAmt}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+							</tr>
+							</c:forEach>
+							<tr>
+								<td height="38"><strong>Total Amount</strong></td>
+								<td align="right">&nbsp;</td>
+								<td align="center">&nbsp;</td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{bterpBean.totalAmt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr>
+							<c:if test="#{bterpBean.depositList.size() > 0}">
+							<tr>
+								<td><strong><em>Deposit Required</em></strong></td>
+								<td align="right">&nbsp;</td>
+								<td align="center">&nbsp;</td>
+								<td align="right">&nbsp;</td>
+							</tr>
+							<c:forEach items="#{bterpBean.depositList}" var="vo">
+							<tr>
+								<td height="39"><h:outputText value="#{vo.desc}" /></td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{vo.amount}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+								<td align="center"><strong><h:outputText value="#{vo.quantity}" /></strong></td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{vo.ttlAmt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr>
+							</c:forEach>
+							</c:if>
+							<c:if test="#{bterpBean.commList.size() > 0 and bterpBean.department eq 'wholesale'}">
+							<tr>
+								<td height="38" colspan="4" bgcolor="#D30707">
+									<font color="black">
+										<strong>AGENT COMM</strong>
+									</font>
+								</td>
+							</tr>
+							<c:forEach items="#{bterpBean.commList}" var="vo">
+							<tr>
+								<td><h:outputText value="#{vo.desc}" /></td>
+								<td align="right">
+									<h:outputText value="#{vo.amount}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+								<td align="center"><strong><h:outputText value="#{vo.quantity}" /></strong></td>
+								<td align="right">
+									<h:outputText value="#{vo.ttlAmt}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+							</tr>
+							</c:forEach>
+							<tr>
+								<td height="38"><strong>Total</strong></td>
+								<td align="right">&nbsp;</td>
+								<td align="center">&nbsp;</td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{bterpBean.ttlAgentComm}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr>
+							</c:if>
+						</tbody>
+						</c:if>
+
+						<!-- ENQUIRYWITHOUTPAX -->
+						<c:if test="#{bterpBean.templateType eq 'ENQUIRYWITHOUTPAX'}">
+						<tbody>
+							<tr>
+								<td height="38" colspan="4" style="background-color: #ABABAB;">
+							        <span style="color: white; font-weight: bold;"> FARE PARTICULAR
+							        </span>
+							    </td>
+							</tr>
+							<tr>
+								<td width="395"><strong>Cabin List</strong></td>
+								<td width="165" align="center"><strong>Price
+										(RM)</strong></td>
+							</tr>
+							<c:forEach items="#{bterpBean.bookingChargeItemList}" var="vo">
+								<tr>
+									<td height="20"><h:outputText value="#{vo.desc}" /></td>
+									<td align="right">
+										<h:outputText value="#{vo.ttlAmt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</td>
+								</tr>
+							</c:forEach>
+							<!-- <c:if test="#{not empty bterpBean.bookingChargeItemListBiz}">
+							<tr>
+								<td width="395"><strong>Business Class</strong></td>
+								<td width="165" align="center">&nbsp;</td>
+							</tr>
+							<c:forEach items="#{bterpBean.bookingChargeItemListBiz}" var="vo">
+								<tr>
+									<td height="20"><h:outputText value="#{vo.desc}" /></td>
+									<td align="right">
+										<h:outputText value="#{vo.ttlAmt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</td>
+								</tr>
+							</c:forEach>
+							</c:if> -->
+							<!-- <tr>
+								<td width="395"><strong>Ground Only</strong></td>
+								<td width="165" align="center">&nbsp;</td>
+							</tr>
+							<c:forEach items="#{bterpBean.bookingChargeItemListGrnd}" var="vo">
+								<tr>
+									<td height="20"><h:outputText value="#{vo.desc}" /></td>
+									<td align="right">
+										<h:outputText value="#{vo.ttlAmt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</td>
+								</tr>
+							</c:forEach> -->
+							<c:if test="#{bterpBean.commList.size() > 0 and bterpBean.department eq 'wholesale'}">
+							<tr>
+								<td height="38" colspan="2" bgcolor="#D30707">
+									<font color="black">
+										<strong>AGENT COMM</strong>
+									</font>
+								</td>
+							</tr>
+							<c:forEach items="#{bterpBean.commList}" var="vo">
+							<tr>
+								<td><h:outputText value="#{vo.desc}" /></td>
+								<td align="right">
+									<h:outputText value="#{vo.ttlAmt}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+							</tr>
+							</c:forEach>
+							</c:if>
+						</tbody>
+						</c:if>
+					</table> <br /> <br />
+
+					<!-- MISCELLANEOUS CHARGES DETAILS -->
+					<table width="800" border="1" cellpadding="0" cellspacing="0">
+						<tbody>
+							<tr>
+								<td height="38" colspan="4" style="background-color: #ABABAB;">
+							        <span style="color: white; font-weight: bold;"> MISCELLANEOUS CHARGES DETAILS
+							        </span>
+							    </td>
+							</tr>
+							<tr>
+								<td width="215" align="right">VISA</td>
+								<td width="180" align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseVisa}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+								<td width="215" align="right">AGENT COLLECTION FEES</td>
+								<td width="180" align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseAC}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+							</tr>
+							<tr>
+								<td align="right">GRATUITIES FEES</td>
+								<td align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseTipping}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+								<td align="right">TRAVEL INSURANCE</td>
+								<td align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseTrvlIns}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+							</tr>
+
+							<tr>
+								<td align="right">PORT CHARGES</td>
+								<td align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseAptAdt}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+								<td align="right">DEVIATION</td>
+								<td align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseDeviation}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+							</tr>
+
+							<tr>
+								<td>&nbsp;</td>
+								<td align="right">&nbsp;</td>
+								<td>&nbsp;</td>
+								<td align="right">&nbsp;</td>
+							</tr>
+							<!-- <tr>
+								<td colspan="4" bgcolor="#EBEBEB">MALAYSIA AIRPORT TAX</td>
+							</tr>
+							<tr>
+								<td align="right">Adult</td>
+								<td align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseAptAdt}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+								<td align="right">Child</td>
+								<td align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseAptChd}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+							</tr>
+							<tr>
+								<td colspan="4" bgcolor="#EBEBEB">YQ FUEL</td>
+							</tr>
+							<tr>
+								<td align="right">Adult</td>
+								<td align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseYqAdt}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+								<td align="right">Child</td>
+								<td align="right">
+									<h:outputText value="#{bterpBean.bookingViewVO.cruiseYqChd}">
+										<f:convertNumber pattern="#,##0.00" />
+									</h:outputText>
+								</td>
+							</tr> -->
+							<c:if test="#{bterpBean.additionalTaxList.size() > 0}">
+							<tr>
+								<td colspan="4" bgcolor="#EBEBEB">ADDITIONAL TAX</td>
+							</tr>
+							<c:forEach var="vo" items="${bterpBean.additionalTaxList}" varStatus="status"
+								begin="0" end="${bterpBean.additionalTaxList.size()}" step="2">
+								<c:if test="#{bterpBean.additionalTaxList.size() >= status.count}">
+							    <tr>
+									<c:choose>
+										<c:when test="${bterpBean.additionalTaxList.size() > status.index}">
+								    		<td align="right">
+								    			<h:outputText value="#{bterpBean.additionalTaxList.get(status.index).desc}" />
+								    		</td>
+											<td align="right">
+												<h:outputText value="#{bterpBean.additionalTaxList.get(status.index).amount}">
+													<f:convertNumber pattern="#,##0.00" />
+												</h:outputText>
+											</td>
+								  		</c:when>
+										<c:otherwise>
+											<td align="right">&nbsp;</td>
+											<td align="right">&nbsp;</td>
+										</c:otherwise>
+									</c:choose>
+									<c:choose>
+								  		<c:when test="${bterpBean.additionalTaxList.size() > status.index + 1}">
+								    		<td align="right">
+								    			<h:outputText value="#{bterpBean.additionalTaxList.get(status.index + 1).desc}" />
+								    		</td>
+											<td align="right">
+												<h:outputText value="#{bterpBean.additionalTaxList.get(status.index + 1).amount}">
+													<f:convertNumber pattern="#,##0.00" />
+												</h:outputText>
+											</td>
+								  		</c:when>
+										<c:otherwise>
+											<td align="right">&nbsp;</td>
+											<td align="right">&nbsp;</td>
+										</c:otherwise>
+									</c:choose>
+							    </tr>
+							    </c:if>
+							</c:forEach>
+							</c:if>
+							<tr>
+								<td>&nbsp;</td>
+								<td align="right">&nbsp;</td>
+								<td>&nbsp;</td>
+								<td align="right">&nbsp;</td>
+							</tr>
+							<c:if test="#{bterpBean.templateType ne 'ENQUIRYWITHOUTPAX'}">
+							<tr>
+								<td colspan="3"><strong>GRAND TOTAL/PER PAX</strong></td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{bterpBean.bookingViewVO.cruiseTotAdt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr>
+							<!-- <tr>
+								<td height="39" align="right">Adult</td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{bterpBean.bookingViewVO.cruiseTotAdt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+								<td align="right">Child</td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{bterpBean.bookingViewVO.cruiseTotChd}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr> -->
+							</c:if>
+							<c:if test="#{bterpBean.templateType eq 'ENQUIRYWITHOUTPAX'}">
+							<!-- <tr>
+								<td colspan="4"><strong>GRAND TOTAL FOR FULL TOUR/PER PAX</strong></td>
+							</tr> -->
+							<tr>
+								<td colspan="3"><strong>GRAND TOTAL/PER PAX</strong></td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{bterpBean.bookingViewVO.cruiseTotAdt}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr>
+							<!-- <tr>
+								<td colspan="4"><strong>GRAND TOTAL FOR GROUND ONLY/PER PAX</strong></td>
+							</tr>
+							<tr>
+								<td height="39" align="right">Adult</td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{bterpBean.tourDepVO.grdMiscAdtChd}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+								<td align="right">Child</td>
+								<td align="right">
+									<strong>
+										<h:outputText value="#{bterpBean.tourDepVO.grdMiscAdtChd}">
+											<f:convertNumber pattern="#,##0.00" />
+										</h:outputText>
+									</strong>
+								</td>
+							</tr> -->
+							</c:if>
+						</tbody>
+					</table>
+					<p>
+						<strong>Remarks</strong><br /> Deviation subject to cruise
+						confirmation &amp; You are required to re-confirm your latest
+						cruise schedule with us before proceed to purchase the domestic
+						ticket or any transportation ticket.
+					</p>
+					<p>
+						<br />
+					</p>
+					<table width="800" border="1" cellpadding="0" cellspacing="0">
+						<tbody>
+							<tr>
+								<td height="38" colspan="8" style="background-color: #ABABAB;">
+							        <span style="color: white; font-weight: bold;"> CRUISE SCHEDULE
+							        </span>
+							    </td>
+							</tr>
+							<tr>
+								<td width="60"><strong>Type</strong></td>
+								<td width="80"><strong>Code</strong></td>
+								<td width="80"><strong>Sector</strong></td>
+								<td width="120"><strong>Date</strong></td>
+								<td width="80"><strong>ETD</strong></td>
+								<td width="120"><strong>Arrival</strong></td>
+								<td width="80"><strong>ETA</strong></td>
+								<td width="162"><strong>Remarks</strong></td>
+							</tr>
+							<c:forEach items="#{bterpBean.cruiseScheduleItemList}" var="vo">
+								<tr>
+									<td><h:outputText value="#{vo.typeCd}" /></td>
+									<td><h:outputText value="#{vo.flightCd}" /></td>
+									<td><h:outputText value="#{vo.fromAirportCd}/#{vo.toAirportCd}" /></td>
+									<td>
+										<h:outputText value="#{vo.departureDate}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</td>
+									<td><h:outputText value="#{vo.etd}" /></td>
+									<td>
+										<h:outputText value="#{vo.arrivalDate}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</td>
+									<td><h:outputText value="#{vo.eta}" /></td>
+									<td><h:outputText value="#{vo.remarks}" /></td>
+								</tr>
+							</c:forEach>
+						</tbody>
+					</table>
+					<c:if test="#{bterpBean.templateType eq 'BOOKING'}">
+					<p>&nbsp;</p>
+					<p>
+						<strong>Payment Methods</strong><br />
+					</p>
+					<ol>
+						<li>Online Banking</li>
+					<ul>
+						<li>Bank: <strong><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_NAME')}" /></strong><br />
+							Account Number: <strong><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NO')}" /></strong><br />
+							Account Name: <strong><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}" /></strong><br /> <br />
+						</li>
+					</ul>
+
+						<li>Email Payment Link (on request)</li>
+						<li>Cash</li>
+						<li>Cheque</li>
+										<ul>
+						<li>Payable to <strong><h:outputText value="#{bterp:globalConfigValue('GLOBAL', 'BANK_ACCT_NAME')}" /></strong></li>
+					</ul>
+					</ol>
+					</c:if>
+					<p>&nbsp;</p>
+					<p>
+						<strong>Important notes:</strong>
+					</p>
+					<ol>
+						<c:if test="#{bterpBean.templateType eq 'ENQUIRY'}">
+						<li>Prices and discounts shown are guidelines only and are not guaranteed until purchase is completed.</li>
+						</c:if>
+						<li>All MISC charges are subject to change without prior
+							notice.</li>
+						<li>Cruise schedule above is subject to change.</li>
+						<!-- <li>For any Domestic flight / Connecting flight, we would advise to arrive (i) at least 3 hours before assemble time in case of flight delay, or (ii) at least 6 hours before group flight departure in case of flight delay.</li> -->
+						<li>Kindly refer to us first before booking or confirming your cruise. We shall not be responsible for any extra charges incurred on your cruise ticket cancellation due to tour not materialized, group cruise related amendments and / or any other unforeseen circumstances. </li>
+						<li>Compulsory Passport Copy upon booking.</li>
+						<li>Transaction in Ringgit Malaysia (RM) only.</li>
+						<li><a href="#{bterp:globalConfigValue('GLOBAL', 'TERMS_N_CONDITIONS_URL')}" target="_blank">Terms &amp; conditions apply.</a></li>
+					</ol>
+					<p>&nbsp;</p>
+					<p></p></td>
+			</tr>
+			<tr>
+				<td>&nbsp;</td>
+			</tr>
+		</tbody>
+	</table>
+	</div>
+</body>
+</f:view>
+</html>

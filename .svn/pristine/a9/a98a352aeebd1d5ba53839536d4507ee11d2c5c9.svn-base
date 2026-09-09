@@ -1,0 +1,487 @@
+package com.bcs.zsg.maintenance.dao;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.primefaces.model.SortOrder;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.maintenance.vo.CityVO;
+import com.bcs.zsg.maintenance.vo.RegionVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+public class RegionDAOImpl extends BaseHibernateDAO implements RegionDAO
+{
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<RegionVO> getRegionListParam(Map<String, Object> params, RegionVO regionVO) throws BusinessException
+	{
+		List<String> listFilteredValue = new ArrayList<String>();
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT r.id, r.code, r.name, r.dt_created, r.created_by, r.dt_upd, r.upd_by ")
+			.append("FROM region r ");
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		
+		if(regionVO != null) {
+			sb.append(" WHERE r.id=" + regionVO.getId());
+			listFilteredValue = addFilterRegionList(filters, sb, true);
+		} else {
+			listFilteredValue = addFilterRegionList(filters, sb, false);
+		}
+		
+		sb.append(" ORDER BY ");
+		String sortField = (String) params.get("sortField");
+		if (sortField == null) {
+			if(listFilteredValue.size() == 0)
+			{	
+				sb.append("r.name");
+			} else {
+				sb.append(getOrderByMatches(listFilteredValue.get(2), listFilteredValue.get(1)));
+			}
+			sb.append(" ASC");
+		}	
+		else 
+		{
+			if ("regioncode".equals(sortField)) sb.append("r.code");
+			else if("regionname".equals(sortField)) sb.append("r.name");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setFirstResult((int) params.get("first"));
+		query.setMaxResults((int) params.get("pageSize"));
+		
+		List<Object> objList = query.list();
+		List<RegionVO> list = new ArrayList<RegionVO>();
+		
+		if (CollectionUtils.isNotEmpty(objList)) {
+			for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+				Object[] row = (Object[]) it.next();
+				RegionVO vo = new RegionVO();
+				vo.setId(((BigInteger) row[0]).longValue());
+				vo.setRegioncode((String) row[1]);
+				vo.setRegionname((String) row[2]);
+				vo.setCreatedDate((Date) row[3]);
+				vo.setCreatedBy((String) row[4]);
+				vo.setUpdatedDate((Date) row[5]);
+				vo.setUpdatedBy((String) row[6]);
+				list.add(vo);
+			}
+		}
+		
+		return list;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CountryVO> getCountryListParam(Map<String, Object> params,
+			RegionVO regionVO) throws BusinessException
+	{
+		List<String> listFilteredValue = new ArrayList<String>();
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT r.name as regionname, c.ID, c.ID_REGION, c.CODE, c.NAME, c.IMAGE, ")
+			.append("	c.DT_CREATED, c.CREATED_BY, c.DT_UPD, c.UPD_BY, c.ISONLINE, c.three_letter_code, c.is_actual_country ")
+			.append("FROM country c ")
+			.append("LEFT JOIN region r on c.id_region = r.id ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		
+		if(regionVO != null) {
+			sb.append(" WHERE c.id_region=" + regionVO.getId());
+			listFilteredValue = addFilterCountryList(filters, sb, true);
+		} else {
+			listFilteredValue = addFilterCountryList(filters, sb, false);
+		}
+		
+		sb.append(" ORDER BY ");
+		String sortField = (String) params.get("sortField");
+		if (sortField == null) 
+		{
+//			if(listFilteredValue.size() == 0)
+//			{	
+//				sb.append("c.name");
+//			} else {
+//				sb.append(getOrderByMatches(listFilteredValue.get(2), listFilteredValue.get(1)));
+//			}
+			sb.append("c.name");
+			sb.append(" ASC");
+		}
+		else 
+		{
+			
+			if ("code".equals(sortField)) sb.append("c.code");
+			else if("country".equals(sortField)) sb.append("c.name");
+			else if("regionname".equals(sortField)) sb.append("r.name");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+//		System.out.println(sb.toString());
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setFirstResult((int) params.get("first"));
+		query.setMaxResults((int) params.get("pageSize"));
+		
+		List<Object> objList = query.list();
+		List<CountryVO> list = new ArrayList<CountryVO>();
+		
+		if (CollectionUtils.isNotEmpty(objList)) {
+			for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+				Object[] row = (Object[]) it.next();
+				CountryVO vo = new CountryVO();
+				
+				vo.setRegionname((String) row[0]);
+				vo.setId(((BigInteger) row[1]).longValue());
+				vo.setRegionId(((BigInteger) row[2]).longValue());
+				vo.setCode((String) row[3]);
+				vo.setCountry((String) row[4]);
+				vo.setImage((String) row[5]);
+				vo.setCreatedDate((Date) row[6]);
+				vo.setCreatedBy((String) row[7]);
+				vo.setUpdatedDate((Date) row[8]);
+				vo.setUpdatedBy((String) row[9]);
+				vo.setIsOnline(((Boolean) row[10]));
+				vo.setThreeLetterCode((String) row[11]);
+				vo.setIsActualCountry(((Boolean) row[12]));
+				list.add(vo);
+			}
+		}
+		
+		return list;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CityVO> getCityListParam(Map<String, Object> params,
+			RegionVO regionVO) throws BusinessException
+	{
+		List<String> listFilteredValue = new ArrayList<String>();
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT cy.name as country_name, c.ID, c.ID_COUNTRY, c.CODE, c.NAME, ")
+			.append("	c.DT_CREATED, c.CREATED_BY, c.DT_UPDATE, c.UPDATED_BY ")
+			.append("FROM city c ")
+			.append("LEFT JOIN country cy on c.id_country = cy.id ")
+			.append("LEFT JOIN region r on cy.id_region = r.id ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		
+		if(regionVO != null) {
+			sb.append(" WHERE cy.id_region=" + regionVO.getId());
+			listFilteredValue = addFilterCityList(filters, sb, true);
+		} else {
+			listFilteredValue = addFilterCityList(filters, sb, false);
+		}
+		
+		sb.append(" ORDER BY ");
+		String sortField = (String) params.get("sortField");
+		if (sortField == null) 
+		{
+			if(listFilteredValue.size() == 0)
+			{	
+				sb.append("c.name");
+			} else {
+				sb.append(getOrderByMatches(listFilteredValue.get(2), listFilteredValue.get(1)));
+			}
+			sb.append(" ASC");
+		}
+		else 
+		{
+			
+			if ("code".equals(sortField)) sb.append("c.code");
+			else if("name".equals(sortField)) sb.append("c.name");
+			else if("countryName".equals(sortField)) sb.append("cy.name");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setFirstResult((int) params.get("first"));
+		query.setMaxResults((int) params.get("pageSize"));
+		
+		List<Object> objList = query.list();
+		List<CityVO> list = new ArrayList<CityVO>();
+		
+		if (CollectionUtils.isNotEmpty(objList)) {
+			for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+				Object[] row = (Object[]) it.next();
+				CityVO vo = new CityVO();
+				
+				vo.setCountryName((String) row[0]);
+				vo.setId(((BigInteger) row[1]).longValue());
+				vo.setIdCountry(((BigInteger) row[2]).longValue());
+				vo.setCode((String) row[3]);
+				vo.setName((String) row[4]);
+				vo.setCreatedDate((Date) row[5]);
+				vo.setCreatedBy((String) row[6]);
+				vo.setUpdatedDate((Date) row[7]);
+				vo.setUpdatedBy((String) row[8]);
+				list.add(vo);
+			}
+		}
+		
+		return list;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<RegionVO> getRegionList() throws BusinessException {
+		Criteria criteria=createCriteria(RegionVO.class);
+		criteria.addOrder(Order.asc("regionname"));
+		return criteria.list();
+	}
+		
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CountryVO> getCountryList() throws BusinessException {
+		Criteria criteria = createCriteria(CountryVO.class);
+		criteria.addOrder(Order.asc("country"));
+		return criteria.list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CountryVO> getActualCountryList() throws BusinessException {
+		Criteria criteria = createCriteria(CountryVO.class);
+		criteria.add(Restrictions.eq("isActualCountry", true)); 
+		criteria.addOrder(Order.asc("country"));
+		return criteria.list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CityVO> getCityList() throws BusinessException {
+		Criteria criteria = createCriteria(CityVO.class);
+		criteria.addOrder(Order.asc("name"));
+		return criteria.list();
+	}
+	
+	@Override
+	public CountryVO getCountryById(Long countryId) throws BusinessException {
+		Criteria criteria = createCriteria(CountryVO.class);
+		criteria.add(Restrictions.eq("id",countryId)); 
+		return (CountryVO) criteria.uniqueResult(); 
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getRegionListSize(Map<String, Object> params,RegionVO regionVO)
+			throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT count(r.id) ")
+			.append("FROM region r ");
+
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if(regionVO != null) {
+			sb.append("WHERE r.id=" + regionVO.getId());
+			addFilterRegionList(filters, sb, false);
+		} else {
+			addFilterRegionList(filters, sb, false);
+		}
+	
+		Query query = createSQLQuery(sb.toString());
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+
+	private List<String> addFilterRegionList(Map<String, String> filters, StringBuilder sb, boolean isAdditionalWhereClause) {
+		List<String> filterValue = new ArrayList<String>();
+		if (filters.isEmpty()) 
+			return filterValue;
+		
+		if(!isAdditionalWhereClause)
+			sb.append("WHERE ");
+		else
+			sb.append(" AND ");
+		
+		for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) 
+		{
+			Entry<String, String> entry = it.next();
+			filterValue.clear();
+			//Filter value is in KEY, VALUE, COLUMN. ONLY 1 PAIR will exists
+			filterValue.add(entry.getKey());
+			filterValue.add(entry.getValue());
+			
+			if ("regioncode".equals(entry.getKey())) {
+				filterValue.add("r.code");
+			} else if ("regionname".equals(entry.getKey())) {
+				filterValue.add("r.name");
+			}
+			sb.append(filterValue.get(2)).append(" LIKE '%").append(entry.getValue()).append("%'");
+			
+			if (filters.size() > 1 && it.hasNext()) sb.append(" AND ");
+		}
+
+		return filterValue;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getCountryListSize(Map<String, Object> params, RegionVO regionVO)
+			throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT count(c.id) ")
+			.append("FROM country c ")
+			.append("left join region r on c.id_region=r.id ");
+
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if(regionVO != null)
+		{ 
+			sb.append("WHERE c.id_region="+regionVO.getId());
+			addFilterCountryList(filters, sb, true);
+		}
+		else {	
+			addFilterCountryList(filters, sb, false);
+		}
+		
+//		System.out.println(sb.toString());
+		
+		Query query = createSQLQuery(sb.toString());
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	private List<String> addFilterCountryList(Map<String, String> filters, StringBuilder sb, boolean isAdditionalWhereClause) {
+		List<String> filterValue = new ArrayList<String>();
+		
+		if (filters.isEmpty()) 
+			return filterValue;
+		
+		if(!isAdditionalWhereClause)
+			sb.append("WHERE ");
+		else
+			sb.append(" AND ");
+		
+		for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) 
+		{
+			Entry<String, String> entry = it.next();
+			filterValue.clear();
+			filterValue.add(entry.getKey());
+			filterValue.add(entry.getValue());
+			
+//			System.out.println(entry.getKey() + " " + entry.getValue());
+			
+			if ("code".equals(entry.getKey())) {
+				sb.append("c.code like '%").append(entry.getValue()).append("%'");
+			} else if ("country".equals(entry.getKey())) {
+				filterValue.add("c.name");
+				sb.append("c.name like '%").append(entry.getValue()).append("%'");
+			} else if ("regionname".equals(entry.getKey())) {
+				filterValue.add("r.name");
+				sb.append("r.name like '%").append(entry.getValue()).append("%'");
+			} else if ("threeLetterCode".equals(entry.getKey())) {
+				filterValue.add("c.three_letter_code");
+				sb.append("c.three_letter_code like '%").append(entry.getValue()).append("%'");
+			} else if ("isActualCountry".equals(entry.getKey())) {
+				if (entry.getValue().equals("All")) {
+					filterValue.add("c.is_actual_country");
+					sb.append("1=1");
+				} else {
+					filterValue.add("c.is_actual_country");
+//					if (entry.getValue().equalsIgnoreCase("true"))
+					sb.append("c.is_actual_country like '%").append(entry.getValue()).append("%'");
+				}
+				
+			}
+//			sb.append(filterValue.get(2)).append(" LIKE '%").append(entry.getValue()).append("%'");
+			
+			if (filters.size() > 1 && it.hasNext()) sb.append(" AND ");
+		}
+		return filterValue;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getCityListSize(Map<String, Object> params, RegionVO regionVO)
+			throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT count(c.id) ")
+			.append("FROM city c ")
+			.append("left join country cy on c.id_country = cy.id ")
+			.append("left join region r on cy.id_region = r.id ");
+
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if(regionVO != null)
+		{ 
+			sb.append("WHERE cy.id_region=" + regionVO.getId());
+			addFilterCityList(filters, sb, true);
+		}
+		else {	
+			addFilterCityList(filters, sb, false);
+		}
+		Query query = createSQLQuery(sb.toString());
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	private List<String> addFilterCityList(Map<String, String> filters, StringBuilder sb, boolean isAdditionalWhereClause) {
+		List<String> filterValue = new ArrayList<String>();
+		
+		if (filters.isEmpty()) 
+			return filterValue;
+		
+		if(!isAdditionalWhereClause)
+			sb.append("WHERE ");
+		else
+			sb.append(" AND ");
+		
+		for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) 
+		{
+			Entry<String, String> entry = it.next();
+			filterValue.clear();
+			filterValue.add(entry.getKey());
+			filterValue.add(entry.getValue());
+			
+			if ("code".equals(entry.getKey())) {
+				filterValue.add("c.code");
+			} else if ("name".equals(entry.getKey())) {
+				filterValue.add("c.name");
+			} else if ("countryName".equals(entry.getKey())) {
+				filterValue.add("cy.name");
+			}
+			sb.append(filterValue.get(2)).append(" LIKE '%").append(entry.getValue()).append("%'");
+			
+			if (filters.size() > 1 && it.hasNext()) sb.append(" AND ");
+		}
+		return filterValue;
+	}
+	
+	private String getOrderByMatches(String columnName, String columnValue) {
+		return "CASE WHEN " + columnName + " LIKE '" + columnValue + "%' THEN " + columnName 
+				+ " ELSE concat('{0} ', " + columnName + ") END";
+	}
+	
+	@Override
+	public CountryVO getCountryByThreeLetterCode(String threeLetterCode) {
+		Criteria criteria = createCriteria(CountryVO.class);
+		criteria.add(Restrictions.eq("threeLetterCode", threeLetterCode));
+		return (CountryVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public void updateActualCountry(Long idCountry, boolean isActualCountry) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		Query query = createSQLQuery("update country set is_actual_country = :isActualCountry, upd_by = :updatedBy, dt_upd = now() where id = :idCountry");
+		query.setParameter("isActualCountry", isActualCountry);
+		query.setParameter("updatedBy", updatedBy);
+		query.setParameter("idCountry", idCountry);
+		query.executeUpdate();
+	}
+}

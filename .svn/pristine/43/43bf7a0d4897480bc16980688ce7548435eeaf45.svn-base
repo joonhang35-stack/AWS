@@ -1,0 +1,331 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<style>
+.ui-state-full {
+	border: 1px solid #999999 !important;
+    background: #dadada !important;
+    font-weight: normal !important;
+    color: #212121 !important;
+}
+
+.badge-transferred {
+	background-color: #ffa500; /* Orange color similar to the screenshot */
+}
+.badge-payment-req {
+ 	background-color: red; 
+}
+.badge-payment-fail {
+	background-color: grey;
+}
+.badge-doc-type-status {
+	background-color: purple;
+}
+.badge-trvl-ins {
+	background-color: #a9cced;
+}
+.badge-payment-fail,
+.badge-payment-req,
+.badge-transferred,
+.badge-trvl-ins,
+.badge-doc-type-status {
+	color: white;
+    padding: 1px 4px; /* Adjusted padding to make the badge smaller */
+    border-radius: 50%;
+    font-size: 0.75em; /* Adjusted font size to make the badge text smaller */
+    font-weight: bold;
+}
+</style>
+
+<div>
+<p:dataTable id="idBookingList" value="#{salesBean.bookingList}" var="vo" paginator="true" rows="10" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="5,10,15" rowIndexVar="rowIndex">
+	<p:columnGroup type="header">
+		<p:row>
+			<p:column rowspan="2" headerText="Edit" style="width:30px;"/>
+			<p:column rowspan="2" headerText="Delete" style="width:30px;"/>
+			<p:column rowspan="2" headerText="No." style="width:30px; font-size:10px;"/>
+			<p:column rowspan="2" headerText="Customer" style="width:100px; font-size:10px;"/>
+			<p:column rowspan="2" headerText="Contact" style="font-size:10px;"/>
+			<p:column rowspan="2" headerText="Sales Person"/>
+			<p:column rowspan="2" headerText="Booking ID" style="font-size:10px;"/>
+			<p:column rowspan="2" headerText="Pax Statement No." style="font-size:10px;"/>
+			<p:column rowspan="2" headerText="Invoice No." style="font-size:10px;"/>
+			<p:column colspan="6" headerText="Full Tour" style="font-size:10px;"/>
+			<p:column colspan="6" headerText="Ground Only" style="font-size:10px;"/>
+			<p:column rowspan="2" headerText="Payment&lt;br/&gt;Status" style="font-size:10px;"/>
+			<p:column rowspan="2" headerText="Expiry" style="font-size:10px;"/>
+			<p:column rowspan="2" headerText="Pay" style="font-size:10px;"/>
+			<p:column rowspan="2" headerText="Mail" style="font-size:10px;"/>
+			<p:column rowspan="2" headerText="Order Source" style="font-size:10px;"/>
+		</p:row>
+		<p:row>
+			<p:column headerText="SGL" style="font-size:10px;"/>
+			<p:column headerText="TWN" style="font-size:10px;"/>
+			<p:column headerText="CTW" style="font-size:10px;"/>
+			<p:column headerText="CWB" style="font-size:10px;"/>
+			<p:column headerText="CNB" style="font-size:10px;"/>
+			<p:column headerText="INFT" style="font-size:10px;"/>
+			<p:column headerText="SGL" style="font-size:10px;"/>
+			<p:column headerText="TWN" style="font-size:10px;"/>
+			<p:column headerText="CTW" style="font-size:10px;"/>
+			<p:column headerText="CWB" style="font-size:10px;"/>
+			<p:column headerText="CNB" style="font-size:10px;"/>
+			<p:column headerText="INFT" style="font-size:10px;"/>
+		</p:row>
+	</p:columnGroup>
+	
+	<p:column style="font-size:10px;">
+		<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.setBookingVO(vo)}" update=":idAddBookingDialog" oncomplete="varAddBookingDialog.show()" disabled="#{vo.pmntStatusCd eq 'KIVEXP' or vo.idCompany ne sessionInfoBean.companyVO.id or (sessionInfoBean.employeeVO.department.contains('sale') and not salesBean.salesManager)}"/><!--  or vo.pmntStatusCd eq 'FULL' -->
+	</p:column>
+	<p:column style="font-size:10px; text-align:center;">
+		<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.setBookingVO(vo)}" oncomplete="varCancelBookingDialog.show()" disabled="#{vo.pmntStatusCd eq 'KIVEXP' or vo.idCompany ne sessionInfoBean.companyVO.id or (sessionInfoBean.employeeVO.department.contains('sale') and not salesBean.salesManager)}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{rowIndex + 1}"/>
+	</p:column>
+	<p:column width="100" style="font-size:10px;">
+		<!-- <p:commandLink actionListener="#{salesBean.handleBookingSelect(vo)}" update=":idBookingDetailsDialog" oncomplete="varBookingDetailsDialog.show()" style="color:#CC2EFA;">
+			<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.customerVO.personVO.salutation)} #{vo.custName}" style="text-transform:uppercase;"/>
+		</p:commandLink> -->
+		<p:commandLink actionListener="#{salesBean.handleBookingSelect(vo)}" update=":idBookingDetailsDialog" oncomplete="varBookingDetailsDialog.show()" style="color:#CC2EFA;">
+			<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.customerVO.salutationCd)} #{vo.custName}" style="text-transform:uppercase;"/>
+		</p:commandLink>
+	</p:column>
+	<p:column width="150" style="font-size:10px;">
+		<!-- <ui:repeat value="#{vo.customerVO.personContactList}" var="tel">
+			<h:outputText value="#{bterp:lookupItemDesc('cntc_type', tel.typeCd)}: "/><h:outputText value="#{tel.number}"/>
+			<br/>
+		</ui:repeat>
+		<ui:repeat value="#{vo.customerVO.corContactList}" var="tel">
+			<h:outputText value="#{bterp:lookupItemDesc('cntc_type', tel.contactType)}: "/><h:outputText value="#{tel.contactNo}"/>
+			<br/>
+		</ui:repeat>
+		<h:outputText value="Email: #{vo.customerVO.personVO.email}" rendered="#{not empty vo.customerVO.personVO.email}"/> -->
+<!--         <ui:repeat value="#{vo.customerVO.perContacts.split(',')}" var="cntc" rendered="#{not empty vo.customerVO.perContacts}">
+            <h:outputText value="#{salesBean.getContactStr(cntc)}"/><br/>
+        </ui:repeat>
+        <h:outputText value="Email: #{vo.customerVO.email}" rendered="#{not empty vo.customerVO.email}"/> -->
+	    <ui:repeat value="#{vo.customerVO.perContacts.split(',')}" var="cntc" varStatus="status" rendered="#{not empty vo.customerVO.perContacts}">
+	        <h:outputText value="#{salesBean.getContactStrWithCountryPair(cntc, status.index, vo.customerVO.countryCode)}"/><br/>
+	    </ui:repeat>
+	    <h:outputText value="Email: #{vo.customerVO.email}" rendered="#{not empty vo.customerVO.email}"/>        
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.employeeViewVO.userVO.name}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.id}"/>
+	</p:column>
+	<p:column width="130" style="text-align:center; font-size:10px;">
+		<ui:repeat var="invVO" value="#{vo.paxStmtList}" varStatus="loop" rendered="#{not empty vo.paxStmtList}">
+			<p:commandLink actionListener="#{salesInvBean.handleInvRefNoClick(invVO.id, false)}" style="color:#0040FF;"
+				update=":idAddInvoiceRefDialog" oncomplete="varAddInvoiceRefDialog.show()" rendered="#{(not empty invVO.psNo and (vo.pmntStatusCd eq 'KIVEXP' or vo.idCompany ne sessionInfoBean.companyVO.id or (not sessionInfoBean.employeeVO.department.contains('agent'))))}" >
+				<h:outputText value="#{bterp:sysNumGenVO(vo.idCompany, 'pax_statement').prefixid}#{invVO.psNo}" rendered="#{(not empty invVO.psNo and (vo.pmntStatusCd eq 'KIVEXP' or vo.idCompany ne sessionInfoBean.companyVO.id or (not sessionInfoBean.employeeVO.department.contains('agent'))))}" />	
+			</p:commandLink>	
+			<!-- <h:panelGroup rendered="#{(not empty invVO.psNo and not empty invVO.validPassportStatus and invVO.validPassportStatus == 0) or (not empty invVO.psNo and not empty invVO.visaCopiesStatus and invVO.visaCopiesStatus == 0)}">
+				<br/>
+			</h:panelGroup> -->
+			<h:outputText value=" [P]" rendered="#{not empty invVO.psNo and not empty invVO.validPassportStatus and invVO.validPassportStatus == 0}"/>
+			<h:outputText value=" [V]" rendered="#{not empty invVO.psNo and not empty invVO.visaCopiesStatus and invVO.visaCopiesStatus == 0}"/>
+			<!-- <h:panelGroup rendered="#{not empty vo.transferredDate or (vo.amtPaid == 0 and vo.invPmntStatusCd ne 'VD') or (vo.amtPaid == 0 and vo.invPmntStatusCd eq 'VD')}">
+				<br/>
+			</h:panelGroup> -->
+			<h:outputText id="idPaymentReq" value="$" styleClass="badge-payment-req" rendered="#{invVO.amtPaid == 0 and invVO.statusCd ne 'VD'}" />
+	        <h:outputText id="idPaymentFail" value="$" styleClass="badge-payment-fail" rendered="#{invVO.amtPaid == 0 and invVO.statusCd eq 'VD'}" />
+	        <h:outputText id="idTransferred" value="T" styleClass="badge-transferred" rendered="#{not empty invVO.transferredDate}" />
+	        <h:outputText id="idTrvlIns" value="I" styleClass="badge-trvl-ins" rendered="#{invVO.showTrvlInsBadge}"/>
+	        <h:outputText id="idDocTypeStatusRV" value="RV" styleClass="badge-doc-type-status" rendered="#{invVO.docTypeCd eq 'P' and invVO.docTypeStatus eq 'RW'}"/>
+	        <pe:tooltip for="idPaymentReq" shared="true" showDelay="3000"  position="top right"
+				rendered="#{invVO.amtPaid == 0 and invVO.statusCd ne 'VD'}">
+				<h:outputText value="Payment Required" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<pe:tooltip for="idPaymentFail" shared="true" showDelay="3000"  position="top right"
+				rendered="#{invVO.amtPaid == 0 and invVO.statusCd eq 'VD'}">
+				<h:outputText value="Payment Failed" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<pe:tooltip for="idTransferred" shared="true" showDelay="3000"  position="top right"
+				rendered="#{not empty invVO.transferredDate}">
+				<h:outputText value="Transferred" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<pe:tooltip for="idTrvlIns" shared="true" showDelay="3000" position="top right" rendered="#{invVO.showTrvlInsBadge}">
+				<h:outputText value="Sgl Ins Issued" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<pe:tooltip for="idDocTypeStatusRV" shared="true" showDelay="3000" position="top right"><h:outputText value="In-Review" escape="true" style="white-space: pre-wrap"/></pe:tooltip>
+			<br/>
+		</ui:repeat>
+	</p:column>
+	<p:column width="130" style="text-align:center; font-size:10px;">
+		<ui:repeat var="invVO" value="#{vo.invList}" varStatus="loop" rendered="#{not empty vo.invList}">
+			<p:commandLink actionListener="#{salesInvBean.handleInvRefNoClick(invVO.id, false)}" style="color:#0040FF;"
+				update=":idAddInvoiceRefDialog" oncomplete="varAddInvoiceRefDialog.show()" rendered="#{(not empty invVO.code and (vo.pmntStatusCd eq 'KIVEXP' or vo.idCompany ne sessionInfoBean.companyVO.id or (not sessionInfoBean.employeeVO.department.contains('agent'))))}" >
+				<h:outputText value="#{bterp:sysNumGenVO(vo.idCompany, 'invc').prefixid}#{invVO.code}" rendered="#{(not empty invVO.code and (vo.pmntStatusCd eq 'KIVEXP' or vo.idCompany ne sessionInfoBean.companyVO.id or (not sessionInfoBean.employeeVO.department.contains('agent'))))}" />	
+			</p:commandLink>	
+			<!-- <h:panelGroup rendered="#{(not empty invVO.psNo and not empty invVO.validPassportStatus and invVO.validPassportStatus == 0) or (not empty invVO.psNo and not empty invVO.visaCopiesStatus and invVO.visaCopiesStatus == 0)}">
+				<br/>
+			</h:panelGroup> -->
+			<h:outputText value=" [P]" rendered="#{not empty invVO.code and not empty invVO.validPassportStatus and invVO.validPassportStatus == 0}"/>
+			<h:outputText value=" [V]" rendered="#{not empty invVO.code and not empty invVO.visaCopiesStatus and invVO.visaCopiesStatus == 0}"/>
+			<!-- <h:panelGroup rendered="#{not empty vo.transferredDate or (vo.amtPaid == 0 and vo.invPmntStatusCd ne 'VD') or (vo.amtPaid == 0 and vo.invPmntStatusCd eq 'VD')}">
+				<br/>
+			</h:panelGroup> -->
+			<h:outputText id="idPaymentReq" value="$" styleClass="badge-payment-req" rendered="#{invVO.amtPaid == 0 and invVO.statusCd ne 'VD'}" />
+	        <h:outputText id="idPaymentFail" value="$" styleClass="badge-payment-fail" rendered="#{invVO.amtPaid == 0 and invVO.statusCd eq 'VD'}" />
+	        <h:outputText id="idTransferred" value="T" styleClass="badge-transferred" rendered="#{not empty invVO.transferredDate}" />
+	        <h:outputText id="idTrvlIns" value="I" styleClass="badge-trvl-ins" rendered="#{invVO.showTrvlInsBadge}"/>
+	        <pe:tooltip for="idPaymentReq" shared="true" showDelay="3000"  position="top right"
+				rendered="#{invVO.amtPaid == 0 and invVO.statusCd ne 'VD'}">
+				<h:outputText value="Payment Required" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<pe:tooltip for="idPaymentFail" shared="true" showDelay="3000"  position="top right"
+				rendered="#{invVO.amtPaid == 0 and invVO.statusCd eq 'VD'}">
+				<h:outputText value="Payment Failed" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<pe:tooltip for="idTransferred" shared="true" showDelay="3000"  position="top right"
+				rendered="#{not empty invVO.transferredDate}">
+				<h:outputText value="Transferred" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<pe:tooltip for="idTrvlIns" shared="true" showDelay="3000" position="top right" rendered="#{invVO.showTrvlInsBadge}">
+				<h:outputText value="Sgl Ins Issued" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<br/>
+		</ui:repeat>
+	</p:column>
+	<!-- keep old code -->
+	<!-- <p:column rendered="#{false}" style="text-align:center; font-size:10px;">
+		<p:commandLink actionListener="#{salesInvBean.handleInvRefNoClick(vo.invId, false)}" style="color:#0040FF;"
+			update=":idAddInvoiceRefDialog" process="@this" oncomplete="varAddInvoiceRefDialog.show()" rendered="#{(not empty vo.invCode) and (vo.pmntStatusCd eq 'KIVEXP' or vo.idCompany ne sessionInfoBean.companyVO.id or (not sessionInfoBean.employeeVO.department.contains('agent')))}" >
+			<h:outputText value="#{bterp:sysNumGenVO(vo.idCompany, 'invc').prefixid}#{vo.invCode}" rendered="#{(not empty vo.invCode) and (vo.pmntStatusCd eq 'KIVEXP' or vo.idCompany ne sessionInfoBean.companyVO.id or (not sessionInfoBean.employeeVO.department.contains('agent')))}" />	
+		</p:commandLink>
+		<h:panelGroup rendered="#{(not empty vo.invCode and not empty vo.validPassportStatus and vo.validPassportStatus == 0) or (not empty vo.invCode and not empty vo.visaCopiesStatus and vo.visaCopiesStatus == 0)}">
+			<br/>
+		</h:panelGroup>
+		<h:outputText value=" [P]" rendered="#{not empty vo.invCode and not empty vo.validPassportStatus and vo.validPassportStatus == 0}"/>
+		<h:outputText value=" [V]" rendered="#{not empty vo.invCode and not empty vo.visaCopiesStatus and vo.visaCopiesStatus == 0}"/>
+		<h:panelGroup rendered="#{not empty vo.transferredDate or (vo.amtPaid == 0 and vo.invPmntStatusCd ne 'VD') or (vo.amtPaid == 0 and vo.invPmntStatusCd eq 'VD')}">
+			<br/>
+		</h:panelGroup>
+		<h:outputText id="idPaymentReq" value="$" styleClass="badge-payment-req" rendered="#{vo.amtPaid == 0 and vo.invPmntStatusCd ne 'VD'}" />
+        <h:outputText id="idPaymentFail" value="$" styleClass="badge-payment-fail" rendered="#{vo.amtPaid == 0 and vo.invPmntStatusCd eq 'VD'}" />
+        <h:outputText id="idTransferred" value="T" styleClass="badge-transferred" rendered="#{not empty vo.transferredDate}" />
+        <h:outputText id="idTrvlIns" value="I" styleClass="badge-trvl-ins" rendered="#{invVO.showTrvlInsBadge}"/>
+        <pe:tooltip for="idPaymentReq" shared="true" showDelay="3000"  position="top right"
+			rendered="#{vo.amtPaid == 0 and vo.invPmntStatusCd ne 'VD'}">
+			<h:outputText value="Payment Required" escape="true" style="white-space: pre-wrap"/>
+		</pe:tooltip>
+		<pe:tooltip for="idPaymentFail" shared="true" showDelay="3000"  position="top right"
+			rendered="#{vo.amtPaid == 0 and vo.invPmntStatusCd eq 'VD'}">
+			<h:outputText value="Payment Failed" escape="true" style="white-space: pre-wrap"/>
+		</pe:tooltip>
+		<pe:tooltip for="idTransferred" shared="true" showDelay="3000"  position="top right"
+			rendered="#{not empty vo.transferredDate}">
+			<h:outputText value="Transferred" escape="true" style="white-space: pre-wrap"/>
+		</pe:tooltip>
+		<pe:tooltip for="idTrvlIns" shared="true" showDelay="3000" position="top right" rendered="#{vo.showTrvlInsBadge}">
+				<h:outputText value="Sgl Ins Issued" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+	</p:column> -->
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxFullSgl}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxFullTwn}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxFullCtw}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxFullCeb}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxFullCnb}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxFullInft}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxGrndSgl}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxGrndTwn}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxGrndCtw}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxGrndCeb}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxGrndCnb}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.paxGrndInft}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{zsg:referenceDataValue('BOOK_PMNT_STATUS', vo.pmntStatusCd)}"/>
+	</p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{vo.dtExp}" rendered="#{vo.pmntStatusCd eq 'KIV'}">
+			<f:convertDateTime pattern="dd-MMM-yyyy"/>
+		</h:outputText>
+		<!--h:outputText value="" rendered="#{vo.pmntStatusCd eq 'FULL'}"/-->
+	</p:column>
+	<p:column>
+		<!-- <p:commandButton value="Pay" actionListener="#{salesBean.makePayment(vo)}" disabled="#{vo.pmntStatusCd eq 'KIVEXP' or vo.pmntStatusCd eq 'FULL' or vo.idCompany ne sessionInfoBean.companyVO.id}"/> -->
+		<p:commandButton styleClass="#{vo.pmntStatusCd eq 'FULL' ? 'ui-state-full' : 'ui-state-default'}" value="#{vo.pmntStatusCd eq 'FULL' ? 'Inv' : 'Pay'}" actionListener="#{salesBean.makePayment_eInvoice(vo)}" rendered="#{vo.pmntStatusCd ne 'KIVEXP' and vo.idCompany eq sessionInfoBean.companyVO.id}"/>
+	</p:column>
+	<p:column style="font-size:10px; text-align:center;"><h:outputLink styleClass="ui-icon ui-icon-mail-closed" value="#{request.contextPath}/app/emailtmp/bookingemailtmp?tourDepId=#{vo.id}&amp;bookingId=#{vo.id}" target="_blank"/></p:column>
+	<p:column style="text-align:center; font-size:10px;">
+		<h:outputText value="#{bterp:lookupItemDesc('ordr_sorc', vo.orderTypeCd)}"/>
+	</p:column>
+	
+	<p:columnGroup type="footer">
+		<p:row rendered="#{not empty salesBean.bookingList}">
+			<p:column colspan="9" footerText="Total" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxFullSgl}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxFullTwn}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxFullCtw}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxFullCeb}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxFullCnb}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxFullInft}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxGrndSgl}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxGrndTwn}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxGrndCtw}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxGrndCeb}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxGrndCnb}" style="font-size:10px;"/>
+			<p:column footerText="#{salesBean.bookingList.get(0).totPaxGrndInft}" style="font-size:10px;"/>
+			<p:column colspan="5"/>
+		</p:row>
+		<p:row>
+			<p:column colspan="4" footerText="Travel Insurance Policy (Single)" style="font-size:10px;"/>
+			<p:column colspan="22" footerText="#{salesBean.tourDepVO.travelInsPolicyS}" style="font-size:10px;"/>
+		</p:row>
+		<p:row>
+			<p:column colspan="4" footerText="Travel Insurance Policy (Family)" style="font-size:10px;"/>
+			<p:column colspan="22" footerText="#{salesBean.tourDepVO.travelInsPolicyF}" style="font-size:10px;"/>
+		</p:row>
+		<p:row rendered="#{salesBean.tourDepVO.dtDeadline ne null}">
+			<p:column colspan="26" footerText="DEADLINE (#{salesBean.dateFormat(salesBean.tourDepVO.dtDeadline, config['date.display.pattern2'])})"
+				style="font-size:15px; font-weight: bold; text-align:left;" />
+		</p:row>
+		<p:row>
+			<p:column colspan="26" style="font-weight: bold; text-align:left;">
+				<h:outputText value="OP PIC: #{salesBean.tourDepVO.opPicName}" escape="false" style="white-space: pre-wrap"/>
+			</p:column>
+		</p:row>
+	</p:columnGroup>
+</p:dataTable>
+</div>
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varBookingListDialog.hide()"/>
+</h:panelGrid>
+</ui:composition>

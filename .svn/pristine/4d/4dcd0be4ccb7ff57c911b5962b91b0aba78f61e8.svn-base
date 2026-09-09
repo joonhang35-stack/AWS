@@ -1,0 +1,75 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+<p:panelGrid style="margin-bottom:10px;">
+	<p:row>
+		<p:column style="width: 100px;">
+			<h:outputLabel for="idListingType">Listing Type <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idListingType" label="Listing Type" value="#{visibleListConfigBean.visibleListingConfigVO.listingType}" required="true" style="width: 180px">
+		       	<f:selectItem itemLabel="Select One" itemValue=""/>
+		       	<f:selectItem itemLabel="Invoice / Pax Statement" itemValue="inv_cat"/>
+		       	<f:selectItem itemLabel="Exchange Order" itemValue="eo_cat"/>
+		       	<p:ajax event="change" update=":idAddForm" global="false"/>
+		    </h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idInvCat">Category <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idInvCat" label="Category" value="#{visibleListConfigBean.visibleListingConfigVO.catCd}" required="true" style="width: 120px">
+		       	<f:selectItem itemLabel="Select One" itemValue=""/>
+		       	<c:if test="#{visibleListConfigBean.visibleListingConfigVO.listingType eq 'eo_cat'}">
+		       		<f:selectItems value="#{bterp:lookupItemList('eo_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		       	</c:if>
+		       	<c:if test="#{visibleListConfigBean.visibleListingConfigVO.listingType eq 'inv_cat'}">
+		       		<f:selectItems value="#{bterp:lookupItemList('inv_cat')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		       	</c:if>
+		    </h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idDeptList">Department List</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:selectCheckboxMenu id="idDeptList" value="#{visibleListConfigBean.visibleListingConfigVO.departmentList}"
+				label="Department List" filter="true" filterMatchMode="startsWith" style="display:block;">
+		        <f:selectItems value="#{bterp:lookupItemList('dept_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+		    </p:selectCheckboxMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column style="padding-bottom: 14px;">
+			<h:outputLabel for="idRoleList">Role List <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:selectCheckboxMenu id="idRoleList" value="#{visibleListConfigBean.visibleListingConfigVO.idRoleList}"
+				label="Role List" filter="true" filterMatchMode="startsWith" required="true">
+		        <f:selectItems value="#{visibleListConfigBean.roleVOList}" var="vo" itemValue="#{vo.uuid}" itemLabel="#{vo.roleName}"/>
+		    </p:selectCheckboxMenu>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid id="idButtonGrid" columns="3" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{visibleListConfigBean.save}" update="@form, :idForm:idConfigList" oncomplete="varConfigList.clearFilters();"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" process="@this" oncomplete="varAddConfig.hide();">
+		<pe:resetEditableValues for="idAddForm"/>
+	</p:commandButton>
+</p:panelGrid>
+
+
+		
+</ui:composition>

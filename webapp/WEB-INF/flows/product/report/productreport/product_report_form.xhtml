@@ -1,0 +1,129 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+				xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+	<script type="text/javascript">
+		function monitorExporting(start, complete) {
+			if (start) {
+				start();
+			}
+		
+			window.pdfExportingMonitor = setInterval(function() {
+				var exportingComplete = $.cookie('cookie.pdf.exporting');
+		
+				if (exportingComplete === 'true') {
+					if (complete) {
+						complete();
+					}
+					$.cookie('cookie.pdf.exporting', null);
+					clearInterval(window.pdfExportingMonitor);
+				}
+			}, 500);
+		}
+		
+		function start() {
+			statusDialog.show();
+		}
+		
+		function stop() {
+			statusDialog.hide();
+		}
+	</script>
+	
+	<p:dialog modal="true" widgetVar="statusDialog" header="Report Loading"
+	        draggable="false" closable="false" resizable="false">
+		<p:panelGrid columns="1">
+			<h:outputLabel>Please wait while the report is being prepared...</h:outputLabel>
+			<p:graphicImage value="/img/ajaxloadingbar.gif" />
+		</p:panelGrid>
+	</p:dialog>
+	
+	<p:panel header="Product Report" toggleable="true" toggleSpeed="500">
+		<h:form id="idFormProductReport">
+			<p:growl id="msg"/>
+			<p:panelGrid style="width:700px;">
+				<p:row>
+					<p:column style="width:100px;">
+						<h:outputLabel for="idReportType">Report Type <span class="required">*</span></h:outputLabel>
+					</p:column>
+					<p:column>
+						<h:selectOneMenu id="idReportType" label="Report Type" value="#{productReportBean.reportType}" effect="fade" required="true">
+							<p:ajax event="change" update=":idFormProductReport" />
+							<f:selectItem itemLabel="Select One" itemValue=""/>
+							<f:selectItem itemLabel="Tour Profit &amp; Loss (By Tour Code) - Summary" itemValue="PLS"/>
+							<f:selectItem itemLabel="Tour Profit &amp; Loss (By Tour Code) - Details" itemValue="PLD"/>
+						</h:selectOneMenu>
+					</p:column>
+					<p:column>
+						<p:commandButton icon="ui-icon-print" value="Print [PDF]" actionListener="#{productReportBean.printReport('PDF')}" ajax="false" onclick="monitorExporting(start,stop)"/>
+						<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{productReportBean.printReport('XLS')}" ajax="false" onclick="monitorExporting(start,stop)"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+			
+			<p:panelGrid id="idFilteringPanel" style="width:750px;">
+				<p:row>
+					<p:column style="width:110px;">
+						<p:outputLabel value="Tour Code" for="idTxtTourCd"/>
+					</p:column>
+					<p:column style="width:10px;">
+						<p:separator style="width:2px;height:20px"/>
+					</p:column>
+					<p:column style="width:150px;" colspan="2">
+					<p:panel id="idTourCd">
+						<p:inputText id="idTxtTourCd" label="Tour Code" value="#{productReportBean.tourDepVO.code}" onkeydown="preventBackspace()" style="background:#ccc;" size="30" maxlength="0" required="true"/>
+						&nbsp;
+				        <p:commandButton icon="ui-icon-search" actionListener="#{productReportBean.loadTour}" update=":idTourCodeList" oncomplete="varTourCodeList.show()" process="@this" rendered="#{empty productReportBean.tourDepVO.id}"/>
+						<p:commandButton icon="ui-icon-close" actionListener="#{productReportBean.clearTourCode}" update=":idFormProductReport:idTourCd" process="@this" rendered="#{not empty productReportBean.tourDepVO.id}"/>
+					</p:panel>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</h:form>
+	</p:panel>
+	
+	<!--
+		DIALOG - TOUR DEPARTURE LIST
+	-->
+	<p:dialog header="Tour Departure List" id="idTourCodeList" widgetVar="varTourCodeList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true" onShow="initializeFilters()">
+		<div style="overflow:auto; width:800px !important; height:500px !important;">
+		<h:form id="idTourDepListForm">
+			<p:dataTable value="#{productReportBean.tourDepVOList}" var="vo" paginator="true" rows="20" 
+				paginatorTemplate="#{bterp:pageTemplate()}" 
+				rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+				<p:ajax event="rowSelect" listener="#{productReportBean.handleTourCodeSelect}" oncomplete="varTourCodeList.hide()"  update=":idFormProductReport:idTourCd" />
+				<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:200px;">
+					<h:outputText value="#{vo.code}" />   
+				</p:column>
+				<p:column headerText="Departure Date" sortBy="#{vo.dtDep}" filterBy="#{productReportBean.dateFormat(vo.dtDep, 'dd-MMM-yyyy')}" filterMatchMode="contains" style="width:60px;">
+					<h:outputText value="#{vo.dtDep}" >
+						<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+					</h:outputText> 
+				</p:column>
+				<p:column headerText="Package" sortBy="#{vo.packageDesc}" filterBy="#{vo.packageDesc}" filterMatchMode="contains">
+					<h:outputText value="#{vo.packageDesc}" />   
+				</p:column>
+			</p:dataTable> 
+		</h:form>
+		</div>
+		<script type="text/javascript">
+        function initializeFilters() {
+            var filters = document.querySelectorAll('#idTourCodeList input.ui-column-filter');
+            filters.forEach(function(filter) {
+                filter.setAttribute('enterkeyhint', 'enter');
+            });
+        }
+    	</script>
+	</p:dialog>
+
+</ui:define>
+</ui:composition>

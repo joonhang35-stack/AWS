@@ -1,0 +1,307 @@
+package com.bcs.zsg.product.dao;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.product.vo.TourCruiseCabinDiscountVO;
+import com.bcs.zsg.product.vo.TourCruiseCabinVO;
+
+public class TourCruiseCabinDAOImpl extends BaseHibernateDAO implements TourCruiseCabinDAO {
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TourCruiseCabinDiscountVO> getTourCruiseCabinDiscountList(Long idTourCruiseCabin) throws BusinessException {
+		Criteria criteria = createCriteria(TourCruiseCabinDiscountVO.class);
+		criteria.add(Restrictions.eq("idCruiseCabin", idTourCruiseCabin));
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TourCruiseCabinVO> getTourCruiseCabinList(Long idTourDep, Long idCompany) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT ").
+			append("d.id, d.id_tour_dep, d.cruise_cabin_cd, d.cabin_allotment, d.pax_per_cabin, ").
+			append("d.price_twn, d.price_3, d.price_4, d.price_sgl, d.price_3_chd, d.price_4_chd, d.price_inf, d.tour_status_cd, ").
+			append("(select ifnull(sum(i.cabin_qty),0) from tour_booking b, tour_booking_charge_item i ").
+			append("where b.id = i.id_tour_booking and b.id_tour_dep = :idTourDep and b.status_cd = 'CF' and i.type_cd = 'T' and i.id_tour_cruise_cabin = d.id) as confirmCabin, ").
+			append("(select ifnull(sum(i.cabin_qty),0) from tour_booking b, tour_booking_charge_item i ").
+			append("where b.id = i.id_tour_booking and b.id_tour_dep = :idTourDep and b.status_cd = 'BK' and b.pmnt_status_cd = 'KIV' and i.type_cd = 'T' and i.id_tour_cruise_cabin = d.id) as kivCabin, ").
+			append("c.description, d.id_acct, d.id_company ").
+			append("from tour_cruise_cabin d left join cruise_cabin c on c.code = d.cruise_cabin_cd and c.status_cd = :statusCode ").
+			append("where d.id_tour_dep = :idTourDep and d.status_cd = :statusCode and d.id_company = :idCompany ").
+			append("order by d.id");
+		
+//		System.out.println("TourCruiseCabinDAOImpl.getTourCruiseCabinList sql: " + sb.toString());
+//		System.out.println("idTourDep: " + idTourDep);
+//		System.out.println("statusCode: " + BaseConstant.STATUS_ACTIVE);
+//		System.out.println("idCompany: " + idCompany);
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("idTourDep", idTourDep);
+		query.setString("statusCode", BaseConstant.STATUS_ACTIVE);
+		query.setLong("idCompany", idCompany);
+		List<Object> results = query.list();
+		List<TourCruiseCabinVO> tourCruiseCabinList = new ArrayList<TourCruiseCabinVO>();
+		TourCruiseCabinVO vo;
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			vo = new TourCruiseCabinVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setUuid(String.valueOf(vo.getId()));
+			vo.setIdTourDep(((BigInteger) row[1]).longValue());
+			vo.setCruiseCabinCd((String) row[2]);
+			vo.setCabinAllotment((Integer) row[3]);
+			vo.setPaxPerCabin((Integer) row[4]);
+			vo.setPriceTwn((Double) row[5]);
+			vo.setPrice3((Double) row[6]);
+			vo.setPrice4((Double) row[7]);
+			vo.setPriceSgl((Double) row[8]);
+			vo.setPrice3Chd((Double) row[9]);
+			vo.setPrice4Chd((Double) row[10]);
+			vo.setPriceInf((Double) row[11]);
+			vo.setTourStatusCd((String) row[12]);
+			vo.setTotalConfirmedCabin(row[13] == null ? 0 : ((BigDecimal) row[13]).intValue());
+			vo.setTotalKivCabin(row[14] == null ? 0 : ((BigDecimal) row[14]).intValue());
+			vo.setCruiseCabinDesc((String) row[15]);
+			vo.setIdAcct(row[16] == null ? null : ((BigInteger) row[16]).longValue());
+			vo.setIdCompany(((BigInteger) row[17]).longValue());
+			vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			
+			// discount list
+			vo.setCabinDiscountList(getTourCruiseCabinDiscountList(vo.getId()));
+			vo.setDiscountLvl1(vo.getCabinDiscountList().get(0).getDiscountAmt());
+			vo.setDiscountLvl1Pax(vo.getCabinDiscountList().get(0).getDiscountPax());
+			vo.setDiscountLvl2(vo.getCabinDiscountList().get(1).getDiscountAmt());
+			vo.setDiscountLvl2Pax(vo.getCabinDiscountList().get(1).getDiscountPax());
+			
+			vo.setBalanceCabin(vo.getCabinAllotment() - vo.getTotalConfirmedCabin() - vo.getTotalKivCabin());
+			
+			tourCruiseCabinList.add(vo);
+		}
+		
+		return tourCruiseCabinList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TourCruiseCabinVO> getHubTourCruiseCabinList(Long idTourDep, Long idCompany) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT ").
+			append("d.id, d.id_tour_dep, d.cruise_cabin_cd, d.cabin_allotment, d.pax_per_cabin, ").
+			append("d.price_twn, d.price_3, d.price_4, d.price_sgl, d.price_inf, d.tour_status_cd, ").
+			append("(select ifnull(sum(i.cabin_qty),0) from tour_booking b, tour_booking_charge_item i ").
+			append("where b.id = i.id_tour_booking and b.id_tour_dep = :idTourDep and b.status_cd = 'CF' and i.type_cd = 'T' and i.id_tour_cruise_cabin = d.id) as confirmCabin, ").
+			append("(select ifnull(sum(i.cabin_qty),0) from tour_booking b, tour_booking_charge_item i ").
+			append("where b.id = i.id_tour_booking and b.id_tour_dep = :idTourDep and b.status_cd = 'BK' and b.pmnt_status_cd = 'KIV' and i.type_cd = 'T' and i.id_tour_cruise_cabin = d.id) as kivCabin, ").
+			append("c.description, d.id_acct, d.id_company ").
+			append("from hub_tour_cruise_cabin d left join hub_cruise_cabin c on c.code = d.cruise_cabin_cd and c.status_cd = :statusCode ").
+			append("where d.id_tour_dep = :idTourDep and d.status_cd = :statusCode and d.id_company = :idCompany ").
+			append("order by d.id");
+		
+//		System.out.println("TourCruiseCabinDAOImpl.getTourCruiseCabinList sql: " + sb.toString());
+//		System.out.println("idTourDep: " + idTourDep);
+//		System.out.println("statusCode: " + BaseConstant.STATUS_ACTIVE);
+//		System.out.println("idCompany: " + idCompany);
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("idTourDep", idTourDep);
+		query.setString("statusCode", BaseConstant.STATUS_ACTIVE);
+		query.setLong("idCompany", idCompany);
+		List<Object> results = query.list();
+		List<TourCruiseCabinVO> tourCruiseCabinList = new ArrayList<TourCruiseCabinVO>();
+		TourCruiseCabinVO vo;
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			vo = new TourCruiseCabinVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setUuid(String.valueOf(vo.getId()));
+			vo.setIdTourDep(((BigInteger) row[1]).longValue());
+			vo.setCruiseCabinCd((String) row[2]);
+			vo.setCabinAllotment((Integer) row[3]);
+			vo.setPaxPerCabin((Integer) row[4]);
+			vo.setPriceTwn((Double) row[5]);
+			vo.setPrice3((Double) row[6]);
+			vo.setPrice4((Double) row[7]);
+			vo.setPriceSgl((Double) row[8]);
+			vo.setPriceInf((Double) row[9]);
+			vo.setTourStatusCd((String) row[10]);
+			vo.setTotalConfirmedCabin(row[11] == null ? 0 : ((BigDecimal) row[11]).intValue());
+			vo.setTotalKivCabin(row[12] == null ? 0 : ((BigDecimal) row[12]).intValue());
+			vo.setCruiseCabinDesc((String) row[13]);
+			vo.setIdAcct(row[14] == null ? null : ((BigInteger) row[14]).longValue());
+			vo.setIdCompany(((BigInteger) row[15]).longValue());
+			vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			
+			// discount list
+			vo.setCabinDiscountList(getTourCruiseCabinDiscountList(vo.getId()));
+			vo.setDiscountLvl1(vo.getCabinDiscountList().get(0).getDiscountAmt());
+			vo.setDiscountLvl1Pax(vo.getCabinDiscountList().get(0).getDiscountPax());
+			vo.setDiscountLvl2(vo.getCabinDiscountList().get(1).getDiscountAmt());
+			vo.setDiscountLvl2Pax(vo.getCabinDiscountList().get(1).getDiscountPax());
+			
+			tourCruiseCabinList.add(vo);
+		}
+		
+		return tourCruiseCabinList;
+	}
+
+	@Override
+	public void deleteByTourDep(Long idTourDep) throws BusinessException {
+		Query query = createSQLQuery("UPDATE tour_cruise_cabin SET status_cd = 'D' WHERE id_tour_dep = :idTourDep");
+		query.setLong("idTourDep", idTourDep);
+		query.executeUpdate();
+	}
+
+	@Override
+	public boolean isTourCruiseCabinBooked(Long idTourCruiseCabin) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select ifnull(sum(i.cabin_qty), 0) from tour_booking_charge_item i, tour_booking b  ").
+			append("where i.id_tour_booking = b.id and b.status_cd not in ('VD', 'CC') and b.pmnt_status_cd != 'KIVEXP' ").
+			append("and i.id_tour_cruise_cabin = :idTourCruiseCabin ").
+			append("group by i.id_tour_cruise_cabin");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("idTourCruiseCabin", idTourCruiseCabin);
+		int count = query.uniqueResult() == null ? 0 : ((BigDecimal) query.uniqueResult()).intValue();
+		return count > 0;
+	}
+
+	@Override
+	public void updateTourCruiseCabinAcctCode(TourCruiseCabinVO tourCruiseCabinVO) throws BusinessException {
+		Query query = createSQLQuery("UPDATE tour_cruise_cabin SET id_acct = :idAcct WHERE id = :id");
+		query.setLong("idAcct", tourCruiseCabinVO.getIdAcct());
+		query.setLong("id", tourCruiseCabinVO.getId());
+		query.executeUpdate();
+	}
+
+	@Override
+	public void updateByCode(TourCruiseCabinVO tourCruiseCabinVO) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE tour_cruise_cabin SET");
+		if (tourCruiseCabinVO.getIdAcct() != null) sb.append(" id_acct = :idAcct,");
+		sb.append(" cabin_allotment = :cabinAllotment,").
+			append(" pax_per_cabin = :paxPerCabin,").
+			append(" price_twn = :priceTwn,").
+			append(" price_3 = :price3,").
+			append(" price_4 = :price4,").
+			append(" price_sgl = :priceSgl,").
+			append(" price_3_chd = :price3Chd,").
+			append(" price_4_chd = :price4Chd,").
+			append(" price_inf = :priceInf,");
+		
+		// to solve "Tour departure still show 'Available' after fully booked issue"
+		if(tourCruiseCabinVO.getCabinAllotment() == 0) {
+			sb.append(" tour_status_cd = 'F',");
+		}
+		
+		sb.append(" status_cd = 'A',").
+			append(" dt_upd = NOW(),").
+			append(" upd_by = :updBy").
+			append(" WHERE id_tour_dep = :idTourDep AND id_company = :idCompany AND cruise_cabin_cd = :cabinCode").
+			append(" AND id = :id");
+			
+		Query query = createSQLQuery(sb.toString());
+		if (tourCruiseCabinVO.getIdAcct() != null) query.setLong("idAcct", tourCruiseCabinVO.getIdAcct());
+		query.setInteger("cabinAllotment", tourCruiseCabinVO.getCabinAllotment());
+		query.setInteger("paxPerCabin", tourCruiseCabinVO.getPaxPerCabin());
+		query.setDouble("priceTwn", tourCruiseCabinVO.getPriceTwn());
+		query.setDouble("price3", tourCruiseCabinVO.getPrice3());
+		query.setDouble("price4", tourCruiseCabinVO.getPrice4());
+		query.setDouble("priceSgl", tourCruiseCabinVO.getPriceSgl());
+		query.setDouble("price3Chd", tourCruiseCabinVO.getPrice3Chd());
+		query.setDouble("price4Chd", tourCruiseCabinVO.getPrice4Chd());
+		query.setDouble("priceInf", tourCruiseCabinVO.getPriceInf());
+		query.setString("updBy", updatedBy);
+		query.setLong("idTourDep", tourCruiseCabinVO.getIdTourDep());
+		query.setLong("idCompany", tourCruiseCabinVO.getIdCompany());
+		query.setString("cabinCode", tourCruiseCabinVO.getCruiseCabinCd());
+		query.setLong("id", tourCruiseCabinVO.getId());
+		query.executeUpdate();
+	}
+	
+	/* ############################ For API - Start ############################ */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TourCruiseCabinVO> getTourCruiseCabinListForApi(Long idTourDep, Long idCompany) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT * FROM ( ").
+			append("SELECT ").
+			append("d.id, d.id_tour_dep, d.cruise_cabin_cd, d.cabin_allotment, d.pax_per_cabin, ").
+			append("d.price_twn, d.price_3, d.price_4, d.price_sgl, d.price_3_chd, d.price_4_chd, d.price_inf, d.tour_status_cd, ").
+			append("(select ifnull(sum(i.cabin_qty),0) from tour_booking b, tour_booking_charge_item i ").
+			append("where b.id = i.id_tour_booking and b.id_tour_dep = :idTourDep and b.status_cd = 'CF' and i.type_cd = 'T' and i.id_tour_cruise_cabin = d.id) as confirmCabin, ").
+			append("(select ifnull(sum(i.cabin_qty),0) from tour_booking b, tour_booking_charge_item i ").
+			append("where b.id = i.id_tour_booking and b.id_tour_dep = :idTourDep and b.status_cd = 'BK' and b.pmnt_status_cd = 'KIV' and i.type_cd = 'T' and i.id_tour_cruise_cabin = d.id) as kivCabin, ").
+			append("c.description, d.id_acct, d.id_company ").
+			append("from tour_cruise_cabin d left join cruise_cabin c on c.code = d.cruise_cabin_cd and c.status_cd = :statusCode ").
+			append("where d.id_tour_dep = :idTourDep and d.status_cd = :statusCode and d.id_company = :idCompany ").
+			append(") a WHERE (cabin_allotment - confirmCabin - kivCabin) > 0 ").
+		append("order by a.id");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setLong("idTourDep", idTourDep);
+		query.setString("statusCode", BaseConstant.STATUS_ACTIVE);
+		query.setLong("idCompany", idCompany);
+		List<Object> results = query.list();
+		List<TourCruiseCabinVO> tourCruiseCabinList = new ArrayList<TourCruiseCabinVO>();
+		TourCruiseCabinVO vo;
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			vo = new TourCruiseCabinVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setIdBase(((BigInteger) row[0]).longValue());
+			vo.setUuid(String.valueOf(vo.getId()));
+			vo.setIdTourDep(((BigInteger) row[1]).longValue());
+			vo.setCruiseCabinCd((String) row[2]);
+			vo.setCabinAllotment((Integer) row[3]);
+			vo.setPaxPerCabin((Integer) row[4]);
+			vo.setPriceTwn((Double) row[5]);
+			vo.setPrice3((Double) row[6]);
+			vo.setPrice4((Double) row[7]);
+			vo.setPriceSgl((Double) row[8]);
+			vo.setPrice3Chd((Double) row[9]);
+			vo.setPrice4Chd((Double) row[10]);
+			vo.setPriceInf((Double) row[11]);
+			vo.setTourStatusCd((String) row[12]);
+			vo.setTotalConfirmedCabin(row[13] == null ? 0 : ((BigDecimal) row[13]).intValue());
+			vo.setTotalKivCabin(row[14] == null ? 0 : ((BigDecimal) row[14]).intValue());
+			vo.setCruiseCabinDesc((String) row[15]);
+			vo.setIdAcct(row[16] == null ? null : ((BigInteger) row[0]).longValue());
+			vo.setIdCompany(((BigInteger) row[17]).longValue());
+			vo.setStatusCode(BaseConstant.STATUS_ACTIVE);
+			
+			// discount list
+			vo.setCabinDiscountList(getTourCruiseCabinDiscountList(vo.getId()));
+			vo.setDiscountLvl1(vo.getCabinDiscountList().get(0).getDiscountAmt());
+			vo.setDiscountLvl1Pax(vo.getCabinDiscountList().get(0).getDiscountPax());
+			vo.setDiscountLvl2(vo.getCabinDiscountList().get(1).getDiscountAmt());
+			vo.setDiscountLvl2Pax(vo.getCabinDiscountList().get(1).getDiscountPax());
+			
+			tourCruiseCabinList.add(vo);
+		}
+		return tourCruiseCabinList;
+	}
+	/* ############################ For API - End   ############################ */
+
+}

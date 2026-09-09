@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:sec="http://www.springframework.org/schema/security"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+            http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd
+			http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+	<!-- app.default.folder.path.upload=D://Tomcat85//webapps//aws//upload -->
+	<mvc:resources mapping="/img/upload/dailyitinerary/**" location="file:${app.default.folder.path.upload}/dailyitinerary/" order="1" cache-period="3600"/>
+	<mvc:resources mapping="/img/upload/itinery/**" location="file:${app.default.folder.path.upload}/itinery/" order="1" cache-period="3600"/>
+	<mvc:resources mapping="/img/upload/tour/**" location="file:${app.default.folder.path.upload}/tour/" order="1" cache-period="3600"/>
+	
+	<bean id="springSecurityFilterChain" class="org.springframework.security.web.FilterChainProxy">
+        <sec:filter-chain-map request-matcher="ant">
+        	
+        	<sec:filter-chain pattern="/app/error*" filters="shallowEtagHeaderFilter, characterEncodingFilter, initFilter, sessionManagementFilter"/>
+        	
+        	<sec:filter-chain pattern="/servlet/*" filters="none"/>
+        	<sec:filter-chain pattern="${sec.logout.success.url}*" filters="shallowEtagHeaderFilter, characterEncodingFilter, initFilter"/>
+        	<sec:filter-chain pattern="${sec.login.url}*" filters="shallowEtagHeaderFilter, characterEncodingFilter, initFilter"/>
+        
+        	<!-- Unsecured Web Services -->
+        	<sec:filter-chain pattern="/services/**" filters="none"/>
+        	
+        	<sec:filter-chain pattern="/app/user/forgotpassword" filters="none"/>
+        	<sec:filter-chain pattern="/app/user/resetpassword*" filters="none"/>
+        	<sec:filter-chain pattern="/app/sales/emailPayment*" filters="none"/>
+        
+            <!-- STATIC RESOURCES -->
+            <sec:filter-chain pattern="/**/*.js" filters="none"/>
+            <sec:filter-chain pattern="/**/*.css" filters="none"/>
+            <sec:filter-chain pattern="/**/css/**" filters="none"/>
+            <sec:filter-chain pattern="/**/js/**" filters="none"/>
+            <sec:filter-chain pattern="/**/img/**" filters="none"/>
+            <sec:filter-chain pattern="/*.jsp" filters="none"/>
+            <sec:filter-chain pattern="/test/*.jsp" filters="none"/>
+            <!-- <sec:filter-chain pattern="/**/upload/**" filters="none"/> -->
+			<sec:filter-chain pattern="/**/upload/dailyitinerary/**" filters="none"/>
+            <sec:filter-chain pattern="/**/upload/itinery/**" filters="none"/>
+            <sec:filter-chain pattern="/**/upload/tour/**" filters="none"/>
+            
+            <!-- JSF Resources -->
+            <sec:filter-chain pattern="/**/javax.faces.resource/**" filters="none"/>
+            
+            <sec:filter-chain pattern="/**" filters="shallowEtagHeaderFilter, characterEncodingFilter, initFilter, concurrentSessionFilter, securityContextFilter, logoutFilter, formLoginFilter, requestCacheFilter, servletApiFilter, anonymousFilter, sessionManagementFilter, exceptionTranslator, filterSecurityInterceptor"/>
+        </sec:filter-chain-map>
+    </bean>
+
+	<sec:filter-security-metadata-source id="securityMetadataSource">
+        <!-- ANONYMOUSLY ACCESSED RESOURCES -->
+        <sec:intercept-url pattern="/error.htm*" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+        <sec:intercept-url pattern="/app/error*" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+        <sec:intercept-url pattern="${sec.logout.success.url}*" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+        <sec:intercept-url pattern="${sec.login.url}*" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+        <sec:intercept-url pattern="/pdf/gst/*" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+		<sec:intercept-url pattern="/upload/passport/*" access="IS_AUTHENTICATED_FULLY"/>
+        <sec:intercept-url pattern="/upload/visa/*" access="IS_AUTHENTICATED_FULLY"/>
+        <sec:intercept-url pattern="/upload/invoice/**" access="IS_AUTHENTICATED_FULLY"/>
+        <sec:intercept-url pattern="/upload/customer/**" access="IS_AUTHENTICATED_FULLY"/>
+        <sec:intercept-url pattern="/upload/exchangeorder/**" access="IS_AUTHENTICATED_FULLY"/>
+		
+		<!-- <sec:intercept-url pattern="/upload/itinery/**" access="IS_AUTHENTICATED_FULLY"/>
+		<sec:intercept-url pattern="/upload/tour/**" access="IS_AUTHENTICATED_FULLY"/> -->
+		<sec:intercept-url pattern="/upload/country/**" access="IS_AUTHENTICATED_FULLY"/>
+
+		<!-- Authenticated users are allowed to access the landing page -->
+		<sec:intercept-url pattern="${sec.default.landing.page.url}*" access="IS_AUTHENTICATED_FULLY"/>
+		
+        <sec:intercept-url pattern="/**" access="FUNCTION_ACCESS"/>
+    </sec:filter-security-metadata-source>
+    
+    <bean id="shallowEtagHeaderFilter" class="org.springframework.web.filter.ShallowEtagHeaderFilter"/>
+	
+    <!-- UTF-8 encoding filter (the first filter) -->
+    <bean id="characterEncodingFilter" class="org.springframework.web.filter.CharacterEncodingFilter">
+        <property name="encoding" value="UTF-8"/>
+    </bean>
+
+    <!-- init filter (must be right after characterEncodingFilter) -->
+    <bean id="initFilter" class="com.bcs.zsg.component.security.web.filter.InitFilter">
+    	<property name="authenticationEntryPoint" ref="authenticationEntryPoint"/>
+    	<property name="localeResolver" ref="localeResolver"/>
+    	<property name="securityBO" ref="securityBO"/>
+    	<property name="maxSessionUpTimeMinutes" value="${sec.max.session.uptime.mins}"/>
+    </bean>
+    
+    <bean id="concurrentSessionFilter" class="com.bcs.zsg.component.security.web.session.ConcurrentSessionFilter">
+        <constructor-arg ref="sessionRegistry"/>
+        <constructor-arg name="expiredUrl" value="${sec.login.concurrent.url}"/>
+        <property name="redirectStrategy" ref="redirectStrategy"/>
+        <property name="lastConcurrentLoginCheckTTL" value="${sec.concurrent.login.check.ttl}"/>
+    </bean>
+
+	<bean id="sessionRegistry" class="com.bcs.zsg.component.security.core.session.JdbcSessionRegistryImpl">
+		<property name="securityBO" ref="securityBO"/>
+		<property name="isRefreshLastRequest" value="${sec.session.registry.refreshlastrequest}"/>
+	</bean>
+	
+	<bean id="securityContextFilter" class="org.springframework.security.web.context.SecurityContextPersistenceFilter">
+        <property name="securityContextRepository" ref="securityContextRepository"/>
+    </bean>
+    
+    <bean id="logoutFilter" class="com.bcs.zsg.component.security.web.authentication.logout.LogoutFilter">
+        <constructor-arg ref="logoutSuccessHandler"/>
+        <constructor-arg>
+            <list>
+            	<ref bean="auditLogoutHandler"/>
+                <bean class="org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler"/>
+            </list>
+        </constructor-arg>
+        <property name="filterProcessesUrl" value="${sec.logout.processing.url}"/>
+    </bean>
+    
+    <bean id="formLoginFilter" class="com.bcs.zsg.component.security.web.authentication.UsernamePasswordAuthenticationFilter">
+        <property name="authenticationManager" ref="authenticationManager"/>
+        <property name="authenticationSuccessHandler" ref="authenticationSuccessHandler"/>
+        <property name="authenticationFailureHandler" ref="authenticationFailureHandler"/>
+        <property name="sessionAuthenticationStrategy" ref="sessionAuthenticationStrategy"/>
+        <property name="filterProcessesUrl" value="${sec.login.processing.url}"/>
+        <property name="allowSessionCreation" value="false"/>
+        <property name="usernameParameter" value="login_id"/>
+        <property name="passwordParameter" value="login_pswd"/>
+    </bean>
+    
+    <bean id="requestCacheFilter" class="org.springframework.security.web.savedrequest.RequestCacheAwareFilter">
+        <property name="requestCache" ref="requestCache"/>
+    </bean>
+
+    <bean id="servletApiFilter" class="org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter"/>
+    
+    <bean id="anonymousFilter" class="org.springframework.security.web.authentication.AnonymousAuthenticationFilter">
+    	<property name="userAttribute" value="anonymousUser,ROLE_ANONYMOUS"/>
+    	<property name="key" value="anonymousKey"/>
+    </bean>
+    
+    <bean id="sessionManagementFilter" class="org.springframework.security.web.session.SessionManagementFilter">
+        <constructor-arg ref="securityContextRepository"/>
+        <property name="authenticationFailureHandler" ref="authenticationFailureHandler"/>
+        <property name="sessionAuthenticationStrategy" ref="sessionAuthenticationStrategy"/>
+        <property name="invalidSessionStrategy" ref="invalidSessionStrategy"/>
+    </bean>
+
+	<!-- New in Spring Security 3.1.0 -->
+	<bean id="invalidSessionStrategy" class="com.bcs.zsg.component.security.web.session.RedirectInvalidSessionStrategy">
+		<constructor-arg value="${sec.session.timeout.url}"/>
+		<property name="redirectStrategy" ref="redirectStrategy"/>
+	</bean>
+
+    <bean id="exceptionTranslator" class="org.springframework.security.web.access.ExceptionTranslationFilter">
+        <property name="authenticationEntryPoint" ref="authenticationEntryPoint"/>
+        <property name="requestCache" ref="requestCache"/>
+        <property name="accessDeniedHandler" ref="accessDeniedHandler"/>
+    </bean>
+
+	<bean id="accessDeniedHandler" class="org.springframework.security.web.access.AccessDeniedHandlerImpl"/>
+	
+    <bean id="filterSecurityInterceptor" class="org.springframework.security.web.access.intercept.FilterSecurityInterceptor">
+        <property name="authenticationManager" ref="authenticationManager"/>
+        <property name="accessDecisionManager" ref="accessDecisionManager"/>
+        <property name="securityMetadataSource" ref="securityMetadataSource"/>
+    </bean>
+
+    <!-- request cache -->
+    <bean id="requestCache" class="org.springframework.security.web.savedrequest.HttpSessionRequestCache">
+        <property name="createSessionAllowed" value="false"/>
+    </bean>
+
+    <!-- security context repository -->
+    <bean id="securityContextRepository" class="org.springframework.security.web.context.HttpSessionSecurityContextRepository">
+        <property name="allowSessionCreation" value="false"/>
+        <property name="disableUrlRewriting" value="true"/><!-- ensure jsessionid is not appended to url -->
+    </bean>
+
+    <!-- session authentication strategy -->
+    <bean id="sessionAuthenticationStrategy" class="com.bcs.zsg.component.security.web.authentication.session.ConcurrentSessionControlStrategy">
+    	<constructor-arg ref="sessionRegistry"/>
+    	<property name="maximumSessions" value="${sec.max.user.concurrent.sessions}"/>
+    </bean>
+    
+    <!-- authentication entry point -->
+    <bean id="authenticationEntryPoint" class="com.bcs.zsg.component.security.web.authentication.LoginUrlAuthenticationEntryPoint">
+        <constructor-arg value="${sec.login.url}"/>
+        <property name="redirectStrategy" ref="redirectStrategy"/>
+    </bean>
+
+    <!-- authentication manager -->
+    <sec:authentication-manager alias="authenticationManager">
+        <sec:authentication-provider ref="authenticationProvider"/>
+    </sec:authentication-manager>
+    
+    <!-- authentication provider -->
+    <bean id="authenticationProvider" class="com.bcs.zsg.component.security.web.authentication.UsernamePasswordAuthenticationProvider">
+    	<property name="securityBO" ref="securityBO"/>
+    </bean>
+    
+    <!-- access decision manager -->
+    <bean id="accessDecisionManager" class="org.springframework.security.access.vote.AffirmativeBased">
+        <property name="decisionVoters">
+            <list>
+                <bean id="accessControlVoter" class="com.bcs.zsg.component.security.access.vote.FunctionAccessVoter">
+                    <property name="securityBO" ref="securityBO"/>
+                </bean>
+                <bean class="org.springframework.security.access.vote.RoleVoter"/>
+                <bean class="org.springframework.security.access.vote.AuthenticatedVoter"/>
+            </list>
+        </property>
+    </bean>
+    
+    <!-- authentication success handler -->
+    <bean id="baseAuthenticationSuccessHandler" class="com.bcs.zsg.component.security.web.authentication.AuthenticationSuccessHandlerImpl">
+        <property name="defaultTargetUrl" value="${sec.default.landing.page.url}"/>
+        <property name="requestCache" ref="requestCache"/>
+        <property name="securityBO" ref="securityBO"/>
+        <property name="alwaysUseDefaultTargetUrl" value="true"/>
+        <property name="auditLogManager" ref="auditLogManager"/>
+        <property name="redirectStrategy" ref="redirectStrategy"/>
+    </bean>
+
+    <!-- authentication failure handler -->
+    <bean id="authenticationFailureHandler" class="com.bcs.zsg.component.security.web.authentication.ErrorCodeMappingAuthenticationFailureHandler">
+        <property name="defaultFailureUrl" value="${sec.login.failure.url}"/>
+        <property name="allowSessionCreation" value="false"/>
+        <property name="exceptionMappings" ref="authenticationExceptionMap"/>
+        <property name="exceptionUrlResolver" ref="exceptionUrlResolver"/>
+        <property name="redirectStrategy" ref="redirectStrategy"/>
+    </bean>
+    
+    <!-- authentication exception mapping -->
+    <bean id="exceptionUrlResolver" class="com.bcs.zsg.component.security.web.authentication.HierarchicalExceptionUrlResolver">
+        <property name="exceptionMappings" ref="authenticationExceptionMap"/>
+        <property name="securityErrorMapper" ref="securityErrorMapper"/>
+    </bean>
+    
+    <!-- authentication error mapper -->
+    <bean id="securityErrorMapper" class="com.bcs.zsg.core.helper.ErrorMapper">
+        <constructor-arg type="java.lang.String" value="security-errormap.properties"/>
+    </bean>
+    
+    <!-- Logout Handler -->
+	<bean id="auditLogoutHandler" class="com.bcs.zsg.component.security.web.authentication.logout.AuditLogoutHandler">
+		<property name="auditLogManager" ref="auditLogManager"/>
+	</bean>
+    
+    <bean id="logoutSuccessHandler" class="org.springframework.security.web.authentication.logout.SimpleUrlLogoutSuccessHandler">
+        <property name="targetUrlParameter" value="logoutSuccessUrl"/>
+        <property name="defaultTargetUrl" value="${sec.logout.success.url}"/>
+        <property name="redirectStrategy" ref="redirectStrategy"/>
+    </bean>
+    
+    <!-- password encoder -->
+    <bean id="passwordEncoder" class="org.springframework.security.authentication.encoding.ShaPasswordEncoder"/>
+    
+    <!-- redirect strategy -->
+    <bean id="redirectStrategy" class="${sec.redirect.strategy.impl}"/>
+	
+</beans>

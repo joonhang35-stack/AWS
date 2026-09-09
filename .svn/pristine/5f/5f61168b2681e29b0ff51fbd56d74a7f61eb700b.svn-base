@@ -1,0 +1,71 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+	<p:growl id="msg" />
+
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varVoucherCatalogDialog.hide();" />
+	</h:panelGrid>
+
+	<p:dataTable widgetVar="varVoucherListTable"
+		value="#{custBean.voucherList}" var="voucherVO" paginator="true" rows="10"
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+		filterEvent="enter">
+
+		<p:column headerText="Code">
+			<p:outputLabel id="idVoucher">
+				<i class="fa fa-info-circle" aria-hidden="true" />
+			</p:outputLabel>
+			<h:outputText value="#{voucherVO.redemptionCode}" />
+			<pe:tooltip for="idVoucher" shared="true" showDelay="300" targetPosition="top left" position="bottom right">
+		        <h:panelGrid columns="2">
+		            <h:outputText value="Name:" /><h:outputText value="#{voucherVO.name}" />
+		            <h:outputText value="Redemption ID:" /><h:outputText value="#{voucherVO.redemptionId}" />
+		            <h:outputText value="Category:" /><h:outputText value="#{voucherVO.categoryName}" />
+		            <h:outputText value="Category Type:" /><h:outputText value="#{voucherVO.categoryType}" />
+					<h:outputText value="Category Desc:" /><h:outputText value="#{voucherVO.categoryDesc}" />
+		            <h:outputText value="Description:" /><h:outputText value="#{voucherVO.description}" />
+					<h:outputText value="Min Points:" /><h:outputText value="#{voucherVO.minPoints}" />
+					<h:outputText value="Max Points:" /><h:outputText value="#{voucherVO.maxPoints}" />
+					<h:outputText value="Min Sales:" /><h:outputText value="#{voucherVO.minSales}" />
+					<h:outputText value="Max Sales:" /><h:outputText value="#{voucherVO.maxSales}" />
+					<h:outputText value="Conversion Points:" /><h:outputText value="#{voucherVO.conversionPoints}" />
+					<h:outputText value="Conversion Rebate Amt:" /><h:outputText value="#{voucherVO.conversionRebateAmt}" />
+					<h:outputText value="Discount Amt:" /><h:outputText value="#{voucherVO.discountAmt}" />
+					<h:outputText value="Percentage:" /><h:outputText value="#{voucherVO.percentage}" />
+					<h:outputText value="Max Discount Capped:" /><h:outputText value="#{voucherVO.maxDiscountCapped}" />
+					<h:outputText value="Expiry Days:" /><h:outputText value="#{voucherVO.expiryDays}" />
+					<h:outputText value="Expiry End of Month:" /><h:outputText value="#{voucherVO.isExpiryEndOfMonth ? 'Yes' : 'No'}" />
+					<h:outputText value="Effective From:" /><h:outputText value="#{voucherVO.effectiveFrom}" />
+					<h:outputText value="Effective Until:" /><h:outputText value="#{voucherVO.effectiveUntil}" />
+					<h:outputText value="Currency:" /><h:outputText value="#{voucherVO.currency}" />
+					<h:outputText value="Active:" /><h:outputText value="#{voucherVO.isActive ? 'Yes' : 'No'}" />
+		        </h:panelGrid>				
+		    </pe:tooltip>
+		</p:column>
+		<p:column headerText="Category">
+			<h:outputText value="#{voucherVO.categoryName}" />
+		</p:column>
+		<p:column headerText="Points Required">
+			<h:outputText value="#{voucherVO.minPoints}" />
+		</p:column>
+		<p:column headerText="Claim">
+			<p:commandButton value="Claim"
+				actionListener="#{custBean.onClaimVoucher(voucherVO)}"
+				oncomplete="if (args &amp;&amp; !args.validationFailed) varConfirmClaimVoucherDialog.show()"
+				process="@this" update=":idVoucherCatalogForm:msg" />
+		</p:column>
+	</p:dataTable>
+
+	<h:panelGrid columns="1">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varVoucherCatalogDialog.hide();" />
+	</h:panelGrid>
+</ui:composition>

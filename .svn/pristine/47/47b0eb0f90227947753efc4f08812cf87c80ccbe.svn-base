@@ -1,0 +1,255 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+	<p:growl id="msg" />
+	
+	<style>
+		.panel-grid-table {
+			margin-top: 16px;
+		}
+		
+		.panel-grid-table tr, .panel-grid-table td {
+			border: 2px solid #ddd !important;
+		}
+	</style>
+
+	<h:panelGrid columns="3" style="margin-bottom: 8px; width: 1px">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varOnlineCustProfileUpdReqDialog.hide();" />
+		<p:commandButton value="Apply" actionListener="#{salesBean.applyOnlineCustProfUpdReq(salesBean.onlineCustomerProfileUpdateVO, salesBean.customerVO)}" 
+			update="@form :idAddCustForm" oncomplete="if (args &amp;&amp; !args.validationFailed) varOnlineCustProfileUpdReqDialog.hide()" immediate="true"/>
+		<p:commandButton value="Reject" actionListener="#{salesBean.rejectOnlineCustProfUpdReq(salesBean.onlineCustomerProfileUpdateVO, salesBean.customerVO)}" 
+			update="@form :idAddCustForm" oncomplete="if (args &amp;&amp; !args.validationFailed) varOnlineCustProfileUpdReqDialog.hide()" immediate="true"/>
+	</h:panelGrid>
+
+	<p:panelGrid columns="3" style="margin-top: 0" styleClass="panel-grid-table">
+	    <f:facet name="header">
+	        General
+	    </f:facet>
+	
+	    <h:outputText value="Field" style="font-weight:bold;" />
+	    <h:outputText value="Original Record" style="font-weight:bold;" />
+	    <h:outputText value="Updated Record" style="font-weight:bold;" />
+	
+	    <h:outputText value="Title" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.salutation}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.salutationCd}" />
+	
+	    <h:outputText value="Honor" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.title}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.titleCd}" />
+	
+	    <h:outputText value="Gender" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.sex}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.gender}" />
+	
+	    <h:outputText value="Surname" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.lastName}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.surname}" />
+	
+	    <h:outputText value="Given Name" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.givenName}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.givenName}" />
+	
+	    <h:outputText value="Nickname" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.nickName}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.nickName}" />
+	
+	    <h:outputText value="TIN" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.taxIdNo}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.taxIdNo}" />
+	
+	    <h:outputText value="Nationality" />
+	    <h:outputText value="#{salesBean.getCountryName(salesBean.customerVO.personVO.countryId)}" />
+	    <h:outputText value="#{salesBean.getCountryName(salesBean.onlineCustomerProfileUpdateVO.idCountry)}" />
+	
+	    <h:outputText value="NRIC" />
+	    <h:outputText value="#{salesBean.nricIdVO.idNo}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.nric}" />
+	
+	    <h:outputText value="Passport" />
+	    <h:outputText value="#{salesBean.passportIdVO.idNo}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.passportNo}" />
+	
+	    <h:outputText value="DOB" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.dob}"><f:convertDateTime pattern="dd-MMM-yyyy" /></h:outputText>
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.dtBirth}"><f:convertDateTime pattern="dd-MMM-yyyy" /></h:outputText>
+	
+	    <h:outputText value="Mobile No." />
+	    <h:outputText value="(#{salesBean.getCountryCd(salesBean.personContactVO.perMobileCountryId)})#{salesBean.personContactVO.perMobileNumber}" />
+	    <h:outputText value="(#{salesBean.getCountryCd(salesBean.onlineCustomerProfileUpdateVO.idMobileNoCountryCd)})#{salesBean.onlineCustomerProfileUpdateVO.mobileNo}" />
+	
+	    <h:outputText value="Office No." />
+	    <h:outputText value="(#{salesBean.getCountryCd(salesBean.personContactVO.perOfficeCountryId)})#{salesBean.personContactVO.perOfficeNumber}" />
+	    <h:outputText value="(#{salesBean.getCountryCd(salesBean.onlineCustomerProfileUpdateVO.idOfficeNoCountryCd)})#{salesBean.onlineCustomerProfileUpdateVO.officeNo}" />
+	
+	    <h:outputText value="Race" />
+	    <h:outputText value="#{bterp:lookupItemDesc('race_type', salesBean.customerVO.personVO.race)}" />
+	    <h:outputText value="#{bterp:lookupItemDesc('race_type', salesBean.onlineCustomerProfileUpdateVO.raceCd)}" />
+	
+	    <h:outputText value="Spoken Language" />
+	    <h:outputText value="#{salesBean.customerVO.languageName}" />
+	    <h:panelGroup>
+	        <ui:repeat value="#{salesBean.onlineCustomerProfileUpdateVO.langList}" var="item" varStatus="status">
+	            <h:outputText value="#{bterp:lookupItemDesc('lang_dilc', item.langCd)}" /><h:outputText value=", " rendered="#{!status.last}" />
+	        </ui:repeat>
+	    </h:panelGroup>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" styleClass="panel-grid-table">
+	    <f:facet name="header">
+	        Travel Document
+	    </f:facet>
+	
+	    <h:outputText value="Field" style="font-weight:bold;" />
+	    <h:outputText value="Original Record" style="font-weight:bold;" />
+	    <h:outputText value="Updated Record" style="font-weight:bold;" />
+	
+	    <h:outputText value="Passport" />
+	    <h:outputText value="#{salesBean.passportIdVO.idNo}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.passportNo}" />
+	
+	    <h:outputText value="Date of Expiry" />
+	    <h:outputText value="#{salesBean.passportIdVO.identityDetailVO.dtExpired}"><f:convertDateTime pattern="dd-MMM-yyyy" /></h:outputText>
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.dtPssprtExpiry}"><f:convertDateTime pattern="dd-MMM-yyyy" /></h:outputText>
+	
+	    <h:outputText value="Nationality" />
+	    <h:outputText value="#{salesBean.getCountryName(salesBean.passportIdVO.identityDetailVO.idCountry)}" />
+	    <h:outputText value="#{salesBean.getCountryName(salesBean.onlineCustomerProfileUpdateVO.idPssprtCountry)}" />
+	
+	    <h:outputText value="Complication" />
+	    <h:outputText value="#{salesBean.customerVO.complicationName}" />
+	    <h:panelGroup>
+	        <ui:repeat value="#{salesBean.onlineCustomerProfileUpdateVO.complicationList}" var="item" varStatus="status">
+	            <h:outputText value="#{bterp:lookupItemDesc('cust_cmpl', item.complicationCd)}" />
+	            <h:outputText value=", " rendered="#{!status.last}" />
+	        </ui:repeat>
+	    </h:panelGroup>
+	
+	    <h:outputText value="Add Meals" />
+	    <h:outputText value="#{salesBean.customerVO.mealName}" />
+	    <h:panelGroup>
+	        <ui:repeat value="#{salesBean.onlineCustomerProfileUpdateVO.mealList}" var="item" varStatus="status">
+	            <h:outputText value="#{bterp:lookupItemDesc('meal_pref', item.mealCd)}" />
+	            <h:outputText value=", " rendered="#{!status.last}" />
+	        </ui:repeat>
+	    </h:panelGroup>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" styleClass="panel-grid-table">
+	    <f:facet name="header">
+	        Billing Address
+	    </f:facet>
+	
+	    <h:outputText value="Field" style="font-weight:bold;" />
+	    <h:outputText value="Original Record" style="font-weight:bold;" />
+	    <h:outputText value="Updated Record" style="font-weight:bold;" />
+	
+	    <h:outputText value="Line 1" />
+	    <h:outputText value="#{salesBean.customerVO.billAddressVO.addr1}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.billAddr1}" />
+	
+	    <h:outputText value="Line 2" />
+	    <h:outputText value="#{salesBean.customerVO.billAddressVO.addr2}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.billAddr2}" />
+	
+	    <h:outputText value="Line 3" />
+	    <h:outputText value="#{salesBean.customerVO.billAddressVO.addr3}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.billAddr3}" />
+	
+	    <h:outputText value="City" />
+	    <h:outputText value="#{salesBean.customerVO.billAddressVO.city}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.billAddrCity}" />
+	
+	    <h:outputText value="State" />
+	    <h:outputText value="#{salesBean.customerVO.billAddressVO.state}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.billAddrStateName}" />
+	
+	    <h:outputText value="Postcode" />
+	    <h:outputText value="#{salesBean.customerVO.billAddressVO.postcode}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.billAddrPostcode}" />
+	
+	    <h:outputText value="Country" />
+	    <h:outputText value="#{salesBean.getCountryName(salesBean.customerVO.billAddressVO.countryId)}" />
+	    <h:outputText value="#{salesBean.getCountryName(salesBean.onlineCustomerProfileUpdateVO.idBillAddrCountry)}" />
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" styleClass="panel-grid-table">
+	    <f:facet name="header">
+	        Mailing Address
+	    </f:facet>
+	
+	    <h:outputText value="Field" style="font-weight:bold;" />
+	    <h:outputText value="Original Record" style="font-weight:bold;" />
+	    <h:outputText value="Updated Record" style="font-weight:bold;" />
+	
+	    <h:outputText value="Line 1" />
+	    <h:outputText value="#{salesBean.customerVO.mailAddressVO.addr1}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.mailAddr1}" />
+	
+	    <h:outputText value="Line 2" />
+	    <h:outputText value="#{salesBean.customerVO.mailAddressVO.addr2}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.mailAddr2}" />
+	
+	    <h:outputText value="Line 3" />
+	    <h:outputText value="#{salesBean.customerVO.mailAddressVO.addr3}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.mailAddr3}" />
+	
+	    <h:outputText value="City" />
+	    <h:outputText value="#{salesBean.customerVO.mailAddressVO.city}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.mailAddrCity}" />
+	
+	    <h:outputText value="State" />
+	    <h:outputText value="#{salesBean.customerVO.mailAddressVO.state}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.mailAddrStateName}" />
+	
+	    <h:outputText value="Postcode" />
+	    <h:outputText value="#{salesBean.customerVO.mailAddressVO.postcode}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.mailAddrPostcode}" />
+	
+	    <h:outputText value="Country" />
+	    <h:outputText value="#{salesBean.getCountryName(salesBean.customerVO.mailAddressVO.countryId)}" />
+	    <h:outputText value="#{salesBean.getCountryName(salesBean.onlineCustomerProfileUpdateVO.idMailAddrCountry)}" />
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" styleClass="panel-grid-table">
+	    <f:facet name="header">
+	        Emergency Contact
+	    </f:facet>
+	
+	    <h:outputText value="Field" style="font-weight:bold;" />
+	    <h:outputText value="Original Record" style="font-weight:bold;" />
+	    <h:outputText value="Updated Record" style="font-weight:bold;" />
+	
+	    <h:outputText value="Surname" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.ecSurname}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.ecSurname}" />
+	
+	    <h:outputText value="Given Name" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.ecGivenName}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.ecGivenName}" />
+	
+	    <h:outputText value="Contact No." />
+	    <h:outputText value="(#{salesBean.getCountryCd(salesBean.customerVO.personVO.ecIdCountryCd)})#{salesBean.customerVO.personVO.ecContacts}" />
+	    <h:outputText value="(#{salesBean.getCountryCd(salesBean.onlineCustomerProfileUpdateVO.ecIdCountryCd)})#{salesBean.onlineCustomerProfileUpdateVO.ecContactNo}" />
+	
+	    <h:outputText value="Relationship" />
+	    <h:outputText value="#{bterp:lookupItemDesc('emergency_relationship', salesBean.customerVO.personVO.ecRelationship)}" />
+	    <h:outputText value="#{bterp:lookupItemDesc('emergency_relationship', salesBean.onlineCustomerProfileUpdateVO.ecRelationship)}" />
+	
+	    <h:outputText value="Email" />
+	    <h:outputText value="#{salesBean.customerVO.personVO.ecEmail}" />
+	    <h:outputText value="#{salesBean.onlineCustomerProfileUpdateVO.ecEmail}" />
+	</p:panelGrid>
+
+	<h:panelGrid columns="1" style="margin-top: 8px">
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			oncomplete="varOnlineCustProfileUpdReqDialog.hide();" />
+	</h:panelGrid>
+</ui:composition>

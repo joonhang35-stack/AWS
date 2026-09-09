@@ -1,0 +1,2033 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<p:growl id="msg" />
+	<style>
+	.phone-row {
+	    display: flex;
+	    align-items: center;
+	    gap: 10px;
+	}	
+	</style>
+	<script type="text/javascript">
+		function onEditCustValidation(xhr, status, args) {
+			if (!args.validationFailed) {
+				varEditCustDialog.hide();
+				varRefreshCustDetails.jq.click();
+			}
+		}
+		function copyTextFromInput(paramValue) {
+			var textToCopy = paramValue.split('[BR]').join('\n'); 
+			//copy the text to the clipboard 
+			navigator.clipboard.writeText(textToCopy);
+		}
+	</script>
+
+	<div>
+		<p:panelGrid id="idCustomerDetail">
+			<p:row rendered="#{custBean.invPmntAuthVO.salesManager or custBean.invPmntAuthVO.operationsRole or custBean.invPmntAuthVO.asstSalesManager}">
+				<p:column style="width:110px;">
+					<h:outputLabel for="idCustLock"
+						rendered="#{custBean.invPmntAuthVO.salesManager or salesBean.invPmntAuthVO.operationsRole or salesBean.invPmntAuthVO.asstSalesManager}">Customer Lock</h:outputLabel>
+				</p:column>
+				<p:column style="width:200px;">
+					<p:selectBooleanButton label="Customer Lock" id="idCustLock" value="#{custBean.customerVO.isLock}"
+						onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close"
+						rendered="#{salesBean.invPmntAuthVO.salesManager or salesBean.invPmntAuthVO.operationsRole or salesBean.invPmntAuthVO.asstSalesManager}"/>
+					<pe:tooltip for="idCustLock">
+						<h:outputText value="Lock or unlock customer information."/>
+					</pe:tooltip>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{custBean.invPmntAuthVO.salesManager or custBean.invPmntAuthVO.operationsRole or custBean.invPmntAuthVO.asstSalesManager}">
+				<p:column style="width:110px;">
+					<h:outputLabel>Customer No</h:outputLabel>
+				</p:column>
+				<p:column style="width:200px;">
+					<h:outputLabel value="#{custBean.customerVO.code}" style="font-weight:bold;"/>
+				</p:column>
+				<p:column style="width:110px;">
+					<h:outputLabel rendered="#{!custBean.hideCRM}">CRM ID</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:commandLink style="width:200px" rendered="#{!custBean.hideCRM}" onclick="copyTextFromInput('#{custBean.customerVO.crmId}');" actionListener="#{custBean.onCopyClick}">
+						<h:outputLabel value="#{empty custBean.customerVO.crmId ? 'N/A' : custBean.customerVO.crmId}"/>
+					</p:commandLink>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idCustType">Customer Type <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idCustType" label="Customer Type"
+						value="#{custBean.customerVO.pcTypeCd}" required="true"
+						disabled="#{not custBean.customerVO.addEdit}">
+						<f:selectItem itemLabel="Individual" itemValue="P" />
+						<f:selectItem itemLabel="Corporate" itemValue="C" />
+						<p:ajax event="change" listener="#{custBean.handleCustomerType}"
+							update="idCustomerDetail,:idContactDialog" />
+					</h:selectOneMenu>
+				</p:column>
+				<p:column rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+					<h:outputLabel for="idClassType">Class</h:outputLabel>
+				</p:column>
+				<p:column rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+					<p:selectCheckboxMenu id="idClassType"
+						style="vertical-align:middle"
+						value="#{custBean.customerVO.classList}" label="Class"
+						filter="true" filterMatchMode="contains"
+						onHide="executeOnClassOnhide();">
+						<f:selectItems value="#{bterp:lookupItemList('cust_class')}"
+							var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+					</p:selectCheckboxMenu>
+					<p:remoteCommand name="executeOnClassOnhide"
+						actionListener="#{custBean.handleClassChange}"
+						update=":idEditCustForm:idClassName"
+						process="@this, :idEditCustForm:idClassType" global="false" />
+						
+				</p:column>
+				
+				<p:column rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+					<h:outputLabel for="idCompanyTIN">TIN <span
+						class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+					<p:inputText id="idCompanyTIN" label="TIN" required="true"
+						value="#{custBean.customerVO.corporateVO.taxIdNo}" maxlength="20"
+						disabled="#{not empty custBean.customerVO.corporateVO.taxIdNo and not custBean.customerVO.addEdit and custBean.customerVO.isLock}"
+						validatorMessage="TIN shouldn't contain spaces.">
+						<f:validateRegex pattern="^\S+$" />
+						<p:ajax event="change" global="false"></p:ajax>
+					</p:inputText>
+				</p:column>
+			</p:row>
+			
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column colspan="3">
+					<h:outputLabel />
+				</p:column>
+				<p:column>
+					<h:outputText id="idClassName" value="#{custBean.customerVO.className}" style="font-size:8px;"></h:outputText>
+				</p:column>
+			</p:row>
+			
+			<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+				<p:column>
+					<h:outputLabel for="idCompName">Company Name <span class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idCompName" label="Company Name"
+						value="#{custBean.customerVO.corporateName}" size="50" maxlength="255"
+						required="true" disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+						<p:ajax event="change" global="false"></p:ajax>
+					</p:inputText>
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+				<p:column>
+					<h:outputLabel for="idRegNo">Registration No. (New) <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idRegNo" label="Registration No. (New)" required="true"
+						value="#{custBean.customerVO.corporateVO.regNo}" maxlength="20"
+						disabled="#{not empty custBean.customerVO.corporateVO.regNo and not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+						<p:ajax event="change" global="false"></p:ajax>
+					</p:inputText>
+					
+					&nbsp;
+					<p:commandLink id="idFillNA" actionListener="#{custBean.corpRegNoFillNA(custBean.customerVO.corporateVO)}" 
+						style="color: #db3333; text-decoration: underline;" update="idRegNo idCompanyTIN" process="@this">
+						NA
+					</p:commandLink>
+					<pe:tooltip for="idFillNA" value="Click to autofill 'NA' into the Registration No. field" />
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idRegNoOld">Registration No. (Old)</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idRegNoOld" label="Registration No. (Old)"
+						value="#{custBean.customerVO.corporateVO.regNoOld}" maxlength="20"
+						disabled="#{not empty custBean.customerVO.corporateVO.regNoOld and not custBean.customerVO.addEdit and custBean.customerVO.isLock}"/>
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+				<p:column>
+					<h:outputLabel for="idGstRegNo">GST Registration No.</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idGstRegNo" label="GST Registration No." value="#{custBean.customerVO.corporateVO.gstRegNo}" maxlength="20"
+						disabled="#{not empty custBean.customerVO.corporateVO.gstRegNo and not custBean.customerVO.addEdit and custBean.customerVO.isLock}"/>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idSstRegNo">SST Registration No.</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idSstRegNo" label="SST Registration No." value="#{custBean.customerVO.corporateVO.sstRegNo}"
+						disabled="#{not empty custBean.customerVO.corporateVO.sstRegNo and not custBean.customerVO.addEdit and custBean.customerVO.isLock}"/>
+				</p:column>
+			</p:row>
+			
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column>
+					<h:outputLabel for="idSalutate">Title <span class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idSalutate" label="Title" value="#{custBean.customerVO.personVO.salutation}" required="true"
+						disabled="#{not empty custBean.customerVO.personVO.salutation and not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{bterp:lookupItemList('salutatn2')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idTitle">Honor</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idTitle" label="Honor" value="#{custBean.customerVO.personVO.title}">
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column>
+					<h:outputLabel for="idLastName">SurName <span class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idLastName" label="SurName" value="#{custBean.customerVO.personVO.lastName}" required="true"
+						disabled="#{not empty custBean.customerVO.personVO.lastName and not custBean.customerVO.addEdit and custBean.customerVO.isLock}"
+						validatorMessage="SurName cannot be empty or just spaces">
+						<f:validateRegex pattern=".*\S.*" />
+					</p:inputText>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idGender">Gender</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idGender" label="Gender"
+						value="#{custBean.customerVO.personVO.sex}">
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{bterp:lookupItemList('gender_type')}"
+							var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column>
+					<h:outputLabel for="idGivenName">Given Name <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idGivenName" label="Given Name" value="#{custBean.customerVO.personVO.givenName}" required="true"
+						disabled="#{not empty custBean.customerVO.personVO.givenName and not custBean.customerVO.addEdit and custBean.customerVO.isLock}"
+						validatorMessage="Given Name cannot be empty or just spaces">
+						<f:validateRegex pattern=".*\S.*" />
+					</p:inputText>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idNickName">NickName</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idNickName" label="NickName" value="#{custBean.customerVO.personVO.nickName}" />
+				</p:column>
+			</p:row>
+			
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column>
+					<h:outputLabel for="idNationality">Nationality <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idNationality" label="Nationality"
+						value="#{custBean.customerVO.personVO.countryId}" style="width:180px;" required="true">
+						<p:ajax event="change" listener="#{custBean.handleNationalitySelected}" update="idTaxIdNo :idEditCustForm:idCity :idEditCustForm:idState" />
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{custBean.countryList}" var="vo"
+							itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idTaxIdNo">TIN</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idTaxIdNo" label="TIN"
+						value="#{custBean.customerVO.personVO.taxIdNo}" maxlength="20"
+						disabled="#{not empty custBean.customerVO.personVO.taxIdNo and not custBean.customerVO.addEdit and custBean.customerVO.isLock}"
+						validatorMessage="TIN shouldn't contain spaces.">
+						<f:validateRegex pattern="^\S+$" />
+					</p:inputText>
+				</p:column>
+			</p:row>
+			
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column>
+					<h:outputLabel for="idNRIC">NRIC <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputMask id="idNRIC" label="NRIC" value="#{custBean.nricIdVO.idNo}" mask="999999-99-9999"
+						disabled="#{not empty custBean.nricIdVO.idNo and not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+						<p:ajax event="change" update=":idEditCustForm:idDOB,:idEditCustForm:idAge" listener="#{custBean.syncNRIC}"/>
+					</p:inputMask>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idPassportNo">Passport No <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idPassportNo" label="Passport No"
+						value="#{custBean.passportIdVO.idNo}" maxlength="20" onkeypress="return rtnAlphaNumeric(event);"
+						disabled="#{not empty custBean.passportIdVO.idNo and not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+						<p:ajax event="change" update=":idEditCustForm:idPssprtNo" listener="#{custBean.syncPassportNo}"/>	
+					</p:inputText>
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column>
+					<h:outputLabel for="idDOB">Date of Birth (DOB)</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:calendar id="idDOB" label="Date of Birth"
+						value="#{custBean.customerVO.personVO.dob}" navigator="true" showButtonPanel="true"
+						yearRange="#{salesBean.yearRange}" pattern="dd-MMM-yyyy">
+						<p:ajax event="dateSelect" listener="#{custBean.calculateAge}"
+							update="idAge" global="false" />
+					</p:calendar>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idAge">Age</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idAge" label="Age"
+						value="#{custBean.customerVO.personVO.age}" size="3"
+						readonly="true" />
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column style="display:none">
+					<h:outputLabel for="idUPoint">One Card Point</h:outputLabel>
+				</p:column>
+				<p:column style="display:none">
+					<p:inputText id="idUPoint" label="One Card Point"
+						value="#{custBean.customerVO.personVO.uPoint}" size="5" />
+				</p:column>
+				<p:column style="display:none">
+					<h:outputLabel for="idApplePoint">Apple Voucher Point</h:outputLabel>
+				</p:column>
+				<p:column style="display:none">
+					<p:inputText id="idApplePoint" label="Apple Voucher Point"
+						value="#{custBean.customerVO.personVO.applePoint}" size="5" />
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column>
+					<h:outputLabel for="idSpokenLanguageList">Spoken Language</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu id="idSpokenLanguageList"
+						style="vertical-align:middle"
+						value="#{custBean.customerVO.langCdList}" label="Spoken Language"
+						filter="true" filterMatchMode="contains"
+						onHide="executeOnLanguageOnhide();">
+						<f:selectItems value="#{bterp:lookupItemList('lang_dilc')}"
+							var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+					</p:selectCheckboxMenu>
+					<p:remoteCommand name="executeOnLanguageOnhide"
+						actionListener="#{custBean.handleLanguageChange}"
+						update=":idEditCustForm:idLanguageName"
+						process="@this, :idEditCustForm:idSpokenLanguageList"
+						global="false" />
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idRace">Race</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idRace" label="Race"
+						value="#{custBean.customerVO.personVO.race}">
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{bterp:lookupItemList('race_type')}"
+							var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column>
+					<h:outputLabel />
+				</p:column>
+				<p:column>
+					<h:outputText id="idLanguageName" value="#{custBean.customerVO.languageName}" style="font-size:8px;"></h:outputText>
+				</p:column>
+				<p:column>
+					<h:outputLabel />
+				</p:column>
+				<p:column style="width:100px"></p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+				<p:column colspan="4">
+					<p:panel id="idPanelPic" header="Person in Charge" toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column>
+									<p:commandButton value="Add" actionListener="#{custBean.addPic}" update=":idEditCustForm:idPanelPic" process="@this" global="false"/>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<p:fieldset id="idPicPrimary" legend="Primary PIC">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idSalutatePIC">Title <span class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idSalutatePIC" label="Title" value="#{custBean.customerVO.personVO.salutation}" required="true">
+														<p:ajax event="change" global="false"/>
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{bterp:lookupItemList('salutatn2')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+													</h:selectOneMenu>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idTitlePIC">Honor</h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idTitlePIC" label="Honor" value="#{custBean.customerVO.personVO.title}">
+														<p:ajax event="change" global="false"/>
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idLastNamePIC">SurName <span class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idLastNamePIC" label="SurName" value="#{custBean.customerVO.personVO.lastName}" required="true" validatorMessage="SurName cannot be empty or just spaces">
+														<p:ajax event="change" global="false"/>
+														<f:validateRegex pattern=".*\S.*" />
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idGenderPIC">Gender</h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idGenderPIC" label="Gender" value="#{custBean.customerVO.personVO.sex}">
+														<p:ajax event="change" global="false"/>
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{bterp:lookupItemList('gender_type')}"
+															var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idGivenNamePIC">Given Name <span class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idGivenNamePIC" label="Given Name" value="#{custBean.customerVO.personVO.givenName}" required="true" validatorMessage="Given Name cannot be empty or just spaces">
+														<p:ajax event="change" global="false"/>
+														<f:validateRegex pattern=".*\S.*" />
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idNickNamePIC">NickName</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idNickNamePIC" label="NickName" value="#{custBean.customerVO.personVO.nickName}">
+														<p:ajax event="change" global="false"/>
+													</p:inputText>
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:fieldset>
+								</p:column>
+							</p:row>
+							<c:forEach var="picVO" items="#{custBean.customerVO.corPicList}" varStatus="loop">
+								<p:row>
+									<p:column>
+										<p:fieldset id="idPic#{loop.index}" legend="PIC #{loop.index + 1}">
+											<p:panelGrid>
+												<p:row>
+													<p:column>
+														<h:outputLabel for="idSalutatePIC#{loop.index}">Title <span class="required">*</span></h:outputLabel>
+													</p:column>
+													<p:column>
+														<h:selectOneMenu id="idSalutatePIC#{loop.index}" label="Title" value="#{picVO.salutation}" required="true">
+															<p:ajax event="change" global="false"/>
+															<f:selectItem itemLabel="Select One" itemValue="" />
+															<f:selectItems value="#{bterp:lookupItemList('salutatn2')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+														</h:selectOneMenu>
+														&nbsp;
+														<p:commandButton icon="ui-icon-close" value="Remove" styleClass="ui-state-error" actionListener="#{custBean.deletePic(picVO)}" update=":idEditCustForm:idPanelPic" process="@this"/>
+													</p:column>
+													<p:column>
+														<h:outputLabel for="idTitlePIC#{loop.index}">Honor</h:outputLabel>
+													</p:column>
+													<p:column>
+														<h:selectOneMenu id="idTitlePIC#{loop.index}" label="Honor" value="#{picVO.title}">
+															<p:ajax event="change" global="false"/>
+															<f:selectItem itemLabel="Select One" itemValue="" />
+															<f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+														</h:selectOneMenu>
+													</p:column>
+												</p:row>
+												<p:row>
+													<p:column>
+														<h:outputLabel for="idLastNamePIC#{loop.index}">SurName <span class="required">*</span>
+														</h:outputLabel>
+													</p:column>
+													<p:column>
+														<p:inputText id="idLastNamePIC#{loop.index}" label="SurName" value="#{picVO.lastName}" required="true">
+															<p:ajax event="change" global="false"/>
+														</p:inputText>
+													</p:column>
+													<p:column>
+														<h:outputLabel for="idGenderPIC#{loop.index}">Gender</h:outputLabel>
+													</p:column>
+													<p:column>
+														<h:selectOneMenu id="idGenderPIC#{loop.index}" label="Gender" value="#{picVO.sex}">
+															<p:ajax event="change" global="false"/>
+															<f:selectItem itemLabel="Select One" itemValue="" />
+															<f:selectItems value="#{bterp:lookupItemList('gender_type')}"
+																var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+														</h:selectOneMenu>
+													</p:column>
+												</p:row>
+												<p:row>
+													<p:column>
+														<h:outputLabel for="idGivenNamePIC#{loop.index}">Given Name <span class="required">*</span>
+														</h:outputLabel>
+													</p:column>
+													<p:column>
+														<p:inputText id="idGivenNamePIC#{loop.index}" label="Given Name" value="#{picVO.givenName}" required="true">
+															<p:ajax event="change" global="false"/>
+														</p:inputText>
+													</p:column>
+													<p:column>
+														<h:outputLabel for="idNickNamePIC#{loop.index}">NickName</h:outputLabel>
+													</p:column>
+													<p:column>
+														<p:inputText id="idNickNamePIC#{loop.index}" label="NickName" value="#{picVO.nickName}">
+															<p:ajax event="change" global="false"/>
+														</p:inputText>
+													</p:column>
+												</p:row>
+												<p:row>
+													<p:column>
+														<h:outputLabel for="idOfficeNoPIC#{loop.index}">Office No</h:outputLabel>
+													</p:column>
+													<p:column colspan="3">
+														<p:inputText id="idOfficeNoPIC#{loop.index}" label="Office No" value="#{picVO.officeNo}" maxlength="14" onkeypress="return rtnPhoneNo(event);">
+															<p:ajax event="change" global="false"/>
+															<p:watermark for="idOfficeNoPIC#{loop.index}" value="Number"/>
+														</p:inputText>
+														<h:outputLabel for="idOfficeExtPIC#{loop.index}">Ext </h:outputLabel>
+														<p:inputText id="idOfficeExtPIC#{loop.index}" label="Office Extension" value="#{picVO.officeExt}" size="4" maxlength="4">
+															<pe:keyFilter regEx="/[\d]/"/>
+															<p:ajax event="change" global="false"/>
+														</p:inputText>
+													</p:column>
+												</p:row>
+												<p:row>
+													<p:column>
+														<h:outputLabel for="idEmailPIC#{loop.index}">Email Address</h:outputLabel>
+													</p:column>
+													<p:column>
+														<p:inputText id="idEmailPIC#{loop.index}" label="Email Address" value="#{picVO.email}" maxlength="50" validatorMessage="Invalid email format">
+															<p:ajax event="change" global="false"/>
+															<f:validateRegex pattern="#{config['email.format.pattern']}" />
+														</p:inputText>
+													</p:column>
+													<p:column>
+														<h:outputLabel for="idMobileNoPIC#{loop.index}">Mobile No</h:outputLabel>
+													</p:column>
+													<p:column>
+														<p:inputText id="idMobileNoPIC#{loop.index}" label="Mobile No" value="#{picVO.mobileNo}" maxlength="14" onkeypress="return rtnPhoneNo(event);">
+															<p:ajax event="change" global="false"/>
+															<p:watermark for="idMobileNoPIC#{loop.index}" value="Number"/>
+														</p:inputText>
+													</p:column>
+												</p:row>
+											</p:panelGrid>
+										</p:fieldset>
+									</p:column>
+								</p:row>
+							</c:forEach>
+						</p:panelGrid>
+					</p:panel>
+				
+				
+					<!-- <p:panel id="idPanelPIC" header="Person in Charge" toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idSalutatePIC">Salutation <span class="required">*</span>
+									</h:outputLabel>
+								</p:column>
+								<p:column>
+									<h:selectOneMenu id="idSalutatePIC" label="Salutation" value="#{custBean.customerVO.personVO.salutation}" required="true">
+										<f:selectItem itemLabel="Select One" itemValue="" />
+										<f:selectItems value="#{bterp:lookupItemList('salutatn2')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+									</h:selectOneMenu>
+								</p:column>
+								<p:column>
+									<h:outputLabel for="idTitlePIC">Title</h:outputLabel>
+								</p:column>
+								<p:column>
+									<h:selectOneMenu id="idTitlePIC" label="Title" value="#{custBean.customerVO.personVO.title}">
+										<f:selectItem itemLabel="Select One" itemValue="" />
+										<f:selectItems value="#{bterp:lookupItemList('salutatn')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+									</h:selectOneMenu>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idLastNamePIC">SurName <span class="required">*</span>
+									</h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:inputText id="idLastNamePIC" label="SurName" value="#{custBean.customerVO.personVO.lastName}" required="true" />
+								</p:column>
+								<p:column>
+									<h:outputLabel for="idGenderPIC">Gender</h:outputLabel>
+								</p:column>
+								<p:column>
+									<h:selectOneMenu id="idGenderPIC" label="Gender" value="#{custBean.customerVO.personVO.sex}">
+										<f:selectItem itemLabel="Select One" itemValue="" />
+										<f:selectItems value="#{bterp:lookupItemList('gender_type')}"
+											var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+									</h:selectOneMenu>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idGivenNamePIC">Given Name <span class="required">*</span>
+									</h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:inputText id="idGivenNamePIC" label="Given Name" value="#{custBean.customerVO.personVO.givenName}" required="true" />
+								</p:column>
+								<p:column>
+									<h:outputLabel for="idNickNamePIC">NickName</h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:inputText id="idNickNamePIC" label="NickName" value="#{custBean.customerVO.personVO.nickName}" />
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:panel> -->
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column colspan="4">
+					<p:panel id="idPanelPerContact" header="Contact" toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column>
+									<p:panel header="Mobile No">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idNumber">Number
+												</h:outputLabel>
+												</p:column>
+												<p:column styleClass="phone-row">
+													<!-- <p:inputText id="idMobileAreaCode" label="Area Code"
+													value="#{custBean.personContactVO.perMobileAreaCode}"
+													required="true" maxlength="5" size="5"
+													onkeypress="return rtnPhoneNo(event);">
+													<p:watermark for="idMobileAreaCode" value="Ext" />
+													<f:validateLength maximum="5" />
+												</p:inputText> -->
+													<p:selectOneMenu id="idMobileCountry" value="#{custBean.personContactVO.perMobileCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+												        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+												        <f:selectItems value="#{custBean.countryList}"  var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+												    </p:selectOneMenu>
+													<!-- <h:outputLabel> - </h:outputLabel> -->
+													<p:inputText id="idMobileNumber" label="Mobile Number" style="width:120px"
+														value="#{custBean.personContactVO.perMobileNumber}"
+														maxlength="14" size="20"
+														onkeypress="return rtnPhoneNo(event);"
+														validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+														<p:watermark for="idMobileNumber" value="Number" />
+														<f:validateLength maximum="14" minimum="8"/>
+														<f:validateRegex pattern="^[0-9+-]+$" />
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idMobileAtt">Attention</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idMobileAtt" label="Attention" style="width:250px"
+														value="#{custBean.personContactVO.perMobileAttention}"
+														maxlength="100" />
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+								<p:column>
+									<p:panel header="Office No">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idNumber">Number
+												</h:outputLabel>
+												</p:column>
+												<p:column styleClass="phone-row">
+													<!-- <p:inputText id="idOfficeAreaCode" label="Area Code"
+													value="#{custBean.personContactVO.perOfficeAreaCode}"
+													required="true" maxlength="5" size="5"
+													onkeypress="return rtnPhoneNo(event);">
+													<p:watermark for="idOfficeAreaCode" value="Ext" />
+													<f:validateLength maximum="5" />
+												</p:inputText> -->
+													<p:selectOneMenu id="idOfficeCountry" value="#{custBean.personContactVO.perOfficeCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+												        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+												        <f:selectItems value="#{custBean.countryList}"  var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+												    </p:selectOneMenu>
+													<!-- <h:outputLabel> - </h:outputLabel> -->
+													<p:inputText id="idOfficeNumber" label="Office Number" style="width:120px"
+														value="#{custBean.personContactVO.perOfficeNumber}"
+														maxlength="14" size="20"
+														onkeypress="return rtnPhoneNo(event);"
+														validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+														<p:watermark for="idOfficeNumber" value="Number" />
+														<f:validateLength maximum="14" minimum="8"/>
+														<f:validateRegex pattern="^[0-9+-]+$" />
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idOfficeAtt">Attention</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idOfficeAtt" label="Attention" style="width:250px"
+														value="#{custBean.personContactVO.perOfficeAttention}"
+														maxlength="100" />
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<p:panel header="Home No">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idNumber">Number
+												</h:outputLabel>
+												</p:column>
+												<p:column styleClass="phone-row">
+													<!-- <p:inputText id="idHomeAreaCode" label="Area Code"
+													value="#{custBean.personContactVO.perHomeAreaCode}"
+													required="true" maxlength="5" size="5"
+													onkeypress="return rtnPhoneNo(event);">
+													<p:watermark for="idHomeAreaCode" value="Ext" />
+													<f:validateLength maximum="5" />
+												</p:inputText> -->
+													<p:selectOneMenu id="idHomeCountry" value="#{custBean.personContactVO.perHomeCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+												        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+												        <f:selectItems value="#{custBean.countryList}"  var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+												    </p:selectOneMenu>
+													<!-- <h:outputLabel> - </h:outputLabel> -->
+													<p:inputText id="idHomeNumber" label="Home Number" style="width:120px"
+														value="#{custBean.personContactVO.perHomeNumber}"
+														maxlength="14" size="20"
+														onkeypress="return rtnPhoneNo(event);"
+														validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+														<p:watermark for="idHomeNumber" value="Number" />
+														<f:validateLength maximum="14" minimum="8"/>
+														<f:validateRegex pattern="^[0-9+-]+$" />
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idHomeAtt">Attention</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idHomeAtt" label="Attention" style="width:250px"
+														value="#{custBean.personContactVO.perHomeAttention}"
+														maxlength="100" />
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+								<p:column>
+									<p:panel header="Fax No">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idNumber">Number
+												</h:outputLabel>
+												</p:column>
+												<p:column styleClass="phone-row">
+													<!-- <p:inputText id="idFaxAreaCode" label="Area Code"
+													value="#{custBean.personContactVO.perFaxAreaCode}"
+													required="true" maxlength="5" size="5"
+													onkeypress="return rtnPhoneNo(event);">
+													<p:watermark for="idFaxAreaCode" value="Ext" />
+													<f:validateLength maximum="5" />
+												</p:inputText> -->
+													<p:selectOneMenu id="idFaxCountry" value="#{custBean.personContactVO.perFaxCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+												        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+												        <f:selectItems value="#{salesBean.countryList}"  var="c" itemValue="#{c.countryCd}" itemLabel="#{c.countryCd} #{c.country}"/>
+												    </p:selectOneMenu>
+													<!-- <h:outputLabel> - </h:outputLabel> -->
+													<p:inputText id="idFaxNumber" label="Fax Number" style="width:120px"
+														value="#{custBean.personContactVO.perFaxNumber}"
+														maxlength="14" size="20"
+														onkeypress="return rtnPhoneNo(event);"
+														validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+														<p:watermark for="idFaxNumber" value="Number" />
+														<f:validateLength maximum="14" minimum="8"/>
+														<f:validateRegex pattern="^[0-9+-]+$" />
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idFaxAtt">Attention</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idFaxAtt" label="Attention" style="250px"
+														value="#{custBean.personContactVO.perFaxAttention}"
+														maxlength="100" />
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+							
+							<p:row>
+								<p:column colspan="2">
+									<p:panel id="idPanelEmail" header="Email" toggleable="true">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idEmail">Primary Email </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idEmail" label="Email"
+														value="#{custBean.customerVO.personVO.email}" readonly="true"
+														style="background:#ccc;" size="40" />	
+												</p:column>
+											</p:row>
+						
+											<p:row>
+												<p:column>
+													<p:commandButton value="Email List"
+														actionListener="#{custBean.setEmailAdd(true)}"
+														oncomplete="varEmailDialog.show()"
+														update=":idEmailDialog" process="@this" />
+												</p:column>
+												<p:column colspan="3">
+													<p:panel id="idEmailListPanel" style="border:none">
+														<p:dataTable id="idEmailListTable"
+															value="#{custBean.customerVO.personVO.emailList}"
+															var="emailVO"
+															rendered="#{not empty custBean.customerVO.personVO.emailList}">
+															<p:column headerText="Edit"
+																style="width:50px; text-align:center;">
+																<p:commandButton icon="ui-icon-pencil"
+																	actionListener="#{custBean.onEmailSelected(emailVO)}"
+																	oncomplete="varEmailDialog.show()" process="@this"
+																	update=":idEmailDialog"
+																	disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock and emailVO.isPrimary}"/>
+															</p:column>
+															<p:column headerText="Delete"
+																style="width:50px; text-align:center;">
+																<p:commandButton icon="ui-icon-close"
+																	actionListener="#{custBean.deleteEmail(emailVO)}"
+																	update=":idEditCustForm:idEmailListPanel,:idEditCustForm:idEmailListTable,:idEditCustForm:idEmail"
+																	process="@this"
+																	disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock and emailVO.isPrimary}"/>
+															</p:column>
+															<p:column headerText="Email">
+																<h:outputText value="#{emailVO.email}" />
+															</p:column>
+															<p:column headerText="Primary Email" style="text-align:center;">
+																<h:outputText value="Y" rendered="#{emailVO.isPrimary}" />
+																<h:outputText value="N" rendered="#{not emailVO.isPrimary}" />
+															</p:column>
+														</p:dataTable>
+													</p:panel>
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+							
+							<p:row>
+								<p:column colspan="2">
+									<p:panel id="idPanelEmergencyContact" header="Emergency Contact" toggleable="true">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idECSurName">SurName </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idECSurName" label="Emergency Contact SurName"
+														value="#{custBean.customerVO.personVO.ecSurname}" maxlength="50" />
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idECGivenName">Given Name </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idECGivenName" label="Emergency Contact Given Name"
+														value="#{custBean.customerVO.personVO.ecGivenName}" maxlength="50" />
+												</p:column>
+											</p:row>
+											
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idNumber">Contact Number </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idECContacts" label="Number"
+														value="#{custBean.customerVO.personVO.ecContacts}"
+														maxlength="14" size="20"
+														onkeypress="return rtnPhoneNo(event);"
+														validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+														<p:watermark for="idECContacts" value="Number" />
+														<f:validateLength maximum="14" />
+														<f:validateRegex pattern="^[0-9+-]+$" />
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idECRelationship">Relationship </h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idECRelationship" label="Emergency Contact Relationship"
+														value="#{custBean.customerVO.personVO.ecRelationship}">
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{bterp:lookupItemList('emergency_relationship')}"
+															var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+					
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idECEmail">Email </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idECEmail" label="Emergency Contact Email"
+														value="#{custBean.customerVO.personVO.ecEmail}" maxlength="200" size="40" />
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:panel>
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column colspan="4">
+					<p:panel id="idPanelTravelDoc" header="Travel Document" toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idPssprtNo">Passport No</h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:inputText id="idPssprtNo" label="Passport No" value="#{custBean.passportIdVO.idNo}" maxlength="20" onkeypress="return rtnAlphaNumeric(event);"/>
+								</p:column>
+								<p:column>
+									<h:outputLabel for="idPssprtDtExp">Date of Expiry</h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:calendar id="idPssprtDtExp" label="Date of Expiry" value="#{custBean.passportIdVO.identityDetailVO.dtExpired}" navigator="true" showButtonPanel="true" yearRange="c-10:c+10" pattern="dd-MMM-yyyy"/>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idPssprtNationality">Nationality</h:outputLabel>
+								</p:column>
+								<p:column>
+									<h:selectOneMenu id="idPssprtNationality" label="Nationality" value="#{custBean.passportIdVO.identityDetailVO.idCountry}"
+										style="width:180px;">  
+										<f:selectItem itemLabel="Select One" itemValue="" />  
+										<f:selectItems value="#{custBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}" />  
+						            </h:selectOneMenu>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<h:outputLabel>Scanned Copy</h:outputLabel>
+								</p:column>
+						        <p:column colspan="3">
+									<p:panelGrid id="idPassportScannedCopy" style="border:0">
+										<p:row rendered="#{empty custBean.passportIdVO.uploadedFile}">
+											<p:column>
+												<p:fileUpload id="idScannedCopy" fileUploadListener="#{custBean.handleFileUploadPassport}" mode="advanced" auto="true" sizeLimit="#{bterp:globalConfigValue('GLOBAL', 'PATH_PDF_FILE_SIZE')}" allowTypes="/(\.|\/)(pdf|jpg|jpeg|png)$/" description="*.pdf;*.jpg;*.jpeg" update="msg, :idEditCustForm:idPassportScannedCopy" oncomplete="varStatusDialog.hide()"/>
+											</p:column>
+										</p:row>
+										<p:row rendered="#{not empty custBean.passportIdVO.uploadedFile}">
+											<p:column style="width:15px;"><p:commandLink styleClass="ui-icon ui-icon-close" onclick="varDelScannedPassportDialog.show()"/></p:column>
+											<p:column>
+												<h:outputText value="#{custBean.passportIdVO.identityDetailVO.scannedPath}" rendered="#{empty custBean.passportIdVO.identityDetailVO.id}"/>
+												<h:outputLink target="_blank" value="#{request.contextPath}#{custBean.destinationPassportPath}/#{custBean.passportIdVO.identityDetailVO.filePath}" rendered="#{not empty custBean.passportIdVO.identityDetailVO.id}">
+													<h:outputText value="#{custBean.passportIdVO.identityDetailVO.scannedPath}"/>
+												</h:outputLink>
+											</p:column>
+										</p:row>
+									</p:panelGrid>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<p:commandButton value="Add ID"
+										actionListener="#{custBean.setIdentityAdd(true)}"
+										update=":idIDDialog" oncomplete="varIDDialog.show()"
+										immediate="true" />
+									<span class="required"> *</span>
+								</p:column>
+								<p:column colspan="3">
+									<p:panel id="idIDListPanel" style="border:none">
+										<p:dataTable id="idIDListTable"
+											value="#{custBean.customerVO.identityList}" var="identityVO"
+											rowKey="#{identityVO.idNo}" selectionMode="single"
+											rendered="#{not empty custBean.customerVO.identityList}">
+											<p:column headerText="Edit"
+												style="width:50px; text-align:center;">
+												<p:commandButton icon="ui-icon-pencil"
+													actionListener="#{custBean.onIdentitySelected(identityVO)}"
+													oncomplete="varIDDialog.show()" process="@this"
+													update=":idIDDialog" rendered="#{identityVO.id eq null or not (custBean.passportIdVO.id eq identityVO.id or custBean.nricIdVO.id eq identityVO.id)}"/>
+											</p:column>
+											<p:column headerText="Delete"
+												style="width:50px; text-align:center;">
+												<p:commandButton icon="ui-icon-close"
+													actionListener="#{custBean.deleteIdentity(identityVO)}"
+													update=":idEditCustForm:idIDListPanel" process="@this"
+													rendered="#{identityVO.id eq null or not (custBean.passportIdVO.id eq identityVO.id or custBean.nricIdVO.id eq identityVO.id)}"/>
+											</p:column>
+											<p:column headerText="ID Type">
+												<h:outputText
+													value="#{bterp:lookupItemDesc('id_type', identityVO.idType)}" />
+											</p:column>
+											<p:column headerText="ID No">
+												<h:outputText value="#{identityVO.idNo}" />
+											</p:column>
+											<p:column headerText="Age" style="text-align:center;">
+												<h:outputText value="#{custBean.calculateAgeByIdNo(identityVO.idNo)}" rendered="#{identityVO.idType == 'nric'}"/>
+											</p:column>
+											<p:column headerText="Expired Date" style="text-align:center;">
+												<h:outputText value="#{identityVO.identityDetailVO.dtExpired}" rendered="#{not empty identityVO.identityDetailVO.dtExpired}">
+													<f:convertDateTime pattern="dd-MMM-yyyy" />
+												</h:outputText>
+											</p:column>
+											<p:column headerText="Attactment" style="width:80px; text-align:center;">
+												<h:outputLink id="idTTIDAttachment" target="_blank" value="#{request.contextPath}#{identityVO.idType == 'visa' ? custBean.destinationVisaPath : custBean.destinationPassportPath}/#{identityVO.identityDetailVO.filePath}"
+													style="color: #db3333;text-decoration: underline;"
+													rendered="#{not empty identityVO.identityDetailVO.scannedPath and not empty identityVO.identityDetailVO.filePath}">
+													<h:outputText value="View"/>
+												</h:outputLink>
+												<pe:tooltip for="idTTIDAttachment" shared="true" showDelay="3000"  position="top right"
+													rendered="#{not empty identityVO.identityDetailVO.scannedPath and not empty identityVO.identityDetailVO.filePath}">
+													<h:outputText value="#{identityVO.identityDetailVO.scannedPath}" escape="true" style="white-space: pre-wrap"/>
+												</pe:tooltip>
+											</p:column>
+										</p:dataTable>
+									</p:panel>
+								</p:column>
+							</p:row>
+							
+							<!-- <p:row>
+								<p:column>
+									<p:commandButton value="Vaccination Cert"
+										actionListener="#{custBean.resetAttachmentForm}"
+										update=":idAttachmentDialog" oncomplete="varAttachmentDialog.show()"
+										immediate="true" disabled="#{custBean.customerVO.id == null}"/>
+								</p:column>
+								<p:column colspan="3">
+									<p:panel id="idAttachmentListPanel" style="border:none">
+										<p:dataTable id="idAttachmentListTable"
+											value="#{custBean.customerVO.personAttachmentList}" var="attachmentVO"
+											rowKey="#{attachmentVO.id}" selectionMode="single"
+											rendered="#{not empty custBean.customerVO.personAttachmentList}">
+											
+											<p:column headerText="Delete" style="width:50px; text-align:center;">
+												<p:commandButton icon="ui-icon-close" actionListener="#{custBean.setPersonAttachmentVO(attachmentVO)}" oncomplete="varDelAttachmentDialog.show()" process="@this"/>
+											</p:column>
+											<p:column headerText="Attachment Type">
+												<p:outputLabel value="#{bterp:lookupItemDesc('cust_attachment_type', attachmentVO.typeCd)}"/>
+											</p:column>
+											
+											<p:column headerText="File Path">
+												<h:outputLink target="_blank" value="#{request.contextPath}#{custBean.destinationAttachmentPath}/#{attachmentVO.filePath}" style="color: #db3333;text-decoration: underline;margin-right: 10px;">
+													<h:outputText value="#{attachmentVO.scannedPath}"/>
+												</h:outputLink>
+											</p:column>
+										</p:dataTable>
+									</p:panel>
+								</p:column>
+							</p:row> -->
+							
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idComplicationType">Complication</h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:selectCheckboxMenu id="idComplicationType"
+										style="vertical-align:middle"
+										value="#{custBean.customerVO.compliList}" label="Complication"
+										filter="true" filterMatchMode="contains"
+										onHide="executeOnComplicationOnhide();">
+										<f:selectItems value="#{bterp:lookupItemList('cust_cmpl')}"
+											var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+									</p:selectCheckboxMenu>
+									<p:remoteCommand name="executeOnComplicationOnhide"
+										actionListener="#{custBean.handleComplicationChange}"
+										update=":idEditCustForm:idComplicationName"
+										process="@this, :idEditCustForm:idComplicationType" global="false" />
+								</p:column>
+								<p:column>
+									<h:outputLabel for="idMealList">Add Meals</h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:selectCheckboxMenu id="idMealList" style="vertical-align:middle"
+										value="#{custBean.customerVO.mealList}" label="Add Meals"
+										filter="true" filterMatchMode="contains"
+										onHide="executeOnMealOnhide();">
+										<f:selectItems value="#{bterp:lookupItemList('meal_pref')}"
+											var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+									</p:selectCheckboxMenu>
+									<p:remoteCommand name="executeOnMealOnhide"
+										actionListener="#{custBean.handleMealChange}"
+										update=":idEditCustForm:idMealName"
+										process="@this, :idEditCustForm:idMealList" global="false" />
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column></p:column>
+								<p:column>
+									<h:outputText id="idComplicationName"
+										value="#{custBean.customerVO.complicationName}" style="font-size:8px;"></h:outputText>
+								</p:column>
+								<p:column></p:column>
+								<p:column>
+									<h:outputText id="idMealName"
+										value="#{custBean.customerVO.mealName}" style="font-size:8px;"></h:outputText>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:panel>
+				</p:column>
+			</p:row>
+	
+			<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+				<p:column colspan="4">
+					<p:panel id="idPanelCorContact" header="Contact" toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column>
+									<p:panel header="Mobile No">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idNumber">Number
+												</h:outputLabel>
+												</p:column>
+												<p:column styleClass="phone-row">
+													<p:selectOneMenu id="idCorMobileCountry" value="#{custBean.corContactVO.corMobileCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+												        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+												        <f:selectItems value="#{custBean.countryList}" var="c" itemLabel="#{c.countryCd} #{c.country}" itemValue="#{c.countryCd}"/>
+											    	</p:selectOneMenu>
+													<p:inputText id="idCorMobileNumber" label="Mobile Number" style="width:120px"
+														value="#{custBean.corContactVO.corMobileNo}"
+														maxlength="14" size="20"
+														onkeypress="return rtnPhoneNo(event);"
+														validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+														<p:watermark for="idCorMobileNumber" value="Number" />
+														<f:validateLength maximum="14" minimum="8"/>
+														<f:validateRegex pattern="^[0-9+-]+$" />
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idCorMobileAtt">Attention</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorMobileAtt" label="Attention" style="width:250px"
+														value="#{custBean.corContactVO.corMobileAttn}"
+														maxlength="100" />
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+								<p:column>
+									<p:panel header="Office No">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idNumber">Number
+												</h:outputLabel>
+												</p:column>
+												<p:column styleClass="phone-row">
+													<p:selectOneMenu id="idCorOfficeCountry" value="#{custBean.corContactVO.corOfficeCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+												        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+												        <f:selectItems value="#{custBean.countryList}" var="c" itemLabel="#{c.countryCd} #{c.country}" itemValue="#{c.countryCd}"/>
+											    	</p:selectOneMenu>
+													<p:inputText id="idCorOfficeNumber" label="Office Number" style="width:120px"
+														value="#{custBean.corContactVO.corOfficeNo}"
+														maxlength="14" size="20"
+														onkeypress="return rtnPhoneNo(event);"
+														validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+														<p:watermark for="idCorOfficeNumber" value="Number" />
+														<f:validateLength maximum="14" minimum="8"/>
+														<f:validateRegex pattern="^[0-9+-]+$" />
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idCorOfficeAtt">Attention</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorOfficeAtt" label="Attention" style="width:250px"
+														value="#{custBean.corContactVO.corOfficeAttn}"
+														maxlength="100" />
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<p:panel header="Home No">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idNumber">Number
+												</h:outputLabel>
+												</p:column>
+												<p:column styleClass="phone-row">
+													<p:selectOneMenu id="idCorHomeCountry" value="#{custBean.corContactVO.corHomeCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+												        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+												        <f:selectItems value="#{custBean.countryList}" var="c" itemLabel="#{c.countryCd} #{c.country}" itemValue="#{c.countryCd}"/>
+											    	</p:selectOneMenu>
+													<p:inputText id="idCorHomeNumber" label="Home Number" style="width:120px"
+														value="#{custBean.corContactVO.corHomeNo}" maxlength="14"
+														size="20" onkeypress="return rtnPhoneNo(event);"
+														validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+														<p:watermark for="idCorHomeNumber" value="Number" />
+														<f:validateLength maximum="14" minimum="8"/>
+														<f:validateRegex pattern="^[0-9+-]+$" />
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idCorHomeAtt">Attention</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorHomeAtt" label="Attention" style="width:250px"
+														value="#{custBean.corContactVO.corHomeAttn}"
+														maxlength="100" />
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+								<p:column>
+									<p:panel header="Fax No">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idNumber">Number
+												</h:outputLabel>
+												</p:column>
+												<p:column styleClass="phone-row">
+													<p:selectOneMenu id="idCorFaxCountry" value="#{custBean.corContactVO.corFaxCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+												        <f:selectItem itemLabel="+60 Malaysia" itemValue="+60" />
+												        <f:selectItems value="#{custBean.countryList}" var="c" itemLabel="#{c.countryCd} #{c.country}" itemValue="#{c.countryCd}" />
+											    	</p:selectOneMenu>
+													<p:inputText id="idCorFaxNumber" label="Fax Number" style="width:120px"
+														value="#{custBean.corContactVO.corFaxNo}" maxlength="14"
+														size="20" onkeypress="return rtnPhoneNo(event);"
+														validatorMessage="Contact number must contain only digits, +, or −, and be at least 8 characters long.">
+														<p:watermark for="idCorFaxNumber" value="Number" />
+														<f:validateLength maximum="14" minimum="8"/>
+														<f:validateRegex pattern="^[0-9+-]+$" />
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idCorFaxAtt">Attention</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorFaxAtt" label="Attention" style="width:250px"
+														value="#{custBean.corContactVO.corFaxAttn}"
+														maxlength="100" />
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column colspan="2">
+									<p:panel id="idPanelCorEmail" header="Email" toggleable="true">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idCorEmail">Primary Email </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idCorEmail" label="Email"
+														value="#{custBean.customerVO.personVO.email}" readonly="true"
+														style="background:#ccc;" size="40" />	
+												</p:column>
+											</p:row>
+						
+											<p:row>
+												<p:column>
+													<p:commandButton value="Email List"
+														actionListener="#{custBean.setEmailAdd(true)}"
+														oncomplete="varEmailDialog.show()"
+														update=":idEmailDialog" process="@this" />
+												</p:column>
+												<p:column colspan="3">
+													<p:panel id="idCorEmailListPanel" style="border:none">
+														<p:dataTable id="idCorEmailListTable"
+															value="#{custBean.customerVO.personVO.emailList}"
+															var="emailVO"
+															rendered="#{not empty custBean.customerVO.personVO.emailList}">
+															<p:column headerText="Edit"
+																style="width:50px; text-align:center;">
+																<p:commandButton icon="ui-icon-pencil"
+																	actionListener="#{custBean.onEmailSelected(emailVO)}"
+																	oncomplete="varEmailDialog.show()" process="@this"
+																	update=":idEmailDialog"
+																	disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock and emailVO.isPrimary}"/>
+															</p:column>
+															<p:column headerText="Delete"
+																style="width:50px; text-align:center;">
+																<p:commandButton icon="ui-icon-close"
+																	actionListener="#{custBean.deleteEmail(emailVO)}"
+																	update=":idEditCustForm:idCorEmailListPanel,:idEditCustForm:idCorEmailListTable,:idEditCustForm:idCorEmail"
+																	process="@this"
+																	disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock and emailVO.isPrimary}"/>
+															</p:column>
+															<p:column headerText="Email">
+																<h:outputText value="#{emailVO.email}" />
+															</p:column>
+															<p:column headerText="Primary Email" style="text-align:center;">
+																<h:outputText value="Y" rendered="#{emailVO.isPrimary}" />
+																<h:outputText value="N" rendered="#{not emailVO.isPrimary}" />
+															</p:column>
+														</p:dataTable>
+													</p:panel>
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:panel>
+				</p:column>
+			</p:row>
+			
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+				<p:column colspan="4">
+					<p:panel id="idPanelPerAddress" header="Address" toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column>
+									<p:panel id="idPanelBillAddress" header="Billing Address">
+										<p:panelGrid>
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idBillCompName">Company Name</h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idBillCompName" label="Company Name"
+														value="#{custBean.customerVO.billAddressVO.companyName}" size="50"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idAdd1">Address Line 1 <span
+															class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idAdd1" label="Address Line 1"
+														value="#{custBean.customerVO.billAddressVO.addr1}" size="50"
+														required="true"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idAdd2">Address Line 2 </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idAdd2" label="Address Line 2"
+														value="#{custBean.customerVO.billAddressVO.addr2}" size="50"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idAdd3">Address Line 3 </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idAdd3" label="Address Line 3"
+														value="#{custBean.customerVO.billAddressVO.addr3}" size="50"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idCity">City <span
+														class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCity" label="Billing Address - City" required="true"
+														value="#{custBean.customerVO.billAddressVO.city}"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idState">State <span
+														class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idState" label="Billing Address - State" rendered="#{custBean.customerVO.billAddressVO.countryId ne 129}"
+														value="#{custBean.customerVO.billAddressVO.state}"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+													<h:selectOneMenu id="idStateMalaysia" label="Billing Address - State" value="#{custBean.customerVO.billAddressVO.state}" effect="fade" rendered="#{custBean.customerVO.billAddressVO.countryId eq 129}"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}" required="true">
+														<f:selectItem itemLabel="Select One" itemValue=""/>
+														<f:selectItems value="#{custBean.malaysiaStateList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.name}"/>
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idPostcode">Postcode <span
+															class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idPostcode" label="Billing Address - Postcode"
+														value="#{custBean.customerVO.billAddressVO.postcode}" required="true"
+														maxlength="#{custBean.customerVO.billAddressVO.countryId == 129 ? 5 : 99}"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+													<pe:tooltip for="idPostcode" position="bottom left" rendered="#{custBean.customerVO.billAddressVO.countryId == 129}">
+														<h:outputText value="For Malaysian addresses, the postcode must not exceed 5 digits." escape="true"
+															style="white-space: pre-wrap" />
+													</pe:tooltip>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idCountry">Country <span
+															class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idCountry" label="Country"
+														value="#{custBean.customerVO.billAddressVO.countryId}"
+														required="true"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" listener="#{custBean.handleBillAddressState}" update="idPanelBillAddress :idEditCustForm:idTaxIdNo" />
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{custBean.countryList}" var="vo"
+															itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+							
+							<p:row>
+								<p:column>
+									<p:panel id="idPanelMailAddress" header="Mailing Address" toggleable="true" collapsed="true">
+										<p:ajax event="toggle" global="false"/>
+										<p:panelGrid>
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idMailCompName">Company Name</h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idMailCompName" label="Company Name"
+														value="#{custBean.customerVO.mailAddressVO.companyName}" size="50">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idMailAdd1">Address Line 1</h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idMailAdd1" label="Address Line 1"
+														value="#{custBean.customerVO.mailAddressVO.addr1}" size="50">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idMailAdd2">Address Line 2 </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idMailAdd2" label="Address Line 2"
+														value="#{custBean.customerVO.mailAddressVO.addr2}" size="50">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idMailAdd3">Address Line 3 </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idMailAdd3" label="Address Line 3"
+														value="#{custBean.customerVO.mailAddressVO.addr3}" size="50">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idMailCity">City </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idMailCity" label="City"
+														value="#{custBean.customerVO.mailAddressVO.city}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idMailState">State </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idMailState" label="Billing Address - State" rendered="#{custBean.customerVO.mailAddressVO.countryId ne 129}"
+														value="#{custBean.customerVO.mailAddressVO.state}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+													<h:selectOneMenu id="idMailStateMalaysia" label="Billing Address - State" value="#{custBean.customerVO.mailAddressVO.state}" effect="fade" rendered="#{custBean.customerVO.mailAddressVO.countryId eq 129}">
+														<f:selectItem itemLabel="Select One" itemValue=""/>
+														<f:selectItems value="#{custBean.malaysiaStateList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.name}"/>
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+												<p:column>
+													<h:outputLabel for="idMailPostcode">Postcode </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idMailPostcode" label="Postcode"
+														value="#{custBean.customerVO.mailAddressVO.postcode}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idMailCountry">Country</h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idMailCountry" label="Country"
+														value="#{custBean.customerVO.mailAddressVO.countryId}">
+														<p:ajax event="change" listener="#{custBean.handleMailAddressState}" update="idPanelMailAddress" />
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{custBean.countryList}" var="vo"
+															itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+										<f:facet name="actions">
+								            <p:selectBooleanCheckbox id="idCopy" value="#{custBean.deepCopy}" style="vertical-align:text-bottom;margin-left:367px">
+												<p:ajax listener="#{custBean.handleCopySelect}" update="idPanelMailAddress" process="@this, idPanelBillAddress" global="false"/>
+											</p:selectBooleanCheckbox>
+											<h:outputLabel>Same as billing address</h:outputLabel>
+								        </f:facet>
+									</p:panel>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:panel>
+				</p:column>
+			</p:row>
+			
+			<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+				<p:column colspan="4">
+					<p:panel id="idPanelCorAddress" header="Address" toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column>
+									<p:panel id="idPanelCorBillAddress" header="Billing Address">
+										<p:panelGrid>
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpBillAdd1">Address Line 1 <span
+															class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idCorpBillAdd1" label="Address Line 1"
+														value="#{custBean.customerVO.corBillAddressVO.addr1}" size="50"
+														required="true"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpBillAdd2">Address Line 2 </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idCorpBillAdd2" label="Address Line 2"
+														value="#{custBean.customerVO.corBillAddressVO.addr2}" size="50"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpBillAdd3">Address Line 3 </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idCorpBillAdd3" label="Address Line 3"
+														value="#{custBean.customerVO.corBillAddressVO.addr3}" size="50"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpBillCity">City <span
+														class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorpBillCity" label="Billing Address - City" required="true"
+														value="#{custBean.customerVO.corBillAddressVO.city}"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idCorpBillState">State <span
+														class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorpBillState" label="State" rendered="#{custBean.customerVO.corBillAddressVO.countryId ne 129}"
+														value="#{custBean.customerVO.corBillAddressVO.state}"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+													<h:selectOneMenu id="idCorpBillStateMalaysia" label="Billing Address - State" value="#{custBean.customerVO.corBillAddressVO.state}" effect="fade" rendered="#{custBean.customerVO.corBillAddressVO.countryId eq 129}"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}" required="true">
+														<f:selectItem itemLabel="Select One" itemValue=""/>
+														<f:selectItems value="#{custBean.malaysiaStateList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.name}"/>
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpBillPostcode">Postcode <span
+														class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorpBillPostcode" label="Billing Address - Postcode"
+														value="#{custBean.customerVO.corBillAddressVO.postcode}" required="true"
+														maxlength="#{custBean.customerVO.corBillAddressVO.countryId == 129 ? 5 : 99}"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+													<pe:tooltip for="idCorpBillPostcode" position="bottom left" rendered="#{custBean.customerVO.corBillAddressVO.countryId == 129}">
+														<h:outputText value="For Malaysian addresses, the postcode must not exceed 5 digits." escape="true"
+															style="white-space: pre-wrap" />
+													</pe:tooltip>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idCorpBillCountry">Country <span
+															class="required">*</span>
+													</h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idCorpBillCountry" label="Country"
+														value="#{custBean.customerVO.corBillAddressVO.countryId}"
+														required="true"
+														disabled="#{not custBean.customerVO.addEdit and custBean.customerVO.isLock}">
+														<p:ajax event="change" listener="#{custBean.handleCorpBillAddressState}" 
+															update="idPanelCorBillAddress idCorpBillCity :idEditCustForm:idRegNo :idEditCustForm:idCompanyTIN"/>
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{custBean.countryList}" var="vo"
+															itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<p:panel id="idPanelCorMailAddress" header="Mailing Address" toggleable="true" collapsed="true">
+										<p:ajax event="toggle" global="false"/>
+										<p:panelGrid>
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpMailAdd1">Address Line 1</h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idCorpMailAdd1" label="Address Line 1"
+														value="#{custBean.customerVO.corMailAddressVO.addr1}"
+														size="50">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpMailAdd2">Address Line 2 </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idCorpMailAdd2" label="Address Line 2"
+														value="#{custBean.customerVO.corMailAddressVO.addr2}"
+														size="50">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpMailAdd3">Address Line 3 </h:outputLabel>
+												</p:column>
+												<p:column colspan="3">
+													<p:inputText id="idCorpMailAdd3" label="Address Line 3"
+														value="#{custBean.customerVO.corMailAddressVO.addr3}"
+														size="50">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpMailCity">City </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorpMailCity" label="City"
+														value="#{custBean.customerVO.corMailAddressVO.city}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idCorpMailState">State </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorpMailState" label="State" rendered="#{custBean.customerVO.corMailAddressVO.countryId ne 129}"
+														value="#{custBean.customerVO.corMailAddressVO.state}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+													<h:selectOneMenu id="idCorpMailStateMalaysia" label="State" value="#{custBean.customerVO.corMailAddressVO.state}" effect="fade" rendered="#{custBean.customerVO.corMailAddressVO.countryId eq 129}">
+														<f:selectItem itemLabel="Select One" itemValue=""/>
+														<f:selectItems value="#{custBean.malaysiaStateList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.name}"/>
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+					
+											<p:row rendered="#{custBean.customerVO.pcTypeCd == 'C'}">
+												<p:column>
+													<h:outputLabel for="idCorpMailPostcode">Postcode </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCorpMailPostcode" label="Postcode"
+														value="#{custBean.customerVO.corMailAddressVO.postcode}">
+														<p:ajax event="change" global="false"></p:ajax>
+													</p:inputText>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idCorpMailCountry">Country</h:outputLabel>
+												</p:column>
+												<p:column>
+													<h:selectOneMenu id="idCorpMailCountry" label="Country"
+														value="#{custBean.customerVO.corMailAddressVO.countryId}">
+														<p:ajax event="change" listener="#{custBean.handleCorpMailAddressState}" update="idPanelCorMailAddress" />
+														<f:selectItem itemLabel="Select One" itemValue="" />
+														<f:selectItems value="#{custBean.countryList}" var="vo"
+															itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+													</h:selectOneMenu>
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+										<f:facet name="actions">
+									            <p:selectBooleanCheckbox value="#{custBean.deepCopy}" style="vertical-align:text-bottom;margin-left:367px">
+													<p:ajax listener="#{custBean.handleCopySelect}" update="idPanelMailAddress, idPanelCorMailAddress" process="@this, idPanelBillAddress, idPanelCorBillAddress" global="false"/>
+												</p:selectBooleanCheckbox>
+												<h:outputLabel>Same as billing address</h:outputLabel>
+									        </f:facet>
+									</p:panel>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:panel>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C' and !custBean.hideCRM}">
+				<p:column colspan="4">
+					<p:panel id="idPanelMemberPoint" header="Member Point Information" toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column colspan="2">
+									<p:panel id="idPanelPoint" header="Point And Tier">
+										<p:panelGrid>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idPoint">Point</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idPoint" label="Point" readonly="true" style="background:#ccc;"
+														value="#{custBean.customerPointTierVO.totalPointsBalance}" maxlength="50" />
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idTier">Tier </h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idTier" label="Tier" readonly="true" style="background:#ccc;"
+														value="#{custBean.customerPointTierVO.tier}" maxlength="50" />
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idTargetSales">Target Sales</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idTargetSales" label="Target Sales" readonly="true" style="background:#ccc;"
+														value="#{custBean.customerPointTierVO.targetSales}" maxlength="50" />
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idCurrentSales">Current Sales</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idCurrentSales" label="Current Sales" readonly="true" style="background:#ccc;"
+														value="#{custBean.customerPointTierVO.currentSales}" maxlength="50" />
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idCurrentSales">Remaining Sales</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idRemainingSales" label="Remaining Sales" readonly="true" style="background:#ccc;"
+														value="#{custBean.customerPointTierVO.remainingSales}" maxlength="50"/>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idTierEF">Tier Effective From</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idTierEF" label="Tier Effective From" readonly="true" style="background:#ccc;"
+														value="#{custBean.customerPointTierVO.tierEffectiveFrom}" maxlength="50"/>
+												</p:column>
+												<p:column>
+													<h:outputLabel for="idTierET">Tier Effective To</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputText id="idTierET" label="Tier Effective To" readonly="true" style="background:#ccc;"
+														value="#{custBean.customerPointTierVO.tierEffectiveTo}" maxlength="50"/>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<h:outputLabel for="idPointE">Point Expiry Date</h:outputLabel>
+												</p:column>
+												<p:column>
+													<p:inputTextarea id="idPointE" value="#{custBean.pointExpiry}" readonly="true" style="background:#ccc; width:250px; resize:none;" rows="3"/>
+												</p:column>
+											</p:row>
+											<p:row>
+												<p:column>
+													<p:commandButton icon="ui-icon-refresh" value="Refresh" action="#{custBean.handleCustomerPointTier(custBean.customerVO.id)}" update="idPanelMemberPoint" process="@this"/>
+												</p:column>
+											</p:row>
+										</p:panelGrid>
+									</p:panel>
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column colspan="2">
+									<p:panel id="idPanelVoucher" header="Claimed Voucher">
+										<p:commandButton value="Add Voucher" icon="ui-icon-plus" actionListener="#{custBean.handleVoucherCatalog}" update=":idVoucherCatalogForm" oncomplete="varVoucherCatalogDialog.show()"/>&nbsp;
+										<p:commandButton value="History" icon="ui-icon-script" actionListener="#{custBean.handleCustomerVoucherHistory(custBean.customerVO.id)}" update=":idVoucherHistoryForm" oncomplete="varVoucherHistoryDialog.show()"/>
+										<br/><br/>
+										<p:dataTable id="idClaimedVoucherListTable" value="#{custBean.customerVO.claimedVoucherList}" 
+											var="voucherVO">
+											
+											<!-- <p:column headerText="Edit"
+												style="width:50px; text-align:center;">
+												<p:commandButton icon="ui-icon-pencil"
+													actionListener="#{salesBean.onIdentitySelected(identityVO)}"
+													oncomplete="varIDDialog.show()" process="@this"
+													update=":idIDDialog" rendered="#{identityVO.id eq null or not (salesBean.passportIdVO.id eq identityVO.id or salesBean.nricIdVO.id eq identityVO.id)}"/>
+											</p:column>
+											<p:column headerText="Delete"
+												style="width:50px; text-align:center;">
+												<p:commandButton icon="ui-icon-close"
+													actionListener="#{salesBean.deleteIdentity(identityVO)}"
+													update=":idAddCustForm:idIDListPanel" process="@this"
+													rendered="#{identityVO.id eq null or not (salesBean.passportIdVO.id eq identityVO.id or salesBean.nricIdVO.id eq identityVO.id)}"/>
+											</p:column> -->
+											<p:column headerText="Code">
+												<p:outputLabel id="idVoucher">
+						 							<i class="fa fa-info-circle" aria-hidden="true" />
+						 						</p:outputLabel>
+												<h:outputText value="#{voucherVO.redemptionCode}" />
+												<pe:tooltip for="idVoucher" shared="true" showDelay="300" targetPosition="top left" position="bottom right">
+										        <h:panelGrid columns="2">
+										            <h:outputText value="Name:" /><h:outputText value="#{voucherVO.redemptionType.name}" />
+										            <h:outputText value="Redemption ID:" /><h:outputText value="#{voucherVO.redemptionType.redemptionId}" />
+										            <h:outputText value="Category:" /><h:outputText value="#{voucherVO.redemptionType.categoryName}" />
+										            <h:outputText value="Category Type:" /><h:outputText value="#{voucherVO.redemptionType.categoryType}" />
+													<h:outputText value="Category Desc:" /><h:outputText value="#{voucherVO.redemptionType.categoryDesc}" />
+										            <h:outputText value="Description:" /><h:outputText value="#{voucherVO.redemptionType.description}" />
+													<h:outputText value="Min Points:" /><h:outputText value="#{voucherVO.redemptionType.minPoints}" />
+													<h:outputText value="Max Points:" /><h:outputText value="#{voucherVO.redemptionType.maxPoints}" />
+													<h:outputText value="Min Sales:" /><h:outputText value="#{voucherVO.redemptionType.minSales}" />
+													<h:outputText value="Max Sales:" /><h:outputText value="#{voucherVO.redemptionType.maxSales}" />
+													<h:outputText value="Conversion Points:" /><h:outputText value="#{voucherVO.redemptionType.conversionPoints}" />
+													<h:outputText value="Conversion Rebate Amt:" /><h:outputText value="#{voucherVO.redemptionType.conversionRebateAmt}" />
+													<h:outputText value="Discount Amt:" /><h:outputText value="#{voucherVO.redemptionType.discountAmt}" />
+													<h:outputText value="Percentage:" /><h:outputText value="#{voucherVO.redemptionType.percentage}" />
+													<h:outputText value="Max Discount Capped:" /><h:outputText value="#{voucherVO.redemptionType.maxDiscountCapped}" />
+													<h:outputText value="Expiry Days:" /><h:outputText value="#{voucherVO.redemptionType.expiryDays}" />
+													<h:outputText value="Expiry End of Month:" /><h:outputText value="#{voucherVO.redemptionType.isExpiryEndOfMonth ? 'Yes' : 'No'}" />
+													<h:outputText value="Effective From:" /><h:outputText value="#{voucherVO.redemptionType.effectiveFrom}" />
+													<h:outputText value="Effective Until:" /><h:outputText value="#{voucherVO.redemptionType.effectiveUntil}" />
+													<h:outputText value="Currency:" /><h:outputText value="#{voucherVO.redemptionType.currency}" />
+													<h:outputText value="Active:" /><h:outputText value="#{voucherVO.redemptionType.isActive ? 'Yes' : 'No'}" />
+										        </h:panelGrid>				
+										    </pe:tooltip>
+											</p:column>
+											<p:column headerText="Expiry Date">
+												<h:outputText value="#{voucherVO.expiryDate}" />
+											</p:column>
+											<p:column headerText="Redeemed Date">
+												<h:outputText value="#{voucherVO.redeemedDateTime}" />
+											</p:column>
+										</p:dataTable>
+									</p:panel>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:panel>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idRemarks">Notes</h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputTextarea id="idRemarks" rows="10" cols="50"
+						value="#{custBean.remarksVO.remarksDetails}"></p:inputTextarea>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	</div>
+
+	<h:panelGrid columns="2" style="width: 1px;">
+		<!--h:inputHidden id="idHiddenValue">
+		<f:ajax event="change" listener="#{custBean.setCustDetailsVO(custBean.custDetailsVO)}"/>
+	</h:inputHidden-->
+		<p:commandButton value="#{msg['common.button.label.save']}"
+			actionListener="#{custBean.addCustomer}"
+			oncomplete="onEditCustValidation(xhr, status, args)" update="@form"
+			rendered="#{empty custBean.customerVO.id}" />
+		<p:commandButton value="#{msg['common.button.label.update']}"
+			actionListener="#{custBean.updateCustomer}" update="@form"
+			oncomplete="onEditCustValidation(xhr, status, args)"
+			rendered="#{not empty custBean.customerVO.id}">
+			<!--f:setPropertyActionListener target="#{custBean.setCustDetailsVO}" value="#{custBean.custDetailsVO}"/-->
+		</p:commandButton>
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			actionListener="#{custBean.resetForm}" update="@form" process="@this"
+			oncomplete="varEditCustDialog.hide()" global="false">
+			<pe:resetEditableValues for="idEditCustForm" />
+		</p:commandButton>
+	</h:panelGrid>
+
+</ui:composition>

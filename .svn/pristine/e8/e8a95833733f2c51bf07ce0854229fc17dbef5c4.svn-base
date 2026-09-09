@@ -1,0 +1,78 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<script type="text/javascript">
+	function onCruiseScheduleValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varCruiseScheduleListDialog.hide();
+		}
+	}
+</script>
+<p:growl id="msg"/>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:inputText id="idScheduleSearch" label="Search Schedule" value="#{tourPkgBean.cruiseScheduleSearch}"/>
+	<p:commandButton value="Search" actionListener="#{tourPkgBean.searchCruiseSchedule}" update="@form"/>
+</h:panelGrid>
+
+<div style="height:400px; overflow:auto;">
+	<c:if test="#{empty tourPkgBean.cruiseScheduleList}">
+		<p:panelGrid>
+			<p:row>
+				<p:column>Cruise schedule is empty, please add it.</p:column>
+				<p:column><p:commandButton value="close" onclick="varCruiseScheduleListDialog.hide()" immediate="true"/></p:column>
+			</p:row>
+		</p:panelGrid>
+	</c:if>
+	
+	<c:forEach items="#{tourPkgBean.cruiseScheduleList}" var="vo">
+		<p:panelGrid style="margin-top:5px;">
+			<p:row>
+				<p:column style="width:30px; background:#dcdcdc;">
+					<!--p:selectBooleanCheckbox value="#{tourPkgBean.checked}" disabled="true" rendered="#{tourPkgBean.cruiseScheduleVO.id eq vo.id}"/>
+					<p:selectBooleanCheckbox value="#{tourPkgBean.uncheck}" rendered="#{tourPkgBean.cruiseScheduleVO.id ne vo.id}">
+						<p:ajax listener="#{tourPkgBean.handleCruiseScheduleSelect(vo, true)}" update="@form" process="@this"/>
+					</p:selectBooleanCheckbox-->
+					<p:selectBooleanCheckbox value="#{tourPkgBean.checked}" disabled="true" rendered="#{tourPkgBean.cruiseScheduleVO.id eq vo.id}"/>
+					<p:selectBooleanCheckbox value="#{tourPkgBean.uncheck}" rendered="#{tourPkgBean.cruiseScheduleVO.id ne vo.id}">
+						<p:ajax listener="#{tourPkgBean.handleCruiseScheduleSelect(vo, true)}" process="@this"/>
+					</p:selectBooleanCheckbox>
+				</p:column>
+				<p:column style="background:#dcdcdc;"><h:outputText value="#{vo.desc}"/></p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:dataTable value="#{vo.cruiseScheduleItemList}" var="itemVO" rowKey="#{itemVO.id}" style="margin-bottom:10px;">
+			<p:ajax event="rowSelect" listener="#{tourPkgBean.handleCruiseScheduleItemSelect}"/>
+			<!-- <p:column selectionMode="multiple" style="width:18px"/> -->
+			<p:column headerText="Sequence" style="width:80px"><p:inputText value="#{itemVO.seq}" size="5"/></p:column>
+			<p:column headerText="Type" style="width:80px"><h:outputText value="#{itemVO.typeCd}"/></p:column>
+			<p:column headerText="Dep Date" style="width:80px">
+				<p:calendar navigator="true" showButtonPanel="true" id="idValidFrom" size="10" pattern="dd-MMM-yyyy" value="#{itemVO.departureDate}">
+					<p:ajax event="dateSelect" update="idValidTo" listener="#{tourPkgBean.autoChangeScheduleDateTo(itemVO)}" global="false"/>
+				</p:calendar>
+			</p:column>
+			<p:column headerText="Arr Date" style="width:80px">
+				<p:calendar id="idValidTo" navigator="true" showButtonPanel="true" size="10" pattern="dd-MMM-yyyy" value="#{itemVO.arrivalDate}"/>
+			</p:column>
+			<p:column headerText="Cruise Code" style="width:80px"><h:outputText value="#{itemVO.flightCd}"/></p:column>
+			<p:column headerText="From" style="width:80px"><h:outputText value="#{itemVO.fromAirportCd}"/></p:column>
+			<p:column headerText="To" style="width:80px"><h:outputText value="#{itemVO.toAirportCd}"/></p:column>
+			<p:column headerText="ETD" style="width:80px"><p:inputText value="#{itemVO.etd}" size="5"/></p:column>
+			<p:column headerText="ETA" style="width:80px">
+				<p:inputText value="#{itemVO.eta}" rendered="#{not itemVO.isNextDay}" size="5"/>
+				<p:inputText value="#{itemVO.eta}+1" rendered="#{itemVO.isNextDay}" size="5"/>
+			</p:column>
+			<p:column headerText="Remarks" style="width:200px"><h:outputText value="#{itemVO.remarks}"/></p:column>
+		</p:dataTable>
+	</c:forEach>
+</div>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{tourPkgBean.addCruiseSchedule}" oncomplete="onCruiseScheduleValidation(xhr, status, args)" update="@form,:idAddTourDepForm:idCruiseScheduleDesc,:idEditTourDepForm:idCruiseScheduleDesc"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{tourPkgBean.resetCruiseScheduleForm}" oncomplete="varCruiseScheduleListDialog.hide()" update="@form" process="@this"/>
+</h:panelGrid>
+</ui:composition>

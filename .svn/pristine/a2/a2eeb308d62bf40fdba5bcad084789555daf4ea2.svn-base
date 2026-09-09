@@ -1,0 +1,31 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	  			
+	<p:growl id="msg"/>
+	<p:panelGrid>
+		<p:row>
+		<p:column><h:outputLabel for="idAddIDType">ID Type <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+		<h:selectOneMenu id="idAddIDType" value="#{purchaseBean.identityVO.idType}">  
+			<f:selectItems value="#{bterp:lookupItemList('id_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+        </h:selectOneMenu>
+        </p:column>
+        <p:column><h:outputLabel for="idAddID">ID Number <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddID" label="ID No" value="#{purchaseBean.identityVO.idNo}" required="true"/></p:column>
+		</p:row>
+		
+	</p:panelGrid>
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{purchaseBean.addIdentity}" update="@form,:idAddSupplierForm:idShowID,:idEditPCustomerForm:idShowID,:idEditPCustomerForm:idShowID"/>
+		<p:commandButton value="Cancel" onclick="varIDDialog.hide()" process="@this">
+			<pe:resetEditableValues for="idAddSupplierForm,idEditPCustomerForm"/>
+		</p:commandButton>
+	</p:panelGrid>
+</ui:composition>

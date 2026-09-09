@@ -1,0 +1,22 @@
+package com.bcs.zsg.scheduler.helper;
+
+public enum EnumJobKey {
+	SendEMail, 
+	CheckEMailStatus, 
+	SendInvalidEmail,
+	DailyJobComplete, 
+	ScheduleManagerOnError,
+	ScheduleManager,
+	ScheduleManager_Daily,
+	ScheduleManager_Monthly,
+	ScheduleManager_Yearly,
+	ScheduleJob,
+	CheckLogArchive,
+	ProcessReverseJournal,
+	AutoSubmitEInvoice,
+	AutoDailyRefreshEInvoice,
+	AutoRefreshSubmissionEInvoice,
+	AutoPostingCRMSales,
+	AutoPostingCRMCustomer,
+	FEEDBACK_EMAIL_JOB;
+}

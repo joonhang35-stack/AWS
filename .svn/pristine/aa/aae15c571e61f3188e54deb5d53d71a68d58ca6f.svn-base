@@ -1,0 +1,381 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<style>
+.tourDepListClass .ui-datatable th div.ui-dt-c,
+.tourDepListClass .ui-datatable .ui-datatable-data td div.ui-dt-c {
+	padding: 4px 0px;
+	font-size: 10px;
+	text-align: center;
+}
+
+.tourDepListClass .ui-state-highlight,
+.tourDepListClass .ui-widget-content .ui-state-highlight {
+	border: 2px solid #7c51a1;
+	background: #7ddbfe !important;
+}
+</style>
+
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varTourDepListDialog.hide()"/>
+</h:panelGrid>
+<div class="tourDepListClass">
+<p:dataTable id="idTourDepList" value="#{salesBean.tourDepList}" var="vo" rowStyleClass="#{vo.groupColor eq 0 ? 'group-color-one' : 'group-color-two'}"
+	rowKey="#{vo.id}" selectionMode="single">
+	<f:facet name="header">
+		<h:panelGrid columns="1">
+			<h:outputText value="#{salesBean.tourPkgVO.nameEn}"/>
+			<h:outputText value="#{salesBean.tourPkgVO.nameOther}" rendered="#{not empty salesBean.tourPkgVO.nameOther}"/>
+			<h:outputText value="#{salesBean.tourPkgVO.nameZh}" rendered="#{not empty salesBean.tourPkgVO.nameZh}"/>
+			<h:outputText value="Sector Type: #{salesBean.tourPkgVO.tourPkgCountryVO.regionName}" rendered="#{not empty salesBean.tourPkgVO.tourPkgCountryVO.regionName}"/>
+			<h:outputText value="Sector: #{salesBean.tourPkgVO.tourPkgCountryVO.countryName}" rendered="#{not empty salesBean.tourPkgVO.tourPkgCountryVO.countryName}"/>
+			<h:outputText value="Location Tag: #{salesBean.tourPkgVO.tourPkgCountryVO.cityName}" rendered="#{not empty salesBean.tourPkgVO.tourPkgCountryVO.cityName}"/>
+		</h:panelGrid>
+	</f:facet>
+	
+	<p:column style="width:30px;">
+		<p:rowToggler />
+	</p:column>
+	<p:column headerText="Status" style="width:60px;">
+		<p:commandLink id="idBookButton" actionListener="#{salesBean.handleTourDepSelect(vo)}" update=":idAddBookingDialog" oncomplete="varAddBookingDialog.show()" 
+			rendered="#{not salesBean.isAgentViewOnly and (vo.accCodeStatusCd eq 'Y' and (vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L' or vo.tourStatusCd eq 'C1'))}">
+			<p:graphicImage value="/img/book_button_a.png" rendered="#{vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'C1'}"/>
+			<p:graphicImage value="/img/book_button_l.png" rendered="#{vo.tourStatusCd eq 'L'}"/>
+			<!-- <p:tooltip for="idBookButton">
+				<p:outputLabel value="#{salesBean.getCalculatedAmount(vo)}" style="white-space: pre-wrap"/>
+				TWN=#{salesBean.getDoubleDecimalFormat(((vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				SGL=#{salesBean.getDoubleDecimalFormat(((vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				CTW=#{salesBean.getDoubleDecimalFormat(((vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				<br/>
+				CWB=#{salesBean.getDoubleDecimalFormat(((vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				CNB=#{salesBean.getDoubleDecimalFormat(((vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				<h:outputLabel style="font-size:10px; color:#F00;" rendered="#{(vo.discountPax1 gt 0 and vo.discount1 gt 0) or (vo.discountPax2 gt 0 and vo.discount2 gt 0)}">
+					<br/><br/>
+					**Discount calculation already included
+				</h:outputLabel>
+			</p:tooltip> -->
+		</p:commandLink>
+		<h:outputText value="Not Ready" style="text-transform:uppercase; color:#F00;" rendered="#{vo.accCodeStatusCd eq 'N'}"/>
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd ne 'F' and vo.tourStatusCd ne 'A' and vo.tourStatusCd ne 'L' and vo.tourStatusCd ne 'C1'}"/>
+		<h:outputText value="Full" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd eq 'F'}"/>
+	</p:column>
+	<p:column headerText="Seq No" style="width:50px;">
+		<h:outputText value="#{vo.seqNo}"/>
+	</p:column>
+	<p:column headerText="Dep Date" style="width:100px;">
+		<h:outputText value="#{vo.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText>
+		<ui:repeat value="#{vo.departDateBadgeList}" var="badgeVO">
+			<h:outputText value="#{badgeVO}" style="display:inline-block; background:white; color:green; border:1px solid green; border-radius: 5px; padding:2px; margin:2px;"  rendered="#{not empty vo.departDateBadgeList}"/>
+		</ui:repeat>
+	</p:column>
+	<p:column headerText="Status" style="width:80px;">
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" rendered="#{vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L'}"/>
+		<h:outputText value="Full" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd eq 'F'}"/>
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" style="text-transform:uppercase; color:#F00;"
+			rendered="#{vo.tourStatusCd eq 'I' or vo.tourStatusCd eq 'C' or vo.tourStatusCd eq 'N' or vo.tourStatusCd eq 'R' or vo.tourStatusCd eq 'C1'}"/>
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}"
+		 	style="text-transform:uppercase; color:#F00;"
+			rendered="#{vo.tourStatusCd ne 'A' and vo.tourStatusCd ne 'L' and vo.tourStatusCd ne 'F'
+					and vo.tourStatusCd ne 'I' and vo.tourStatusCd ne 'C' and vo.tourStatusCd ne 'N'
+					and vo.tourStatusCd ne 'R' and vo.tourStatusCd ne 'C1'}"/>
+	</p:column>
+	<p:column headerText="Tour Code" style="width:150px;">
+		<h:outputText value="#{vo.code}"/>
+	</p:column>
+	<p:column headerText="Tour Package Name">
+		<!-- <p:commandLink actionListener="#{salesBean.handleShowBookingList(vo)}" oncomplete="varBookingListDialog.show()" update=":idBookingListDialog" style="color:#CC2EFA;"> -->
+			<h:outputText value="#{vo.duration}" rendered="false"/>
+			<h:outputText value="PD " rendered="#{vo.isDepositPaid}"/><h:outputText value="#{vo.numDays}D/#{vo.numNights}N "/><h:outputText value="[#{vo.desc}]" style="color:#FF0000;" rendered="#{not empty vo.desc}"/>
+			<h:outputText value="[#{vo.prn}]" style="color:#0040FF;" rendered="#{not empty vo.prn}"/><h:outputText value="[S]" style="font-weight:bold; color:#{vo.isIssuedS ? '#FF0000' : '#638604'}" rendered="#{vo.travelInsS}"/><h:outputText value="[F]" style="font-weight:bold; color:#{vo.isIssuedF ? '#FF0000' : '#638604'}" rendered="#{vo.travelInsF}"/><h:outputText value="[#{vo.dailyCode}]" style="color:#000000;"  rendered="#{not empty vo.dailyCode}"/>
+			<p:graphicImage value="/img/push.gif" rendered="#{vo.isPush and (vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L')}"/>
+		<!-- </p:commandLink> -->
+	</p:column>
+	<p:column headerText="Cruise" style="width:60px;">
+		<h:outputText value="#{vo.airlineCode}"/>
+	</p:column>
+	<p:column headerText="Misc." style="width:90px;">
+		<h:outputText value="#{vo.miscAdt}" rendered="#{vo.miscAdt % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/></h:outputText>
+		<h:outputText value="#{vo.miscAdt}" rendered="#{vo.miscAdt % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/></h:outputText>
+	</p:column>
+	<p:column headerText="Info" style="width:30px;">
+		<p:commandLink actionListener="#{salesBean.handleTourDepSelect(vo)}" oncomplete="varTourDepMoreInfoDialog.show()" update=":idTourDepMoreInfoDialog">
+			<p:graphicImage value="/img/more.png"/>
+		</p:commandLink>
+	</p:column>
+	
+	<p:rowExpansion>
+		<p:dataTable value="#{vo.tourCruiseCabinList}" var="cabinVO">
+			<p:columnGroup type="header">
+				<p:row>
+					<p:column rowspan="2" headerText="Cabin"/>
+					<p:column colspan="2" headerText="Discount"/>
+					<p:column colspan="4" headerText="Allotment"/>
+					<p:column colspan="4" headerText="Adult (RM)"/>
+					<p:column colspan="2" headerText="Child (RM)"/>
+					<p:column colspan="1" headerText="Infant (RM)"/>
+				</p:row>
+				<p:row>
+					<p:column headerText="Level 1"/>
+					<p:column headerText="Level 2"/>
+					<p:column headerText="Cabin" style="width:70px;"/>
+					<p:column headerText="Sold" style="width:70px;"/>
+					<p:column headerText="Reserved" style="width:70px;"/>
+					<p:column headerText="Available" style="width:70px;"/>
+					<p:column headerText="1ST/2ND"/>
+					<p:column headerText="3RD"/>
+					<p:column headerText="4TH"/>
+					<p:column headerText="SGL"/>
+					<p:column headerText="3RD"/>
+					<p:column headerText="4TH"/>
+					<p:column headerText="INF"/>
+				</p:row>
+			</p:columnGroup>
+			
+			<p:column>
+				<h:outputText value="#{cabinVO.cruiseCabinCd}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.discountLvl1 gt 0 ? (cabinVO.discountLvl1 * -1) : 0}">
+					<f:convertNumber pattern="#,##0"/>
+				</h:outputText>
+				<h:outputText value=" (#{cabinVO.discountLvl1Pax})" style="color: red;"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.discountLvl2 gt 0 ? (cabinVO.discountLvl2 * -1) : 0}">
+					<f:convertNumber pattern="#,##0"/>
+				</h:outputText>
+				<h:outputText value=" (#{cabinVO.discountLvl2Pax})" style="color: red;"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.cabinAllotment}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.totalConfirmedCabin}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.totalKivCabin}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.cabinAllotment - cabinVO.totalConfirmedCabin - cabinVO.totalKivCabin}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.priceTwn}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price3}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price4}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.priceSgl}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price3Chd}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price4Chd}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.priceInf}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+		</p:dataTable>
+	</p:rowExpansion>
+</p:dataTable>
+<!-- <p:dataTable id="idTourDepList" value="#{salesBean.tourDepList}" var="vo" rowStyleClass="#{vo.groupColor eq 0 ? 'group-color-one' : 'group-color-two'}"
+	rowKey="#{vo.id}" selectionMode="single">
+	<f:facet name="header">
+		<h:panelGrid columns="1">
+			<h:outputText value="#{salesBean.tourPkgVO.nameEn}"/>
+			<h:outputText value=" #{salesBean.tourPkgVO.nameOther}" rendered="#{not empty salesBean.tourPkgVO.nameOther}"/>
+			<h:outputText value=" #{salesBean.tourPkgVO.nameZh}" rendered="#{not empty salesBean.tourPkgVO.nameZh}"/>
+			<h:outputText value="Sector Type: #{salesBean.tourPkgVO.tourPkgCountryVO.regionName}" rendered="#{not empty salesBean.tourPkgVO.tourPkgCountryVO.regionName}"/>
+			<h:outputText value="Sector: #{salesBean.tourPkgVO.tourPkgCountryVO.countryName}" rendered="#{not empty salesBean.tourPkgVO.tourPkgCountryVO.countryName}"/>
+			<h:outputText value="Location Tag: #{salesBean.tourPkgVO.tourPkgCountryVO.cityName}" rendered="#{salesBean.tourPkgVO.tourPkgCountryVO.countryName}"/>
+		</h:panelGrid>
+	</f:facet>
+	
+	<p:columnGroup type="header">
+		<p:row>
+			<p:column rowspan="2" headerText="Seq No" width="40"/>
+			<p:column rowspan="2" headerText="Date" width="80"/>
+			<p:column rowspan="2" headerText="Status" width="60"/>
+			<p:column rowspan="2" headerText="Tour Code" width="130"/>
+			<p:column rowspan="2" headerText="Tour Package Name" width="160"/>
+			<p:column rowspan="2" headerText="Airline" width="40"/>
+			<p:column colspan="2" headerText="Discount Level"/>
+			<p:column colspan="5" headerText="Seat Allotment"/>
+			<p:column colspan="2" headerText="Adult Price (RM)"/>
+			<p:column colspan="3" headerText="Child Price (RM)"/>
+			<p:column rowspan="2" headerText="MISC Charges&lt;br/&gt;ADT/CHD" width="80"/>
+			<p:column rowspan="2" headerText="Normal&lt;br/&gt;AC/SI" width="70"/>
+			<p:column colspan="2" headerText="Itinery"/>
+			<p:column rowspan="2" headerText="More&lt;br/&gt;Info" width="30"/>
+			<p:column rowspan="2" headerText="Mail" width="30"/>
+		</p:row>
+		<p:row>
+			<p:column headerText="Level 1" width="50"/>
+			<p:column headerText="Level 2" width="50"/>
+			<p:column headerText="All" width="30" style="font-size:10px;"/>
+			<p:column headerText="Sold" width="30" style="font-size:10px;"/>
+			<p:column headerText="KIV" width="30" style="font-size:10px;"/>
+			<p:column headerText="Bal" width="30" style="font-size:10px;"/>
+			<p:column headerText="GA" width="30" style="font-size:10px;"/>
+			<p:column headerText="TWN" width="55" style="font-size:10px;"/>
+			<p:column headerText="SGL" width="55" style="font-size:10px;"/>
+			<p:column headerText="CTW" width="55" style="font-size:10px;"/>
+			<p:column headerText="CEB" width="55" style="font-size:10px;"/>
+			<p:column headerText="CNB" width="55" style="font-size:10px;"/>
+			<p:column headerText="EN" width="25" style="font-size:10px;"/>
+			<p:column headerText="CN" width="25" style="font-size:10px;"/>
+		</p:row>
+	</p:columnGroup>
+	<p:column width="40">
+		<h:outputText value="#{vo.seqNo}"/>
+	</p:column>
+	<p:column width="80" style="padding: 8px 0;"><h:outputText value="#{vo.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText>
+	<ui:repeat value="#{vo.departDateBadgeList}" var="badgeVO">
+			<h:outputText value="#{badgeVO}" style="display:inline-block; background:white; color:green; border:1px solid green; border-radius: 5px; padding:2px; margin:2px;"  rendered="#{not empty vo.departDateBadgeList}"/>
+		</ui:repeat>
+	</p:column>
+	<p:column width="60">
+		<p:commandLink id="idBookButton" actionListener="#{salesBean.handleTourDepSelect(vo)}" update=":idAddBookingDialog" oncomplete="varAddBookingDialog.show()" 
+		rendered="#{not salesBean.isAgentViewOnly and (vo.accCodeStatusCd eq 'Y' and (vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L' or vo.tourStatusCd eq 'C1'))}">
+			<p:graphicImage value="/img/book_button_a.png" rendered="#{vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'C1'}"/>
+			<p:graphicImage value="/img/book_button_l.png" rendered="#{vo.tourStatusCd eq 'L'}"/>
+			p:tooltip for="idBookButton" showEffect="slide" hideEffect="slide"
+				value="TWN=#{salesBean.getDoubleDecimalFormat('#,##0', vo.fullTwn + vo.miscAdt)}&nbsp;&nbsp;&nbsp;SGL=#{salesBean.getDoubleDecimalFormat('#,##0', vo.fullSgl + vo.miscAdt)}&nbsp;&nbsp;&nbsp;CTW=#{salesBean.getDoubleDecimalFormat('#,##0', vo.fullCtw + vo.miscChd)}&nbsp;&nbsp;&nbsp;CWB=#{salesBean.getDoubleDecimalFormat('#,##0', vo.fullCeb + vo.miscChd)}&nbsp;&nbsp;&nbsp;CNB=#{salesBean.getDoubleDecimalFormat('#,##0', vo.fullCnb + vo.miscChd)}"/
+			style="white-space: pre-wrap"
+			<p:tooltip for="idBookButton">
+				<p:outputLabel value="#{salesBean.getCalculatedAmount(vo)}" style="white-space: pre-wrap"/>
+				TWN=#{salesBean.getDoubleDecimalFormat(((vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullTwn + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				SGL=#{salesBean.getDoubleDecimalFormat(((vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullSgl + vo.miscAdt - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				CTW=#{salesBean.getDoubleDecimalFormat(((vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCtw + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				<br/>
+				CWB=#{salesBean.getDoubleDecimalFormat(((vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCeb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				CNB=#{salesBean.getDoubleDecimalFormat(((vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) % 1 &gt; 0 ? '#,##0.00' : '#,##0', ((vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))) lt 0) ? 0 : (vo.fullCnb + vo.miscChd - (vo.discountPax1 > 0 ? vo.discount1 : (vo.discountPax2 > 0 ? vo.discount2 : 0))))}
+				<span style="color:#F00;">#{(vo.discountPax1 > 0 or vo.discountPax2 > 0) ? (vo.discountPax1 > 0 ? '('.concat(vo.discountPax1).concat(')') : '('.concat(vo.discountPax2).concat(')')) : ''}</span>
+				<h:outputLabel style="font-size:10px; color:#F00;" rendered="#{(vo.discountPax1 gt 0 and vo.discount1 gt 0) or (vo.discountPax2 gt 0 and vo.discount2 gt 0)}">
+					<br/><br/>
+					**Discount calculation already included
+				</h:outputLabel>
+			</p:tooltip>
+		</p:commandLink>
+		<h:outputText value="Not Ready" style="text-transform:uppercase; color:#F00;" rendered="#{vo.accCodeStatusCd eq 'N'}"/>
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd ne 'F' and vo.tourStatusCd ne 'A' and vo.tourStatusCd ne 'L' and vo.tourStatusCd ne 'C1'}"/>
+		<h:outputText value="Full" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd eq 'F'}"/>
+	</p:column>
+	<p:column width="130"><h:outputText value="#{vo.code}"/></p:column>
+	<p:column width="160">
+		<p:commandLink actionListener="#{salesBean.handleShowBookingList(vo)}" oncomplete="varBookingListDialog.show()" update=":idBookingListDialog" style="color:#CC2EFA;">
+			<h:outputText value="PD " rendered="#{vo.isDepositPaid}"/><h:outputText value="#{vo.numDays}D/#{vo.numNights}N "/><h:outputText value=" [#{vo.desc}]" style="color:#FF0000;" rendered="#{not empty vo.desc}"/>
+			<h:outputText value="[S]" style="font-weight:bold; color:#{vo.isIssuedS ? '#FF0000' : '#638604'}" rendered="#{vo.travelInsS}"/><h:outputText value="[F]" style="font-weight:bold; color:#{vo.isIssuedF ? '#FF0000' : '#638604'}" rendered="#{vo.travelInsF}"/><h:outputText value="[#{vo.dailyCode}]" style="color:#000000;"  rendered="#{not empty vo.dailyCode}"/>
+			<p:graphicImage value="/img/push.gif" rendered="#{vo.isPush and (vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L')}"/>
+		</p:commandLink>
+	</p:column>
+	<p:column width="40"><h:outputText value="#{vo.airlineCode}"/></p:column>
+	<p:column width="50">
+		<h:outputText value="#{vo.discount1 gt 0 ? vo.discount1 * -1 : vo.discount1}" rendered="#{vo.discount1 % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText>
+		<h:outputText value="#{vo.discount1 gt 0 ? vo.discount1 * -1 : vo.discount1}" rendered="#{vo.discount1 % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText>
+		<h:outputText value=" (#{vo.discountPax1})" style="color: red;"/>
+	</p:column>
+	<p:column width="50">
+		<h:outputText value="#{vo.discount2 gt 0 ? vo.discount2 * -1 : vo.discount2}" rendered="#{vo.discount2 % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText>
+		<h:outputText value="#{vo.discount2 gt 0 ? vo.discount2 * -1 : vo.discount2}" rendered="#{vo.discount2 % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText>
+		<h:outputText value=" (#{vo.discountPax2})" style="color: red;"/>
+	</p:column>
+	<p:column width="30"><h:outputText value="#{vo.seatAllot}"/></p:column>
+	<p:column width="30"><h:outputText value="#{vo.tfairPax + vo.agentPax + vo.inHsePax + vo.on9BookingPax}"/></p:column>
+	<p:column width="30"><h:outputText value="#{vo.kivPax}"/></p:column>
+	<p:column width="30"><h:outputText value="#{vo.seatAllot - vo.reservedSeat - vo.tourManagerPax - (vo.tfairPax + vo.agentPax + vo.inHsePax + vo.kivPax + vo.on9BookingPax)}" style="#{(vo.seatAllot - vo.reservedSeat - vo.tourManagerPax - (vo.tfairPax + vo.agentPax + vo.inHsePax + vo.kivPax + vo.on9BookingPax)) eq 0 ? 'color:#f00; font-weight:bold;' : ''}"/></p:column>
+	<p:column width="30"><h:outputText value="#{vo.totalGA}"/></p:column>
+	<p:column width="55">
+		<h:outputText value="#{vo.fullTwn}" rendered="#{vo.fullTwn % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText>
+		<h:outputText value="#{vo.fullTwn}" rendered="#{vo.fullTwn % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText>
+	</p:column>
+	<p:column width="55">
+		<h:outputText value="#{vo.fullSgl}" rendered="#{vo.fullSgl % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText>
+		<h:outputText value="#{vo.fullSgl}" rendered="#{vo.fullSgl % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText>
+	</p:column>
+	<p:column width="55">
+		<h:outputText value="#{vo.fullCtw}" rendered="#{vo.fullCtw % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText>
+		<h:outputText value="#{vo.fullCtw}" rendered="#{vo.fullCtw % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText>
+	</p:column>
+	<p:column width="55">
+		<h:outputText value="#{vo.fullCeb}" rendered="#{vo.fullCeb % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText>
+		<h:outputText value="#{vo.fullCeb}" rendered="#{vo.fullCeb % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText>
+	</p:column>
+	<p:column width="55">
+		<h:outputText value="#{vo.fullCnb}" rendered="#{vo.fullCnb % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText>
+		<h:outputText value="#{vo.fullCnb}" rendered="#{vo.fullCnb % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText>
+	</p:column>
+	<p:column width="110">
+		<h:outputText value="#{vo.miscAdt}" rendered="#{vo.miscAdt % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/></h:outputText><h:outputText value="/" rendered="#{vo.miscAdt % 1 &gt; 0}"/><h:outputText value="#{vo.miscChd}" rendered="#{vo.miscChd % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText>
+		<h:outputText value="#{vo.miscAdt}" rendered="#{vo.miscAdt % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/></h:outputText><h:outputText value="/" rendered="#{vo.miscAdt % 1 &lt;= 0}"/><h:outputText value="#{vo.miscChd}" rendered="#{vo.miscChd % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText>
+	</p:column>
+	<p:column width="90">
+		<h:outputText value="#{vo.cnaAdt}" rendered="#{vo.cnaAdt % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText><h:outputText value="/" rendered="#{vo.cnaAdt % 1 &gt; 0}"/><h:outputText value="#{vo.csiAdt}" rendered="#{vo.csiAdt % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/> </h:outputText>
+		<h:outputText value="#{vo.cnaAdt}" rendered="#{vo.cnaAdt % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText><h:outputText value="/" rendered="#{vo.cnaAdt % 1 &lt;= 0}"/><h:outputText value="#{vo.csiAdt}" rendered="#{vo.csiAdt % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/> </h:outputText>
+	</p:column>
+	<p:column width="25">
+		<ui:repeat value="#{vo.tourItineryList}" var="itineryVO">
+			<h:outputLink target="_blank" value="#{request.contextPath}#{itineryVO.path}/#{salesBean.urlEncoder(itineryVO.name)}" rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'EN'}"><p:graphicImage value="/img/pdf.png"/></h:outputLink>
+		</ui:repeat>
+	</p:column>
+	<p:column width="25">
+		<ui:repeat value="#{vo.tourItineryList}" var="itineryVO">
+			<h:outputLink target="_blank" value="#{request.contextPath}#{itineryVO.path}/#{salesBean.urlEncoder(itineryVO.name)}" rendered="#{itineryVO.typeCd eq 'CUST' and itineryVO.langCd eq 'ZH'}"><p:graphicImage value="/img/pdf.png"/></h:outputLink>
+		</ui:repeat>
+	</p:column>
+	<p:column width="30">
+		<p:commandLink actionListener="#{salesBean.handleTourDepSelect(vo)}" oncomplete="varTourDepMoreInfoDialog.show()" update=":idTourDepMoreInfoDialog">
+			<p:graphicImage value="/img/more.png"/>
+		</p:commandLink>
+	</p:column>
+	<p:column width="30">
+		<h:outputLink value="#{request.contextPath}/app/emailtmp/bookingemailtmp?tourDepId=#{vo.id}&amp;withOutPax=Y" target="_blank">
+			<p:graphicImage value="/img/mail.png"/>
+		</h:outputLink>
+	</p:column>
+</p:dataTable> -->
+</div>
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" onclick="varTourDepListDialog.hide()"/>
+</h:panelGrid>
+</ui:composition>

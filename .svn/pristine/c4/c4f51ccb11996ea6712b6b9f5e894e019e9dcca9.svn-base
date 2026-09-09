@@ -1,0 +1,151 @@
+package com.bcs.zsg.common.helper;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+import org.apache.commons.lang.StringUtils;
+import org.primefaces.json.JSONObject;
+
+import com.bcs.zsg.core.exception.BusinessException;
+
+public class HttpUtils {
+	
+	public static final String HTTP_GET = "GET";
+    public static final String HTTP_POST = "POST";
+    public static final String HTTP_PUT = "PUT";
+    public static final String HTTP_DELETE = "DELETE";
+	
+	public static int STATUS_CD_OK = 200;
+	public static int STATUS_CD_UNAUTHORIZED = 401;
+	public static int STATUS_CD_NOT_FOUND = 404;
+	public static int STATUS_CD_GATEWAY_TIMEOUT = 504;
+
+	static TrustManager[] trustAllCerts = new TrustManager[] {
+			new X509TrustManager() {
+				public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+					return null;
+				}
+	
+				public void checkClientTrusted(
+						java.security.cert.X509Certificate[] certs, String authType) {}
+	
+				public void checkServerTrusted(
+						java.security.cert.X509Certificate[] certs, String authType) {}
+			}
+	};
+
+	public static SSLContext getSslContext() throws NoSuchAlgorithmException, KeyManagementException {
+		SSLContext sc = SSLContext.getInstance("TLSv1.2");
+		sc.init(null, trustAllCerts, new java.security.SecureRandom());
+		return sc;
+	}
+
+	public static HttpsURLConnection openHttpsURLConnection(URL url, String requestMethod, String accessToken) throws IOException, KeyManagementException, NoSuchAlgorithmException {
+	    return openHttpsURLConnection(url, requestMethod, accessToken, "");
+	}
+
+	private static HttpsURLConnection openHttpsURLConnection(URL url, String requestMethod, String accessToken, JSONObject requestBody) throws IOException, KeyManagementException, NoSuchAlgorithmException {
+	    return openHttpsURLConnection(url, requestMethod, accessToken, requestBody.toString());
+	}
+
+	private static HttpsURLConnection openHttpsURLConnection(URL url, String requestMethod, String accessToken, String requestBody) throws IOException, KeyManagementException, NoSuchAlgorithmException {
+		// open connection
+	    HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+	    connection.setSSLSocketFactory(getSslContext().getSocketFactory());
+	    connection.setRequestMethod(requestMethod);
+	    
+	    // set headers
+	    connection.setRequestProperty("Accept", "application/json");
+	    connection.setRequestProperty("Accept-Language", "en");
+	    connection.setRequestProperty("Content-Type", "application/json");
+	    connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+	    
+	    // java.net.ProtocolException: cannot write to a URLConnection if doOutput=false - call setDoOutput(true)
+	    connection.setDoOutput(true);
+	    
+	    // set request body
+		if (StringUtils.isNotBlank(requestBody)) {
+			try (OutputStream os = connection.getOutputStream()) {
+				byte[] input = requestBody.getBytes("utf-8");
+				os.write(input, 0, input.length);
+			}
+		}
+	    
+	    return connection;
+	}
+	
+	public static HttpURLConnection openAuthAccessTokenHttpsURLConnection(URL url, String requestMethod, String requestBody)
+			throws IOException, KeyManagementException, NoSuchAlgorithmException, BusinessException {
+		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		connection.setRequestMethod("POST");
+		connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+		connection.setDoOutput(true);
+
+		try (OutputStream os = connection.getOutputStream()) {
+			byte[] input = requestBody.getBytes("utf-8");
+			os.write(input, 0, input.length);
+		}
+
+		return connection;
+	}
+	
+	public static HttpURLConnection openHttpURLConnection(URL url, String requestMethod, String accessToken) throws IOException, KeyManagementException, NoSuchAlgorithmException {
+	    return openHttpURLConnection(url, requestMethod, accessToken, "");
+	}
+
+	public static HttpURLConnection openHttpURLConnection(URL url, String requestMethod, String accessToken, JSONObject requestBody) throws IOException, KeyManagementException, NoSuchAlgorithmException {
+	    return openHttpURLConnection(url, requestMethod, accessToken, requestBody.toString());
+	}
+
+	public static HttpURLConnection openHttpURLConnection(URL url, String requestMethod, String accessToken, String requestBody) throws IOException, KeyManagementException, NoSuchAlgorithmException {
+		// open connection
+	    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+	    connection.setRequestMethod(requestMethod);
+	    
+	    // set headers
+	    connection.setRequestProperty("Accept", "application/json");
+	    connection.setRequestProperty("Accept-Language", "en");
+	    connection.setRequestProperty("Content-Type", "application/json");
+	    connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+	    
+	    // java.net.ProtocolException: cannot write to a URLConnection if doOutput=false - call setDoOutput(true)
+	    connection.setDoOutput(true);
+	    
+	    // set request body
+		if (StringUtils.isNotBlank(requestBody)) {
+			try (OutputStream os = connection.getOutputStream()) {
+				byte[] input = requestBody.getBytes("utf-8");
+				os.write(input, 0, input.length);
+			}
+		}
+	    
+	    return connection;
+	}
+
+	public static String getConnectionResponse(HttpURLConnection connection) throws UnsupportedEncodingException, IOException {
+		BufferedReader reader = new BufferedReader(new InputStreamReader(
+				connection.getResponseCode() > 299 ? connection.getErrorStream() : connection.getInputStream(), "utf-8"));
+		StringBuilder response = new StringBuilder();
+		String line;
+		while ((line = reader.readLine()) != null) {
+			response.append(line.trim());
+		}
+		reader.close();
+		
+		return response.toString();
+	}
+
+	
+}

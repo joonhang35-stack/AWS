@@ -1,0 +1,829 @@
+package com.bcs.zsg.purchase.vo;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+
+import com.bcs.zsg.acct.helper.EInvoiceProperties;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.acct.vo.JournalVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.core.vo.BaseVO;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.web.object.EInvoiceDocument;
+
+import oasis.names.specification.ubl.schema.xsd.invoice_21.InvoiceType;
+
+public class ExOrderBillVO extends BaseVO {
+	private static final long serialVersionUID = 1L;
+
+	private String code;
+	private String desc;
+	private String comments;
+	private String exReason;
+	private String supplierName;
+	private String overDue;
+	private String status;
+	private String cnNumber;
+	private Date billDt;
+	private Date dueDt;
+	private Date depDt;
+	private Date invoiceDt;
+	private Double billAmt;
+	private Double amtPaid = 0.0;
+	private Double curBal;
+	private Long id;
+	private Long companyId;
+	private Long eoId;
+	private Long tourId;
+	private Long idJournal;
+	private Long supplierId;
+	private Long idPayee;
+	private String payee;
+	private Long acctId;
+	private String supplierType;
+	private boolean select;
+	private Boolean draft;
+	private Boolean pending;
+	private Boolean paid;
+	private Boolean amended;
+	private Boolean cancelled;
+	private String paymentTerm;
+	private Double amtAllocate = 0.0;
+	private String taxCodeGroup = CommonConstant.TAX_CODE_GROUP_Y;
+	private Boolean isEInvoice; // user select is e inv or not
+	private String codePayment; // payment no of bill payment
+	
+	// The variables below is for view purposes only
+	private Date paymentDt;
+	private String chequeNo;
+	private boolean pmntMultiple;
+	private String tourCode;
+	private String tourDesc;
+	private String eoCode;
+	private String invoices;
+	private String beneficiaryName;
+	private List<BillPaymentVO> billPmntList = new ArrayList<BillPaymentVO>();
+	private List<AcctTransVO> acctTransList = new ArrayList<AcctTransVO>();
+	private List<ExOrderBillPersonVO> eoBillPersonList = new ArrayList<ExOrderBillPersonVO>();
+	private CountryVO countryVO;
+
+	// Report Used (A/P Detail Aging By Supplier)
+	private Integer aging;
+	private Double currentAmt = 0.0;
+	private Double days130Amt = 0.0;
+	private Double days3160Amt = 0.0;
+	private Double days6190Amt = 0.0;
+	private Double days91120Amt = 0.0;
+	// private Double days120AftAmt = 0.0;
+	private Double days121150Amt = 0.0;
+	private Double days150AftAmt = 0.0;
+	private Double advPaidAmt = 0.0;
+
+	// Purchases in advance report
+	private String acctCd;
+	private String acctSubCd;
+	private String acctDesc;
+	private String acctSubDesc;
+	private Double itemAmt;
+
+	// for Rounding and Tax
+	private AmountCalcViewVO amountCalcViewVO;
+
+	// E-Invoice API submission result
+	private String eInvoiceSubmissionUid; // e invoice api submission uid (one submission might include multiple
+											// documents)
+	private String eInvoiceDocumentUuid; // e invoice document uuid
+	private String eInvoiceStatus; // e invoice document submission status
+	private String eInvoiceErr; // e invoice document submission error
+
+	private EInvoiceDocument eInvoiceDocument;
+	private EInvoiceDocumentVO eInvoiceDocumentVO;
+	
+	// journal
+	private JournalVO journalVO;
+	private List<JournalVO> journalList;
+	
+	private InvoiceType invoiceType; // to record submitted info and write into db
+	
+	public String geteInvoiceErr() {
+		return eInvoiceErr;
+	}
+
+	public void seteInvoiceErr(String eInvoiceErr) {
+		this.eInvoiceErr = eInvoiceErr;
+	}
+
+	public InvoiceType getInvoiceType() {
+		return invoiceType;
+	}
+
+	public void setInvoiceType(InvoiceType invoiceType) {
+		this.invoiceType = invoiceType;
+	}
+
+	public Long getIdJournal() {
+		return idJournal;
+	}
+
+	public void setIdJournal(Long idJournal) {
+		this.idJournal = idJournal;
+	}
+
+	public JournalVO getJournalVO() {
+		return journalVO;
+	}
+
+	public void setJournalVO(JournalVO journalVO) {
+		this.journalVO = journalVO;
+	}
+
+	public List<JournalVO> getJournalList() {
+		return journalList;
+	}
+
+	public void setJournalList(List<JournalVO> journalList) {
+		this.journalList = journalList;
+	}
+
+	public String geteInvoiceValidationLink() {
+		if (eInvoiceDocument != null && StringUtils.isNotBlank(eInvoiceDocumentUuid) && StringUtils.isNotBlank(eInvoiceDocument.getLongId())) {
+			return EInvoiceProperties.getEnvBaseUrl() + eInvoiceDocumentUuid + "/share/" + eInvoiceDocument.getLongId();
+		} else if (eInvoiceDocumentVO != null && StringUtils.isNotBlank(eInvoiceDocumentUuid) && StringUtils.isNotBlank(eInvoiceDocumentVO.getLongId())) {
+			return EInvoiceProperties.getEnvBaseUrl() + eInvoiceDocumentUuid + "/share/" + eInvoiceDocumentVO.getLongId();
+		}
+		
+		return null;
+	}
+
+	public EInvoiceDocumentVO geteInvoiceDocumentVO() {
+		return eInvoiceDocumentVO;
+	}
+
+	public void seteInvoiceDocumentVO(EInvoiceDocumentVO eInvoiceDocumentVO) {
+		this.eInvoiceDocumentVO = eInvoiceDocumentVO;
+	}
+
+	public String geteInvoiceSubmissionUid() {
+		return eInvoiceSubmissionUid;
+	}
+
+	public void seteInvoiceSubmissionUid(String eInvoiceSubmissionUid) {
+		this.eInvoiceSubmissionUid = eInvoiceSubmissionUid;
+	}
+
+	public String geteInvoiceDocumentUuid() {
+		return eInvoiceDocumentUuid;
+	}
+
+	public void seteInvoiceDocumentUuid(String eInvoiceDocumentUuid) {
+		this.eInvoiceDocumentUuid = eInvoiceDocumentUuid;
+	}
+
+	public String geteInvoiceStatus() {
+		return eInvoiceStatus;
+	}
+
+	public void seteInvoiceStatus(String eInvoiceStatus) {
+		this.eInvoiceStatus = eInvoiceStatus;
+	}
+
+	public EInvoiceDocument geteInvoiceDocument() {
+		return eInvoiceDocument;
+	}
+
+	public void seteInvoiceDocument(EInvoiceDocument eInvoiceDocument) {
+		this.eInvoiceDocument = eInvoiceDocument;
+	}
+
+	public Boolean getIsEInvoice() {
+		return isEInvoice;
+	}
+
+	public void setIsEInvoice(Boolean isEInvoice) {
+		this.isEInvoice = isEInvoice;
+	}
+
+	public boolean getPmntMultiple() {
+		return pmntMultiple;
+	}
+
+	public void setPmntMultiple(boolean pmntMultiple) {
+		this.pmntMultiple = pmntMultiple;
+	}
+
+	public CountryVO getCountryVO() {
+		return countryVO;
+	}
+
+	public void setCountryVO(CountryVO countryVO) {
+		this.countryVO = countryVO;
+	}
+
+	public Date getPaymentDt() {
+		return paymentDt;
+	}
+
+	public void setPaymentDt(Date paymentDt) {
+		this.paymentDt = paymentDt;
+	}
+
+	public String getChequeNo() {
+		return chequeNo;
+	}
+
+	public void setChequeNo(String chequeNo) {
+		this.chequeNo = chequeNo;
+	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public void setCode(String code) {
+		this.code = code;
+	}
+
+	public String getDesc() {
+		return desc;
+	}
+
+	public void setDesc(String desc) {
+		this.desc = desc;
+	}
+
+	public String getComments() {
+		return comments;
+	}
+
+	public void setComments(String comments) {
+		this.comments = comments;
+	}
+
+	public String getExReason() {
+		return exReason;
+	}
+
+	public void setExReason(String exReason) {
+		this.exReason = exReason;
+	}
+
+	public Date getBillDt() {
+		return billDt;
+	}
+
+	public void setBillDt(Date billDt) {
+		this.billDt = billDt;
+	}
+
+	public Date getDueDt() {
+		return dueDt;
+	}
+
+	public void setDueDt(Date dueDt) {
+		this.dueDt = dueDt;
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public Long getEoId() {
+		return eoId;
+	}
+
+	public void setEoId(Long eoId) {
+		this.eoId = eoId;
+	}
+
+	public Long getTourId() {
+		return tourId;
+	}
+
+	public void setTourId(Long tourId) {
+		this.tourId = tourId;
+	}
+
+	public Long getSupplierId() {
+		return supplierId;
+	}
+
+	public void setSupplierId(Long supplierId) {
+		this.supplierId = supplierId;
+	}
+
+	public Long getIdPayee() {
+		return idPayee;
+	}
+
+	public void setIdPayee(Long idPayee) {
+		this.idPayee = idPayee;
+	}
+	
+	public String getPayee() {
+		return payee;
+	}
+
+	public void setPayee(String payee) {
+		this.payee = payee;
+	}
+
+	/**
+	 * @return the acctId
+	 */
+	public Long getAcctId() {
+		return acctId;
+	}
+
+	/**
+	 * @param acctId the acctId to set
+	 */
+	public void setAcctId(Long acctId) {
+		this.acctId = acctId;
+	}
+
+	public Double getBillAmt() {
+		return billAmt;
+	}
+
+	public void setBillAmt(Double billAmt) {
+		this.billAmt = billAmt;
+	}
+
+	public String getSupplierName() {
+		return supplierName;
+	}
+
+	public void setSupplierName(String supplierName) {
+		this.supplierName = supplierName;
+	}
+
+	public Boolean getDraft() {
+		return draft;
+	}
+
+	public void setDraft(Boolean draft) {
+		this.draft = draft;
+	}
+
+	public Boolean getPending() {
+		return pending;
+	}
+
+	public void setPending(Boolean pending) {
+		this.pending = pending;
+	}
+
+	public Boolean getPaid() {
+		return paid;
+	}
+
+	public void setPaid(Boolean paid) {
+		this.paid = paid;
+	}
+
+	public Boolean getAmended() {
+		return amended;
+	}
+
+	public void setAmended(Boolean amended) {
+		this.amended = amended;
+	}
+
+	public Boolean getCancelled() {
+		return cancelled;
+	}
+
+	public void setCancelled(Boolean cancelled) {
+		this.cancelled = cancelled;
+	}
+
+	public Double getAmtPaid() {
+		return amtPaid;
+	}
+
+	public void setAmtPaid(Double amtPaid) {
+		this.amtPaid = amtPaid;
+	}
+
+	public Double getCurBal() {
+		return curBal;
+	}
+
+	public void setCurBal(Double curBal) {
+		this.curBal = curBal;
+	}
+
+	public String getOverDue() {
+		return overDue;
+	}
+
+	public void setOverDue(String overDue) {
+		this.overDue = overDue;
+	}
+
+	public boolean isSelect() {
+		return select;
+	}
+
+	public void setSelect(boolean select) {
+		this.select = select;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public Long getCompanyId() {
+		return companyId;
+	}
+
+	public void setCompanyId(Long companyId) {
+		this.companyId = companyId;
+	}
+
+	public String getCnNumber() {
+		return cnNumber;
+	}
+
+	public void setCnNumber(String cnNumber) {
+		this.cnNumber = cnNumber;
+	}
+
+	public Date getDepDt() {
+		return depDt;
+	}
+
+	public void setDepDt(Date depDt) {
+		this.depDt = depDt;
+	}
+
+	public Date getInvoiceDt() {
+		return invoiceDt;
+	}
+
+	public void setInvoiceDt(Date invoiceDt) {
+		this.invoiceDt = invoiceDt;
+	}
+
+	public String getPaymentTerm() {
+		return paymentTerm;
+	}
+
+	public void setPaymentTerm(String PaymentTerm) {
+		this.paymentTerm = PaymentTerm;
+	}
+
+	public double getAmtAllocate() {
+		return this.amtAllocate;
+	}
+
+	public void setAmtAllocate(double amtAllocate) {
+		this.amtAllocate = amtAllocate;
+	}
+
+	public String getSupplierType() {
+		return supplierType;
+	}
+
+	public void setSupplierType(String supplierType) {
+		this.supplierType = supplierType;
+	}
+
+	public String getTourCode() {
+		return tourCode;
+	}
+
+	public void setTourCode(String tourCode) {
+		this.tourCode = tourCode;
+	}
+
+	/**
+	 * @return the tourDesc
+	 */
+	public String getTourDesc() {
+		return tourDesc;
+	}
+
+	/**
+	 * @param tourDesc the tourDesc to set
+	 */
+	public void setTourDesc(String tourDesc) {
+		this.tourDesc = tourDesc;
+	}
+
+	/**
+	 * @return the eoCode
+	 */
+	public String getEoCode() {
+		return eoCode;
+	}
+
+	/**
+	 * @param eoCode the eoCode to set
+	 */
+	public void setEoCode(String eoCode) {
+		this.eoCode = eoCode;
+	}
+
+	/**
+	 * @return the invoices
+	 */
+	public String getInvoices() {
+		return invoices;
+	}
+
+	/**
+	 * @param invoices the invoices to set
+	 */
+	public void setInvoices(String invoices) {
+		this.invoices = invoices;
+	}
+
+	/**
+	 * @return the billPmntList
+	 */
+	public List<BillPaymentVO> getBillPmntList() {
+		return billPmntList;
+	}
+
+	/**
+	 * @param billPmntList the billPmntList to set
+	 */
+	public void setBillPmntList(List<BillPaymentVO> billPmntList) {
+		this.billPmntList = billPmntList;
+	}
+
+	/**
+	 * @return the acctTransList
+	 */
+	public List<AcctTransVO> getAcctTransList() {
+		return acctTransList;
+	}
+
+	/**
+	 * @param acctTransList the acctTransList to set
+	 */
+	public void setAcctTransList(List<AcctTransVO> acctTransList) {
+		this.acctTransList = acctTransList;
+	}
+
+	/**
+	 * @return the amountCalcViewVO
+	 */
+	public AmountCalcViewVO getAmountCalcViewVO() {
+		return amountCalcViewVO;
+	}
+
+	/**
+	 * @param amountCalcViewVO the amountCalcViewVO to set
+	 */
+	public void setAmountCalcViewVO(AmountCalcViewVO amountCalcViewVO) {
+		this.amountCalcViewVO = amountCalcViewVO;
+	}
+
+	/**
+	 * @return the taxCodeGroup
+	 */
+	public String getTaxCodeGroup() {
+		return taxCodeGroup;
+	}
+
+	/**
+	 * @param taxCodeGroup the taxCodeGroup to set
+	 */
+	public void setTaxCodeGroup(String taxCodeGroup) {
+		this.taxCodeGroup = taxCodeGroup;
+	}
+
+	/**
+	 * @return the aging
+	 */
+	public Integer getAging() {
+		return aging;
+	}
+
+	/**
+	 * @param aging the aging to set
+	 */
+	public void setAging(Integer aging) {
+		this.aging = aging;
+	}
+
+	/**
+	 * @return the currentAmt
+	 */
+	public Double getCurrentAmt() {
+		return currentAmt;
+	}
+
+	/**
+	 * @param currentAmt the currentAmt to set
+	 */
+	public void setCurrentAmt(Double currentAmt) {
+		this.currentAmt = currentAmt;
+	}
+
+	/**
+	 * @return the days3160Amt
+	 */
+	public Double getDays3160Amt() {
+		return days3160Amt;
+	}
+
+	/**
+	 * @param days3160Amt the days3160Amt to set
+	 */
+	public void setDays3160Amt(Double days3160Amt) {
+		this.days3160Amt = days3160Amt;
+	}
+
+	/**
+	 * @return the days6190Amt
+	 */
+	public Double getDays6190Amt() {
+		return days6190Amt;
+	}
+
+	/**
+	 * @param days6190Amt the days6190Amt to set
+	 */
+	public void setDays6190Amt(Double days6190Amt) {
+		this.days6190Amt = days6190Amt;
+	}
+
+	/**
+	 * @return the days91120Amt
+	 */
+	public Double getDays91120Amt() {
+		return days91120Amt;
+	}
+
+	/**
+	 * @param days91120Amt the days91120Amt to set
+	 */
+	public void setDays91120Amt(Double days91120Amt) {
+		this.days91120Amt = days91120Amt;
+	}
+
+	/**
+	 * @return the days130Amt
+	 */
+	public Double getDays130Amt() {
+		return days130Amt;
+	}
+
+	/**
+	 * @param days130Amt the days130Amt to set
+	 */
+	public void setDays130Amt(Double days130Amt) {
+		this.days130Amt = days130Amt;
+	}
+
+	/**
+	 * @return the days121150Amt
+	 */
+	public Double getDays121150Amt() {
+		return days121150Amt;
+	}
+
+	/**
+	 * @param days121150Amt the days121150Amt to set
+	 */
+	public void setDays121150Amt(Double days121150Amt) {
+		this.days121150Amt = days121150Amt;
+	}
+
+	/**
+	 * @return the days150AftAmt
+	 */
+	public Double getDays150AftAmt() {
+		return days150AftAmt;
+	}
+
+	/**
+	 * @param days150AftAmt the days150AftAmt to set
+	 */
+	public void setDays150AftAmt(Double days150AftAmt) {
+		this.days150AftAmt = days150AftAmt;
+	}
+
+	/**
+	 * @return the advPaidAmt
+	 */
+	public Double getAdvPaidAmt() {
+		return advPaidAmt;
+	}
+
+	/**
+	 * @param advPaidAmt the advPaidAmt to set
+	 */
+	public void setAdvPaidAmt(Double advPaidAmt) {
+		this.advPaidAmt = advPaidAmt;
+	}
+
+	/**
+	 * @return the acctCd
+	 */
+	public String getAcctCd() {
+		return acctCd;
+	}
+
+	/**
+	 * @param acctCd the acctCd to set
+	 */
+	public void setAcctCd(String acctCd) {
+		this.acctCd = acctCd;
+	}
+
+	/**
+	 * @return the acctSubCd
+	 */
+	public String getAcctSubCd() {
+		return acctSubCd;
+	}
+
+	/**
+	 * @param acctSubCd the acctSubCd to set
+	 */
+	public void setAcctSubCd(String acctSubCd) {
+		this.acctSubCd = acctSubCd;
+	}
+
+	/**
+	 * @return the acctDesc
+	 */
+	public String getAcctDesc() {
+		return acctDesc;
+	}
+
+	/**
+	 * @param acctDesc the acctDesc to set
+	 */
+	public void setAcctDesc(String acctDesc) {
+		this.acctDesc = acctDesc;
+	}
+
+	/**
+	 * @return the acctSubDesc
+	 */
+	public String getAcctSubDesc() {
+		return acctSubDesc;
+	}
+
+	/**
+	 * @param acctSubDesc the acctSubDesc to set
+	 */
+	public void setAcctSubDesc(String acctSubDesc) {
+		this.acctSubDesc = acctSubDesc;
+	}
+
+	/**
+	 * @return the itemAmt
+	 */
+	public Double getItemAmt() {
+		return itemAmt;
+	}
+
+	/**
+	 * @param itemAmt the itemAmt to set
+	 */
+	public void setItemAmt(Double itemAmt) {
+		this.itemAmt = itemAmt;
+	}
+
+	public String getBeneficiaryName() {
+		return beneficiaryName;
+	}
+
+	public void setBeneficiaryName(String beneficiaryName) {
+		this.beneficiaryName = beneficiaryName;
+	}
+
+	public List<ExOrderBillPersonVO> getEoBillPersonList() {
+		return eoBillPersonList;
+	}
+
+	public void setEoBillPersonList(List<ExOrderBillPersonVO> eoBillPersonList) {
+		this.eoBillPersonList = eoBillPersonList;
+	}
+	
+	public String getCodePayment() {
+	    return codePayment;
+	}
+
+	public void setCodePayment(String codePayment) {
+	    this.codePayment = codePayment;
+	}
+}

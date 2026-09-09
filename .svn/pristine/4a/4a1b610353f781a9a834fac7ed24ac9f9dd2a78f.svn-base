@@ -1,0 +1,329 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<p:growl id="msg" />
+
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varEInvoiceDialog.show();
+			} else {
+				varEInvoiceDialog.hide();
+			}
+		}
+	</script>
+
+	<style></style>
+
+	<!-- Invoice -->
+	<p:panelGrid rendered="#{salesBean.docTypeCd eq 'I'}">
+		<p:row>
+			<p:column style="width:120px;">Document UUID</p:column>
+			<p:column style="width:320px;">
+				<p:outputLabel value="#{salesBean.invoiceVO.eInvoiceDocumentUuid}"></p:outputLabel>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>Submission ID</p:column>
+			<p:column>
+				<p:outputLabel value="#{salesBean.invoiceVO.eInvoiceSubmissionUid}"></p:outputLabel>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>Status</p:column>
+			<p:column>
+				<p:outputLabel value="#{salesBean.invoiceVO.eInvoiceStatus}"></p:outputLabel>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{salesBean.invoiceVO.eInvoiceStatus eq 'Invalid'}">
+			<p:column>Error</p:column>
+			<p:column>
+				<p:panelGrid>
+					<c:forEach
+						items="#{salesBean.invoiceVO.eInvoiceDocument.validationResults.validationSteps}"
+						var="step">
+						<p:row rendered="#{step.status eq 'Invalid'}">
+							<p:column style="padding-left: 0; text-decoration: underline;">
+								<p:outputLabel>#{step.name}</p:outputLabel>
+							</p:column>
+						</p:row>
+						<c:forEach items="#{step.error.innerError}" var="innerErr">
+							<p:row>
+								<p:column style="padding-left: 0; max-width: 200px">#{innerErr.error}</p:column>
+							</p:row>
+						</c:forEach>
+					</c:forEach>
+				</p:panelGrid>
+			</p:column>
+		</p:row>
+		<p:row></p:row>
+		<p:row rendered="#{salesBean.invoiceVO.eInvoiceDocument ne null or 
+			salesBean.invoiceVO.eInvoiceDocumentVO ne null and salesBean.invoiceVO.eInvoiceDocumentUuid ne null and salesBean.invoiceVO.eInvoiceDocumentVO.longId ne null}">
+			<p:column colspan="2">
+				Copy validation link <p:commandLink id="idCopyButton"
+					onclick="navigator.clipboard.writeText('#{salesBean.invoiceVO.eInvoiceValidationLink}');"
+					update="@form" styleClass="ui-icon ui-icon-copy" global="false" style="display: inline-block;"
+					process="@this">
+				</p:commandLink>
+				<p:tooltip for="idCopyButton">Click to Copy</p:tooltip>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{not empty salesBean.invoiceVO.eInvoiceDocumentVO and not empty salesBean.invoiceVO.eInvoiceDocumentVO.qrCodeStr}">
+			<p:column>
+				<h:graphicImage rendered="#{not empty salesBean.invoiceVO.eInvoiceDocumentVO.qrCodeStr}" value="data:image/png;base64,#{salesBean.invoiceVO.eInvoiceDocumentVO.qrCodeStr}" 
+					width="100" height="100" />
+			</p:column>
+			<p:column></p:column>
+		</p:row>
+		<p:row rendered="#{not empty salesBean.invoiceVO.eInvoiceErr}">
+			<p:column>Error</p:column>
+			<p:column>
+				<p:outputLabel value="#{salesBean.invoiceVO.eInvoiceErr}" rendered="#{not empty salesBean.invoiceVO.eInvoiceErr}"></p:outputLabel>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+
+	<!-- Credit Note - Credit Note Info -->
+	<p:panel header="Credit Note" rendered="#{salesBean.docTypeCd eq 'C'}">
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:120px;">Document UUID</p:column>
+				<p:column style="width:320px;">
+					<p:outputLabel value="#{salesBean.invoiceVO.eInvoiceDocumentUuid}"></p:outputLabel>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>Submission ID</p:column>
+				<p:column>
+					<p:outputLabel value="#{salesBean.invoiceVO.eInvoiceSubmissionUid}"></p:outputLabel>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>Status</p:column>
+				<p:column>
+					<p:outputLabel value="#{salesBean.invoiceVO.eInvoiceStatus}"></p:outputLabel>
+				</p:column>
+			</p:row>
+			<p:row rendered="#{salesBean.invoiceVO.eInvoiceStatus eq 'Invalid'}">
+				<p:column>Error</p:column>
+				<p:column>
+					<p:panelGrid>
+						<c:forEach
+							items="#{salesBean.invoiceVO.eInvoiceDocument.validationResults.validationSteps}"
+							var="step">
+							<p:row rendered="#{step.status eq 'Invalid'}">
+								<p:column style="padding-left: 0; text-decoration: underline;">
+									<p:outputLabel>#{step.name}</p:outputLabel>
+								</p:column>
+							</p:row>
+							<c:forEach items="#{step.error.innerError}" var="innerErr">
+								<p:row>
+									<p:column style="padding-left: 0; max-width: 200px">#{innerErr.error}</p:column>
+								</p:row>
+							</c:forEach>
+						</c:forEach>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row></p:row>
+			<p:row rendered="#{salesBean.invoiceVO.eInvoiceDocument ne null}">
+				<p:column colspan="2">
+					Copy validation link <p:commandLink id="idCopyButton1"
+						onclick="navigator.clipboard.writeText('#{salesBean.invoiceVO.eInvoiceValidationLink}');"
+						update="@form" styleClass="ui-icon ui-icon-copy" global="false" style="display: inline-block;"
+						process="@this">
+					</p:commandLink>
+					<p:tooltip for="idCopyButton1">Click to Copy</p:tooltip>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<h:panelGrid columns="2" style="width: 1px; margin-top: 15px" rendered="#{salesBean.invPmntAuthVO.eInvoice}">
+			<!-- <p:commandButton styleClass="nowrap" value="Submit Document"
+				actionListener="#{salesBean.submitEInvoice}" process="@this"
+				update=":idAddInvoiceForm:msg :idEInvoiceForm" style="width: 140px;" />
+			<p:commandButton styleClass="nowrap" value="Cancel Document"
+				actionListener="#{salesBean.onCancelEInvoiceAPI}" process="@this"
+				update=":idAddInvoiceForm:msg :idCancelEInvoiceDialog"
+				disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Cancelled'}"
+				oncomplete="varCancelEInvoiceDialog.show()" style="width: 140px;" />
+			<p:commandButton styleClass="nowrap" value="Refresh Status"
+				actionListener="#{salesBean.getEInvoiceDocStatus}" process="@this"
+				update=":idAddInvoiceForm:msg :idEInvoiceForm"
+				style="width: 140px;" /> -->
+			<p:commandButton styleClass="nowrap" value="Print" ajax="false"
+				actionListener="#{salesBean.printEInvoice(salesBean.invoiceVO.eInvoiceDocumentUuid)}" 
+				style="width: 140px;" />
+		</h:panelGrid>
+	</p:panel>
+
+	<!-- Credit Note - Refund Note Info -->
+	<p:panel header="Refund Note" rendered="#{salesBean.docTypeCd eq 'C'}" style="margin:15px 0 0 0;">
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:120px;">Document UUID</p:column>
+				<p:column style="width:320px;">
+					<p:outputLabel
+						value="#{salesBean.invoiceVO.eInvoiceRnDocumentUuid}"></p:outputLabel>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>Submission ID</p:column>
+				<p:column>
+					<p:outputLabel
+						value="#{salesBean.invoiceVO.eInvoiceRnSubmissionUid}"></p:outputLabel>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>Status</p:column>
+				<p:column>
+					<p:outputLabel value="#{salesBean.invoiceVO.eInvoiceRnStatus}"></p:outputLabel>
+				</p:column>
+			</p:row>
+			<p:row
+				rendered="#{salesBean.invoiceVO.eInvoiceRnStatus eq 'Invalid'}">
+				<p:column>Error</p:column>
+				<p:column>
+					<p:panelGrid>
+						<c:forEach
+							items="#{salesBean.invoiceVO.eInvoiceDocument.validationResults.validationSteps}"
+							var="step">
+							<p:row rendered="#{step.status eq 'Invalid'}">
+								<p:column style="padding-left: 0; text-decoration: underline;">
+									<p:outputLabel>#{step.name}</p:outputLabel>
+								</p:column>
+							</p:row>
+							<c:forEach items="#{step.error.innerError}" var="innerErr">
+								<p:row>
+									<p:column style="padding-left: 0; max-width: 200px">#{innerErr.error}</p:column>
+								</p:row>
+							</c:forEach>
+						</c:forEach>
+					</p:panelGrid>
+				</p:column>
+			</p:row>
+			<p:row></p:row>
+			<p:row rendered="#{salesBean.invoiceVO.eInvoiceRnDocument ne null}">
+				<p:column colspan="2">
+				Copy validation link <p:commandLink id="idCopyButton2"
+						onclick="navigator.clipboard.writeText('#{salesBean.invoiceVO.eInvoiceRnValidationLink}');"
+						update="@form" styleClass="ui-icon ui-icon-copy" global="false" style="display: inline-block; vertical-align: middle;"
+						process="@this">
+					</p:commandLink>
+					<p:tooltip for="idCopyButton2">Click to Copy</p:tooltip>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<h:panelGrid columns="2" style="width: 1px; margin-top: 15px" rendered="#{salesBean.invPmntAuthVO.eInvoice}">
+			<!-- <p:commandButton styleClass="nowrap" value="Submit Document"
+				actionListener="#{salesBean.submitEInvoice}" process="@this"
+				update=":idAddInvoiceForm:msg :idEInvoiceForm" style="width: 140px;" />
+			<p:commandButton styleClass="nowrap" value="Cancel Document"
+				actionListener="#{salesBean.onCancelEInvoiceAPI}" process="@this"
+				update=":idAddInvoiceForm:msg :idCancelEInvoiceDialog"
+				disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Cancelled'}"
+				oncomplete="varCancelEInvoiceDialog.show()" style="width: 140px;" />
+			<p:commandButton styleClass="nowrap" value="Refresh Status"
+				actionListener="#{salesBean.getEInvoiceDocStatus}" process="@this"
+				update=":idAddInvoiceForm:msg :idEInvoiceForm"
+				style="width: 140px;" /> -->
+			<p:commandButton styleClass="nowrap" value="Print" ajax="false"
+				actionListener="#{salesBean.printEInvoice(salesBean.invoiceVO.eInvoiceRnDocumentUuid)}" 
+				style="width: 140px;" />
+		</h:panelGrid>
+	</p:panel>
+
+	<!-- for Invoice (with E-Invoice access) -->
+	<h:panelGrid columns="2" style="width: 1px; margin-top: 15px" rendered="#{salesBean.invPmntAuthVO.eInvoice and salesBean.docTypeCd eq 'I'}">
+		<p:commandButton styleClass="nowrap" value="Submit Document"
+			actionListener="#{salesBean.submitEInvoice}" process="@this"
+			update=":idAddInvoiceForm:msg :idEInvoiceForm :idAddInvoiceForm" style="width: 140px;" 
+			disabled="#{salesBean.invoiceVO.statusCd eq 'VD' or (salesBean.invoiceVO.eInvoiceStatus eq 'Valid' or salesBean.invoiceVO.eInvoiceStatus eq 'Submitted')}" />
+		<p:commandButton styleClass="nowrap" value="Cancel Document"
+			actionListener="#{salesBean.onCancelEInvoiceAPI}" process="@this"
+			update=":idAddInvoiceForm:msg :idCancelEInvoiceDialog"
+			disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Cancelled' or salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Not Submitted'}"
+			oncomplete="varCancelEInvoiceDialog.show()" style="width: 140px;" />
+		<p:commandButton styleClass="nowrap" value="Refresh Status"
+			actionListener="#{salesBean.getEInvoiceDocStatus}" process="@this"
+			disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Not Submitted'}"
+			update=":idAddInvoiceForm:msg :idEInvoiceForm :idAddInvoiceForm"
+			style="width: 140px;" />
+		<p:commandButton styleClass="nowrap" value="Print" ajax="false"
+			actionListener="#{salesBean.printEInvoice}" 
+			disabled="#{salesBean.invoiceVO.eInvoiceStatus ne 'Valid'}"
+			style="width: 140px;" />
+<!-- 		<p:commandButton styleClass="nowrap" value="Print" ajax="false"
+			actionListener="#{salesBean.printEInvoice}" 
+			disabled="#{salesBean.invoiceVO.eInvoiceStatus ne 'Valid'}"
+			style="width: 140px;" /> -->
+			
+		<p:commandButton value="Close" style="margin-top: 20px;" oncomplete="varEInvoiceDialog.hide();" />
+		<!-- <p:commandButton styleClass="nowrap" value="Download QR Code"
+			actionListener="#{salesBean.downloadQRCode}" process="@this"
+			update=":idAddInvoiceForm:msg" ajax="false"
+			rendered="#{salesBean.invoiceVO.eInvoiceStatus eq 'Valid'}"
+			style="width: 140px;" /> -->
+
+		<!-- <p:commandButton value="#{msg['common.button.label.save']}"
+			update=":idAddInvoiceForm:msg"
+			actionListener="#{salesBean.splitPaxStatement}"
+			oncomplete="if (args &amp;&amp; !args.validationFailed) varSplitPaxStatementDialog.hide();" />
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			process="@this"
+			oncomplete="varSplitPaxStatementDialog.hide();" /> -->
+	</h:panelGrid>
+	
+	<!-- for Invoice (without E-Invoice access) -->
+	<h:panelGrid columns="2" style="width: 1px; margin-top: 15px" rendered="#{not salesBean.invPmntAuthVO.eInvoice and salesBean.docTypeCd eq 'I'}">
+		<!-- <p:commandButton styleClass="nowrap" value="Submit Document"
+			actionListener="#{salesBean.submitEInvoice}" process="@this"
+			update=":idAddInvoiceForm:msg :idEInvoiceForm :idAddInvoiceForm" style="width: 140px;" />
+		<p:commandButton styleClass="nowrap" value="Cancel Document"
+			actionListener="#{salesBean.onCancelEInvoiceAPI}" process="@this"
+			update=":idAddInvoiceForm:msg :idCancelEInvoiceDialog"
+			disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Cancelled' or salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Not Submitted'}"
+			oncomplete="varCancelEInvoiceDialog.show()" style="width: 140px;" />
+		<p:commandButton styleClass="nowrap" value="Refresh Status"
+			actionListener="#{salesBean.getEInvoiceDocStatus}" process="@this"
+			disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Not Submitted'}"
+			update=":idAddInvoiceForm:msg :idEInvoiceForm :idAddInvoiceForm"
+			style="width: 140px;" /> -->
+		<p:commandButton styleClass="nowrap" value="Print" ajax="false"
+			actionListener="#{salesBean.printEInvoice}" 
+			disabled="#{salesBean.invoiceVO.eInvoiceStatus ne 'Valid'}"
+			style="width: 140px;" />
+			
+		<p:commandButton value="Close" oncomplete="varEInvoiceDialog.hide();" style="width: 140px;" />
+	</h:panelGrid>
+	
+	<!-- for CN : only show close button -->
+	<h:panelGrid columns="2" style="width: 1px; margin-top: 15px" rendered="#{salesBean.invPmntAuthVO.eInvoice and salesBean.docTypeCd eq 'C'}">
+		<p:commandButton styleClass="nowrap" value="Submit Document"
+			actionListener="#{salesBean.submitEInvoice}" process="@this"
+			update=":idAddInvoiceForm:msg :idEInvoiceForm :idAddInvoiceForm" style="width: 140px;"
+			disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Valid' or salesBean.invoiceVO.eInvoiceStatus eq 'Submitted'
+			or salesBean.invoiceVO.eInvoiceRnStatus eq 'Valid' or salesBean.invoiceVO.eInvoiceRnStatus eq 'Submitted'}" />
+		<p:commandButton styleClass="nowrap" value="Cancel Document"
+			actionListener="#{salesBean.onCancelEInvoiceAPI}" process="@this"
+			update=":idAddInvoiceForm:msg :idCancelEInvoiceDialog"
+			disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Cancelled' or salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Not Submitted'}"
+			oncomplete="varCancelEInvoiceDialog.show()" style="width: 140px;" />
+		<p:commandButton styleClass="nowrap" value="Refresh Status"
+			actionListener="#{salesBean.getEInvoiceDocStatus}" process="@this"
+			update=":idAddInvoiceForm:msg :idEInvoiceForm :idAddInvoiceForm"
+			style="width: 140px;" />
+		<div></div>
+		<p:commandButton value="Close" style="margin-top: 20px;" oncomplete="varEInvoiceDialog.hide();" />
+
+	</h:panelGrid>
+
+</ui:composition>

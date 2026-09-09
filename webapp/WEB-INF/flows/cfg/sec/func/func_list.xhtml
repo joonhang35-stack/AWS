@@ -1,0 +1,87 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Function List" toggleable="true" toggleSpeed="100">
+	<h:form id="idDataForm">
+		<p:growl id="msg"/>
+		
+		<h:panelGrid columns="2" style="margin-bottom:5px">
+			<p:commandButton value="Add" oncomplete="varAddFuncDialog.show()" update=":idAddFuncDialog" immediate="true"/>
+		</h:panelGrid>
+		
+		<p:dataTable id="idFuncList" value="#{functionBean.functionList}" var="vo" paginator="true" rows="10" rowsPerPageTemplate="10,50,100"
+			filteredValue="#{functionBean.filteredFunctionList}" filterEvent="enter">
+			<p:column style="width:80px; text-align:center">
+				<p:panelGrid columns="2">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{functionBean.setFunctionVO(vo)}" update=":idAddFuncDialog" oncomplete="varAddFuncDialog.show()"/>
+					<p:commandButton icon="ui-icon-close" actionListener="#{functionBean.setFunctionVO(vo)}" oncomplete="varDelFuncDialog.show()"/>
+				</p:panelGrid>
+			</p:column>
+			
+			<p:column headerText="Function Code" sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}">
+				<h:outputText value="#{vo.functionCode}"/>
+			</p:column>
+			<p:column headerText="Parent Function" sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}">
+				<h:outputText value="#{vo.parentFunctionCode}"/>
+			</p:column>
+			<p:column headerText="Label (Default)" sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}">
+				<h:outputText value="#{vo.functionName}"/>
+			</p:column>
+			<p:column headerText="Status" sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}" style=" text-align:center">
+				<h:outputText value="#{vo.statusCode}"/>
+			</p:column>
+			<p:column headerText="Type" sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}" style=" text-align:center">
+				<h:outputText value="#{vo.typeCode}"/>
+			</p:column>
+			<p:column headerText="Entry Page" sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}">
+				<h:outputText value="#{vo.entryURI}"/>
+			</p:column>
+			<p:column headerText="Process URI Regex" sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}">
+				<h:outputText value="#{vo.processingURI}"/>
+			</p:column>
+			<p:column headerText="Secure?" sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}" style=" text-align:center">
+				<p:selectBooleanCheckbox value="#{vo.isSecure}"/>
+			</p:column>
+			<p:column headerText="Menu Level" sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}" style=" text-align:center">
+				<h:outputText value="#{vo.level}"/>
+			</p:column>
+			<p:column headerText="Order Seq." sortBy="#{vo.functionCode}" filterBy="#{vo.functionCode}" style=" text-align:center">
+				<h:outputText value="#{vo.sequence}"/>
+			</p:column>
+			<p:column headerText="Remarks">
+				<h:outputText value="#{vo.remarks}"/>
+			</p:column>
+		</p:dataTable>
+		
+		<h:panelGrid columns="2" style="margin-top:5px">
+			<p:commandButton value="Add" oncomplete="varAddFuncDialog.show()" update=":idAddFuncDialog" immediate="true"/>
+		</h:panelGrid>
+	</h:form>
+</p:panel>
+
+<!-- DIALOG - ADD ROLE -->
+<p:dialog id="idAddFuncDialog" header="Add Function" widgetVar="varAddFuncDialog" modal="true" 
+	resizable="false" dynamic="true" draggable="true" hideEffect="fade" showEffect="fade" closable="false">
+	<h:form id="idAddFuncForm">
+		<ui:include src="func_add_form.xhtml"/>
+	</h:form>
+</p:dialog>
+
+<!-- DIALOG - DELETE ACCOUNT -->
+<p:confirmDialog widgetVar="varDelFuncDialog" message="Are you sure want to delete this record?">
+	<h:form>
+		<p:commandButton value="Yes" actionListener="#{functionBean.deleteFunction}" update="@form,:idDataForm" oncomplete="varDelFuncDialog.hide()"/>
+		<p:commandButton value="Cancel" actionListener="#{functionBean.resetForm}" oncomplete="varDelFuncDialog.hide()"/>
+	</h:form>
+</p:confirmDialog>
+
+</ui:define>
+</ui:composition>

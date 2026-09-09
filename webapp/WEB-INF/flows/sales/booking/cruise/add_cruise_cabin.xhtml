@@ -1,0 +1,82 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idCabinType">Cruise Cabin Type <span class="required">*</span></h:outputLabel></p:column>
+		<p:column style="width: 300px;">
+			<h:selectOneMenu id="idCabinType" label="Cruise Cabin Type"
+				value="#{cruiseBookingBean.tourCabinVO.idTourCruiseCabin}" effect="fade" required="true">
+				<f:selectItem itemLabel="Select One" />
+				<f:selectItems value="#{cruiseBookingBean.tourDepVO.tourCruiseCabinList}" var="vo"
+					itemLabel="#{vo.cruiseCabinCd} - #{vo.cruiseCabinDesc} (Bal: #{vo.balanceCabin})" itemValue="#{vo.id}" />
+				<p:ajax event="change" listener="#{cruiseBookingBean.handleCabinTypeSelect}" update="@form" />
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel>No. Of Pax <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:panelGrid columns="7">
+				<h:outputLabel>1ST/2ND</h:outputLabel>
+				<h:outputLabel>Adult 3RD</h:outputLabel>
+				<h:outputLabel>Adult 4TH</h:outputLabel>
+				<h:outputLabel>Adult SGL</h:outputLabel>
+				<h:outputLabel>Child 3RD</h:outputLabel>
+				<h:outputLabel>Child 4TH</h:outputLabel>
+				<h:outputLabel>INFT</h:outputLabel>
+				<p:inputText label="Adult 1ST/2ND" id="idPaxTwn" value="#{cruiseBookingBean.tourCabinVO.paxTwn}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="Adult 3" id="idPax3" value="#{cruiseBookingBean.tourCabinVO.pax3}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="Adult 4" id="idPax4" value="#{cruiseBookingBean.tourCabinVO.pax4}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="Adult SGL" id="idPaxSgl" value="#{cruiseBookingBean.tourCabinVO.paxSgl}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="Child 3" id="idPax3Chd" value="#{cruiseBookingBean.tourCabinVO.pax3Chd}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="Child 4" id="idPax4Chd" value="#{cruiseBookingBean.tourCabinVO.pax4Chd}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				<p:inputText label="INFT" id="idPaxInf" value="#{cruiseBookingBean.tourCabinVO.paxInf}" required="true" style="width:50px;"><pe:keyFilter regEx="/[\d]/"/></p:inputText>
+				
+				<h:outputText value="#{cruiseBookingBean.tourCabinVO.priceTwn}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{cruiseBookingBean.tourCabinVO.price3}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{cruiseBookingBean.tourCabinVO.price4}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{cruiseBookingBean.tourCabinVO.priceSgl}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{cruiseBookingBean.tourCabinVO.price3Chd}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{cruiseBookingBean.tourCabinVO.price4Chd}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+	        	<h:outputText value="#{cruiseBookingBean.tourCabinVO.priceInf}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+			</h:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column/>
+		<p:column>
+			
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{cruiseBookingBean.tourCabinVO.id == null ? msg['common.button.label.save'] : msg['common.button.label.update']}" actionListener="#{cruiseBookingBean.saveCruiseCabin}"
+				update="@form,:idAddInvoiceForm:idTourCabinListTable,:idAddInvoiceForm:idTotalAmtGroup" oncomplete="onCruiseCabinValidation(xhr, status, args)"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{cruiseBookingBean.resetTourCabinForm}" onclick="varAddCruiseCabinDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddCruiseCabinForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

@@ -1,0 +1,1395 @@
+package com.bcs.zsg.acct.web.bean;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.component.UIComponent;
+import javax.faces.context.FacesContext;
+import javax.faces.validator.ValidatorException;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.primefaces.context.RequestContext;
+import org.primefaces.event.DateSelectEvent;
+import org.primefaces.event.SelectEvent;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+
+import com.bcs.zsg.acct.bo.ChartOfAcctBO;
+import com.bcs.zsg.acct.bo.FinancialPeriodBO;
+import com.bcs.zsg.acct.bo.GeneralLedgerBO;
+import com.bcs.zsg.acct.bo.JournalBO;
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.acct.vo.FinancialPeriodLockVO;
+import com.bcs.zsg.acct.vo.JournalVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.component.security.bo.SecurityBO;
+import com.bcs.zsg.component.security.vo.UserRoleViewVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.db.bterp.vo.gst.TaxCodeVO;
+import com.bcs.zsg.gst.bo.GSTBO;
+import com.bcs.zsg.gst.helper.GSTType;
+import com.bcs.zsg.maintenance.bo.AppSettingBO;
+import com.bcs.zsg.maintenance.helper.ConstantAppSetting;
+import com.bcs.zsg.maintenance.helper.MaintConstant;
+import com.bcs.zsg.maintenance.vo.AppSettingVO;
+import com.bcs.zsg.product.bo.TourPackageBO;
+import com.bcs.zsg.product.helper.ProductConstant;
+import com.bcs.zsg.product.vo.TourDepartureViewVO;
+import com.bcs.zsg.purchase.bo.BillPymtBO;
+import com.bcs.zsg.purchase.bo.PurchaseBO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.InvPmntAuthVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+/**
+ * 
+ */
+public class JournalBean extends AppBackingBean {
+
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient MessageSource messageSource;
+	@Autowired
+	protected transient GeneralLedgerBO generalLedgerBO;
+	@Autowired
+	protected transient JournalBO journalBO;
+	@Autowired
+	private transient FinancialPeriodBO finPeriodBO;
+	@Autowired
+	private transient SecurityBO securityBO;
+	@Autowired
+	private transient GSTBO gstBO;
+	@Autowired
+	private transient ChartOfAcctBO chartOfAcctBO;
+	@Autowired
+	private transient TourPackageBO tourPkgBO;
+	@Autowired
+	private transient BillPymtBO billPymtBO;
+	@Autowired
+	private transient PurchaseBO purchaseBO;
+	@Autowired
+	private transient InvoiceBO invoiceBO;
+	@Autowired
+	private transient AppSettingBO appSettingBO;
+
+	private List<Object> filteredJournalDetailList;
+	private AcctTransVO journalItem, prevJournalItem;
+	/**
+	 * journal list for type All
+	 */
+	private LazyDataModel<JournalVO> lazyDMJournal;
+	/**
+	 * journal list for type = gnrl, bill
+	 */
+	private LazyDataModel<JournalVO> lazyDMJournalGnrl;
+	/**
+	 * journal list for type = sales
+	 */
+	private LazyDataModel<JournalVO> lazyDMJournalSales;
+	private List<AcctTransVO> journalCartList;
+	private List<AcctViewVO> acctViewList;
+	private JournalVO journalVO;
+	private BigDecimal totalCrdAmt, totalDbtAmt;
+	
+	private String amtType;
+	private FinancialPeriodLockVO finPeriodLockVO;
+	private Boolean isAddNewDetail = false, isAddNewItem = false;
+	private boolean isDateInFinPeriodClosed, isGSTPeriod;
+	private Map<String, AcctVO> acctListMap;
+	
+	protected AddUpdDelVO journalItemsVO;
+	private InvPmntAuthVO invPmntAuthVO;
+	
+	private AmountCalcViewVO amtCalcViewVO;
+	private List<TaxCodeVO> inputTaxCodeVOList;
+	private List<TaxCodeVO> outputTaxCodeVOList;
+	private List<TourDepartureViewVO> tourDepViewList;
+	private List<SupplierVO> supplierList;
+	
+	private List<AppSettingVO> appSettingVOList;
+	
+	private TrackingLogUtils trackingLogUtils;
+	
+	// process past invoice to reserve sales
+	private Date dtTo;
+	private Date dtFrom;
+	
+	// config
+	private SimpleDateFormat dateFormat;
+	private Date schedulerTime;
+	
+	public void resetForm() {
+		setLazyDMJournal(new LazyJournalListDataModel(CommonConstant.JOURNAL_TYPE_SALES, CommonConstant.JOURNAL_TYPE_GNRL, CommonConstant.JOURNAL_TYPE_BILL));
+		setLazyDMJournalGnrl(new LazyJournalListDataModel(CommonConstant.JOURNAL_TYPE_GNRL, CommonConstant.JOURNAL_TYPE_BILL));
+		setLazyDMJournalSales(new LazyJournalListDataModel(CommonConstant.JOURNAL_TYPE_SALES));
+		journalCartList = new ArrayList<AcctTransVO>();
+		//glList = new ArrayList<AcctVO>();
+		journalItem = new AcctTransVO();
+		prevJournalItem = null;
+		journalVO = new JournalVO();
+		journalItemsVO = new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>());
+		
+		acctListMap = new HashMap<String, AcctVO>();
+		
+		resetFilteredObjList();
+		
+		setIsAddNewDetail(false);
+		setIsAddNewItem(false);
+		
+		isDateInFinPeriodClosed = false;
+		
+		isGSTPeriod = false;
+		
+		amtCalcViewVO = new AmountCalcViewVO();
+		amtCalcViewVO.setIdTaxAcct(getSessionInfoBean().getCompanyVO().getIdAcctGST());
+		amtCalcViewVO.setIdTaxNonClaimableAcct(getSessionInfoBean().getCompanyVO().getIdAcctNonClaimableGST());
+		
+		setOriObj(null);
+	}
+	
+	/**
+	 * Journal init
+	 */
+	public void init() {
+		this.trackingLogUtils = new TrackingLogUtils(getClass());
+//		TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+		try {
+			
+//			trackingLogUtils.startLogs();
+			
+			initSearchParam();
+			resetForm();
+			loadJournalDateRange();
+			loadSupplier();
+			
+			// Get user assigned role list
+			List<UserRoleViewVO> userRoleList = securityBO.getUserRoleListByUser(this.getSessionInfoBean().getUserVO().getUuid());
+			// User Authorize
+			invPmntAuthVO = new InvPmntAuthVO();
+			if (CollectionUtils.isNotEmpty(userRoleList)) {
+				for (UserRoleViewVO userRoleVO : userRoleList) {
+					if (userRoleVO.getRoleCode().equalsIgnoreCase(SalesConstant.ACCT_MANAGER_ROLE)) {
+						invPmntAuthVO.setAccountManager(true);
+						break; // Take "break" out if more then 1
+					}
+				}
+			}
+			// GST Code
+			setInputTaxCodeVOList(gstBO.getTaxCodeList(GSTType.INPUT));
+			setOutputTaxCodeVOList(gstBO.getTaxCodeList(GSTType.OUTPUT));
+			acctViewList = chartOfAcctBO.getAcctViewList(getSessionInfoBean().getCompanyVO().getId(), null);
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+//			trackingLogUtils.endLogs("JournalBean.init");
+		}
+	}
+	
+	private void calcJourItemTotal(boolean isCalGLItems) {
+		totalCrdAmt = new BigDecimal("0.00");
+		totalDbtAmt = new BigDecimal("0.00");
+		
+		for(AcctTransVO journalItem : journalCartList){
+			if(journalItem.getCredit() != 0.00) {
+				journalItem.setAmount(journalItem.getCredit());
+				totalCrdAmt = totalCrdAmt.add(new BigDecimal(String.valueOf(journalItem.getCredit()))
+												.add(new BigDecimal(String.valueOf(journalItem.getDTaxAmount()))) );
+				
+			} else {
+				journalItem.setAmount(journalItem.getDebit());
+				totalDbtAmt = totalDbtAmt.add(new BigDecimal(String.valueOf(journalItem.getDebit()))
+												.add(new BigDecimal(String.valueOf(journalItem.getDTaxAmount()))) );
+				
+			}
+		}
+		
+		try {
+			updateTaxableAmount(isCalGLItems);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	private void updateTaxableAmount(boolean isCalGLItems) throws BusinessException {
+		if (isCalGLItems) calculateGLItemsAmount(journalCartList);
+		
+		amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, false, journalCartList, null, false);
+	}
+	
+	private void calculateGLItemsAmount(List<AcctTransVO> list) throws BusinessException {
+		for (AcctTransVO vo : list) {
+			vo.setTaxAmount(vo.getAmount() < 0 ? -vo.getTaxAmount() : vo.getTaxAmount());
+			
+			BigDecimal amount = new BigDecimal(String.valueOf(vo.getAmount()));
+			BigDecimal taxAmount = new BigDecimal(vo.getTaxAmount().toString());
+			
+			vo.setAmountIncludeTax(amount.add(taxAmount).doubleValue());
+		}
+	}
+	
+	public void delJournal() throws BusinessException{
+		try {
+			// Unable to delete this record due to financial period closed.
+			if (isDateInFinPeriodClosed()) throw new BusinessException(CommonErrConstant.ERR_ACCT_FIN_PERIOD_CLOSED_CANNOT_DEL);
+			
+			journalBO.delJournal(journalVO);
+			
+			init();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	private boolean updateJournaItemList() {
+		
+		double initialAmount = journalItem.getAmount();
+		
+		if (this.getAmtType().equals("Debit")) {
+			journalItem.setDebit(journalItem.getAmount());
+			journalItem.setCredit(0.0);
+			
+		} else if (this.getAmtType().equals("Credit")) {
+			journalItem.setCredit(journalItem.getAmount());
+			journalItem.setDebit(0.0);
+		}
+		
+		//this handling to prevent AcctTransVO override amount value in SETCREDIT method
+		journalItem.setAmount(initialAmount);
+		
+		if(getIsAddNewItem()) {
+			//New item add to journal chart list.
+			journalCartList.add((AcctTransVO) journalItem.clone());
+			
+			if(!getIsAddNewDetail())
+				journalItemsVO.getAddList().add(journalItem.clone());
+		} else {
+
+			if(journalItem.getId() != null) {
+				boolean isInUpdList = replaceJournalItemInList(((List<AcctTransVO>)((List<?>)journalItemsVO.getUpdList())), 
+																prevJournalItem);
+				
+				//To cater case where the item is loaded and edited but not found in UpdList yet.
+				if(!isInUpdList)
+					journalItemsVO.getUpdList().add(journalItem.clone());
+			} else {
+				//For NON-NEW journal detail, new added item, updated again before saving to DB.
+				if(!getIsAddNewDetail())
+					replaceJournalItemInList(((List<AcctTransVO>)((List<?>)journalItemsVO.getAddList())), 
+												prevJournalItem);
+			}
+			
+			//journalCartList Item Being Edited again
+			replaceJournalItemInList(journalCartList, prevJournalItem);
+			
+			prevJournalItem = null;
+		}
+		calcJourItemTotal(false);
+		
+		handleJourItemSelect(null);
+		return true;
+	}
+	
+	private boolean isSameItemVO(AcctTransVO originalVO, AcctTransVO comparedVO) {
+		if(originalVO.getId() == comparedVO.getId() &&
+			originalVO.getDesc().equals(comparedVO.getDesc()) &&
+			originalVO.getCode().equals(comparedVO.getCode()) &&
+			originalVO.getDebit().equals(comparedVO.getDebit()) &&
+			originalVO.getCredit().equals(comparedVO.getCredit())) 
+			return true;
+		else
+			return false;
+	}
+	
+	private boolean replaceJournalItemInList(List<AcctTransVO> journalViewList, AcctTransVO prevJourItem) {
+
+		boolean isPrevJourItemFoundInList = false;
+		for(int i = 0; i < journalViewList.size(); i++) {
+			AcctTransVO tmpVO = journalViewList.get(i);
+			
+			if(isSameItemVO(tmpVO, prevJourItem)) {
+				journalViewList.set(i, (AcctTransVO) journalItem.clone());
+				isPrevJourItemFoundInList = true;
+				break;
+			}
+		}
+		return isPrevJourItemFoundInList;
+	}
+	
+	public void saveJournalCart() {
+		trackingLogUtils.startLogs();
+		trackingLogUtils.endLogs("saveJournalCart");
+		saveJournalCart(null);
+	}
+	
+	public void saveJournalCartFromBill() {
+		trackingLogUtils.startLogs();
+		trackingLogUtils.endLogs("saveJournalCartFromBill");
+		if (journalVO != null && journalVO.getId() != null)	saveJournalCart(null);
+	}
+	
+	/**
+	 * @param idBill - null when calling from journal listing page, not null when calling from bill page posting to journal
+	 */
+	public void saveJournalCart(ExOrderBillVO exOrderBillVO) {
+		try {
+			
+			trackingLogUtils.startLogs();
+			// check financial closed / GST submitted
+			if (getOriObj() == null) checkFinGSTClosed(CommonConstant.ACTION_CD_ADD, null, journalVO.getJournalDt(), invPmntAuthVO.isAccountManager());
+			else {
+				JournalVO oriVO = (JournalVO) getOriObj();
+				checkFinGSTClosed(CommonConstant.ACTION_CD_UPD, oriVO.getJournalDt(), journalVO.getJournalDt(), invPmntAuthVO.isAccountManager());
+			}
+			if (journalCartList.size() == 0)
+				throw new BusinessException(CommonErrConstant.ERR_ACCT_JOURNAL_NO_ITEM); 
+			if (totalCrdAmt.doubleValue() == totalDbtAmt.doubleValue() && totalCrdAmt.doubleValue() != 0.00 ) {
+				journalVO.setTotalAmt(totalCrdAmt.doubleValue());
+				
+				if (exOrderBillVO != null) {
+					journalBO.validateJournalTotalAgainstBill(exOrderBillVO, journalVO.getTotalAmt(), true);
+				}
+				
+				journalVO.setAmountCalcViewVO(amtCalcViewVO);
+				journalVO.setIdBill(exOrderBillVO.getId());				
+				if (journalVO.getId() == null){
+					journalBO.insertJournal(journalVO, journalCartList);
+					if (exOrderBillVO != null) {
+						billPymtBO.updateJournalToBill(exOrderBillVO.getId(), journalVO.getId());
+					}
+				} else {
+					journalBO.updateJournal(journalVO, journalCartList, journalItemsVO);
+				}
+			} else 
+				throw new BusinessException(CommonErrConstant.ERR_ACCT_CREDIT_DEBIT_NOT_EQUAL); 
+			init();
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("saveJournalCart(ExOrderBillVO exOrderBillVO)");
+		}
+	}
+	
+	/**
+	 * 
+	 *  Delete Single Journal
+	 */
+	public void delSingleJournal(AcctTransVO vo) {
+		try {
+			// remove in New Add List if exists
+			for (int i = 0; i < journalItemsVO.getAddList().size(); i++) {
+				AcctTransVO tmpVO = (AcctTransVO) journalItemsVO.getAddList().get(i);
+				
+				if(isSameItemVO(tmpVO, vo)) {
+					journalItemsVO.getAddList().remove(i);
+					break;
+				}
+			}
+			
+			// remove in Update List if exists
+			for (int i = 0; i < journalItemsVO.getUpdList().size(); i++) {
+				AcctTransVO tmpVO = (AcctTransVO) journalItemsVO.getUpdList().get(i);
+				
+				if(tmpVO.getId().equals(vo.getId())) {
+					journalItemsVO.getUpdList().remove(i);
+					break;
+				}
+			}
+
+			if (vo.getId() != null) {
+				journalItemsVO.getDelList().add(vo);
+			}
+			
+			journalCartList.remove(vo);
+			calcJourItemTotal(false);
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void delSingleJournal(AcctTransVO vo, JournalVO journalVO) {
+		setJournalVO(journalVO);
+		setJournalCartList(journalVO.getJournalCartList());
+		journalItemsVO = journalVO.getJournalItemsVO();
+		delSingleJournal(vo);
+		journalVO.setAmountCalcViewVO(amtCalcViewVO);
+		journalVO.setTotalCrdAmt(totalCrdAmt);
+		journalVO.setTotalDbtAmt(totalDbtAmt);
+	}
+	
+	public void resetCart() {
+		try {
+			journalCartList = new ArrayList<AcctTransVO>();
+			
+			calcJourItemTotal(true);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleTourDepSelect(SelectEvent event) throws BusinessException{
+		try {
+			TourDepartureViewVO vo = (TourDepartureViewVO) event.getObject();
+			journalVO.setTourCd(vo.getCode());
+			journalVO.setIdTourDep(vo.getId());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void loadTourDepartureList() {
+		try {
+			setTourDepViewList(tourPkgBO.getTourDepViewList());
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	private void loadJournalDateRange() throws BusinessException{
+		finPeriodLockVO = finPeriodBO.getFinPeriodLock(getSessionInfoBean().getCompanyVO().getId());
+	}
+	
+	/*
+	 * Load Journal Items
+	 */
+	private void loadJournalItems(JournalVO vo) throws BusinessException {
+		journalCartList = journalBO.getJournalItems(vo);
+		
+	}
+	
+	/*
+	 * Load supplier list
+	 */
+	private void loadSupplier() throws BusinessException {
+		supplierList = purchaseBO.getSupplierList(getSessionInfoBean().getCompanyVO().getId(), true);
+	}
+	
+	private void loadSupplierName(List<ExOrderBillVO> billList) {
+		if (CollectionUtils.isNotEmpty(billList) && CollectionUtils.isNotEmpty(supplierList)) {
+			for (ExOrderBillVO billVO : billList) {
+				for (SupplierVO supplierVO : supplierList) {
+					if (billVO.getSupplierId().equals(supplierVO.getId())) {
+						
+						billVO.setSupplierName(supplierVO.getFullName());
+					}
+				}
+				
+			}
+		}
+	}
+	
+	public void handleSubAcctSelect(SelectEvent event) {
+		try {
+			
+			AcctVO acctViewVO = (AcctVO) event.getObject();
+			journalItem.setCode(acctViewVO.getCode() + (acctViewVO.getSubCode().isEmpty() ? "" : "-" + acctViewVO.getSubCode()));
+			journalItem.setDesc(acctViewVO.getDesc() + (acctViewVO.getSubDesc().equals("") ? "" : "-" + acctViewVO.getSubDesc()));
+			journalItem.setAcctId(acctViewVO.getId());
+			journalItem.setTaxCode(acctViewVO.getTaxCode());
+			journalItem.setAcctDesc(acctViewVO.getCode() + (acctViewVO.getSubCode().isEmpty() ? "" : "-" + acctViewVO.getSubCode()) + " : " +
+					acctViewVO.getDesc() + (acctViewVO.getSubDesc().equals("") ? "" : ", " + acctViewVO.getSubDesc()));
+			
+			handleTaxCodeSelection(journalItem.getTaxCode(), acctViewVO.getTaxRate() == null ? null : (double) acctViewVO.getTaxRate());
+			
+			acctListMap.clear();
+			acctListMap.put(journalItem.getCode(), acctViewVO);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	public void handleJournalDetailAddNew() {
+		
+		trackingLogUtils.startLogs();
+		
+		setIsAddNewDetail(true);
+		resetCart();
+		journalVO = new JournalVO();
+		journalVO.setJournalDt(new Date());
+		journalVO.setCompanyId(getSessionInfoBean().getCompanyVO().getId());
+		journalVO.setTypeCd(CommonConstant.JOURNAL_TYPE_GNRL);
+		isDateInFinPeriodClosed = false;
+		
+		trackingLogUtils.endLogs("handleJournalDetailAddNew");
+		
+		try {
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), journalVO.getJournalDt());
+		 
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void cloneJournalDetail(JournalVO vo) {
+		try {
+			handleJournalDetailAddNew();
+			
+			JournalVO journalCloneVO = (JournalVO) vo.clone();
+			List<AcctTransVO> journalCartCloneList = new ArrayList<AcctTransVO>();
+			
+			journalCloneVO.setId(null);
+			
+			List<AcctTransVO> journalItemList = journalBO.getJournalItems(vo);
+			
+			Double debit = 0D;
+			Double credit = 0D;
+			for (AcctTransVO acctTransVO : journalItemList) {
+				acctTransVO.setId(null);
+				debit = acctTransVO.getDebit();
+				credit = acctTransVO.getCredit();
+				acctTransVO.setDebit(credit);
+				acctTransVO.setCredit(debit);
+				journalCartCloneList.add((AcctTransVO) acctTransVO.clone());
+			}
+			
+			journalVO = journalCloneVO;
+			journalCartList = journalCartCloneList;
+			
+			calcJourItemTotal(true);
+		 
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleJournalDetailSelect(JournalVO vo) {
+		setIsAddNewDetail(false);
+		try {
+			journalVO = (JournalVO) vo.clone();
+			setOriObj(vo.clone());
+			// Check Financial Period Closed
+			getFinPeriodClosedStatus();
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), journalVO.getJournalDt());
+			
+//			loadJournalItems(vo);
+			journalVO = journalBO.getJournalDetails(journalVO);
+			journalCartList = journalVO.getJournalCartList();
+			if (vo.getExOrderBillVO() != null && StringUtils.isNotBlank(vo.getExOrderBillVO().getSupplierName())) {
+				if (journalVO.getExOrderBillVO() == null)	journalVO.setExOrderBillVO(new ExOrderBillVO());
+				journalVO.getExOrderBillVO().setSupplierName(vo.getExOrderBillVO().getSupplierName());
+			}
+			calcJourItemTotal(true);
+//			journalVO.setBillList(billPymtBO.getBillListByJournalId(journalVO.getId()));
+			loadSupplierName(journalVO.getBillList());
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Author - You Yuan
+	 * 
+	 * @param idJournal
+	 */
+	public void onJournalSelected(Long idJournal) {
+		
+		setIsAddNewDetail(false);
+		try {
+			if (idJournal == null) {
+				resetForm();
+				return; // might be null cuz can call from bill_list.xhtml
+			}
+			
+			journalVO = journalBO.getJournalById(idJournal, getSessionInfoBean().getCompanyVO().getId());
+			// Check Financial Period Closed
+			getFinPeriodClosedStatus();
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), journalVO.getJournalDt());
+			
+			// cannot load data at bean level, cuz will fetch cache data
+//			loadJournalItems(journalVO);
+			journalBO.getJournalDetails(journalVO);
+			journalCartList = journalVO.getJournalCartList();
+			calcJourItemTotal(true);
+//			journalVO.setBillList(billPymtBO.getBillListByJournalId(journalVO.getId()));
+			loadSupplierName(journalVO.getBillList());
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+		
+	}
+
+	public void handleJournalItemSubmit() {
+		try {
+			journalItem.setAmount(Double.valueOf(new DecimalFormat("#0.00").format(journalItem.getAmount())));
+			
+			if(journalItem.getAcctId() == null)
+				throw new BusinessException(CommonErrConstant.ERR_ACCT_NOT_VALID); 
+			
+			if(journalItem.getAmount() < 0 || journalItem.getDAmountIncludeTax() < 0)
+				throw new BusinessException(CommonErrConstant.ERR_AMOUNT_GREATER_ZERO);
+			
+			if(journalItem.getAmount() == 0)
+				throw new BusinessException(CommonErrConstant.ERR_AMOUNT_NON_ZERO); 
+			
+			if(journalItem.getAmount() == 0)
+				throw new BusinessException(CommonErrConstant.ERR_AMOUNT_NON_ZERO); 
+			
+			updateJournaItemList();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * handle add new journal item (from bill payment page)
+	 */
+	public void handleJournalItemSubmitFromBill() {
+		handleJournalItemSubmit();
+		journalVO.setAmountCalcViewVO(amtCalcViewVO);
+		journalVO.setTotalCrdAmt(totalCrdAmt);
+		journalVO.setTotalDbtAmt(totalDbtAmt);
+	}
+	
+	/**
+	 * on add new journal item (from bill payment page)
+	 * @param journalVO
+	 */
+	public void handleJourItemAddNew(JournalVO journalVO) {
+		setJournalVO(journalVO);
+		setJournalCartList(journalVO.getJournalCartList());
+		journalItemsVO = journalVO.getJournalItemsVO();
+		handleJourItemAddNew();
+	}
+
+	/**
+	 * On Journal Item selected
+	 * @param event
+	 */
+	public void handleJourItemAddNew() {
+		handleJourItemSelect(null);
+	}
+	
+	public void handleJourItemSelect(AcctTransVO vo) {
+
+		RequestContext.getCurrentInstance().reset("idFormJournalItem");
+		if(vo == null)  {
+			setIsAddNewItem(true);
+			amtType = "Debit";
+			resetJournalItemAccount();
+		} else {
+			try {
+				setIsAddNewItem(false);
+				
+				prevJournalItem = (AcctTransVO) vo.clone();
+				journalItem = (AcctTransVO) vo.clone();
+				
+				if(vo.getCredit().doubleValue() == 0) {
+					journalItem.setAmount(vo.getDebit());
+					amtType = "Debit";
+				} else {
+					journalItem.setAmount(vo.getCredit());
+					amtType = "Credit";
+				}
+				
+				if (journalItem.getAcctId() != null) {
+					for (AcctViewVO acctVO : acctViewList) {
+						if (acctVO.getId().equals(journalItem.getAcctId())) {
+							journalItem.setAcctDesc(acctVO.getCode() + (acctVO.getSubCode().isEmpty() ? "" : "-" + acctVO.getSubCode()) + " : " +
+									acctVO.getDesc() + (acctVO.getSubDesc().equals("") ? "" : ", " + acctVO.getSubDesc()));
+							break;
+						}
+					}
+				}
+				
+			} catch (Throwable t) {
+				errorResult(t);
+			}
+		}
+
+		acctListMap.clear();
+	}
+	
+	/**
+	 * on journal item selected (from bill payment page)
+	 * @param vo
+	 * @param journalVO
+	 */
+	public void handleJourItemSelect(AcctTransVO vo, JournalVO journalVO) {
+		setJournalVO(journalVO);
+		setJournalCartList(journalVO.getJournalCartList());
+		journalItemsVO = journalVO.getJournalItemsVO();
+		handleJourItemSelect(vo);
+	}
+
+	public void handleGSTSelect(SelectEvent event) {
+		try {
+			TaxCodeVO taxCodeVO = (TaxCodeVO) event.getObject();
+			handleTaxCodeSelection(taxCodeVO.getCode(), (double) taxCodeVO.getRate());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	public void handleAmountChange() {
+		try {
+			journalItem = (AcctTransVO) AccountHelper.calcTaxableAmount(journalItem, false, 0, 0);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleAmountIncludeTaxChange() {
+		try {
+			journalItem = (AcctTransVO) AccountHelper.calcAmountBaseOnTotalTaxableAmount(journalItem);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	private void handleTaxCodeSelection(String taxCode, Double taxRate) throws BusinessException {
+		
+		if(getSessionInfoBean().getCompanyVO().getIdAcctGST() != null && taxCode != null && isGSTPeriod) {
+		
+			if(taxCode != null && taxRate == null) {
+				//journalItem = (AcctTransVO) GSTHelper.getInstance().updateAcctTrans(journalItem, taxCode);
+				TaxCodeVO taxCodeVO = gstBO.getTaxCode(taxCode);
+				journalItem.setTaxCode(taxCodeVO.getCode());
+				journalItem.setTaxRate(taxCodeVO.getRate());
+				
+			} else {
+				journalItem.setTaxCode(taxCode);
+				journalItem.setTaxRate(taxRate.floatValue());
+			}
+			
+			//This handling to ensure the amount input by user is the actual amount without tax
+			if(journalItem.getTaxRate() > 0.00)
+				handleAmountIncludeTaxChange();
+			else
+				handleAmountChange();
+		
+		} else {
+			journalItem.setTaxCode(null);
+			journalItem.setTaxRate(null);
+			
+			handleAmountChange();
+		}
+		
+	}
+	
+	public void handleDateChange(DateSelectEvent event) {
+		
+		try {
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), journalVO.getJournalDt());
+			
+			if(!isGSTPeriod) {
+				//Reset all account trans with null taxCode
+				for (int i = 0 ; i < journalCartList.size() ; i++) {
+					journalCartList.get(i).setTaxCode(null);
+					journalCartList.get(i).setTaxRate(null);
+				}
+			}
+			
+			updateTaxableAmount(true);
+			
+		}  catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	private boolean validateAccount(String acctNo) throws BusinessException {
+		if( acctNo == null || acctNo == "" ) 
+			return true;
+
+		String code = null, subCode = "";
+		if(acctNo.contains("-")) {
+			code = acctNo.split("-")[0];
+			subCode = acctNo.split("-")[1];
+		} else 
+			code = acctNo;
+		
+		//Ensure Account is VALID in database
+		AcctVO tmpAcctVO = new AcctVO();
+		tmpAcctVO.setIdCompany(getSessionInfoBean().getCompanyVO().getId());
+		tmpAcctVO.setCode(code);
+		tmpAcctVO.setSubCode(subCode);
+		
+		return journalBO.isAccountValid(tmpAcctVO);
+	}
+	
+	public void isAcctValid(FacesContext ctx, UIComponent component, Object value) 
+			throws BusinessException {
+		String acctNo = value.toString();
+		
+		if(!validateAccount(acctNo)) {
+			RequestContext.getCurrentInstance().reset("idFormJournalItem");
+			journalItem.setCode(acctNo);
+			throw new ValidatorException(new FacesMessage(FacesMessage.SEVERITY_ERROR, 
+					messageSource.getMessage(CommonErrConstant.ERR_ACCT_NOT_VALID, null, getLocale()), ""));
+			
+		}
+	}
+	
+	/**
+	 * On Journal Delete selected
+	 * @param event
+	 */
+	public void onJourDeleteSelected(JournalVO vo) {
+		journalVO = (JournalVO) vo.clone();
+		// Check Financial Period Closed
+		getFinPeriodClosedStatus();
+	}
+	
+	public List<String> acctAutoComplete(String query) {  
+        List<String> results = new ArrayList<String>();
+    	/*List<AcctVO> acctAutoCompleteList;
+    	acctListMap = new HashMap<String, AcctVO>();
+    	
+    	if( strAcctInputValue == "")
+			return results;
+		
+        try { 
+        	acctAutoCompleteList = journalBO.getAcctAutoCompleteList(getSessionInfoBean().getCompanyVO().getId(), strAcctInputValue);
+        	
+        	if(acctAutoCompleteList != null) {
+	        	for (int i = 0; i < acctAutoCompleteList.size(); i++) {
+	        		String value = acctAutoCompleteList.get(i).getCode() + (acctAutoCompleteList.get(i).getSubCode().isEmpty() ?
+        					 		"" : "-" + acctAutoCompleteList.get(i).getSubCode());
+	        		results.add(value);
+	        		acctListMap.put(value, acctAutoCompleteList.get(i));
+	        	}
+        	}
+        } catch(Exception e) {
+        	e.printStackTrace() ;
+        }*/
+        
+        try {
+        	String tempStr;
+        	for (int i = 0 ; i < acctViewList.size() ; i++) {
+        		tempStr = acctViewList.get(i).getCode() + ((StringUtils.isEmpty(acctViewList.get(i).getSubCode())) ? "" : "-" + acctViewList.get(i).getSubCode());
+        		if (tempStr.startsWith(query)) {
+        			results.add(tempStr);
+        		}
+        	}
+        } catch (Throwable t) {
+        	errorResult(t);
+        }
+        return results;  
+    }
+	
+	public void onAutoCompleteAcctSelect(SelectEvent event) {
+		//updateJournalItemAccount(event.getObject().toString());
+		try {
+			String acctNo = event.getObject().toString();
+			
+			for (AcctViewVO vo : acctViewList) {
+				if (acctNo.equals(vo.getCode())) {
+					journalItem.setDesc(vo.getDesc());
+					//journalItem.setAcctViewVO(vo);
+					journalItem.setAcctId(vo.getId());
+					journalItem.setTaxCode(vo.getTaxCode());
+					journalItem.setTaxRate(vo.getTaxRate());
+					journalItem.setAcctDesc(vo.getCode() + " : " + vo.getDesc());
+					break;
+					
+				} else if (acctNo.equalsIgnoreCase(vo.getCode() + "-" + vo.getSubCode())) {
+					journalItem.setDesc(vo.getDesc() + "," + vo.getSubDesc());
+					//journalItem.setAcctViewVO(vo);
+					journalItem.setAcctId(vo.getId());
+					journalItem.setTaxCode(vo.getTaxCode());
+					journalItem.setTaxRate(vo.getTaxRate());
+					journalItem.setAcctDesc(vo.getCode() + "-" + vo.getSubCode()+ " : " + vo.getDesc() + ", " + vo.getSubDesc());
+					break;
+				}
+			}
+			
+			if (journalItem.getAcctId() != null) {
+				// populate GST code and rate
+				handleTaxCodeSelection(journalItem.getTaxCode(), journalItem.getTaxRate() == null ? null : (double) journalItem.getTaxRate());
+				
+			} else resetJournalItemAccount();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	private void updateJournalItemAccount(String acctNo) {
+		//Generate the list of AcctVO to ensure contains data
+		if(acctListMap.size() == 0) {
+			acctAutoComplete(acctNo);
+		} 
+		
+		AcctVO acctVO = (AcctVO) acctListMap.get(acctNo);
+		
+		if(acctVO != null) {
+			journalItem.setCode(acctNo);
+			journalItem.setDesc(acctVO.getDesc() + (acctVO.getSubDesc().equals("") ? "" : "-" + acctVO.getSubDesc()));
+			journalItem.setAcctId(acctVO.getId());
+			journalItem.setTaxCode(acctVO.getTaxCode());
+			
+			try {
+				handleTaxCodeSelection(journalItem.getTaxCode(), null);
+			} catch (Throwable t) {
+				errorResult(t);
+			}
+		} else {
+			//Might be from accountList
+			resetJournalItemAccount();
+		}
+	}
+	
+	private void resetJournalItemAccount() {
+		journalItem = new AcctTransVO();
+		journalItem.setDebit(0.00);
+		journalItem.setCredit(0.00);
+		journalItem.setTaxCode(null);
+		journalItem.setTaxRate(null);
+		journalItem.setAmount(0.00);
+	}
+	
+	/**
+	 * Get Financial Period Closed Status
+	 */ 
+	public void getFinPeriodClosedStatus() {
+		try {
+			setDateInFinPeriodClosed(LookupItemUtils.getFinAndGSTPeriodClosedStatus(this.getSessionInfoBean().getCompanyVO().getId(), journalVO.getJournalDt(), invPmntAuthVO.isAccountManager()));
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	public void handleTaxCodeClear() {
+		try {
+			handleTaxCodeSelection(null, null);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void onPostJournal(ExOrderBillVO exOrderBillVO, ArrayList<AcctTransVO> acctTransList) {
+		
+		TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+		trackingLogUtils.startLogs();
+		
+		try {
+			
+			journalBO.validateJournalTotalAgainstBill(exOrderBillVO, false);
+			
+			init();
+			handleJournalDetailAddNew();
+			
+			journalVO.setIdDpt(MaintConstant.DEPT_TYPE_ACCT);
+			journalVO.setIdTourDep(exOrderBillVO.getTourId());
+			journalVO.setTourCd(exOrderBillVO.getTourCode());
+			journalVO.setJournalDt(new Date());
+			journalVO.setTypeCd(CommonConstant.JOURNAL_TYPE_BILL);	
+			
+			for (AcctTransVO vo : acctTransList) {
+//				System.out.println(vo.getDesc());
+//				System.out.println(vo.getAmount());
+				handleJourItemAddNew();
+				journalItem.setAmount(vo.getAmount());
+				journalItem.setDesc(vo.getDesc());
+				
+				journalItem.setCode(vo.getCode());
+				journalItem.setAcctId(vo.getAcctId());
+//				journalItem.setTaxCode(vo.getTaxCode());
+//				journalItem.setAcctDesc(acctViewVO.getCode() + (acctViewVO.getSubCode().isEmpty() ? "" : "-" + acctViewVO.getSubCode()) + " : " +
+//						acctViewVO.getDesc() + (acctViewVO.getSubDesc().equals("") ? "" : ", " + acctViewVO.getSubDesc()));
+				
+				calcJourItemAmount(acctTransList, exOrderBillVO, journalItem);
+				
+				updateJournaItemList();
+				
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("onPostJournal");
+		}
+	}
+	
+	public void onProcessReversePastInvoice() {
+		Calendar cal = Calendar.getInstance();
+
+        cal.set(2025, Calendar.JANUARY, 1);  // Month is 0-based
+        dtFrom = cal.getTime();
+
+        cal.set(2025, Calendar.JANUARY, 31);
+        dtTo = cal.getTime();
+	}
+	
+	public void loadAppSettingData() {
+		try {
+			schedulerTime = new Date();
+			dateFormat = new SimpleDateFormat("HH:mm");
+			
+			appSettingVOList = appSettingBO.getAppSettingList(ConstantAppSetting.MODULE_MAINT.getValue());
+			
+			for (AppSettingVO vo : appSettingVOList) {
+				if (StringUtils.equals(vo.getModule().concat("_").concat(vo.getCode()), ConstantAppSetting.MAINT_JOURNAL_CONFIG_SCHEDULER_TIME_PROCESS_REVERSE_SALES.getValue())) {
+					schedulerTime = dateFormat.parse(vo.getValue());
+				}
+			}
+		} catch (BusinessException | ParseException e) {
+			errorResult(e);
+		}
+	}
+	
+	public void saveAppSettingData() {
+		try {
+			for (AppSettingVO vo : appSettingVOList) {
+				if (StringUtils.equals(vo.getModule().concat("_").concat(vo.getCode()), ConstantAppSetting.MAINT_JOURNAL_CONFIG_SCHEDULER_TIME_PROCESS_REVERSE_SALES.getValue())) { 
+					vo.setValue(dateFormat.format(schedulerTime));
+				} 
+			}
+			
+			appSettingBO.update(appSettingVOList);
+			successResult();
+//			loadAppSettingData();
+			
+		} catch (BusinessException e) {
+			e.printStackTrace();
+			errorResult(e);
+		}
+	}
+	
+	/**
+	 * one time used
+	 * to reverse pax statement sales before implemented reverse sales journal
+	 */
+	public void processReversePastInvoice() {
+		trackingLogUtils.startLogs();
+		try {
+			
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("invDtFrom", dtFrom);
+			params.put("invDtTo", dtTo);
+			params.put("docTypeCdList", FunctionUtils.generateArrayFromStr(SalesConstant.DOC_TYPE_CD_PAX_STMT));
+			params.put("docTypeStatusList", FunctionUtils.generateArrayFromStr(ProductConstant.PAX_STMT_STATUS_CONVERTED));
+			
+			List<InvoiceVO> convertedPaxStatementList = invoiceBO.getInvoiceList(params, getSessionInfoBean().getCompanyVO().getId());
+//			List<InvoiceVO> invList = new ArrayList<InvoiceVO>();
+			
+			int cnt = 0;
+			for (InvoiceVO psVO : convertedPaxStatementList) {
+
+				invoiceBO.processReversePsSales(psVO);
+				
+//				if (cnt++ > 2)	break;
+			}
+			
+//			for (InvoiceVO vo : invoiceBO.getInvoiceList(getSessionInfoBean().getCompanyVO().getId(), SalesConstant.DOC_TYPE_CD_PAX_STMT)) {
+//				if (!StringUtils.equals(vo.getPsNo(), vo.getCode()) && StringUtils.equals(vo.getDocTypeStatus(), ProductConstant.PAX_STMT_STATUS_CONVERTED)) {
+//					invList.add(vo);
+//				}
+//			}
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("processReversePastInvoice");
+		}
+	}
+	
+	public void calcJourItemAmount(List<AcctTransVO> billAcctTransList, ExOrderBillVO exOrderBillVO, AcctTransVO journalItem) {
+		if (billAcctTransList.size() == 1) {
+			if (CollectionUtils.isNotEmpty(exOrderBillVO.getJournalList())) {
+				for (JournalVO journalVO : exOrderBillVO.getJournalList()) {
+					journalItem.setAmount(journalItem.getAmount() - journalVO.getTotalAmt());
+				}
+			}
+		}
+	}
+
+	/**********************
+	 * Lazy loading model *
+	 **********************/
+	class LazyJournalListDataModel extends LazyDataModel<JournalVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+		
+		private String[] typeCdList;
+		
+		public LazyJournalListDataModel(String ...typeCdList) {
+			this.typeCdList = typeCdList;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#load(int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+		 */
+		@SuppressWarnings("unchecked")
+		@Override
+		public List<JournalVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+			trackingLogUtils.startLogs();
+			try {
+
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", sortField);
+				params.put("sortOrder", sortOrder);
+				params.put("filters", new HashMap<String, String>(filters));
+				params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+				params.put("typeCdList", typeCdList);
+				
+				setRowCount(journalBO.getJournalListSize(params));
+				
+				if (getRowCount() > 0) 
+					return (List<JournalVO>) journalBO.getJournalList(params);
+				
+			} catch (Throwable t) {
+				t.printStackTrace();
+				errorResult(t);
+			}
+			
+			trackingLogUtils.endLogs("LazyJournalListDataModel");
+			return new ArrayList<JournalVO>();
+		}
+		
+		@Override
+		public void setRowIndex(int rowIndex) {
+			/*
+			 * The following is in ancestor (LazyDataModel):
+			 * this.rowIndex = rowIndex == -1 ? rowIndex : (rowIndex % pageSize);
+			 */
+			if (rowIndex == -1 || getPageSize() == 0) {
+				super.setRowIndex(-1);
+			} else super.setRowIndex(rowIndex % getPageSize());
+		}
+	}
+	
+	public void journalDetailsDialogClose() {
+		
+	}
+	
+	/*******************
+	 * Getter & Setter *
+	 *******************/
+
+	public AcctTransVO getJournalItem() {
+		return journalItem;
+	}
+
+	public void setJournalItem(AcctTransVO journalItem) {
+		this.journalItem = journalItem;
+	}
+	
+	public String getAmtType() {
+		return amtType;
+	}
+
+	public void setAmtType(String amtType) {
+		this.amtType = amtType;
+	}
+
+	public List<AcctTransVO> getJournalCartList() {
+		return journalCartList;
+	}
+
+	public void setJournalCartList(List<AcctTransVO> journalCartList) {
+		this.journalCartList = journalCartList;
+	}
+
+	public BigDecimal getTotalCrdAmt() {
+		return totalCrdAmt;
+	}
+
+	public void setTotalCrdAmt(BigDecimal totalCrdAmt) {
+		this.totalCrdAmt = totalCrdAmt;
+	}
+
+	public BigDecimal getTotalDbtAmt() {
+		return totalDbtAmt;
+	}
+
+	public void setTotalDbtAmt(BigDecimal totalDbtAmt) {
+		this.totalDbtAmt = totalDbtAmt;
+	}
+
+	public JournalVO getJournalVO() {
+		return journalVO;
+	}
+
+	public void setJournalVO(JournalVO journalVO) {
+		this.journalVO = journalVO;
+	}
+	
+	public FinancialPeriodLockVO getFinPeriodLockVO() {
+		return finPeriodLockVO;
+	}
+
+	public void setFinPeriodLockVO(FinancialPeriodLockVO finPeriodLockVO) {
+		this.finPeriodLockVO = finPeriodLockVO;
+	}
+
+
+	public Boolean getIsAddNewDetail() {
+		return isAddNewDetail;
+	}
+
+	public void setIsAddNewDetail(Boolean isAddNewDetail) {
+		this.isAddNewDetail = isAddNewDetail;
+	}
+
+	public Boolean getIsAddNewItem() {
+		return isAddNewItem;
+	}
+
+	public void setIsAddNewItem(Boolean isAddNewItem) {
+		this.isAddNewItem = isAddNewItem;
+	}
+	
+	public LazyDataModel<JournalVO> getLazyDMJournal() {
+		return lazyDMJournal;
+	}
+
+	public void setLazyDMJournal(LazyDataModel<JournalVO> lazyDMJournal) {
+		this.lazyDMJournal = lazyDMJournal;
+	}
+
+	public List<Object> getFilteredJournalDetailList() {
+		return filteredJournalDetailList;
+	}
+
+	public void setFilteredJournalDetailList(List<Object> filteredJournalDetailList) {
+		this.filteredJournalDetailList = filteredJournalDetailList;
+	}
+	
+	/**
+	 * @return the isDateInFinPeriodClosed
+	 */
+	public boolean isDateInFinPeriodClosed() {
+		return isDateInFinPeriodClosed;
+	}
+	/**
+	 * @param isDateInFinPeriodClosed the isDateInFinPeriodClosed to set
+	 */
+	public void setDateInFinPeriodClosed(boolean isDateInFinPeriodClosed) {
+		this.isDateInFinPeriodClosed = isDateInFinPeriodClosed;
+	}
+
+	public AmountCalcViewVO getAmtCalcViewVO() {
+		return amtCalcViewVO;
+	}
+
+	public void setAmtCalcViewVO(AmountCalcViewVO amtCalcViewVO) {
+		this.amtCalcViewVO = amtCalcViewVO;
+	}
+
+	public List<TaxCodeVO> getInputTaxCodeVOList() {
+		return inputTaxCodeVOList;
+	}
+
+	public void setInputTaxCodeVOList(List<TaxCodeVO> inputTaxCodeVOList) {
+		this.inputTaxCodeVOList = inputTaxCodeVOList;
+	}
+
+	public boolean getIsGSTPeriod() {
+		return isGSTPeriod;
+	}
+
+	public void setIsGSTPeriod(boolean isGSTPeriod) {
+		this.isGSTPeriod = isGSTPeriod;
+	}
+
+	public List<TaxCodeVO> getOutputTaxCodeVOList() {
+		return outputTaxCodeVOList;
+	}
+
+	public void setOutputTaxCodeVOList(List<TaxCodeVO> outputTaxCodeVOList) {
+		this.outputTaxCodeVOList = outputTaxCodeVOList;
+	}
+
+	public List<TourDepartureViewVO> getTourDepViewList() {
+		return tourDepViewList;
+	}
+
+	public void setTourDepViewList(List<TourDepartureViewVO> tourDepViewList) {
+		this.tourDepViewList = tourDepViewList;
+	}
+
+	public LazyDataModel<JournalVO> getLazyDMJournalSales() {
+		return lazyDMJournalSales;
+	}
+
+	public void setLazyDMJournalSales(LazyDataModel<JournalVO> lazyDMJournalSales) {
+		this.lazyDMJournalSales = lazyDMJournalSales;
+	}
+
+	public Date getDtTo() {
+		return dtTo;
+	}
+
+	public void setDtTo(Date dtTo) {
+		this.dtTo = dtTo;
+	}
+
+	public Date getDtFrom() {
+		return dtFrom;
+	}
+
+	public void setDtFrom(Date dtFrom) {
+		this.dtFrom = dtFrom;
+	}
+
+	public LazyDataModel<JournalVO> getLazyDMJournalGnrl() {
+		return lazyDMJournalGnrl;
+	}
+
+	public void setLazyDMJournalGnrl(LazyDataModel<JournalVO> lazyDMJournalGnrl) {
+		this.lazyDMJournalGnrl = lazyDMJournalGnrl;
+	}
+
+	public Date getSchedulerTime() {
+		return schedulerTime;
+	}
+
+	public void setSchedulerTime(Date schedulerTime) {
+		this.schedulerTime = schedulerTime;
+	}
+}

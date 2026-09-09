@@ -1,0 +1,33 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:dataTable widgetVar="varEOListTable" value="#{tourPkgBean.exOrderList}" var="vo" paginator="true" rows="10" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	rowsPerPageTemplate="5,10,15" filterEvent="enter" filteredValue="#{tourPkgBean.filteredObjList}">
+	
+	<p:column headerText="Supplier Name" sortBy="#{vo.supplierName}" filterBy="#{vo.supplierName}" filterMatchMode="contains">
+		<h:outputText value="#{vo.supplierName}" />
+	</p:column>
+	
+	<p:column headerText="EO Number" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains">
+		<p:commandLink actionListener="#{purchaseEOBean.handleEORefNoClick(vo)}" update=":idAddEORefDialog" oncomplete="varAddEORefDialog.show()" style="color:#CC2EFA;" process="@this">
+			<h:outputText value="#{vo.code}" />
+		</p:commandLink>
+	</p:column>
+	
+	<p:column headerText="Status" sortBy="#{vo.status}" filterBy="#{vo.status}" filterMatchMode="contains">
+		<h:outputText value="#{vo.status}" />
+	</p:column>
+	
+</p:dataTable>
+
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{tourPkgBean.resetFilteredObjList}" onclick="varEODetailsDialog.hide()"/>
+</h:panelGrid>
+</ui:composition>

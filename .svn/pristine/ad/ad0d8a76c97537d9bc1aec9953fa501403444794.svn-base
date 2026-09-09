@@ -1,0 +1,473 @@
+package com.bcs.zsg.purchase.dao;
+
+import java.math.BigInteger;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.primefaces.model.SortOrder;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.purchase.vo.AddressVO;
+import com.bcs.zsg.purchase.vo.ContactVO;
+import com.bcs.zsg.purchase.vo.CorAddressVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.purchase.vo.CorporateVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.purchase.vo.PersonVO;
+import com.bcs.zsg.purchase.vo.RemarksVO;
+import com.bcs.zsg.purchase.vo.SuppPersonInChargeVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+
+
+public class PurchaseDAOImpl extends BaseHibernateDAO implements PurchaseDAO {
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getSupplierList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<SupplierVO> getSupplierList() {
+
+		Criteria criteria = getSession().createCriteria(SupplierVO.class);
+		criteria.add(Restrictions.eq("status", "A"));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getSupplierList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<IdentityVO> getIdentityList() {
+
+		Criteria criteria = createCriteria(IdentityVO.class);
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getPymtTermList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<LookupItemVO> getPymtTermList(String pymtTerm) {
+
+		Criteria criteria = getSession().createCriteria(LookupItemVO.class);
+		criteria.add(Restrictions.eq("lookupCatCd", pymtTerm));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getSupplierList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CountryVO> getCountryList() {
+		Criteria criteria = getSession().createCriteria(CountryVO.class);
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getPersonList()
+	 */
+	@Override
+	public PersonVO getPerson(Long personId) {
+
+		Criteria criteria = getSession().createCriteria(PersonVO.class);
+		criteria.add(Restrictions.eq("Id", personId));
+		
+		return (PersonVO)criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getContactList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ContactVO> getContactList(Long personId) {
+
+		Criteria criteria = getSession().createCriteria(ContactVO.class);
+		criteria.add(Restrictions.eq("personId", personId));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getCorContactList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CorContactVO> getCorContactList(Long corporateId) {
+
+		Criteria criteria = getSession().createCriteria(CorContactVO.class);
+		criteria.add(Restrictions.eq("corporateId", corporateId));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getAddressList()
+	 */
+	@Override
+	public AddressVO getAddress(Long personId) {
+
+		Criteria criteria = getSession().createCriteria(AddressVO.class);
+		criteria.add(Restrictions.eq("personId", personId));
+		return (AddressVO)criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getCorAddressList()
+	 */
+	@Override
+	public CorAddressVO getCorAddress(Long corporateId) {
+
+		Criteria criteria = getSession().createCriteria(CorAddressVO.class);
+		criteria.add(Restrictions.eq("corporateId", corporateId));
+		return (CorAddressVO)criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getCompany()
+	 */
+	@Override
+	public CorporateVO getCompany(Long personId) {
+
+		Criteria criteria = getSession().createCriteria(CorporateVO.class);
+		criteria.add(Restrictions.eq("personId", personId));
+		return (CorporateVO)criteria.uniqueResult();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getIdentityList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<IdentityVO> getIdentityList(Long personId) {
+
+		Criteria criteria = getSession().createCriteria(IdentityVO.class);
+		criteria.add(Restrictions.eq("personId", personId));
+		return criteria.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getRemarksList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<RemarksVO> getRemarksList(Long personId) {
+
+		Criteria criteria = getSession().createCriteria(RemarksVO.class);
+		criteria.add(Restrictions.eq("personCorpId", personId));
+		return criteria.list();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getSupplierListSize(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getSupplierListSize(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("SELECT ").
+			append("count(s.id) ").
+			append("FROM supplier s ").
+			append("left join person p on s.id_person = p.id ").
+			append("left join corporate c on c.id_person = p.id ").
+			append("left join lookup_item li ON s.cat_cd = li.code and li.lookup_cat_cd = 'supl_cat' ").
+			append("left join corporate_address ca ON c.id = ca.id_corporate ").
+			append("left join country co ON ca.id_country = co.id ").
+			append("WHERE s.id_company = '").append(params.get("idCompany")).append("' and s.status_cd = 'A' ");
+
+		String groupCd = (String) params.get("groupCd");
+		if (StringUtils.isNotEmpty(groupCd)) {
+			sb.append(" AND s.group_cd = '").append(groupCd).append("'");
+		} 
+		
+		Map<String, String> filters = params.get("filters") != null ? (Map<String, String>) params.get("filters") : null;
+		if (filters != null && !filters.isEmpty()) {
+			sb.append("AND (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("sysNo".equals(entry.getKey())) sb.append("s.sys_no LIKE '%").append(entry.getValue()).append("%'");
+				else if ("fullName".equals(entry.getKey())) sb.append("(case when c.name <> '' then c.name else concat_ws(' ', p.last_name, p.first_name) end) LIKE '%").append(entry.getValue()).append("%'");
+				else if ("email".equals(entry.getKey())) sb.append("p.email LIKE '%").append(entry.getValue()).append("%'");
+				else if ("supplierType".equals(entry.getKey())) sb.append("CONCAT(s.type_cd, ' (', CASE WHEN s.type_cd = 'TC' THEN 'Trade' ELSE 'Sundry' END, ')') LIKE '%").append(entry.getValue()).append("%'");
+				else if ("contactNo".equals(entry.getKey())) sb.append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM corporate_contact WHERE id_corporate = c.id AND status_cd = 'A') LIKE '%").append(entry.getValue()).append("%'");
+				else if ("supplierCatName".equals(entry.getKey())) sb.append("li.description LIKE '%").append(entry.getValue()).append("%'");
+				else if ("countryName".equals(entry.getKey())) sb.append("co.name LIKE '%").append(entry.getValue()).append("%'");
+				else if ("gstRegNo".equals(entry.getKey())) sb.append("s.gst_reg_no LIKE '%").append(entry.getValue()).append("%'");
+				else if ("updatedBy".equals(entry.getKey())) sb.append("s.upd_by like '%").append(entry.getValue()).append("%'");
+				else if ("updatedDate".equals(entry.getKey())) sb.append("date_format(s.dt_upd, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("beneficiaryName".equals(entry.getKey())) sb.append("s.beneficiary_name LIKE '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getSupplierList(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<SupplierVO> getSupplierList(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("SELECT ").
+			append("supplierId, personId, supplierNo, CONCAT(supplierType, ' (', CASE WHEN supplierType = 'TC' THEN 'Trade' ELSE 'Sundry' END, ')'), name, email, ").
+			append("(SELECT GROUP_CONCAT(CONCAT((select description from lookup_item where lookup_cat_cd = 'cntc_type' and code = cc.type_cd), ': ', cc.number) separator ',') FROM corporate_contact cc WHERE cc.id_corporate = A.corporateId AND cc.status_cd = 'A') AS 'corContacts', ").
+			append("beneficiaryName, supplierCatName, countryName, regNo, gstRegNo, updatedBy, updatedDate, email_upd_status, email_upd_remarks ").
+			append("FROM (SELECT ").
+			append("s.id AS supplierId, s.sys_no AS supplierNo, s.type_cd AS supplierType, p.id AS personId, c.id AS corporateId, p.email, ").
+			append("case when c.name <> '' then c.name else concat_ws(' ', p.last_name, p.first_name) end as name, s.beneficiary_name as beneficiaryName ").
+			append(", li.description AS supplierCatName, co.name AS countryName, s.group_cd AS groupCd, s.reg_no AS regNo, s.gst_reg_no AS gstRegNo ").
+			append(", s.upd_by as updatedBy, s.dt_upd as updatedDate ").
+			append(", (SELECT update_status FROM supplier_profile_update spu WHERE spu.id_supplier = s.id AND spu.status_cd = 'A' ORDER BY spu.id DESC LIMIT 1) AS email_upd_status ").
+			append(", (SELECT GROUP_CONCAT( ").
+				append("CASE WHEN spu2.update_status = 'P' THEN ").
+					append("CONCAT('Status Pending Created By ', spu2.created_by, ' On ', DATE_FORMAT(spu2.dt_created, '%Y-%m-%d %h:%i:%s %p')) ").
+				append("WHEN spu2.update_status = 'S' THEN ").
+					append("CONCAT('Status Success Updated By ', spu2.updated_by, ' On ', DATE_FORMAT(spu2.dt_update, '%Y-%m-%d %h:%i:%s %p')) ").
+				append("ELSE null END ").
+			append("ORDER BY spu2.id DESC SEPARATOR '\n') FROM supplier_profile_update spu2 WHERE spu2.id_supplier = s.id AND spu2.status_cd = 'A' GROUP BY spu2.id_supplier) as email_upd_remarks ").
+			append("FROM supplier s ").
+			append("left join person p on s.id_person = p.id ").
+			append("left join corporate c on c.id_person = p.id ").
+			append("left join lookup_item li ON s.cat_cd = li.code and li.lookup_cat_cd = 'supl_cat' ").
+			append("left join corporate_address ca ON c.id = ca.id_corporate ").
+			append("left join country co ON ca.id_country = co.id ").
+			append("WHERE s.id_company = '").append(params.get("idCompany")).append("' and s.status_cd = 'A' ");
+		
+		String groupCd = (String) params.get("groupCd");
+		if (StringUtils.isNotEmpty(groupCd)) {
+			sb.append(" AND s.group_cd = '").append(groupCd).append("'");
+		}
+		
+		if (params.get("suppType") != null && !StringUtils.equals(params.get("suppType").toString(), "ALL"))
+			sb.append("and s.type_cd = '" + params.get("suppType") + "' ");
+		
+		Map<String, String> filters = params.get("filters") != null ? (Map<String, String>) params.get("filters") : null;
+		if (filters != null && !filters.isEmpty()) {
+			sb.append("AND (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("sysNo".equals(entry.getKey())) sb.append("s.sys_no LIKE '%").append(entry.getValue()).append("%'");
+				else if ("fullName".equals(entry.getKey())) sb.append("(case when c.name <> '' then c.name else concat_ws(' ', p.last_name, p.first_name) end) LIKE '%").append(entry.getValue()).append("%'");
+				else if ("email".equals(entry.getKey())) sb.append("p.email LIKE '%").append(entry.getValue()).append("%'");
+				else if ("supplierType".equals(entry.getKey())) sb.append("CONCAT(s.type_cd, ' (', CASE WHEN s.type_cd = 'TC' THEN 'Trade' ELSE 'Sundry' END, ')') LIKE '%").append(entry.getValue()).append("%'");
+				else if ("supplierCatName".equals(entry.getKey())) sb.append("li.description LIKE '%").append(entry.getValue()).append("%'");
+				else if ("countryName".equals(entry.getKey())) sb.append("co.name LIKE '%").append(entry.getValue()).append("%'");
+				else if ("gstRegNo".equals(entry.getKey())) sb.append("s.gst_reg_no LIKE '%").append(entry.getValue()).append("%'");
+				else if ("contactNo".equals(entry.getKey())) sb.append("(SELECT GROUP_CONCAT(CONCAT(type_cd, '|', number) separator ',') FROM corporate_contact WHERE id_corporate = c.id AND status_cd = 'A') LIKE '%").append(entry.getValue()).append("%'");
+				else if ("updatedBy".equals(entry.getKey())) sb.append("s.upd_by like '%").append(entry.getValue()).append("%'");
+				else if ("updatedDate".equals(entry.getKey())) sb.append("date_format(s.dt_upd, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("beneficiaryName".equals(entry.getKey())) sb.append("s.beneficiary_name LIKE '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(") ");
+		}
+		sb.append(") A ORDER BY ");
+		String sortField = (String) params.get("sortField");
+		if (sortField == null) {
+			sb.append("name ");
+			
+		} else {
+			if ("sysNo".equals(sortField)) sb.append("cast(supplierNo as decimal)");
+			else if("fullName".equals(sortField)) sb.append("name");
+			else if("supplierType".equals(sortField)) sb.append("supplierType");
+			else if("supplierCatName".equals(sortField)) sb.append("supplierCatName");
+			else if("countryName".equals(sortField)) sb.append("countryName");
+			else if("gstRegNo".equals(sortField)) sb.append("gstRegNo");
+			else if ("contactNo".equals(sortField)) sb.append("corContacts");
+			else if ("email".equals(sortField)) sb.append("email");
+			else if ("updatedBy".equals(sortField)) sb.append("updatedBy");
+			else if ("updatedDate".equals(sortField)) sb.append("updatedDate");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		if (params.get("first") != null) query.setFirstResult((int) params.get("first"));
+		if (params.get("pageSize") != null) query.setMaxResults((int) params.get("pageSize"));
+		List<Object> results = query.list();
+		List<SupplierVO> ls = new ArrayList<SupplierVO>(results.size());
+		SupplierVO vo = null;
+		 
+		for (int i = 0; i < results.size(); i++) {
+			vo = new SupplierVO();
+			Object[] row = (Object[]) results.get(i);
+			
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setPersonId(((BigInteger) row[1]).longValue());
+			vo.setSysNo((String) row[2]);
+			vo.setSupplierType((String) row[3]);
+			vo.setFullName((String) row[4]);
+			vo.setEmail((String) row[5]);
+			vo.setContactNo((String) row[6]);
+			vo.setBeneficiaryName(row[7] == null ? null : (String) row[7]);
+			vo.setSupplierCatName((String) row[8]);
+			vo.setCountryName((String) row[9]);
+			vo.setRegNo((String) row[10]);
+			vo.setGstRegNo((String) row[11]);
+			vo.setUpdatedBy((String) row[12]);
+			vo.setUpdatedDate((Date) row[13]);
+			vo.setEmailUpdStatus((String) row[14]);
+			vo.setEmailUpdRemarks((String) row[15]);
+			ls.add(vo);
+		}
+		return ls;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.purchase.dao.PurchaseDAO#getSupplierById(java.lang.Long)
+	 */
+	@Override
+	public SupplierVO getSupplierById(Long id) {
+		Criteria criteria = createCriteria(SupplierVO.class);
+		criteria.add(Restrictions.eq("id", id));
+		return (SupplierVO) criteria.uniqueResult();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<SuppPersonInChargeVO> getSuppPicList(Long supplierId) {
+		Criteria criteria = getSession().createCriteria(SuppPersonInChargeVO.class);
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.add(Restrictions.eq("supplierId", supplierId));
+		criteria.addOrder(Order.desc("id"));
+		return criteria.list();
+	}
+	
+	@Override
+	public void terminateSupplierCorContact(Long corporateId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE corporate_contact SET status_cd = :statusCode WHERE id_corporate = :corporateId");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setString("statusCode", BaseConstant.STATUS_DELETED);
+		query.setLong("corporateId", corporateId);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void terminateSupplierPIC(Long supplierId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE supplier_pic SET status_cd = :statusCode WHERE id_supplier = :supplierId");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setString("statusCode", BaseConstant.STATUS_DELETED);
+		query.setLong("supplierId", supplierId);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public List<SupplierVO> getSupplierList(Long idCompany, SearchParamVO searchParamVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		List<SupplierVO> list = new ArrayList<SupplierVO>();
+		
+		try {
+			sb.append("SELECT ").
+			append("supplierId, personId, supplierNo, CONCAT(supplierType, ' (', CASE WHEN supplierType = 'TC' THEN 'Trade' ELSE 'Sundry' END, ')'), name, email, ").
+			append("(SELECT GROUP_CONCAT(CONCAT((select description from lookup_item where lookup_cat_cd = 'cntc_type' and code = cc.type_cd), ': ', cc.number) separator ',') FROM corporate_contact cc WHERE cc.id_corporate = A.corporateId AND cc.status_cd = :statusCd) AS 'corContacts', ").
+			append("beneficiaryName, supplierCatName, countryName, regNo, gstRegNo, updatedBy, updatedDate, compContact, compEmail, corAddress ").
+			append("FROM (SELECT ").
+			append("s.id AS supplierId, s.sys_no AS supplierNo, s.type_cd AS supplierType, p.id AS personId, c.id AS corporateId, p.email, ").
+			append("case when c.name <> '' then c.name else concat_ws(' ', p.last_name, p.first_name) end as name, s.beneficiary_name as beneficiaryName ").
+			append(", li.description AS supplierCatName, co.name AS countryName, s.group_cd AS groupCd, s.reg_no AS regNo, s.gst_reg_no AS gstRegNo ").
+			append(", s.upd_by as updatedBy, s.dt_upd as updatedDate, s.contact_no as compContact, s.email as compEmail, s.dt_created,  ").
+			append("(SELECT CONCAT_WS(' ', ").
+				append("if(addr_1 = '', null, addr_1), if(addr_2 = '', null, addr_2), if(addr_3 = '', null, addr_3), ").
+				append("if(city = '', null, city), if(state = '', null, state), if(postcode = '', null, postcode), ").
+				append("if(ct.name = '', null, ct.name)) FROM corporate_address pa left join country ct on ct.id = pa.id_country WHERE pa.id_corporate = c.id) AS 'corAddress' ").
+			append("FROM supplier s ").
+			append("left join person p on s.id_person = p.id ").
+			append("left join corporate c on c.id_person = p.id ").
+			append("left join lookup_item li ON s.cat_cd = li.code and li.lookup_cat_cd = 'supl_cat' ").
+			append("left join corporate_address ca ON c.id = ca.id_corporate ").
+			append("left join country co ON ca.id_country = co.id ").
+			append("WHERE s.id_company = :idCompany and s.status_cd = :statusCd ");
+			
+			if (searchParamVO.getObj7() != null && StringUtils.isNotEmpty(searchParamVO.getObj7().toString())) {
+				sb.append("AND s.id in (").append(searchParamVO.getObj7().toString()).append(") ");
+			}
+			
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			if (searchParamVO.getFromDate() != null) sb.append("AND DATE(A.dt_created) >= DATE('" + sdf.format((Date)searchParamVO.getFromDate()) + "') ");
+			if (searchParamVO.getToDate() != null) sb.append("AND DATE(A.dt_created) <= DATE('" + sdf.format((Date)searchParamVO.getToDate()) + "') ");
+			sb.append(") A ORDER BY cast(A.supplierNo AS decimal) ASC ");
+			
+//			System.out.println("##############sql: " + sb.toString());
+			Query query = createSQLQuery(sb.toString());
+			query.setParameter("idCompany", idCompany);
+			query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+			List<Object> objList = query.list();
+			
+			if (CollectionUtils.isNotEmpty(objList)) {
+				for (Iterator<Object> it = objList.iterator() ; it.hasNext() ;) {
+					Object[] row = (Object[]) it.next();
+					SupplierVO vo = new SupplierVO();
+					
+					vo.setId(((BigInteger) row[0]).longValue());
+					vo.setPersonId(((BigInteger) row[1]).longValue());
+					vo.setSysNo((String) row[2]);
+					vo.setSupplierType((String) row[3]);
+					vo.setFullName((String) row[4]);
+					vo.setEmail((String) row[5]);
+					vo.setContactNo((String) row[6]);
+					vo.setBeneficiaryName(row[7] == null ? null : (String) row[7]);
+					vo.setSupplierCatName((String) row[8]);
+					vo.setCountryName((String) row[9]);
+					vo.setRegNo((String) row[10]);
+					vo.setGstRegNo((String) row[11]);
+					vo.setUpdatedBy((String) row[12]);
+					vo.setUpdatedDate((Date) row[13]);
+					
+//					vo.setContactNo((String) row[14]);
+//					vo.setEmail((String) row[15]);
+					vo.setAdd1((String) row[16]);
+					list.add(vo);
+				}
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+		
+		return list;
+	}
+}

@@ -1,0 +1,393 @@
+package com.bcs.zsg.common.helper;
+
+import static com.bcs.zsg.core.web.swf.bean.BaseBackingBean.logger;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.codehaus.jackson.map.ObjectMapper;
+import org.primefaces.json.JSONArray;
+import org.primefaces.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.support.SpringBeanAutowiringSupport;
+
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.CollectionUtils;
+import com.bcs.zsg.crm.bo.CustomerPosInfoBO;
+import com.bcs.zsg.crm.bo.InvoicePosSalesBO;
+import com.bcs.zsg.crm.helper.CRMProperties;
+import com.bcs.zsg.crm.vo.CRMRequestVO;
+import com.bcs.zsg.crm.vo.CRMResponseVO;
+import com.bcs.zsg.crm.vo.CustomerPointTierVO;
+import com.bcs.zsg.crm.vo.CustomerPosInfoVO;
+import com.bcs.zsg.crm.vo.InvoicePosSalesBillingVO;
+import com.bcs.zsg.crm.vo.InvoicePosSalesVO;
+import com.bcs.zsg.crm.vo.PointExpiryVO;
+import com.bcs.zsg.sales.bo.CustomerBO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+@Service
+@Transactional
+public class CRMUtils  {
+
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
+	
+	@Autowired
+	private transient InvoicePosSalesBO invoicePosSalesBO;
+	@Autowired
+    private transient CustomerPosInfoBO customerPosInfoBO;
+	@Autowired
+	private transient CustomerBO customerBO;
+	
+	public CRMUtils() {
+		SpringBeanAutowiringSupport.processInjectionBasedOnCurrentContext(this);
+	}
+	
+	// Post Sales Information from ERP to CRM
+	public void postingSalesInvoice() throws BusinessException {
+		try {
+			URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_POSTING_SALES_INVOICE);
+			
+			CRMRequestVO requestVO = new CRMRequestVO();
+			List<InvoicePosSalesVO> invoicePosSalesList = invoicePosSalesBO.getInvoicePosSalesList();
+			
+			if (CollectionUtils.isEmpty(invoicePosSalesList)) return;
+			
+			List<InvoicePosSalesBillingVO> posSalesBilling = new ArrayList<InvoicePosSalesBillingVO>();
+			for (InvoicePosSalesVO salesVO : invoicePosSalesList) {
+				if (salesVO.getIdCustomer() != null) {
+					posSalesBilling = new ArrayList<InvoicePosSalesBillingVO>();
+					posSalesBilling.add(invoicePosSalesBO.getBillingDetails(salesVO.getIdCustomer()));
+					salesVO.setInvoicePosSalesBillingList(posSalesBilling);
+				}
+			}
+			
+			requestVO.setTotalCount(invoicePosSalesList.size());
+			requestVO.setData(invoicePosSalesList);
+			
+			String requestJson = generateJsonWithAnnotationOnly(requestVO);
+		    System.out.println("#############jsonString: " + new JSONObject(requestJson).toString(4));
+			System.out.println("############# uri.toURL(): " + uri.toURL());
+			System.out.println("############# uri.getPath(): " + uri.getPath());
+			
+//			// open connection
+			String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.POST, requestJson);
+			
+			JSONObject obj = new JSONObject(responseJson);
+			TrackingLogUtils.infoLogs("Response: " + obj.toString(4));
+
+			// optional summary fields
+			int totalReceived = obj.optInt("totalReceived");
+			int totalSuccess = obj.optInt("totalSuccess");
+			int totalFailed = obj.optInt("totalFailed");
+
+			TrackingLogUtils.infoLogs(String.format("Received: %s, Success: %s, Failed: %s", totalReceived, totalSuccess, totalFailed));
+
+			// get results array
+			JSONArray results = obj.optJSONArray("results");
+			List<InvoicePosSalesVO> updList = new ArrayList<InvoicePosSalesVO>();
+			if (results != null) {
+			    for (int i = 0; i < results.length(); i++) {
+			        JSONObject item = results.getJSONObject(i);
+
+			        String crmId = item.optString("crmId");
+			        String customerId = item.optString("customerId");
+			        String refSalesId = item.optString("refSalesId");
+			        String timestamp = item.optString("timestamp");
+			        String status = item.optString("status");
+			        String message = item.optString("message");
+
+			        System.out.println("==== RESULT " + i + " ====");
+			        System.out.println("crmId: " + crmId);
+			        System.out.println("customerId: " + customerId);
+			        System.out.println("refSalesId: " + refSalesId);
+			        System.out.println("status: " + status);
+			        System.out.println("message: " + message);
+			        
+			        for (InvoicePosSalesVO salesVO : invoicePosSalesList) {
+				        if (refSalesId != null && refSalesId.equals(String.valueOf(salesVO.getIdInvoice()))) {
+				        	if (CRMCommonConstant.API_STATUS_SUCCESS.equals(status)) {
+				        		salesVO.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_SUCCESS);
+				        		updList.add(salesVO);
+				        	} else {
+				        		salesVO.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_FAILED);
+				        		salesVO.setRemarks(message);
+				        		updList.add(salesVO);
+				        	}
+				        	break;
+				        }
+			        }
+			    }
+			    if(CollectionUtils.isNotEmpty(updList)) invoicePosSalesBO.updateInvoicePosSalesStatus(updList);
+			}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("[CRMUtils - postingSalesInvoice]", e);
+		}
+	}
+	
+	public static CustomerPointTierVO getCustomerPointTier(Map<String, Object> params) throws BusinessException {
+	    try {
+	        String customerId = String.valueOf(params.get("customerId"));
+
+	        URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_RETRIEVE_MEMBER + "/" + customerId);
+
+	        String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.GET, null);
+
+	        JSONObject obj = new JSONObject(responseJson);
+	        TrackingLogUtils.infoLogs("Response: " + obj.toString(4));
+	        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+
+	        CustomerPointTierVO vo = gson.fromJson(responseJson, CustomerPointTierVO.class);
+	        return vo;
+
+	    } catch (Exception e) {
+	        throw new BusinessException(e.getMessage());
+	    }
+	}
+	
+	public void postingCustomerData() throws BusinessException {
+	    try {
+	        URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_POSTING_CONTACT);
+
+	        CRMRequestVO requestVO = new CRMRequestVO();
+	        List<CustomerPosInfoVO> customerPosInfoList = customerPosInfoBO.getCustomerPosInfoList();
+
+	        if (CollectionUtils.isEmpty(customerPosInfoList)) return;
+
+	        requestVO.setTotalCount(customerPosInfoList.size());
+	        requestVO.setData(customerPosInfoList);
+
+	        String requestJson = generateJsonWithAnnotationOnly(requestVO);
+
+	        System.out.println("############# jsonString: " + new JSONObject(requestJson).toString(4));
+	        System.out.println("############# uri.toURL(): " + uri.toURL());
+	        System.out.println("############# uri.getPath(): " + uri.getPath());
+
+	        // open connection
+	        String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.POST, requestJson);
+
+	        JSONObject obj = new JSONObject(responseJson);
+
+	        TrackingLogUtils.infoLogs("Response: " + obj.toString(4));
+	        // optional summary fields
+	        int totalReceived = obj.optInt("totalReceived");
+	        int totalSuccess = obj.optInt("totalSuccess");
+	        int totalFailed = obj.optInt("totalFailed");
+
+	        TrackingLogUtils.infoLogs(String.format("Received: %s, Success: %s, Failed: %s", totalReceived, totalSuccess, totalFailed));
+
+	        // get results array
+	        JSONArray results = obj.optJSONArray("results");
+	        List<CustomerPosInfoVO> updList = new ArrayList<CustomerPosInfoVO>();
+
+	        if (results != null) {
+	            for (int i = 0; i < results.length(); i++) {
+	                JSONObject item = results.getJSONObject(i);
+	                String crmId = item.optString("crmId");
+	                Long customerId  = item.optLong("customerId");
+	                String status = item.optString("status");
+	                String message = item.optString("message");
+	                String timestamp = item.optString("timestamp");
+
+	                System.out.println("==== RESULT " + i + " ====");
+	                System.out.println("crmId: " + crmId);
+	                System.out.println("customerId: " + customerId);
+	                System.out.println("status: " + status);
+	                System.out.println("message: " + message);
+	                for (CustomerPosInfoVO custVO : customerPosInfoList) {
+	                    if (customerId != null && customerId.equals(custVO.getCustomerId())) {
+	                        if (CRMCommonConstant.API_STATUS_SUCCESS.equalsIgnoreCase(status)) {
+	                            custVO.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_SUCCESS);
+	                            custVO.setRemarks(message);
+	                            custVO.setRequest(requestJson);
+	                            custVO.setResponse(responseJson);
+	                            customerBO.updateCrmId(customerId, crmId);
+	                        } else {
+	                            custVO.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_FAILED);
+	                            custVO.setRemarks(message);
+	                        }
+	                        updList.add(custVO);
+	                        break;
+	                    }
+	                }
+	            }
+	            if (CollectionUtils.isNotEmpty(updList)) {
+	                customerPosInfoBO.updateCustomerPosInfoStatus(updList);
+	            }
+	        }
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        logger.error("[CRMUtils - postingCustomerData]", e);
+	    }
+	}
+	
+	public void postingCustomerData(CustomerVO customerVO) throws BusinessException {
+	    try {
+	        URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_POSTING_CONTACT);
+	        
+	        CustomerPosInfoVO posInfo = customerPosInfoBO.getCustomerPosInfo(customerVO);
+	        
+	        List<CustomerPosInfoVO> singleList = new ArrayList<>();
+	        singleList.add(posInfo);
+	        
+	        CRMRequestVO requestVO = new CRMRequestVO();
+	        requestVO.setTotalCount(1);
+	        requestVO.setData(singleList);
+
+	        String requestJson = generateJsonWithAnnotationOnly(requestVO);
+
+	        System.out.println("############# IMMEDIATE REQUEST: " + new JSONObject(requestJson).toString(4));
+	        System.out.println("############# uri.toURL(): " + uri.toURL());
+
+	        String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.POST, requestJson);
+	        JSONObject obj = new JSONObject(responseJson);
+	        TrackingLogUtils.infoLogs("IMMEDIATE Response: " + obj.toString(4));
+	        JSONArray results = obj.optJSONArray("results");
+	        if (results != null && results.length() > 0) {
+	            JSONObject item = results.getJSONObject(0);
+	            String crmId = item.optString("crmId");
+	            Long customerId  = item.optLong("customerId");
+	            String status = item.optString("status");
+	            String message = item.optString("message");
+                String timestamp = item.optString("timestamp");
+                System.out.println("==== RESULT ====");
+                System.out.println("crmId: " + crmId);
+                System.out.println("customerId: " + customerId);
+                System.out.println("status: " + status);
+                System.out.println("message: " + message);
+	            if (CRMCommonConstant.API_STATUS_SUCCESS.equalsIgnoreCase(status)) {
+	                posInfo.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_SUCCESS);
+	                posInfo.setRemarks(message);
+	                posInfo.setRequest(requestJson);
+	                posInfo.setResponse(responseJson);
+	                customerBO.updateCrmId(customerId, crmId);
+	            } else {
+	                posInfo.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_FAILED);
+	                posInfo.setRemarks(message);
+	            }
+
+	            List<CustomerPosInfoVO> updList = new ArrayList<>();
+	            updList.add(posInfo);
+
+	            customerPosInfoBO.updateCustomerPosInfoStatus(updList);
+	        }
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        logger.error("[CRMUtils - postingCustomerData]", e);
+	    }
+	}
+	
+	// Retrieved Sales Data by Id
+	public CRMResponseVO retrievedSalesInvoice(Long id) throws BusinessException {
+		CRMResponseVO crmResponseVO = new CRMResponseVO();
+		try {
+			URI uri = new URI(String.format(CRMProperties.getSystemApiUrl() + CRMProperties.API_RETRIEVE_SALES_INVOICE + "/%s", id));
+			
+			System.out.println("############# uri.toURL(): " + uri.toURL());
+			System.out.println("############# uri.getPath(): " + uri.getPath());
+			
+			// open connection
+			String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.GET, "");
+			
+			JSONObject obj = new JSONObject(responseJson);
+			TrackingLogUtils.infoLogs("Response: " + obj.toString(4));
+
+			
+			ObjectMapper mapper = new ObjectMapper();
+
+			crmResponseVO = mapper.readValue(responseJson, CRMResponseVO.class);
+			
+			TrackingLogUtils.infoLogs(String.format("Success: %s, Error: %s, Message: %s", crmResponseVO.isSuccess(), crmResponseVO.getErrors(), crmResponseVO.getMessage()));
+
+			// get results array
+			JSONObject data = obj.optJSONObject("data");
+			TrackingLogUtils.infoLogs("Data: " + data.toString(4));
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("[CRMUtils - postingSalesInvoice]", e);
+		}
+		
+		return crmResponseVO;
+	}
+	
+	public void updateCustomerData(CustomerVO customerVO) throws BusinessException {
+
+	    try {
+	        URI uri = new URI(CRMProperties.getSystemApiUrl() + CRMProperties.API_POSTING_CONTACT + "/" + customerVO.getId());
+	        CRMRequestVO requestVO = new CRMRequestVO();
+	        CustomerPosInfoVO vo = customerPosInfoBO.getCustomerPosInfo(customerVO);
+	        List<CustomerPosInfoVO> customerPosInfoList = new ArrayList<CustomerPosInfoVO>();
+
+	        customerPosInfoList.add(vo);
+
+	        requestVO.setTotalCount(1);
+	        requestVO.setData(customerPosInfoList);
+
+	        String requestJson = generateJsonWithAnnotationOnly(requestVO);
+
+	        System.out.println("############# UPDATE REQUEST: " + new JSONObject(requestJson).toString(4));
+	        System.out.println("############# uri.toURL(): "+ uri.toURL());
+	        String responseJson = HttpUtils.openCRMConnection(uri.toURL(), HttpMethod.PUT, requestJson);
+	        JSONObject obj = new JSONObject(responseJson);
+	        TrackingLogUtils.infoLogs("UPDATE Response: " + obj.toString(4));
+
+	        JSONArray results = obj.optJSONArray("results");
+	        if (results != null && results.length() > 0) {
+	            JSONObject item = results.getJSONObject(0);
+
+	            String crmId = item.optString("crmId");
+	            Long customerId = item.optLong("customerId");
+	            String status = item.optString("status");
+	            String message = item.optString("message");
+
+	            System.out.println("==== UPDATE RESULT ====");
+	            System.out.println("crmId: " + crmId);
+	            System.out.println("customerId: " + customerId);
+	            System.out.println("status: " + status);
+	            System.out.println("message: " + message);
+
+	            if (CRMCommonConstant.API_STATUS_SUCCESS.equalsIgnoreCase(status)) {
+	                vo.setPostingStatus(CRMCommonConstant.CRM_INV_POSTING_SUCCESS);
+	                vo.setRemarks(message);
+	                vo.setRequest(requestJson);
+	                vo.setResponse(responseJson);
+
+	            } else {
+	                vo.setPostingStatus( CRMCommonConstant.CRM_INV_POSTING_FAILED);
+	                vo.setRemarks(message);
+	            }
+	            List<CustomerPosInfoVO> updList = new ArrayList<CustomerPosInfoVO>();
+	            updList.add(vo);
+	            customerPosInfoBO.updateCustomerPosInfoStatus(updList);
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        logger.error("[CRMUtils - updateCustomerData]", e);
+	    }
+	}
+	
+	private String generateJson(Gson gson, Object requestVO) throws UnsupportedEncodingException {
+		if (gson == null) gson = new GsonBuilder().serializeNulls().setPrettyPrinting().create();
+		return gson.toJson(requestVO);
+	}
+	
+	protected String generateJsonWithAnnotationOnly(Object requestVO) throws UnsupportedEncodingException {
+		Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").serializeNulls().excludeFieldsWithoutExposeAnnotation().create();
+		return generateJson(gson, requestVO);
+	}
+}

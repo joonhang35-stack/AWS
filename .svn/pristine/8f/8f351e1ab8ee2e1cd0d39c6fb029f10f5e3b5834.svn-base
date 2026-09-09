@@ -1,0 +1,303 @@
+package com.bcs.zsg.sales.web.bean;
+
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+
+import javax.faces.context.FacesContext;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.primefaces.event.SelectEvent;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.vo.CompanyContactVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.sales.bo.DebtorsStmtBO;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.DebtorsStmtVO;
+import com.bcs.zsg.sales.vo.PersonContactVO;
+
+import net.sf.jasperreports.engine.JasperPrint;
+
+public class DebtorStmtBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient DebtorsStmtBO debtorsStmtBO;
+	@Autowired
+	private transient CorporateProfileBO corporateProfileBO;
+	@Autowired
+	private transient RegionBO regionBO;
+	@Autowired
+	protected transient InvoiceBO invoiceBO;
+	
+	private CustDetailsVO custDetailsVO;
+	private TrackingLogUtils trackingLogUtils;
+	
+	public void init() throws BusinessException {
+		try {
+			
+			trackingLogUtils = new TrackingLogUtils(getClass());
+					
+			// Initialize search param
+			initSearchParam();
+			presetDate();
+			
+			initPrefixVal();
+			
+			resetForm();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	@Override
+	public void resetForm() {
+		custDetailsVO = new CustDetailsVO();
+	}
+	
+	/**
+	 * Preset Date
+	 */
+	public void presetDate() {
+		try {
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(new Date());
+			// set from date
+			cal.set(Calendar.DAY_OF_MONTH, 1);
+			cal.set(Calendar.HOUR_OF_DAY, 0);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			searchParamVO.setObj2(cal.getTime());
+			// set to date
+			cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
+			cal.set(Calendar.HOUR_OF_DAY, 23);
+			cal.set(Calendar.MINUTE, 59);
+			cal.set(Calendar.SECOND, 59);
+			searchParamVO.setObj3(cal.getTime());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Printing Debtors Statement Report
+	 */
+	public void printDebtorsStmtRpt(String xlsOrPDf) {
+		try {
+			
+			trackingLogUtils.startLogs();
+			
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getObj2());
+			map.put("toDate", (Date) searchParamVO.getObj3());
+			
+			if (custDetailsVO.getCustId()!= null) {
+				searchParamVO.setObj4(custDetailsVO.getCustId());
+			} else {
+				searchParamVO.setObj4(null);
+			}
+			
+			CustDetailsVO custVO = invoiceBO.getCustDetails(custDetailsVO.getCustId());
+			StringBuilder sbCust = new StringBuilder();
+			if (custVO.getCustType().equals("C")) {
+				if (StringUtils.isNotEmpty(custVO.getContPersonName())) sbCust.append(custVO.getContPersonName() + "\n");
+				if (StringUtils.isNotEmpty(custVO.getCorAddressVO().getAddr1())) sbCust.append(custVO.getCorAddressVO().getAddr1() + "\n");
+				if (StringUtils.isNotEmpty(custVO.getCorAddressVO().getAddr2())) sbCust.append(custVO.getCorAddressVO().getAddr2() + "\n");
+				if (StringUtils.isNotEmpty(custVO.getCorAddressVO().getAddr3())) sbCust.append(custVO.getCorAddressVO().getAddr3() + "\n");
+				if (StringUtils.isNotEmpty(custVO.getCorAddressVO().getCity())) sbCust.append(custVO.getCorAddressVO().getCity() + " ");
+				if (StringUtils.isNotEmpty(custVO.getCorAddressVO().getState())) sbCust.append(custVO.getCorAddressVO().getState() + " ");
+				if (StringUtils.isNotEmpty(custVO.getCorAddressVO().getPostcode())) sbCust.append(custVO.getCorAddressVO().getPostcode() + " ");
+				if (custVO.getCorAddressVO().getCountryId() != null) sbCust.append(getCountryName(custVO.getCorAddressVO().getCountryId()) + ".\n");
+				//if (StringUtils.isNotEmpty(custVO.getContact())) sbCust.append(custVO.getContact() + "");
+				if (CollectionUtils.isNotEmpty(custVO.getCorContactList())) {
+					String contact = "";
+					for (CorContactVO vo : custVO.getCorContactList()) {
+						contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getContactType()) + ": " + vo.getContactNo() + "\n";
+					}
+					sbCust.append(contact);
+				}
+				//if (StringUtils.isNotEmpty(custVO.getEmail())) sbCust.append("Email: " + custVO.getEmail() + " ");
+			} else {
+				if (StringUtils.isNotEmpty(custVO.getAddressVO().getAddr1())) sbCust.append(custVO.getAddressVO().getAddr1() + "\n");
+				if (StringUtils.isNotEmpty(custVO.getAddressVO().getAddr2())) sbCust.append(custVO.getAddressVO().getAddr2() + "\n");
+				if (StringUtils.isNotEmpty(custVO.getAddressVO().getAddr3())) sbCust.append(custVO.getAddressVO().getAddr3() + "\n");
+				if (StringUtils.isNotEmpty(custVO.getAddressVO().getCity())) sbCust.append(custVO.getAddressVO().getCity() + " ");
+				if (StringUtils.isNotEmpty(custVO.getAddressVO().getState())) sbCust.append(custVO.getAddressVO().getState() + " ");
+				if (StringUtils.isNotEmpty(custVO.getAddressVO().getPostcode())) sbCust.append(custVO.getAddressVO().getPostcode() + " ");
+				if (custVO.getAddressVO().getCountryId() != null) sbCust.append(getCountryName(custVO.getAddressVO().getCountryId()) + ".\n");
+				//if (StringUtils.isNotEmpty(custVO.getContact())) sbCust.append(custVO.getContact() + "");
+				if (CollectionUtils.isNotEmpty(custVO.getContactList())) {
+					String contact = "";
+					for (PersonContactVO vo : custVO.getContactList()) {
+						contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getTypeCd()) + ": " + vo.getNumber() + "\n";
+					}
+					sbCust.append(contact);
+				}
+				//if (StringUtils.isNotEmpty(custVO.getEmail())) sbCust.append("Email: " + custVO.getEmail() + " ");
+			}
+			map.put("custInfo", sbCust.toString().trim());
+			
+			List<DebtorsStmtVO> debtorStmtList = debtorsStmtBO.getDebtorStmtList(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			DebtorsStmtVO debtorsStmtVO = debtorsStmtBO.getDebtorStmtTtl(getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			
+			if (CollectionUtils.isEmpty(debtorStmtList)) throw new BusinessException(CommonErrConstant.ERR_NO_RESULT);
+			
+			//BigDecimal balance = new BigDecimal(new DecimalFormat("#0.00").format(debtorsStmtVO.getBeginningBal()));
+			BigDecimal balance = new BigDecimal(0.00);
+			for (DebtorsStmtVO vo : debtorStmtList) {
+				if (vo.getDebit()!=null) {
+					balance = balance.add(new BigDecimal(new DecimalFormat("#0.00").format(vo.getDebit())));
+				}
+				if (vo.getCredit()!=null) {
+					balance = balance.subtract(new BigDecimal(new DecimalFormat("#0.00").format(vo.getCredit())));
+				}
+				vo.setBalance(balance.doubleValue());
+				
+//				if (SalesConstant.DOC_TYPE_CD_PAX_STMT.equals(vo.getDocTypeCd())) {
+//					vo.setInvoiceCode(psPrefixVal + vo.getInvoiceCode());
+//				} 
+			}
+			
+			BigDecimal totalDue = new BigDecimal(0.00);
+			totalDue = totalDue.add(new BigDecimal(new DecimalFormat("#0.00").format(debtorsStmtVO.getCurrent())));
+			totalDue = totalDue.add(new BigDecimal(new DecimalFormat("#0.00").format(debtorsStmtVO.getDays31_60())));
+			totalDue = totalDue.add(new BigDecimal(new DecimalFormat("#0.00").format(debtorsStmtVO.getDays61_90())));
+			totalDue = totalDue.add(new BigDecimal(new DecimalFormat("#0.00").format(debtorsStmtVO.getDays91_120())));
+			totalDue = totalDue.add(new BigDecimal(new DecimalFormat("#0.00").format(debtorsStmtVO.getDays120After())));
+			
+			map.put("beginningBal", debtorsStmtVO.getBeginningBal());
+			map.put("current", debtorsStmtVO.getCurrent());
+			map.put("days01_30", debtorsStmtVO.getDays01_30());
+			map.put("days31_60", debtorsStmtVO.getDays31_60());
+			map.put("days61_90", debtorsStmtVO.getDays61_90());
+			map.put("days91_120", debtorsStmtVO.getDays91_120());
+			map.put("days120After", debtorsStmtVO.getDays120After());
+			map.put("totalDue", totalDue.doubleValue());
+			
+			String jasperFileName = CommonConstant.JAS_RPT_DEBTORS_STMT_SALES;
+			String reportName = CommonConstant.PDF_RPT_DEBTORS_STMT_SALES;
+
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(debtorStmtList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+			FacesContext.getCurrentInstance().getExternalContext().addResponseCookie(
+					"cookie.pdf.exporting", "true", Collections.<String, Object>emptyMap());
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("printDebtorsStmtRpt");
+		}
+	}
+	
+	/**
+	 * Get country name
+	 */
+	public String getCountryName(Long id) {
+		try {
+			CountryVO vo = regionBO.getCountryById(id);
+			if (vo == null) return "";
+			else return vo.getCountry();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return "";
+	}
+	
+	/**
+	 * On selected customer details
+	 */
+	public void handleCustSelect(SelectEvent event) {
+		try {
+			custDetailsVO = invoiceBO.getCustDetails(((CustomerVO) event.getObject()).getId());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Clear customer details
+	 */
+	public void custClear() {
+		try {
+			custDetailsVO = new CustDetailsVO();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Prepare Report Title
+	 */
+	public HashMap<String, Object> reportTitle() {
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		try {
+			CompanyVO companyVO = new CompanyVO();
+			companyVO = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			
+			StringBuilder address = new StringBuilder();
+			map.put("companyName", companyVO.getName());
+			map.put("slogan", companyVO.getSlogan());
+			
+			if (!companyVO.getCompanyAddressVO().getAddress1().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress1()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress2().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress2()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress3().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress3()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getCity().equals("")) address.append(companyVO.getCompanyAddressVO().getCity()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getState().equals("")) address.append(companyVO.getCompanyAddressVO().getState()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getPostcode().equals("")) address.append(companyVO.getCompanyAddressVO().getPostcode()).append(" ");
+			String companyName = regionBO.getCountryById(companyVO.getCompanyAddressVO().getCountryid()).getCountry();
+			if (!companyName.equals("")) address.append(companyName);
+			map.put("address", address.toString());
+	
+			String contact = "";
+			for (CompanyContactVO vo : companyVO.getCompanyContactList()) {
+				contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getTypecodecontact()) + ": " + vo.getNumber() + "  ";
+			}
+			if (!contact.equals("")) contact = "Tel: " + contact;
+			map.put("contact", contact);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return map;
+	}
+
+
+	public CustDetailsVO getCustDetailsVO() {
+		return custDetailsVO;
+	}
+
+	public void setCustDetailsVO(CustDetailsVO custDetailsVO) {
+		this.custDetailsVO = custDetailsVO;
+	}
+	
+}

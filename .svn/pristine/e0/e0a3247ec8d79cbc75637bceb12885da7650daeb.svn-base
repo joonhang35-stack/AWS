@@ -1,0 +1,1507 @@
+package com.bcs.zsg.bank.web.bean;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.faces.context.FacesContext;
+
+import net.sf.jasperreports.engine.JasperPrint;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.primefaces.component.api.UIColumn;
+import org.primefaces.component.datatable.DataTable;
+import org.primefaces.event.DateSelectEvent;
+import org.primefaces.event.SelectEvent;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.bo.ChartOfAcctBO;
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctTransViewVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.AcctViewVO;
+import com.bcs.zsg.bank.bo.BankAcctBO;
+import com.bcs.zsg.bank.bo.BankAdjustBO;
+import com.bcs.zsg.bank.bo.CashBookBO;
+import com.bcs.zsg.bank.bo.DepositBO;
+import com.bcs.zsg.bank.bo.PaymentBO;
+import com.bcs.zsg.bank.vo.BankAcctVO;
+import com.bcs.zsg.bank.vo.BankAcctViewVO;
+import com.bcs.zsg.bank.vo.CashBookVO;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.EnglishNumberToWords;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.vo.SearchParamVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.component.security.bo.SecurityBO;
+import com.bcs.zsg.component.security.vo.UserRoleViewVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.db.bterp.vo.gst.TaxCodeVO;
+import com.bcs.zsg.gst.bo.GSTBO;
+import com.bcs.zsg.gst.helper.GSTType;
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.maintenance.bo.ListingTableViewBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.helper.ConstantListingTableView;
+import com.bcs.zsg.maintenance.vo.CompanyContactVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.ListingTableViewColumnsVO;
+import com.bcs.zsg.maintenance.vo.ListingTableViewVO;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.product.bo.TourPackageBO;
+import com.bcs.zsg.product.helper.LazyDMTourDep;
+import com.bcs.zsg.product.vo.TourCatVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.sales.bo.CustomerBO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.InvPmntAuthVO;
+
+public class BankAdjustmentBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient PaymentBO paymentBO;
+	@Autowired
+	private transient BankAcctBO bankAcctBO;
+	@Autowired
+	private transient ChartOfAcctBO chartOfAcctBO;
+	@Autowired
+	private transient BankAdjustBO bankAdjustBO;
+	@Autowired
+	private transient DepositBO depositBO;
+	@Autowired
+	private transient CorporateProfileBO corporateProfileBO;
+	@Autowired
+	private transient SecurityBO securityBO;
+	@Autowired
+	private transient CashBookBO cashBookBO;
+	@Autowired
+	private transient GSTBO gstBO;
+	@Autowired
+	private transient CustomerBO customerBO;
+	@Autowired
+	private transient TourPackageBO tourPkgBO;
+	@Autowired
+	private transient ListingTableViewBO listingTableViewBO;
+	@Autowired
+	private transient RegionBO regionBO;
+
+	private AcctTransVO acctTransVO;
+	private CashBookVO cashBookVO;
+	private BankAcctVO bankAcctVO;
+	private  SystemNumberGenerationVO sysNumGenVO;
+	private CompanyVO companyVO;
+	private AcctViewVO acctViewVO;
+	private TourCatVO tourCatVO;
+	private AcctTransViewVO acctTransViewVO;
+	//private AcctVO acctIdVO;
+	private AcctVO acctVO;
+	private AcctTransViewVO acctTransCashBookVO;
+	private LookupItemVO lookupItemBT;
+	private LookupItemVO lookupItemBTCD;
+	private LookupItemVO lookupItemCBT;
+	private LookupItemVO lookupItemGnDp;
+	private BankAcctVO bankAcctSearchVO;
+	private InvPmntAuthVO invPmntAuthVO;
+	private AmountCalcViewVO amtCalcViewVO;
+	private ListingTableViewVO listingTableViewVO;
+
+	private List<AcctTransVO> acctTransList;
+	//private AcctTransVO acctTransListSelected;
+	private List<AcctTransViewVO> acctTransSysNoList;
+	private List<SystemNumberGenerationVO> sysNumGenList;
+	private List<BankAcctViewVO> bankAcctViewList;
+	private List<CashBookVO> cashBookList;
+	private List<AcctTransVO> updCompTranslist;
+	private List<AcctViewVO> acctViewList;
+	private List<CashBookVO> cashBookBankAdjustList;
+	private List<AcctVO> acctAutoCompleteList;
+	private List<TaxCodeVO> inputTaxCodeVOList;
+	private List<TaxCodeVO> outputTaxCodeVOList;
+	private List<TourDepartureVO> tourList;
+	private Map<Integer, Boolean> listingTableViewMap;
+	
+	private LazyDMTourDep<TourDepartureVO> lazyDataModelTourDep;
+	private LazyDataModel<CashBookVO> lazyDataModelBankAdjustment;
+	
+//	private Date transDate;
+//	private Long bankId;
+	private String prefixValue;
+	private boolean isAddAcctTrans, isGSTPeriod;
+	TrackingLogUtils trackingLogUtils = new TrackingLogUtils(this.getClass()); 
+	
+	@Override
+	public void resetForm() {
+		try{
+			acctTransVO = new AcctTransVO();
+			cashBookVO= new CashBookVO();
+			cashBookVO.setDtTrans(new Date());
+			cashBookVO.setAcctTransList(new ArrayList<AcctTransViewVO>());
+			companyVO=new CompanyVO();
+			acctViewVO=new AcctViewVO();
+			bankAcctVO=new BankAcctVO();
+			tourCatVO=new TourCatVO();
+			resetAcctTransViewForm();
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), cashBookVO.getDtTrans());
+			
+			amtCalcViewVO = new AmountCalcViewVO();
+			amtCalcViewVO.setIdRoundingAcct(null);
+			amtCalcViewVO.setIdTaxAcct(getSessionInfoBean().getCompanyVO().getIdAcctGST());
+			amtCalcViewVO.setIdTaxNonClaimableAcct(getSessionInfoBean().getCompanyVO().getIdAcctNonClaimableGST());
+			
+			if (searchParamVO.getObj2() == null) search();
+			else searchAll();
+			
+			setOriObj(null);
+
+		} catch(Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	public void resetAcctTransForm() throws BusinessException {
+		acctTransVO = new AcctTransVO();
+	}
+	
+	public void resetAcctTransViewForm() throws BusinessException {
+		acctTransViewVO = new AcctTransViewVO();
+	}
+
+
+	public void resetCompanyAcctTransList()
+	{
+		updCompTranslist= new ArrayList<AcctTransVO>();
+	}
+
+	public void resetCashBookForm() throws BusinessException {
+		cashBookVO = new CashBookVO();
+	}
+
+	public void init() throws BusinessException {
+		try {
+			initSearchParam();
+			searchParamVO.setFromDate(new Date());
+			searchParamVO.setToDate(searchParamVO.getFromDate());
+			
+			bankAcctViewList = bankAcctBO.getBankAcctList(getSessionInfoBean().getCompanyVO().getId());
+			acctViewList = chartOfAcctBO.getAcctViewList(getSessionInfoBean().getCompanyVO().getId(), null);
+			resetAcctTransViewForm();
+			resetAcctTransForm();
+			loadBankAdjust();
+			resetForm();
+			loadListingTableView();
+			prefixValue = LookupItemUtils.getSysNumGenVO(getSessionInfoBean().getCompanyVO().getId(), CommonConstant.SYS_NUM_CD_BANK_ADJM).getPrefixid();
+			
+			// GST Code
+			setInputTaxCodeVOList(gstBO.getTaxCodeList(GSTType.INPUT));
+			setOutputTaxCodeVOList(gstBO.getTaxCodeList(GSTType.OUTPUT));
+			
+		}catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	private void loadBankAdjust() throws BusinessException {
+		try {
+			resetFilteredObjList();
+			if(bankAcctViewList.size()!=0) {
+				List<UserRoleViewVO> userRoleList = securityBO.getUserRoleListByUser(this.getSessionInfoBean().getUserVO().getUuid());
+				
+				invPmntAuthVO = new InvPmntAuthVO();
+				if (CollectionUtils.isNotEmpty(userRoleList)) {
+					for (UserRoleViewVO userRoleVO : userRoleList) {
+						if (userRoleVO.getRoleCode().equals(SalesConstant.BANK_ADJUST_DEL)) {
+							invPmntAuthVO.setPmntDel(true);
+						} else if (userRoleVO.getRoleCode().equalsIgnoreCase(SalesConstant.ACCT_MANAGER_ROLE)) {
+							invPmntAuthVO.setAccountManager(true);
+						}
+					}
+				}	
+				
+				lookupItemBTCD = paymentBO.getlookupItemBT("cash_deps");
+				lookupItemBT = paymentBO.getlookupItemBT("cash_with");
+				lookupItemCBT = paymentBO.getlookupItemCBT("gnrl_pymt");
+				lookupItemGnDp = paymentBO.getlookupItemCBT("gnrl_deps");
+				searchParamVO.setObj1(bankAcctViewList.get(0).getId().toString());
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	public void addBankAdjustment() throws BusinessException {
+		try {
+			// check financial closed / GST submitted
+			checkFinGSTClosed(CommonConstant.ACTION_CD_ADD, null, cashBookVO.getDtTrans(), invPmntAuthVO.isAccountManager());
+			if (CollectionUtils.isEmpty(cashBookVO.getAcctTransList())) throw new BusinessException(CommonErrConstant.ERR_ADJUST_ACCT_LIST_EMPTY);
+			
+			bankAcctSearchVO = paymentBO.getBankAcctSearchList(cashBookVO.getIdBank());
+			acctVO = paymentBO.getAcctSearchList(bankAcctSearchVO.getIdAcct());
+			cashBookVO.setAmountCalcViewVO(amtCalcViewVO);
+			
+			bankAdjustBO.addBankAdjust(cashBookVO,getSessionInfoBean().getCompanyVO().getId(),bankAcctSearchVO,lookupItemBT,lookupItemCBT,lookupItemGnDp,lookupItemBTCD,acctVO);
+			
+			resetForm();
+			resetFilteredObjList();
+			successResult();
+			cashBookVO.setTemp(bankAcctSearchVO.getName());
+			cashBookVO.setIdBank(bankAcctSearchVO.getId());
+
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void onAddBankAdjustSelected() {
+		try {
+			resetAcctTransViewForm();
+			
+			Long bankId = Long.parseLong((String) searchParamVO.getObj1());
+			if (!CommonConstant.SEARCH_ALL_BANKS.equals(searchParamVO.getObj1())) {
+				for(BankAcctViewVO vo : bankAcctViewList) {
+					if (vo.getId().equals(bankId)) {
+						cashBookVO.setIdBank(vo.getId());
+						cashBookVO.setTemp(vo.getName());
+						break;
+					}
+				}
+			}
+			
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), cashBookVO.getDtTrans());
+		}catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	/**
+	 * 
+	 * @param vo
+	 * @throws BusinessException
+	 */
+	public void onBankAdjustSelected(CashBookVO vo) throws BusinessException{
+		try {
+			cashBookVO = cashBookBO.getCashBookById(vo.getId()); //cashBookVO;
+			setOriObj(cashBookVO.clone());
+			
+			acctTransCashBookVO = depositBO.getAcctTransCashBook(cashBookVO.getSysNo(),cashBookVO.getTransTypeCd(),cashBookVO.getSysCode(),getSessionInfoBean().getCompanyVO().getId());
+			cashBookVO.setAcctTransList(bankAdjustBO.getAcctTransViewTableList(cashBookVO.getSysNo(),cashBookVO.getTypeCd(),cashBookVO.getSysCode(),getSessionInfoBean().getCompanyVO().getId()));
+			bankAcctSearchVO = paymentBO.getBankAcctSearchList(cashBookVO.getIdBank());
+			
+			if (cashBookVO.getTourDepId() != null) {
+				TourDepartureVO tourDepVO = tourPkgBO.getTourDepById(cashBookVO.getTourDepId());
+				if (tourDepVO != null) cashBookVO.setTourCd(tourDepVO.getCode());
+			}
+			
+			for (AcctTransViewVO viewVO : cashBookVO.getAcctTransList()) {
+				if (viewVO.getDebit() == 0.00) viewVO.setAmount(viewVO.getCredit());
+				else viewVO.setAmount(viewVO.getDebit());
+			}
+			
+			// gnrl_pymt or gnrl_deps
+			cashBookVO.setAdjmType(cashBookVO.getTypeCd());
+			
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), cashBookVO.getDtTrans());
+			
+			updateTaxableAmount(true);
+			
+			cashBookVO.setTemp(bankAcctSearchVO.getName());
+			// Check Financial Period Closed
+			getFinPeriodClosedStatus();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	public void deleteAdjustRecord() throws BusinessException{
+		try {
+			// Unable to delete this record due to financial period closed.
+			if (cashBookVO.isDateInFinPeriodClosed()) throw new BusinessException(CommonErrConstant.ERR_ACCT_FIN_PERIOD_CLOSED_CANNOT_DEL);
+						
+			//deleteAdjustList();
+			paymentBO.deletePaymentList(cashBookVO, getSessionInfoBean().getCompanyVO().getId());
+			search();
+			resetForm();
+			resetAcctTransViewForm();
+			//init();
+			successResult();
+
+		} catch (Throwable t){
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * New payment form
+	 */
+	public void newPaymentForm() {
+		resetForm();
+		onAddBankAdjustSelected();
+	}
+
+	/*private void deleteAdjustList() throws BusinessException {
+		try {
+			acctTransSysNoList=paymentBO.getAcctTransSysNoList(cashBookVO.getSysNo(),cashBookVO.getSysCode(),getSessionInfoBean().getCompanyVO().getId());
+			paymentBO.deletePaymentList(cashBookVO, acctTransSysNoList);
+
+		} catch (Throwable t){
+			errorResult(t);
+		}
+	}*/
+
+	/*public void onClearPayment() throws BusinessException {
+		try {
+			acctTransViewVO.setTempPayment(null);
+			acctTransViewVO.setPaymentDesc(null);
+			
+		} catch(Throwable t){
+			errorResult(t);
+		}
+	}
+	public void onClearDeposit() throws BusinessException {
+		try {
+			acctTransViewVO.setTempDeposit(null);
+			acctTransViewVO.setDepositDesc(null);
+			
+		} catch(Throwable t){
+			errorResult(t);
+		}
+	}*/
+
+	/**
+	 * 
+	 * @throws BusinessException
+	 */
+	public void editBankAdjustment() throws BusinessException {
+		try {
+			CashBookVO oriVO = (CashBookVO) getOriObj();
+			checkFinGSTClosed(CommonConstant.ACTION_CD_UPD, oriVO.getDtTrans(), cashBookVO.getDtTrans(), invPmntAuthVO.isAccountManager());
+			
+			if (CollectionUtils.isEmpty(cashBookVO.getAcctTransList())) throw new BusinessException(CommonErrConstant.ERR_ADJUST_ACCT_LIST_EMPTY);
+			
+			acctTransViewVO.setSysNo(cashBookVO.getSysNo());
+			
+			/*if (StringUtils.isEmpty(acctTransViewVO.getTempPayment()) && StringUtils.isEmpty(acctTransViewVO.getPaymentDesc())) {
+				if (StringUtils.isEmpty(acctTransViewVO.getTempDeposit()) || StringUtils.isEmpty(acctTransViewVO.getDepositDesc()))
+					throw new BusinessException(CommonErrConstant.ERR_ADJUST_ACCT_COMPLETE);
+			} else {
+				if (StringUtils.isEmpty(acctTransViewVO.getTempPayment()) || StringUtils.isEmpty(acctTransViewVO.getPaymentDesc()))
+					throw new BusinessException(CommonErrConstant.ERR_ADJUST_ACCT_COMPLETE);
+			}
+			if(cashBookVO.getCredit().doubleValue()==0.00 && cashBookVO.getDebit().doubleValue()==0.00) {
+				throw new BusinessException(CommonErrConstant.ERR_BANK_PAYMENT_CREDIT_REQUIRED);
+			} else if(cashBookVO.getCredit().doubleValue()==0.00 && cashBookVO.getDebit().doubleValue()!=0.00 && StringUtils.isEmpty(acctTransViewVO.getTempPayment()) && StringUtils.isNotEmpty(acctTransViewVO.getTempDeposit())){
+				bankAdjustBO.updateAdjust(cashBookVO,acctTransViewVO,bankAcctSearchVO,lookupItemCBT,lookupItemGnDp,acctTransCashBookVO,getSessionInfoBean().getCompanyVO().getId(),acctTransListSelected,lookupItemBT,lookupItemBTCD);
+			} else if (cashBookVO.getCredit().doubleValue()!=0.00 && cashBookVO.getDebit().doubleValue()==0.00 && StringUtils.isNotEmpty(acctTransViewVO.getTempPayment()) && StringUtils.isEmpty(acctTransViewVO.getTempDeposit())) {
+				bankAdjustBO.updateAdjust(cashBookVO,acctTransViewVO,bankAcctSearchVO,lookupItemCBT,lookupItemGnDp,acctTransCashBookVO,getSessionInfoBean().getCompanyVO().getId(),acctTransListSelected,lookupItemBT,lookupItemBTCD);
+			}// else throw new BusinessException(CommonErrConstant.ERR_ADJUST_EITHER_AMOUNTWITHDRAW_AMOUNTDEPOSITED); 
+			*/
+			//Long idCompany = getSessionInfoBean().getCompanyVO().getId();
+			
+			cashBookVO.setAmountCalcViewVO(amtCalcViewVO);
+			bankAdjustBO.updateAdjust(cashBookVO, acctTransCashBookVO, bankAcctSearchVO, lookupItemCBT, lookupItemGnDp, lookupItemBT, lookupItemBTCD);
+			
+			//init();
+			//loadBankAdjust();
+			//search();
+			resetForm();
+			resetFilteredObjList();
+			successResult();
+
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleAcctSelectDebit(SelectEvent event) throws BusinessException {
+		try {
+			AcctViewVO acctViewVO = (AcctViewVO) event.getObject();
+			if (StringUtils.isEmpty(acctViewVO.getSubCode())) {
+				acctTransViewVO.setTempPayment(acctViewVO.getCode());
+			} else {	
+				acctTransViewVO.setTempPayment(acctViewVO.getCode() + "-" + acctViewVO.getSubCode());
+			}
+			if (StringUtils.isEmpty(acctViewVO.getSubDesc())) {
+				
+				acctTransViewVO.setPaymentDesc(acctViewVO.getDesc());
+			} else {
+				acctTransViewVO.setPaymentDesc(acctViewVO.getDesc()+","+acctViewVO.getSubDesc());
+			}
+			acctTransViewVO.setAcctViewVO(acctViewVO);
+			acctTransViewVO.setAcctPaymentId(acctTransViewVO.getAcctViewVO().getId());
+
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	public void handleAcctSelectCredit(SelectEvent event) throws BusinessException{
+		try {
+			AcctViewVO acctViewVO = (AcctViewVO) event.getObject();
+			if (StringUtils.isEmpty(acctViewVO.getSubCode())) {
+				acctTransViewVO.setTempDeposit(acctViewVO.getCode());
+			} else {	
+				acctTransViewVO.setTempDeposit(acctViewVO.getCode() + "-" + acctViewVO.getSubCode());
+			}
+			if (StringUtils.isEmpty(acctViewVO.getSubDesc())) {
+				acctTransViewVO.setDepositDesc(acctViewVO.getDesc());
+			} else {
+				acctTransViewVO.setDepositDesc(acctViewVO.getDesc()+","+acctViewVO.getSubDesc());
+			}
+			acctTransViewVO.setAcctViewVO(acctViewVO);
+			acctTransViewVO.setAcctDepositId(acctTransViewVO.getAcctViewVO().getId());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+
+	public void handleBankSelect(SelectEvent event) throws BusinessException{
+		try {
+			BankAcctVO bankAcctVO = (BankAcctVO) event.getObject();
+			cashBookVO.setTemp(bankAcctVO.getName());
+			cashBookVO.setIdBank(bankAcctVO.getId());
+
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void search() {
+		try{
+			
+			/*for(BankAcctViewVO vo : bankAcctViewList) {
+				if (vo.getId().equals(bankId)) {
+					cashBookVO.setIdBank(vo.getId());
+					break;
+				}
+			}*/
+			resetFilteredObjList();
+			searchParamVO.setObj2(null);
+			if (!searchParamVO.getObj1().toString().equalsIgnoreCase(CommonConstant.SEARCH_ALL_BANKS)) cashBookVO.setIdBank(Long.parseLong(searchParamVO.getObj1().toString()));
+			//cashBookBankAdjustList = bankAdjustBO.getCashBookBankAdjustList(CommonConstant.SYS_NUM_CD_BANK_ADJM, getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+//			cashBookBankAdjustList = paymentBO.getBankCashBookList(CommonConstant.SYS_NUM_CD_BANK_ADJM, getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			setLazyDataModelBankAdjustment(new BankAdjustmentLazyDataModel(searchParamVO));
+			
+		}
+		catch(Throwable t){
+			errorResult(t);	
+		}
+	}
+	
+	public void searchAll() {
+		try {
+			
+			searchParamVO.setObj2(CommonConstant.SEARCH_ALL_DATES);
+			if (!searchParamVO.getObj1().toString().equalsIgnoreCase(CommonConstant.SEARCH_ALL_BANKS)) cashBookVO.setIdBank(Long.parseLong(searchParamVO.getObj1().toString()));
+			//cashBookBankAdjustList = bankAdjustBO.getCashBookBankAdjustList(CommonConstant.SYS_NUM_CD_BANK_ADJM, getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+//			cashBookBankAdjustList = paymentBO.getBankCashBookList(CommonConstant.SYS_NUM_CD_BANK_ADJM, getSessionInfoBean().getCompanyVO().getId(), searchParamVO);
+			setLazyDataModelBankAdjustment(new BankAdjustmentLazyDataModel(searchParamVO));
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public List<String> complete(String query) {  
+        List<String> results = new ArrayList<String>();   
+        try {
+        	/*acctAutoCompleteList=paymentBO.getAcctList(getSessionInfoBean().getCompanyVO().getId(),query);
+        	for (int i = 0; i <acctAutoCompleteList.size(); i++) {
+	        	if(acctAutoCompleteList.get(i).getSubCode().isEmpty()) { 
+	        		results.add(acctAutoCompleteList.get(i).getCode());
+	        	} else {
+	        		results.add(acctAutoCompleteList.get(i).getCode() + "-" + acctAutoCompleteList.get(i).getSubCode() );  
+	        	}
+        	}*/
+        	
+        	String tempStr;
+        	for (int i = 0 ; i < acctViewList.size() ; i++) {
+        		tempStr = acctViewList.get(i).getCode() + ((StringUtils.isEmpty(acctViewList.get(i).getSubCode())) ? "" : "-" + acctViewList.get(i).getSubCode());
+        		if (tempStr.startsWith(query)) {
+        			results.add(tempStr);
+        		}
+        	}
+        	
+        } catch(Exception e){
+        	e.printStackTrace() ;
+        }
+        return results;  
+    }
+	
+	public void changeDesc() throws BusinessException{
+		try{
+			for (AcctViewVO vo : acctViewList) {
+				if (acctTransViewVO.getCode().equals(vo.getCode())) {
+					acctTransViewVO.setDesc(vo.getDesc());
+					acctTransViewVO.setAcctViewVO(vo);
+					acctTransViewVO.setAcctId(vo.getId());
+					acctTransViewVO.setTaxCode(vo.getTaxCode());
+					acctTransViewVO.setTaxRate(vo.getTaxRate());
+					break;
+					
+				} else if (acctTransViewVO.getCode().equalsIgnoreCase(vo.getCode() + "-" + vo.getSubCode())) {
+					acctTransViewVO.setDesc(vo.getDesc() + "," + vo.getSubDesc());
+					acctTransViewVO.setAcctViewVO(vo);
+					acctTransViewVO.setAcctId(vo.getId());
+					acctTransViewVO.setTaxCode(vo.getTaxCode());
+					acctTransViewVO.setTaxRate(vo.getTaxRate());
+					break;
+				}
+			}
+			
+			// populate GST code and rate]
+			handleTaxCodeSelection(acctTransViewVO.getTaxCode(), acctTransViewVO.getTaxRate() == null ? null : (double) acctTransViewVO.getTaxRate());
+			
+		} catch(Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void changeDescCredit() throws BusinessException{
+		try{
+			for(AcctViewVO vo:acctViewList) {
+				if(acctTransViewVO.getTempDeposit().toString().equalsIgnoreCase(vo.getCode().toString())) {
+					acctTransViewVO.setDepositDesc(vo.getDesc());
+					if(vo.getSubCode().isEmpty()) {
+						acctTransViewVO.setAcctViewVO(vo);
+						acctTransViewVO.setAcctDepositId(vo.getId());
+					}
+				} else if(acctTransViewVO.getTempDeposit().toString().equalsIgnoreCase(vo.getCode().toString()+"-"+vo.getSubCode().toString())) {
+					if(vo.getSubDesc().toString().isEmpty()) {
+						acctTransViewVO.setDepositDesc(vo.getDesc());
+						acctTransViewVO.setAcctViewVO(vo);
+						acctTransViewVO.setAcctDepositId(vo.getId());
+					} else {	
+						acctTransViewVO.setDepositDesc(vo.getDesc()+","+vo.getSubDesc());
+						acctTransViewVO.setAcctViewVO(vo);
+						acctTransViewVO.setAcctDepositId(vo.getId());
+					}	
+				}
+			}
+		}catch(Throwable t){
+			errorResult(t);
+		}
+	}
+	
+	public void changeDescDebit() throws BusinessException{
+		try{
+			for(AcctViewVO vo:acctViewList) {
+				if(acctTransViewVO.getTempPayment().toString().equalsIgnoreCase(vo.getCode().toString())) {
+					acctTransViewVO.setPaymentDesc(vo.getDesc());
+					if(vo.getSubCode().isEmpty()) {
+						acctTransViewVO.setAcctViewVO(vo);
+						acctTransViewVO.setAcctPaymentId(vo.getId());
+					}
+				} else if(acctTransViewVO.getTempPayment().toString().equalsIgnoreCase(vo.getCode().toString()+"-"+vo.getSubCode().toString())) {
+					if(vo.getSubDesc().toString().isEmpty()) {
+						acctTransViewVO.setPaymentDesc(vo.getDesc());
+						acctTransViewVO.setAcctViewVO(vo);
+						acctTransViewVO.setAcctPaymentId(vo.getId());
+					} else {	
+						acctTransViewVO.setPaymentDesc(vo.getDesc()+","+vo.getSubDesc());
+						acctTransViewVO.setAcctViewVO(vo);
+						acctTransViewVO.setAcctPaymentId(vo.getId());
+					}	
+				}
+			}
+		}catch(Throwable t){
+			errorResult(t);
+		}
+	}
+	
+	public void handleAcctSelect(SelectEvent event) {
+		try {
+			AcctVO acctVO = (AcctVO) event.getObject();
+			String codeView = "";
+			String code = acctVO.getCode();
+			String desc = acctVO.getDesc();
+			
+			if (StringUtils.isNotEmpty(acctVO.getSubCode())) {
+				code += "-" + acctVO.getSubCode();
+				desc += "-" + acctVO.getSubDesc();
+			}
+			
+			acctTransViewVO.setCode(code);
+			acctTransViewVO.setDesc(desc);
+			
+			handleTaxCodeSelection(acctVO.getTaxCode(), acctVO.getTaxRate() == null ? null : (double) acctVO.getTaxRate());
+			
+			for (AcctViewVO vo : acctViewList) {
+				codeView = vo.getCode();
+				if (StringUtils.isNotEmpty(vo.getSubCode())) codeView += "-" + vo.getSubCode();
+				
+				if (code.equals(codeView)) {
+					acctViewVO = vo;
+					break;
+				}
+			}
+			
+			acctTransViewVO.setAcctViewVO(acctViewVO);
+			acctTransViewVO.setAcctId(acctViewVO.getId());
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	private void handleTaxCodeSelection(String taxCode, Double taxRate) throws BusinessException {
+
+		if(getSessionInfoBean().getCompanyVO().getIdAcctGST() != null && taxCode != null) {
+			if(isGSTPeriod) {
+
+				if(taxCode != null && taxRate == null) {
+					//acctTransViewVO = (AcctTransViewVO) GSTHelper.getInstance().updateAcctTrans(acctTransViewVO, taxCode);
+					TaxCodeVO taxCodeVO = gstBO.getTaxCode(taxCode);
+					acctTransViewVO.setTaxCode(taxCodeVO.getCode());
+					acctTransViewVO.setTaxRate(taxCodeVO.getRate());
+					
+				} else {
+					acctTransViewVO.setTaxCode(taxCode);
+					acctTransViewVO.setTaxRate(taxRate.floatValue());
+				}
+				
+				//This handling to ensure the amount input by user is the actual amount without tax
+				if(acctTransViewVO.getTaxRate() > 0.00)
+					acctTransViewVO = (AcctTransViewVO) AccountHelper.calcAmountBaseOnTotalTaxableAmount(acctTransViewVO);
+				else
+					acctTransViewVO = (AcctTransViewVO) AccountHelper.calcTaxableAmount(acctTransViewVO, false, 0, 0);
+				
+			}
+		} else {
+			acctTransViewVO.setTaxCode(null);
+			acctTransViewVO.setTaxRate(null);
+			
+			acctTransViewVO = (AcctTransViewVO) AccountHelper.calcTaxableAmount(acctTransViewVO, false, 0, 0);
+		}
+	}
+	
+	public void handleGSTSelect(SelectEvent event) {
+		try {
+			TaxCodeVO taxCodeVO = (TaxCodeVO) event.getObject();
+			handleTaxCodeSelection(taxCodeVO.getCode(), (double) taxCodeVO.getRate());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleTaxCodeClear() {
+		try {
+			handleTaxCodeSelection(null, null);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleDateChange(DateSelectEvent event) {
+		try {
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), cashBookVO.getDtTrans());
+			
+			if(!isGSTPeriod) {
+				//Reset all account trans with null taxCode
+				for (int i = 0 ; i < cashBookVO.getAcctTransList().size() ; i++) {
+					cashBookVO.getAcctTransList().get(i).setTaxCode(null);
+					cashBookVO.getAcctTransList().get(i).setTaxRate(null);
+				}
+			}
+			updateTaxableAmount(true);
+			
+		}  catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*private void updateTaxableAmount() throws BusinessException {
+		amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, true, cashBookVO.getAcctTransList(), null, false);
+	}*/
+	
+	private void updateTaxableAmount(boolean isCalGLItems) throws BusinessException {
+		if (isCalGLItems) calculateGLItemsAmount(cashBookVO.getAcctTransList());
+		
+		amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, false, cashBookVO.getAcctTransList(), null, false);
+	}
+	
+	public void handleAmountChange() {
+		try {
+			acctTransViewVO = (AcctTransViewVO) AccountHelper.calcTaxableAmount(acctTransViewVO, false, 0, 0);
+			//updateTaxableAmount();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleGSTAmtChange() {
+		try {
+			BigDecimal amount = new BigDecimal(String.valueOf(acctTransViewVO.getAmount()));
+			BigDecimal taxAmount = new BigDecimal(acctTransViewVO.getTaxAmount().toString());
+			
+			acctTransViewVO.setAmountIncludeTax(amount.add(taxAmount).doubleValue());
+			amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, false, cashBookVO.getAcctTransList(), null, false);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	
+	public void handleAmountIncludeTaxChange() {
+		try {
+			acctTransViewVO = (AcctTransViewVO) AccountHelper.calcAmountBaseOnTotalTaxableAmount(acctTransViewVO);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	private void calculateGLItemsAmount(List<AcctTransViewVO> list) throws BusinessException {
+		for (AcctTransVO vo : list) {
+			vo.setTaxAmount(vo.getAmount() < 0 ? -vo.getTaxAmount() : vo.getTaxAmount());
+			
+			BigDecimal amount = new BigDecimal(String.valueOf(vo.getAmount()));
+			BigDecimal taxAmount = new BigDecimal(vo.getTaxAmount().toString());
+			
+			vo.setAmountIncludeTax(amount.add(taxAmount).doubleValue());
+		}
+	}
+	
+	public void onAddAcctTrans() {
+		try {
+			resetAcctTransViewForm();
+			isAddAcctTrans = true;
+			
+		} catch(Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void onAcctTransSelected(AcctTransViewVO vo) {
+		try {
+			acctTransViewVO = vo;
+			isAddAcctTrans = false;
+
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void addAcctTrans() throws BusinessException {
+		try {
+			if(null == cashBookVO.getAcctTransList()) cashBookVO.setAcctTransList(new ArrayList<AcctTransViewVO>());
+			acctTransViewVO.setType(lookupItemCBT.getCode());
+			
+			cashBookVO.getAcctTransList().add(acctTransViewVO);
+			updateTaxableAmount(false);
+			resetAcctTransViewForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void editAcctTrans() throws BusinessException{
+		try {
+			resetAcctTransViewForm();
+			updateTaxableAmount(false);
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void delAcctTrans(AcctTransViewVO acctTransViewVO) {
+		try {
+			cashBookVO.getAcctTransList().remove(acctTransViewVO);
+			updateTaxableAmount(false);
+			successResult();
+
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void printPV(CashBookVO cashBookVO) throws BusinessException{
+		try {
+			bankAcctSearchVO = paymentBO.getBankAcctSearchList(cashBookVO.getIdBank());
+			CompanyVO company = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			validateEffectiveCompanyName(company, cashBookVO.getDtTrans());
+			
+			Map<String, Object> map = new HashMap<>();
+			map.put("companyName", company.getName());
+			map.put("companyShortName", company.getShortName());
+			map.put("slogan", company.getSlogan());
+			map.put("address1", company.getCompanyAddressVO().getAddress1());
+			map.put("address2", company.getCompanyAddressVO().getAddress2());
+			map.put("address3", company.getCompanyAddressVO().getAddress3());
+			map.put("city", company.getCompanyAddressVO().getCity());
+			map.put("state", company.getCompanyAddressVO().getState());
+			map.put("postcode", company.getCompanyAddressVO().getPostcode());
+			List<CountryVO> countryList = customerBO.getCountryList();
+			if (CollectionUtils.isNotEmpty(countryList)) {
+				for (CountryVO vo : countryList){
+					if (vo.getId().equals(company.getCompanyAddressVO().getCountryid())) {
+						map.put("countryName", vo.getCountry());
+						break;
+					}
+				}
+			}
+			
+			map.put("date", new SimpleDateFormat("dd/MM/yyyy").format(cashBookVO.getDtTrans()));
+			map.put("voucherNo", cashBookVO.getSysNo());
+			map.put("chequeNo", cashBookVO.getRefNo());
+			map.put("bankAcctNo",bankAcctSearchVO.getAcctNo());
+			map.put("bankAcctName",bankAcctSearchVO.getName());
+			
+			//map.put("contPersonName", supplierVO.getBeneficiaryName());
+			map.put("cAmount", cashBookVO.getCredit());
+			map.put("dAmount", cashBookVO.getDebit());
+			
+			if (cashBookVO.getDebit() == 0.00) map.put("vAmount", (cashBookVO.getCredit()));
+			else map.put("vAmount", (cashBookVO.getDebit()));
+			map.put("vAmountWord", EnglishNumberToWords.withCents(cashBookVO.getCredit().doubleValue()));
+			map.put("memo", cashBookVO.getRemarks());
+			map.put("payee", cashBookVO.getPayee());
+			
+			String contact = "";
+			for (CompanyContactVO vo : company.getCompanyContactList()) {
+				contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getTypecodecontact()) + ": " + vo.getNumber() + "  ";
+			}
+			map.put("contact", contact);
+			
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(map, CommonConstant.JAS_RPT_ADJUST_VOU);
+			ReportUtils.printReport(jasperPrint, CommonConstant.PDF_RPT_AV);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void printBankAdjustmentReport(String xlsOrPDf) {
+		try {
+			List<CashBookVO> reportList = new ArrayList<CashBookVO>();
+			if (CollectionUtils.isEmpty(filteredObjList)) {
+				cloneCashBookBankAdjustListForReport(reportList, cashBookBankAdjustList);
+			} else {
+				cloneCashBookBankAdjustListForReport(reportList, (List<CashBookVO>)(List<?>)filteredObjList);
+			}
+			HashMap<String, Object> map = reportTitle();
+			map.put("fromDate", (Date) searchParamVO.getFromDate());
+			map.put("toDate", (Date) searchParamVO.getToDate());
+			map.put("cashBookBankAdjustList", reportList);
+			
+			String jasperFileName = CommonConstant.JAS_RPT_BANK_ADJUSTMENT;
+			String reportName = CommonConstant.PDF_RPT_BANK_ADJUSTMENT;
+			
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(reportList, map, jasperFileName);
+			if (xlsOrPDf.equals("PDF")) {
+				ReportUtils.printReport(jasperPrint, reportName);
+			} else {
+				ReportUtils.printReportExcel(jasperPrint, reportName);
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Prepare Report Title
+	 */
+	public HashMap<String, Object> reportTitle() {
+		HashMap<String, Object> map = new HashMap<String, Object>();
+		try {
+			CompanyVO companyVO = new CompanyVO();
+			companyVO = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			
+			StringBuilder address = new StringBuilder();
+			map.put("companyName", companyVO.getName());
+			map.put("slogan", companyVO.getSlogan());
+			
+			if (!companyVO.getCompanyAddressVO().getAddress1().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress1()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress2().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress2()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getAddress3().equals("")) address.append(companyVO.getCompanyAddressVO().getAddress3()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getCity().equals("")) address.append(companyVO.getCompanyAddressVO().getCity()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getState().equals("")) address.append(companyVO.getCompanyAddressVO().getState()).append(" ");
+			if (!companyVO.getCompanyAddressVO().getPostcode().equals("")) address.append(companyVO.getCompanyAddressVO().getPostcode()).append(" ");
+			String companyName = regionBO.getCountryById(companyVO.getCompanyAddressVO().getCountryid()).getCountry();
+			if (!companyName.equals("")) address.append(companyName);
+			map.put("address", address);
+	
+			String contact = "";
+			for (CompanyContactVO vo : companyVO.getCompanyContactList()) {
+				contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, vo.getTypecodecontact()) + ": " + vo.getNumber() + "  ";
+			}
+			if (!contact.equals("")) contact = "Tel: " + contact;
+			map.put("contact", contact);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return map;
+	}
+	
+	private void cloneCashBookBankAdjustListForReport(List<CashBookVO> reportList, List<CashBookVO> listCashBookVO) {
+		for(Object tmpCashBookVO: listCashBookVO) {
+			CashBookVO cashBookVOCloned = (CashBookVO) ((CashBookVO) tmpCashBookVO).clone();
+			cashBookVOCloned.setSysPrefix("BA-" + cashBookVOCloned.getSysNo().toString());
+		
+			reportList.add(cashBookVOCloned);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param document
+	 */
+	public void postProcessXLS(Object document) {
+		try {
+        HSSFWorkbook wb = (HSSFWorkbook) document;
+        HSSFSheet sheet = wb.getSheetAt(0);
+        sheet.shiftRows(0, sheet.getLastRowNum(), 2);
+        HSSFRow header = sheet.createRow(0);
+        
+        for(int i=0; i < header.getPhysicalNumberOfCells();i++) {
+            HSSFCell cell = header.getCell(i);
+
+        }
+       
+		} catch(Throwable t) {
+			errorResult(t);
+		}
+    }
+	
+	public void handleChangeColumnsViewClick() {
+		// Get Data Table Columns
+		DataTable dataTable = (DataTable) FacesContext.getCurrentInstance().getViewRoot().findComponent("idForm:idPaymentTable");
+		List<UIColumn> column = dataTable.getColumns();
+		int index = 1;
+		List<ListingTableViewColumnsVO> columnList = new ArrayList<>();
+		for (UIColumn uiColumn : column) {
+			boolean isExists = false;
+			for (ListingTableViewColumnsVO columnsVO : listingTableViewVO.getListingTableViewColumnsVOList()) {
+				if (StringUtils.equals(columnsVO.getColumnsName(), uiColumn.getHeaderText())) {
+					columnsVO.setSeqNo(index);
+					
+					columnList.add(columnsVO);
+					isExists = true;
+					break;
+				}
+			}
+			
+			if (!isExists) {
+				ListingTableViewColumnsVO columnsVO = new ListingTableViewColumnsVO();
+				columnsVO.setColumnsName(uiColumn.getHeaderText());
+				columnsVO.setSeqNo(index);
+				columnsVO.setVisible(true);
+				columnList.add(index - 1, columnsVO);
+			}
+			index++;
+		} 
+		
+		listingTableViewVO.setListingTableViewColumnsVOList(columnList);
+	}
+	
+	public void updateListingTableView() {
+		try {
+			listingTableViewBO.updateListingTableView(listingTableViewVO);
+			
+			loadListingTableView();
+			successResult();
+		} catch (BusinessException e) {
+			errorResult(e);
+		}
+	}
+	
+	public void loadListingTableView() {
+		listingTableViewMap = new HashMap<>();
+		try {
+			listingTableViewVO = listingTableViewBO.getListingTableView(ConstantListingTableView.LISTING_TYPE_BANK_ADJ, getSessionInfo().getUserVO().getId());
+			
+			if (listingTableViewVO == null) {
+				listingTableViewVO = new ListingTableViewVO();
+				listingTableViewVO.setIdUser(getSessionInfo().getUserVO().getId());
+				listingTableViewVO.setListingType(ConstantListingTableView.LISTING_TYPE_BANK_ADJ);
+				
+				listingTableViewVO.setListingTableViewColumnsVOList(new ArrayList<ListingTableViewColumnsVO>()); 
+			}
+			
+			for (ListingTableViewColumnsVO columnsVO : listingTableViewVO.getListingTableViewColumnsVOList()) {
+				listingTableViewMap.put(columnsVO.getSeqNo(), columnsVO.getVisible());
+			}
+		} catch (BusinessException e) {
+			errorResult(e);
+		}
+	}
+	
+	/**
+	 * tour code selected
+	 * @param event
+	 */
+	public void handleTourCodeSelect(SelectEvent event){
+		try{
+			TourDepartureVO tourDepVO = (TourDepartureVO) event.getObject();  
+			
+			cashBookVO.setTourDepId(tourDepVO.getId());
+			cashBookVO.setTourCd(tourDepVO.getCode());
+			
+		}catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * Load tour list
+	 */
+	public void loadTour() throws BusinessException{
+//		tourList = tourPkgBO.getTourDepListV2();
+		lazyDataModelTourDep = new LazyDMTourDep<>();
+		lazyDataModelTourDep.setCompanyId(getSessionInfoBean().getCompanyVO().getId());
+	}
+	
+	/**
+	 * clear tour code
+	 */
+	public void clearTourCode() {
+		try {
+			cashBookVO.setTourDepId(null);
+			cashBookVO.setTourCd(null);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Get Financial Period Closed Status
+	 */ 
+	public void getFinPeriodClosedStatus() {
+		try {
+			cashBookVO.setDateInFinPeriodClosed(LookupItemUtils.getFinAndGSTPeriodClosedStatus(this.getSessionInfoBean().getCompanyVO().getId(), cashBookVO.getDtTrans(), invPmntAuthVO.isAccountManager()));
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	class BankAdjustmentLazyDataModel extends LazyDataModel<CashBookVO> implements Serializable{
+		private static final long serialVersionUID = 1L;
+		private SearchParamVO searchParamVO;
+		
+	    public BankAdjustmentLazyDataModel(SearchParamVO searchParamVO) {
+	        this.searchParamVO = searchParamVO;
+	    }
+	    
+	    /*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#load(int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+		 */
+		@Override
+	    public List<CashBookVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			trackingLogUtils.startLogs();
+			List<CashBookVO> data = new ArrayList<CashBookVO>();
+			try {
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", sortField);
+				params.put("sortOrder", sortOrder);
+				params.put("filters", filters);
+
+				int size = paymentBO.getBankCashBookListSize(CommonConstant.SYS_NUM_CD_BANK_ADJM,getSessionInfoBean().getCompanyVO().getId(),searchParamVO, params);
+				setRowCount(size);
+				if (size > 0) return paymentBO.getBankCashBookList(CommonConstant.SYS_NUM_CD_BANK_ADJM,getSessionInfoBean().getCompanyVO().getId(),searchParamVO, params);
+
+			} catch (BusinessException e) {
+				e.printStackTrace();
+			} finally {
+				trackingLogUtils.endLogs("BankAdjustmentLazyDataModel");
+			}
+			return data;
+	    }
+	    
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#setRowIndex(int)
+		 */
+		@Override
+		public void setRowIndex(int rowIndex) {
+			if (rowIndex == -1 || getPageSize() == 0) super.setRowIndex(-1);
+			else super.setRowIndex(rowIndex % getPageSize());
+		}
+	}
+	
+	
+	public AcctTransVO getAcctTransVO() 
+	{
+		return acctTransVO;
+	}
+
+	public void setAcctTransVO(AcctTransVO acctTransVO) 
+	{
+		this.acctTransVO = acctTransVO;
+	}
+
+	public CashBookVO getCashBookVO() 
+	{
+		return cashBookVO;
+	}
+
+	public void setCashBookVO(CashBookVO cashBookVO) 
+	{
+		this.cashBookVO = cashBookVO;
+	}
+
+	public SystemNumberGenerationVO getSysNumGenVO() 
+	{
+		return sysNumGenVO;
+	}
+
+	public void setSysNumGenVO(SystemNumberGenerationVO sysNumGenVO) 
+	{
+		this.sysNumGenVO = sysNumGenVO;
+	}
+
+	public List<AcctTransVO> getAcctTransList() {
+		return acctTransList;
+	}
+
+	public void setAcctTransList(List<AcctTransVO> acctTransList) {
+		this.acctTransList = acctTransList;
+	}
+	public List<CashBookVO> getCashBookList() {
+		return cashBookList;
+	}
+
+	public void setCashBookList(List<CashBookVO> cashBookList) {
+		this.cashBookList = cashBookList;
+	}
+
+	public List<SystemNumberGenerationVO> getSysNumGenList() {
+		return sysNumGenList;
+	}
+
+	public void setSysNumGenList(List<SystemNumberGenerationVO> sysNumGenList) {
+		this.sysNumGenList = sysNumGenList;
+	}
+
+
+	public BankAcctVO getBankAcctVO() {
+		return bankAcctVO;
+	}
+
+	public void setBankAcctVO(BankAcctVO bankAcctVO) {
+		this.bankAcctVO = bankAcctVO;
+	}
+
+	public CompanyVO getCompanyVO() {
+		return companyVO;
+	}
+
+	public void setCompanyVO(CompanyVO companyVO) {
+		this.companyVO = companyVO;
+	}
+
+	public AcctViewVO getAcctViewVO() {
+		return acctViewVO;
+	}
+
+	public void setAcctViewVO(AcctViewVO acctViewVO) {
+		this.acctViewVO = acctViewVO;
+	}
+
+
+	public List<AcctViewVO> getAcctViewList() {
+		return acctViewList;
+	}
+
+	public void setAcctViewList(List<AcctViewVO> acctViewList) {
+		this.acctViewList = acctViewList;
+	}
+
+	public TourCatVO getTourCatVO() 
+	{
+		return tourCatVO;
+	}
+
+	public void setTourCatVO(TourCatVO tourCatVO) 
+	{
+		this.tourCatVO = tourCatVO;
+	}
+
+	public AcctTransViewVO getAcctTransViewVO() {
+		return acctTransViewVO;
+	}
+
+	public void setAcctTransViewVO(AcctTransViewVO acctTransViewVO) {
+		this.acctTransViewVO = acctTransViewVO;
+	}
+
+	public List<AcctTransVO> getUpdCompTranslist() {
+		return updCompTranslist;
+	}
+
+	public void setUpdCompTranslist(List<AcctTransVO> updCompTranslist) {
+		this.updCompTranslist = updCompTranslist;
+	}
+
+	public AcctTransViewVO getAcctTransCashBookVO() {
+		return acctTransCashBookVO;
+	}
+
+	public void setAcctTransCashBookVO(AcctTransViewVO acctTransCashBookVO) {
+		this.acctTransCashBookVO = acctTransCashBookVO;
+	}
+
+
+	public LookupItemVO getLookupItemBT() {
+		return lookupItemBT;
+	}
+
+	public void setLookupItemBT(LookupItemVO lookupItemBT) {
+		this.lookupItemBT = lookupItemBT;
+	}
+
+	public LookupItemVO getLookupItemCBT() {
+		return lookupItemCBT;
+	}
+
+	public void setLookupItemCBT(LookupItemVO lookupItemCBT) {
+		this.lookupItemCBT = lookupItemCBT;
+	}
+
+	public List<AcctTransViewVO> getAcctTransSysNoList() {
+		return acctTransSysNoList;
+	}
+
+	public void setAcctTransSysNoList(List<AcctTransViewVO> acctTransSysNoList) {
+		this.acctTransSysNoList = acctTransSysNoList;
+	}
+
+
+	public BankAcctVO getBankAcctSearchVO() {
+		return bankAcctSearchVO;
+	}
+
+
+	public void setBankAcctSearchVO(BankAcctVO bankAcctSearchVO) {
+		this.bankAcctSearchVO = bankAcctSearchVO;
+	}
+
+	public LookupItemVO getLookupItemGnDp() {
+		return lookupItemGnDp;
+	}
+
+	public void setLookupItemGnDp(LookupItemVO lookupItemGnDp) {
+		this.lookupItemGnDp = lookupItemGnDp;
+	}
+
+	public List<CashBookVO> getCashBookBankAdjustList() {
+		return cashBookBankAdjustList;
+	}
+
+	public void setCashBookBankAdjustList(List<CashBookVO> cashBookBankAdjustList) {
+		this.cashBookBankAdjustList = cashBookBankAdjustList;
+	}
+
+	public LookupItemVO getLookupItemBTCD() {
+		return lookupItemBTCD;
+	}
+
+	public void setLookupItemBTCD(LookupItemVO lookupItemBTCD) {
+		this.lookupItemBTCD = lookupItemBTCD;
+	}
+
+	public List<BankAcctViewVO> getBankAcctViewList() {
+		return bankAcctViewList;
+	}
+
+	public void setBankAcctViewList(List<BankAcctViewVO> bankAcctViewList) {
+		this.bankAcctViewList = bankAcctViewList;
+	}
+
+	/**
+	 * @return the acctAutoCompleteList
+	 */
+	public List<AcctVO> getAcctAutoCompleteList() {
+		return acctAutoCompleteList;
+	}
+
+	/**
+	 * @param acctAutoCompleteList the acctAutoCompleteList to set
+	 */
+	public void setAcctAutoCompleteList(List<AcctVO> acctAutoCompleteList) {
+		this.acctAutoCompleteList = acctAutoCompleteList;
+	}
+
+	/**
+	 * @return the invPmntAuthVO
+	 */
+	public InvPmntAuthVO getInvPmntAuthVO() {
+		return invPmntAuthVO;
+	}
+
+	/**
+	 * @param invPmntAuthVO the invPmntAuthVO to set
+	 */
+	public void setInvPmntAuthVO(InvPmntAuthVO invPmntAuthVO) {
+		this.invPmntAuthVO = invPmntAuthVO;
+	}
+
+	/**
+	 * @return the acctVO
+	 */
+	public AcctVO getAcctVO() {
+		return acctVO;
+	}
+
+	/**
+	 * @param acctVO the acctVO to set
+	 */
+	public void setAcctVO(AcctVO acctVO) {
+		this.acctVO = acctVO;
+	}
+
+	/**
+	 * @return the bankId
+	 */
+//	public Long getBankId() {
+//		return bankId;
+//	}
+//
+//	/**
+//	 * @param bankId the bankId to set
+//	 */
+//	public void setBankId(Long bankId) {
+//		this.bankId = bankId;
+//	}
+
+	/**
+	 * @return the prefixValue
+	 */
+	public String getPrefixValue() {
+		return prefixValue;
+	}
+
+	/**
+	 * @return the isAddAcctTrans
+	 */
+	public boolean isAddAcctTrans() {
+		return isAddAcctTrans;
+	}
+
+	/**
+	 * @param isAddAcctTrans the isAddAcctTrans to set
+	 */
+	public void setAddAcctTrans(boolean isAddAcctTrans) {
+		this.isAddAcctTrans = isAddAcctTrans;
+	}
+
+	/**
+	 * @return the inputTaxCodeVOList
+	 */
+	public List<TaxCodeVO> getInputTaxCodeVOList() {
+		return inputTaxCodeVOList;
+	}
+
+	/**
+	 * @param inputTaxCodeVOList the inputTaxCodeVOList to set
+	 */
+	public void setInputTaxCodeVOList(List<TaxCodeVO> inputTaxCodeVOList) {
+		this.inputTaxCodeVOList = inputTaxCodeVOList;
+	}
+	
+	/**
+	 * @return the outputTaxCodeVOList
+	 */
+	public List<TaxCodeVO> getOutputTaxCodeVOList() {
+		return outputTaxCodeVOList;
+	}
+
+	/**
+	 * @param outputTaxCodeVOList the outputTaxCodeVOList to set
+	 */
+	public void setOutputTaxCodeVOList(List<TaxCodeVO> outputTaxCodeVOList) {
+		this.outputTaxCodeVOList = outputTaxCodeVOList;
+	}
+
+	public AmountCalcViewVO getAmtCalcViewVO() {
+		return amtCalcViewVO;
+	}
+
+	public void setAmtCalcViewVO(AmountCalcViewVO amtCalcViewVO) {
+		this.amtCalcViewVO = amtCalcViewVO;
+	}
+
+	/**
+	 * @return the tourList
+	 */
+	public List<TourDepartureVO> getTourList() {
+		return tourList;
+	}
+
+	/**
+	 * @param tourList the tourList to set
+	 */
+	public void setTourList(List<TourDepartureVO> tourList) {
+		this.tourList = tourList;
+	}
+
+	public boolean isGSTPeriod() {
+		return isGSTPeriod;
+	}
+
+	public void setGSTPeriod(boolean isGSTPeriod) {
+		this.isGSTPeriod = isGSTPeriod;
+	}
+
+	public ListingTableViewVO getListingTableViewVO() {
+		return listingTableViewVO;
+	}
+
+	public void setListingTableViewVO(ListingTableViewVO listingTableViewVO) {
+		this.listingTableViewVO = listingTableViewVO;
+	}
+
+	public Map<Integer, Boolean> getListingTableViewMap() {
+		return listingTableViewMap;
+	}
+
+	public void setListingTableViewMap(Map<Integer, Boolean> listingTableViewMap) {
+		this.listingTableViewMap = listingTableViewMap;
+	}
+	
+	public LazyDataModel<TourDepartureVO> getLazyDataModelTourDep() {
+		return lazyDataModelTourDep;
+	}
+
+	public LazyDataModel<CashBookVO> getLazyDataModelBankAdjustment() {
+		return lazyDataModelBankAdjustment;
+	}
+
+	public void setLazyDataModelBankAdjustment(LazyDataModel<CashBookVO> lazyDataModelBankAdjustment) {
+		this.lazyDataModelBankAdjustment = lazyDataModelBankAdjustment;
+	}
+
+
+}

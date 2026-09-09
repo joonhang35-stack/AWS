@@ -1,0 +1,61 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varRoomPriceDialog.show();
+		} else {
+			varRoomPriceDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid  id ="idAddTourPackageItemPanel" >
+	
+	
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idRemarks">Item Description <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idRemarks" rows="1" cols="15" value="#{tourPkgBean.roomPriceVO.roomName}" required="true"></p:inputText>
+			&nbsp;<p:commandButton icon="ui-icon-search" onclick="varRoomTypeListDialog.show()" process="@this"/>
+     </p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idNetPrice">Net Price <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column> 
+			<p:inputText id="idNetPrice" rows="1" cols="8" value="#{tourPkgBean.roomPriceVO.priceFrom}" required="true"><f:convertNumber pattern="#,##0.00"/></p:inputText>
+							 
+     </p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idSellingPrice">Selling Price <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idSellingPrice" rows="1" cols="8" value="#{tourPkgBean.roomPriceVO.priceTo}" required="true"><f:convertNumber pattern="#,##0.00"/></p:inputText>  
+     </p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 10px;">
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{tourPkgBean.addRoomPrice}" update="@form,:idAddTourPkgForm:idRoomPriceListPanel,:idEditTourPkgForm:idRoomPriceListPanel"  rendered="#{tourPkgBean.roomPriceAdd}"    /> 
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{tourPkgBean.updateRoomPrice}" update="@form,:idAddTourPkgForm:idRoomPriceListPanel,:idEditTourPkgForm:idRoomPriceListPanel" oncomplete="varRoomPriceDialog.hide()" rendered="#{not tourPkgBean.roomPriceAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{tourPkgBean.resetRoomPriceForm}"  oncomplete="varRoomPriceDialog.hide()" global="false">
+		<pe:resetEditableValues for="idTourPkgForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

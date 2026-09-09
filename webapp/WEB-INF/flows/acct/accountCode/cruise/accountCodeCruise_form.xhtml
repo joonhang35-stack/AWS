@@ -1,0 +1,85 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Tour Departure Account Code Maintenance - Cruise">
+<h:form id="idForm">
+<p:growl id="msg"/>
+<p:dataTable id="idTourDepList" widgetVar="varTourAcctCodeList" value="#{accountCodeBean.tourDepVOList}" var="vo" paginator="true" rows="20"
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+	rowsPerPageTemplate="10, 20, 30" rowStyleClass="#{vo.groupColor eq 0 ? 'group-color-one' : 'group-color-two'}" filteredValue="#{accountCodeBean.filteredObjList}"
+	filterEvent="enter">
+
+	<p:column headerText="Edit" style="width:50px;" styleClass="txt_center">
+		<p:commandButton icon="ui-icon-pencil" action="#{accountCodeBean.handleAccountDepSelect(vo)}" oncomplete="varEditAccCodeDialog.show()" update=":idEditAccCodeDialog,:idAcctListTableForm:idAcctListTable" />
+	</p:column>
+	<p:column headerText="Tour Code" sortBy="#{vo.code}" filterBy="#{vo.code}" filterMatchMode="contains" style="width:300px; font-size:10px; text-align:center;"><h:outputText value="#{vo.code}"/></p:column>
+	<p:column headerText="Dep Date" sortBy="#{vo.dtDep}" style="width:100px; font-size:10px;text-align:center;"><h:outputText value="#{vo.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+	<p:column headerText="Tour Category" sortBy="#{vo.tourCategoryName}" filterBy="#{vo.tourCategoryName}" filterMatchMode="contains" style="width:100px; font-size:10px; text-align:center;"><h:outputText value="#{vo.tourCategoryName}"/></p:column>
+	<p:column headerText="Package Name" sortBy="#{vo.packageName}"  filterBy="#{vo.packageName}" filterMatchMode="contains" style="font-size:10px; text-align:center;"><h:outputText value="#{vo.packageName}"/></p:column>
+	<p:column headerText="Status" style="width:80px; font-size:10px; text-align:center;"><h:outputText value="#{bterp:lookupItemDesc('acc_code_status', vo.accCodeStatusCd)}"/></p:column>
+</p:dataTable>
+</h:form>
+</p:panel>
+
+<!--
+	DIALOG - UPDATE Account Code
+-->
+<p:dialog id="idEditAccCodeDialog" widgetVar="varEditAccCodeDialog" header="Update Account Code (Cruise)" modal="true" resizable="false" dynamic="true" draggable="true"
+	closable="false">
+	<h:form id="idEditAccCodeForm">
+		<ui:include src="add_acc_code.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - ACCOUNT SUB CAT LIST
+-->
+<p:dialog id="idAcctSubCatList" widgetVar="varAcctSubCatList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<h:form id="idAcctListTableForm">
+		<p:dataTable widgetVar="varAcctListTable" id="idAcctListTable" value="#{accountCodeBean.acctList}" var="acctVO" paginator="true" rows="20"
+			paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+			filteredValue="#{accountCodeBean.filteredObjList}" filterEvent="enter"
+			rowsPerPageTemplate="10, 20, 30" rowKey="#{acctVO.id}" selectionMode="single">
+			<p:ajax event="rowSelect" listener="#{accountCodeBean.handleSubAcctSelect}" oncomplete="varAcctSubCatList.hide()" update=":idEditAccCodeForm:idEditAccCodePanel" process="@this"/>
+
+			<p:column headerText="Account No" sortBy="#{acctVO.code}-#{acctVO.subCode}" filterBy="#{empty acctVO.subCode ? acctVO.code : acctVO.code.concat('-').concat(acctVO.subCode)}" filterMatchMode="contains">
+				<h:outputText value="#{acctVO.code}" />
+				<h:outputText value="-#{acctVO.subCode}" rendered="#{not empty acctVO.subDesc}" />
+			</p:column>
+
+			<p:column headerText="Description" sortBy="#{acctVO.desc}, #{acctVO.subDesc}" filterBy="#{empty acctVO.subDesc ? acctVO.desc : acctVO.desc.concat(',').concat(acctVO.subDesc)}" filterMatchMode="contains">
+				<h:outputText value="#{acctVO.desc}" />
+				<h:outputText value=", #{acctVO.subDesc}" rendered="#{not empty acctVO.subDesc}" />
+			</p:column>
+		</p:dataTable>
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idGSTListDialog" widgetVar="varGSTListDialog" header="GST Output Tax" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+	<p:dataTable id="idOutputTaxCodeList" value="#{accountCodeBean.outputTaxCodeVOList}" var="taxCodeVO" rowKey="#{taxCodeVO.id}" selectionMode="single">
+		<p:ajax event="rowSelect" listener="#{accountCodeBean.handleGSTSelect}" oncomplete="varGSTListDialog.hide()" update=":idEditAccCodeForm:idEditAccCodePanel"/>
+		<p:column headerText="No." width="25" style="text-align:right;">
+			<h:outputText value="#{taxCodeVO.seqNo}"/>
+		</p:column>
+		<p:column headerText="Code" width="50">
+			<h:outputText value="#{taxCodeVO.code}" />
+		</p:column>
+		<p:column headerText="Description" >
+			<h:outputText value="#{taxCodeVO.description}" />
+		</p:column>
+		<p:column headerText="Rate (%)" width="50" style="text-align:right;">
+			<h:outputText value="#{taxCodeVO.rate}"/>
+		</p:column>
+	</p:dataTable>
+</p:dialog>
+</ui:define>
+</ui:composition>

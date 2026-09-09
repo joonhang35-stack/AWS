@@ -1,0 +1,141 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+<p:panel header="Debtors Outstanding" toggleable="true" toggleSpeed="500">
+<h:form id="debtorsForm">
+<h:panelGrid columns="10" cellpadding="0" cellspacing="2" style="margin-bottom:10px; width:850px">
+		<h:outputLabel>Date From</h:outputLabel>
+		<p:calendar value="#{debtorsOutstandingBean.searchParamVO.fromDate}" id="idFromDate" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+		<h:outputLabel>Date To</h:outputLabel>
+		<p:calendar value="#{debtorsOutstandingBean.searchParamVO.toDate}" id="idToDate" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" display="inline"></p:calendar>
+		<h:outputLabel>Due days</h:outputLabel>
+		<h:selectOneMenu id="idDueDays" label="Due Days" value="#{debtorsOutstandingBean.searchParamVO.obj1}">
+			 <f:selectItem itemLabel="All" />  
+            <f:selectItems value="#{debtorsOutstandingBean.dueDaysList}" var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}"/>
+		</h:selectOneMenu>
+		<h:outputLabel>Customer Name</h:outputLabel>
+		<p:inputText value="#{debtorsOutstandingBean.searchParamVO.obj3}"/>
+		<p:commandButton value="Search" actionListener="#{debtorsOutstandingBean.search}" update="@form"/>
+		
+	</h:panelGrid>
+<p:dataTable id="idDebtorOutstandingTable"  value="#{debtorsOutstandingBean.ldmDebtorsList}" widgetVar="varDebitorOutstandingTable" var="vo"  paginator="true" rows="20" 
+			paginatorTemplate="#{bterp:pageTemplate()}" 
+			rowsPerPageTemplate="20, 30, 50" filteredValue="#{debtorsOutstandingBean.filteredObjList}" lazy="true" filterEvent="enter">
+			
+			<p:column>
+	        <f:facet name="header">
+	            <h:outputText value="Seq No" />  
+	        </f:facet> 
+					<h:outputText value="#{vo.rowNumber}"/>
+				</p:column>
+				
+					<p:column filterBy="#{vo.custCode}" filterMatchMode="contains" width="80">
+	        <f:facet name="header">
+	            <h:outputText value="Customer No." />  
+	        </f:facet> 
+					<h:outputText value="#{vo.custCode}" />
+				</p:column>
+			
+			<p:column filterBy="#{vo.custName}" filterMatchMode="contains" width="200">
+	        <f:facet name="header">
+	            <h:outputText value="Customer Name" />  
+	        </f:facet> 
+					<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.custSalutation)} #{vo.custName}" style="text-transform:uppercase;"/>
+				</p:column>
+			
+			<p:column sortBy="#{vo.invoiceCode}" filterBy="#{vo.invoiceCode}" filterMatchMode="contains" width="120">
+	        <f:facet name="header">
+	            <h:outputText value="Invoice No." />  
+	        </f:facet> 
+					<h:outputText value="#{debtorsOutstandingBean.prefixValue} #{vo.invoiceCode}" />
+				</p:column>
+			
+			<p:column width="100" sortBy="#{vo.invoiceDt}">
+	        <f:facet name="header">
+	            <h:outputText value="Invoice Date" />  
+	        </f:facet> 
+					<h:outputText value="#{vo.invoiceDt}">
+					<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+				</h:outputText>
+				</p:column>
+			
+			<p:column sortBy="#{vo.eoNo}" filterBy="#{vo.eoNo}" filterMatchMode="contains" width="120" style="word-wrap:break-word;">
+	        <f:facet name="header">
+	            <h:outputText value="Eo No" />  
+	        </f:facet> 
+					 <h:outputText value="#{vo.eoNo}"  />
+				</p:column>
+			
+			<p:column filterBy="#{vo.attnTo}" filterMatchMode="contains" sortBy="#{vo.attnTo}" width="200">
+	        <f:facet name="header">
+	            <h:outputText value="Attn To" />  
+	        </f:facet> 
+					<h:outputText value="#{vo.attnTo}" />
+				</p:column>
+			
+			<p:column sortBy="#{vo.invAmt}" styleClass="txt_center" width="80">
+	        <f:facet name="header">
+	            <h:outputText value="Invoice Amount" />  
+	        </f:facet> 
+					<h:outputText value="#{vo.invAmt}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+				</p:column>
+			
+	        <p:column sortBy="#{vo.invPaid}" styleClass="txt_center" width="80">
+	        <f:facet name="header">
+	            <h:outputText value="Amount Paid" />  
+	        </f:facet> 
+					<h:outputText value="#{vo.invPaid}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+				</p:column>
+	        
+	        <p:column sortBy="#{vo.invDue}" styleClass="txt_center" width="80">
+	        <f:facet name="header">
+	            <h:outputText value="Amount Due" />  
+	        </f:facet> 
+					<h:outputText value="#{vo.invDue}">
+	        		<f:convertNumber pattern="#,##0.00"/>
+	        	</h:outputText>
+				</p:column>
+	        
+	        <p:column  width="80" sortBy="#{vo.dueDt}">
+	        <f:facet name="header">
+	            <h:outputText value="Due Date" />  
+	        </f:facet> 
+					<h:outputText value="#{vo.dueDt}">
+					<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+				</h:outputText>
+				</p:column>
+	      
+		</p:dataTable>
+		<p:panelGrid rendered="#{not empty debtorsOutstandingBean.ldmDebtorsList}">
+				<p:row>
+					<p:column>	
+					<h:commandLink value="Export Excel" styleClass="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ui-button-text" 
+												style="padding: .45em 1em;">  
+					  	<p:graphicImage value="/img/excel.png" width="16" height="12" />  
+		       		<p:dataExporter type="xls" target="idDebtorOutstandingTable" fileName="#{debtorsOutstandingBean.exportFileName}" postProcessor="#{debtorsOutstandingBean.postProcessXLS}"/>  
+						</h:commandLink>	
+			    
+    				<p:commandButton icon="ui-icon-print" value="#{msg['common.button.label.print']} PDF" 
+    					actionListener="#{debtorsOutstandingBean.printDebtorsOutstandingSalesReport}" ajax="false" style="margin-left:10px"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+</h:form>
+	
+</p:panel>
+	
+</ui:define>
+</ui:composition>

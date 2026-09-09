@@ -1,0 +1,44 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel>No. of Night</h:outputLabel></p:column>
+		<p:column>
+			<p:calendar pattern="dd-MMM-yyyy" id="idFromDate" label="From Date" value="#{tourPkgBean.tourHotelVO.fromDate}" required="true" navigator="true" showButtonPanel="true">
+				<p:watermark for="idFromDate" value="From Date" />
+			</p:calendar>
+		</p:column>
+		<p:column>
+			<p:calendar pattern="dd-MMM-yyyy" id="idToDate" label="To Date" value="#{tourPkgBean.tourHotelVO.toDate}" required="true" navigator="true" showButtonPanel="true">
+				<p:watermark for="idToDate" value="To Date" />
+			</p:calendar>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idHotel">Hotel <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idHotel" value="#{tourPkgBean.tourHotelVO.hotelVO.name}" required="true" maxlength="0" onkeydown="preventBackspace()"/>&nbsp;<p:commandButton icon="ui-icon-search" oncomplete="varHotelListDialog.show()" update=":idHotelListDialog" />
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<h:panelGrid columns="2" style="width:1px">
+<!-- 	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{tourPkgBean.saveTourHotel}" update="@form,:idAddTourDepForm:idShowHotelList,:idEditTourDepForm:idShowHotelList"/>
+ -->
+	<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{tourPkgBean.addTourHotel}" update="@form,:idAddTourDepForm:idShowHotelList,:idEditTourDepForm:idShowHotelList"/>
+ 
+ 	<!-- <p:commandButton value="#{msg['common.button.label.save']}" disabled="true" rendered="#{tourPkgBean.hotelStayNight eq 0}"/> -->
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{tourPkgBean.resetTourHotelForm}" oncomplete="varAddHotelDialog.hide()" process="@this" update="@form">
+		<pe:resetEditableValues for="idAddTourHotelForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

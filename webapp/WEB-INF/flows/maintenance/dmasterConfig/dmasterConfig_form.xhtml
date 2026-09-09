@@ -1,0 +1,33 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+	<p:panel header="Deposit Master Config">
+		<h:form id="idForm">
+			<p:growl id="msg"/>
+			<p:dataTable id="idAccountCodeTable" value="#{dMasterConfigBean.depositMasterConfigList}" var="vo" style="margin-top:10px; width: 1000px;"> 
+				<p:column  headerText="Payment Type">
+					<h:outputText value="#{vo.pmntTypeDesc}"/>
+				</p:column>
+				<p:column headerText="Bank" style="width:200px;text-align:center"> 
+					<h:selectOneMenu id="idBankAccount" label="Bank Account" value="#{vo.idBank}">
+						<f:selectItems value="#{dMasterConfigBean.bankAcctViewList}" var="bankVO" itemLabel="#{bankVO.name}" itemValue="#{bankVO.id}"/>
+						<p:ajax event="change" update="@this" global="false"/>
+					</h:selectOneMenu>
+				</p:column>
+			</p:dataTable> 	
+			<h:panelGrid columns="2" style="margin-top: 15px; width: 10px;">
+				<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{dMasterConfigBean.save}" update=":idForm" />
+			</h:panelGrid>
+		</h:form>		
+	</p:panel>
+</ui:define>
+</ui:composition>

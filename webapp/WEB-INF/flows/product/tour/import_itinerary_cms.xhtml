@@ -1,0 +1,175 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+				xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+<style>
+	.tabScrollable {
+		height: 500px !important;
+		overflow: auto;
+	}
+</style>
+
+
+<h:panelGrid columns="2" style="margin-top:5px;margin-bottom:5px;">  
+	<h:outputLabel rendered="#{empty tourPkgBean.tourPkgCMSVO.tourPkgDailyItineraryVOList}" style="margin-top:10px; margin-bottom:100px;">
+		<span class="required">Itinerary CMS is not exist.</span>
+	</h:outputLabel>
+</h:panelGrid>
+
+<p:tabView id="idTabDailyItinerary" activeIndex="#{tourPkgBean.activeDailyItineryIndexCMS}" rendered="#{not empty tourPkgBean.tourPkgCMSVO.tourPkgDailyItineraryVOList}">
+	<p:ajax event="tabChange" global="false" listener="#{tourPkgBean.onTabChangeCMS}"/>
+	<c:forEach var="child" items="#{tourPkgBean.tourPkgCMSVO.tourPkgDailyItineraryVOList}" varStatus="loop">
+		<p:tab title="#{child.title}">
+			<p:panel styleClass="tabScrollable">
+				<p:panelGrid id="idPanelDailyItinerary#{loop.index}">
+					<p:row>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="Short Code" for="idTxtDailyItineraryShortCd#{loop.index}"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idTxtDailyItineraryShortCd#{loop.index}" requiredMessage="Short Code is Required" size="20" value="#{child.code}" required="true" maxlength="20">
+								<p:ajax event="change" global="false"/>
+							</p:inputText>
+						</p:column>
+						<p:column style="text-align:right;">
+							<p:commandButton value="Import" actionListener="#{tourPkgBean.setImportTPDailyItineraryVO(child)}"
+								oncomplete="varImportTourPkgDailyItineraryDialog.show()"
+								rendered="#{child.id != null}"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="Title" for="idTxtDailyItineraryTitle#{loop.index}"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idTxtDailyItineraryTitle#{loop.index}" requiredMessage="Title is Required" size="72" value="#{child.title}" required="true" maxlength="255">
+								<p:ajax event="change" global="false"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="Title (Chinese)" for="idTxtDailyItineraryZhTitle#{loop.index}"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idTxtDailyItineraryZhTitle#{loop.index}" requiredMessage="Title is Required" size="72" value="#{child.titleZh}" maxlength="255">
+								<p:ajax event="change" global="false"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="Image URL" for="idTxtDailyItineraryImageUrl#{loop.index}"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idTxtDailyItineraryImageUrl#{loop.index}" 
+								size="72" value="#{child.imageUrl}" maxlength="500">
+								<p:ajax event="change" global="false"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="Sequence" for="idTxtDailyItinerarySeq#{loop.index}"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idTxtDailyItinerarySeq#{loop.index}" 
+								size="10" value="#{child.seq}" maxlength="2" required="true"
+								requiredMessage="Sequence is Required">
+								<pe:keyFilter regEx="/[\d]/"/>
+								<p:ajax event="change" global="false"/>
+							</p:inputText>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				<p:panelGrid id="idPanelDailyItineraryItem#{loop.index}">
+					<p:row>
+						<p:column>
+							<p:selectOneButton value="#{child.langCd}">
+					            <f:selectItem itemLabel="ENGLISH" itemValue="ENG" />
+					            <f:selectItem itemLabel="CHINESE" itemValue="ZH" />
+					            <p:ajax global="false" update=":idImportItineraryCMSForm:idTabDailyItinerary:idTableDailyItineraryItem#{loop.index}, :idImportItineraryCMSForm:idTabDailyItinerary:idPanelDailyItinerary#{loop.index}, :idImportItineraryCMSForm:idTabDailyItinerary:idPanelHighLight#{loop.index}"/>
+					        </p:selectOneButton>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<p:dataTable id="idTableDailyItineraryItem#{loop.index}" value="#{child.langCd eq 'ENG' ? child.dailyItineraryItemEngVOList : child.dailyItineraryItemZhVOList}" var="subVo" style="margin-top: 10px; margin-bottom: 10px;" 
+					rows="10" paginator="true" paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10,15,20" >
+					<p:column headerText="Seq" style="width:30px; text-align:center;">
+						<h:outputText value="#{subVo.seq}"/>
+					</p:column>
+					<p:column headerText="Title" style="width:200px;">
+						<h:outputText value="#{subVo.title}" escape="false"/>
+					</p:column>
+					<p:column headerText="Hotel" style="width:200px;">
+						<h:outputText value="#{subVo.hotel}" escape="true" style="white-space: pre-wrap"/>
+					</p:column>
+					<p:column headerText="Meals" style="width:200px;">
+						<h:outputText value="#{subVo.meals}" escape="true" style="white-space: pre-wrap"/>
+					</p:column>
+					<p:column headerText="Description">
+						<h:outputText value="#{subVo.description}" escape="false"/>
+					</p:column>
+					<p:column headerText="Remark" style="width:200px">
+						<h:outputText value="#{subVo.remarks}" escape="true" style="white-space: pre-wrap"/>
+					</p:column>
+				</p:dataTable>
+				
+				<p:panelGrid id="idPanelHighLight#{loop.index}">
+					<p:row>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="Highlight" for="idHighLight#{loop.index}"/>
+						</p:column>
+						<p:column colspan="2">
+							<p:inputTextarea label="Highlight" id="idHighLight#{loop.index}" value="#{child.highlight}" rows="5" style="width:300px">
+								<p:ajax event="change" global="false"/>
+							</p:inputTextarea>
+						</p:column>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="Highlight (Chinese)" for="idHighLightZh#{loop.index}"/>
+						</p:column>
+						<p:column colspan="2">
+							<p:inputTextarea label="Highlight" id="idHighLightZh#{loop.index}" value="#{child.highlightZh}" rows="5" style="width:300px">
+								<p:ajax event="change" global="false"/>
+							</p:inputTextarea>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<p:panelGrid id="idPanelGenRemarks#{loop.index}">
+					<p:row>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="General Remarks" for="idGenRemarks#{loop.index}"/>
+						</p:column>
+						<p:column colspan="2">
+							<p:inputTextarea label="General Remarks" id="idGenRemarks#{loop.index}" value="#{child.genRemarks}" rows="5" style="width:300px">
+								<p:ajax event="change" global="false"/>
+							</p:inputTextarea>
+						</p:column>
+						<p:column style="width: 80px;">
+							<p:outputLabel value="General Remarks (Chinese)" for="idGenRemarksZh#{loop.index}"/>
+						</p:column>
+						<p:column colspan="2">
+							<p:inputTextarea label="General Remarks (Chinese)" id="idGenRemarksZh#{loop.index}" value="#{child.genRemarksZh}" rows="5" style="width:300px">
+								<p:ajax event="change" global="false"/>
+							</p:inputTextarea>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:tab>
+	</c:forEach>
+</p:tabView>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="Cancel" oncomplete="varImportItineraryCMSDialog.hide()"/>
+</h:panelGrid>
+
+</ui:composition>

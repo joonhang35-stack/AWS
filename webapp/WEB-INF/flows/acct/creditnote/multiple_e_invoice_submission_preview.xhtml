@@ -1,0 +1,153 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	
+
+
+		<script type="text/javascript">
+    function fncLoad() {
+        document.getElementById('idInvListForm:idAddBtn').onclick();
+    }
+    
+    function onValidationReason(xhr, status, args) {
+		if (args.validationFailed) {
+			varReasonDialog.show();
+		} else {
+			varReasonDialog.hide();
+			//varAddInvoiceDialog.hide();
+		}
+	}
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        var filters = document.querySelectorAll('input.ui-column-filter');
+        filters.forEach(function(filter) {
+            filter.setAttribute('enterkeyhint', 'enter');
+        });
+    });
+</script>
+
+	<p:panelGrid>
+		<p:row>
+			<p:column>
+				<p:commandButton value="Submit" actionListener="#{salesBean.submitMultipleEInvoice}"
+					update=":idInvListForm:msg :idMultipleEInvSubmitRespDialog"
+					oncomplete="if (#{salesBean.isEInvSubm}) varMultipleEInvSubmitRespDialog.show()"></p:commandButton>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	<p:dataTable id="idSelectedInvListTable" widgetVar="varSelectedInvoiceListTable"
+		value="#{salesBean.savedSelectedInvoiceList}" var="vo" paginator="true" rows="20"
+		paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+		rowsPerPageTemplate="20, 30, 50" filterEvent="enter"
+		rowKey="#{vo.id}">
+
+		<!-- <p:ajax event="rowSelectCheckbox" listener="#{salesBean.onSelect}"/> -->
+		<!-- <p:ajax event="rowUnselectCheckbox" listener="#{salesBean.onUnselect}"/> -->
+		<!-- <p:ajax event="toggleSelect" listener="#{salesBean.onToggle}"/> -->
+		<!-- <p:ajax event="page" listener="#{salesBean.onPagination}" /> -->
+		<!-- <p:ajax event="filter" listener="#{salesBean.onFilter}" /> -->
+
+		<!-- <p:column selectionMode="multiple"
+			style="width:16px;text-align:center"
+			rendered="#{salesBean.isEInvSubm}" exportable="false" /> -->
+
+		<!-- <p:column headerText="Edit" style="width:50px; text-align:center;">
+			<p:commandButton icon="ui-icon-pencil"
+				actionListener="#{salesBean.onInvoiceSelected(vo)}"
+				oncomplete="varAddInvoiceDialog.show()"
+				update=":idAddInvoiceDialog" />
+		</p:column>
+
+		<p:column headerText="Cancel" style="width:50px; text-align:center;">
+			<p:commandButton icon="ui-icon-close"
+				actionListener="#{salesBean.onInvoiceSelected(vo)}"
+				oncomplete="varDelInvDialog.show()"
+				rendered="#{vo.statusCd eq 'BL' or vo.statusCd eq 'PD' or vo.statusCd eq 'IN' or vo.statusCd eq 'DP' or vo.statusCd eq 'FP'}" />
+		</p:column> -->
+
+		<p:column headerText="Credit Note No." sortBy="#{vo.codeLong}"
+			filterBy="#{vo.codeLong}" filterMatchMode="contains">
+			<h:outputText value="#{salesBean.prefixValue} #{vo.codeLong}" />
+		</p:column>
+
+		<p:column headerText="Credit Note Date" sortBy="#{vo.invoiceDt}">
+			<h:outputText value="#{vo.invoiceDt}">
+				<f:convertDateTime pattern="dd-MMM-yyyy" />
+			</h:outputText>
+		</p:column>
+
+		<p:column headerText="Customer No." sortBy="#{vo.custCdLong}"
+			filterBy="#{vo.custCdLong}" filterMatchMode="contains">
+			<h:outputText value="#{vo.custCdLong}" />
+		</p:column>
+
+		<p:column headerText="Customer Name" sortBy="#{vo.custName}"
+			filterBy="#{vo.custName}" filterMatchMode="contains">
+			<h:outputText
+				value="#{bterp:lookupItemDesc('salutatn', vo.custSalutation)} #{vo.custName}" />
+		</p:column>
+
+		<p:column headerText="Refund Note No." sortBy="#{vo.rnNo}"
+			filterBy="#{vo.rnNo}" filterMatchMode="contains">
+			<h:outputText value="#{salesBean.prefixValueRN} #{vo.rnNo}"
+				rendered="#{not empty vo.rnNo}" />
+		</p:column>
+
+		<p:column headerText="Document No."
+			sortBy="#{
+			vo.cnInvNo != null ? 
+				(vo.cnPsNo != null ? 
+					salesBean.invPrefixVal.concat(' ').concat(vo.cnInvNo).concat(' / ').concat(salesBean.psPrefixVal).concat(' ').concat(vo.cnPsNo) 
+						: salesBean.invPrefixVal.concat(' ').concat(vo.cnInvNo)) 
+					: salesBean.psPrefixVal.concat(' ').concat(vo.cnPsNo)
+			}"
+			filterBy="#{
+			vo.cnInvNo != null ? 
+				(vo.cnPsNo != null ? 
+					salesBean.invPrefixVal.concat(' ').concat(vo.cnInvNo).concat(' / ').concat(salesBean.psPrefixVal).concat(' ').concat(vo.cnPsNo) 
+						: salesBean.invPrefixVal.concat(' ').concat(vo.cnInvNo)) 
+					: salesBean.psPrefixVal.concat(' ').concat(vo.cnPsNo)
+			}"
+			filterMatchMode="contains">
+			<h:outputText
+				rendered="#{vo.cnInvNo ne null and vo.cnPsNo eq null}"
+				value="#{salesBean.invPrefixVal} #{vo.cnInvNo}" />
+			<h:outputText
+				rendered="#{vo.cnInvNo ne null and vo.cnPsNo ne null}"
+				value="#{salesBean.invPrefixVal} #{vo.cnInvNo} / #{salesBean.psPrefixVal} #{vo.cnPsNo}" />
+			<h:outputText
+				rendered="#{vo.cnInvNo eq null and vo.cnPsNo ne null}"
+				value="#{salesBean.psPrefixVal} #{vo.cnPsNo}" />
+		</p:column>
+
+		<p:column headerText="Total Amt" sortBy="#{vo.amount}"
+			filterBy="#{vo.amount}" styleClass="txt_center">
+			<h:outputText value="#{vo.amount}">
+				<f:convertNumber pattern="#,##0.00" />
+			</h:outputText>
+		</p:column>
+
+		<p:column headerText="Status"
+			sortBy="#{zsg:referenceDataValue('INV_STATUS', vo.statusCd)}"
+			style="width: 80px;" styleClass="txt_center"
+			filterBy="#{zsg:referenceDataValue('INV_STATUS', vo.statusCd)}">
+			<h:outputText
+				value="#{zsg:referenceDataValue('INV_STATUS', vo.statusCd)}" />
+		</p:column>
+
+		<p:column headerText="E-Invoice Status"
+			sortBy="#{vo.eInvoiceStatus}" style="width: 80px;"
+			styleClass="txt_center" filterBy="#{vo.eInvoiceStatus}">
+			<h:outputText value="#{vo.eInvoiceStatus}" />
+		</p:column>
+	</p:dataTable>
+		
+	
+</ui:composition>

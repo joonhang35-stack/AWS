@@ -1,0 +1,169 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+<div style="height:500px;overflow:auto;">
+	<p:panelGrid>
+		<p:row>
+			<p:column><h:outputLabel for="idAddTypeVen">Type of Vendor <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+			<h:selectOneMenu id="idAddTypeVen" value="#{purchaseEOBean.supplierVO.supplierType}">  
+	            <f:selectItem itemLabel="Select One" itemValue="" />  
+	            <f:selectItem itemLabel="Trade Creditors" itemValue="TC" /> 
+	            <f:selectItem itemLabel="Sundry Creditors" itemValue="SC" />
+        	</h:selectOneMenu> 
+	        </p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idAddCompName">Company Name <span class="required">*</span></h:outputLabel></p:column>
+			<p:column colspan="3"><p:inputText id="idAddCompName" label="Company Name" value="#{purchaseEOBean.supplierVO.companyName}" required="true" size="50"/></p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:fieldset legend="Contact Person ">
+		<p:panelGrid>
+		<p:row>
+		<p:column><h:outputLabel for="idAddSalutate">Salutation <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+		<h:selectOneMenu id="idAddSalutate" value="#{purchaseEOBean.supplierVO.salutation}">  
+            <f:selectItem itemLabel="Select One" itemValue="" />  
+            <f:selectItem itemLabel="Mr." itemValue="Mr." /> 
+            <f:selectItem itemLabel="Mrs." itemValue="Mrs." /> 
+            <f:selectItem itemLabel="Ms." itemValue="Ms." /> 
+        </h:selectOneMenu>
+        </p:column>
+        <p:column><h:outputLabel for="idAddLastName">Last Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddLastName" label="Last Name" value="#{purchaseEOBean.supplierVO.lastName}" required="true"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddGivenName">Given Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddGivenName" label="Given Name" value="#{purchaseEOBean.supplierVO.givenName}" required="true"/></p:column>
+		</p:row>
+		
+ 		<p:row>
+			<p:column><p:commandButton value="Add Contact" onclick="varContactDialog.show()" immediate="true"/></p:column>
+			<p:column colspan="3">
+			<p:panel id ="idShowContact" style="border:none">
+				<p:dataTable id="idShowContactList" value="#{purchaseEOBean.supplierVO.contactList}" var="contactVO" rowKey="#{contactVO.contactNo}" selectionMode="single" style="width:250px" rendered="#{not empty purchaseEOBean.supplierVO.contactList}">
+				
+					<p:column headerText="Edit" style="width:50px; text-align:center;">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseEOBean.onContactSelected(contactVO)}" oncomplete="varEditContactDialog.show()" process="@this"/>
+					</p:column>
+					<p:column headerText="Delete" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-close" actionListener="#{purchaseEOBean.delContactList(contactVO)}" update="@form,:idContactDialog,:idEditContactDialog,:idAddPCustomerForm:idShowContact" process="@this"/>
+					</p:column>
+					<p:column headerText="Contact Type">
+						<h:outputText value="#{contactVO.contactType}"/>
+					</p:column>
+					<p:column headerText="Contact No">
+						<h:outputText value="#{contactVO.contactNo}"/>
+					</p:column>
+					
+				</p:dataTable>
+			</p:panel>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column><h:outputLabel for="idAddEmail">Email </h:outputLabel></p:column>
+			<p:column><p:inputText id="idAddEmail" label="Email ID" value="#{purchaseEOBean.supplierVO.email}" /></p:column>
+		</p:row>
+		</p:panelGrid>
+	</p:fieldset>
+		
+	<p:panelGrid>
+		<p:row>
+		<p:column><h:outputLabel for="idAddAdd1">Address Line 1 </h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddAdd1" label="Suite" value="#{purchaseEOBean.supplierVO.add1}" size="50"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddAdd2">Address Line 2 </h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddAdd2" label="Street" value="#{purchaseEOBean.supplierVO.add2}" size="50"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddAdd3">Address Line 3 </h:outputLabel></p:column>
+		<p:column colspan="3"><p:inputText id="idAddAdd3" label="Street" value="#{purchaseEOBean.supplierVO.add3}" size="50"/></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddCity">City </h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddCity" label="City" value="#{purchaseEOBean.supplierVO.city}" /></p:column>
+		
+		<p:column><h:outputLabel for="idAddState">State/ Province </h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddState" label="State/ Province" value="#{purchaseEOBean.supplierVO.state}" /></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddPostcode">Postcode </h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddPostcode" label="Postcode" value="#{purchaseEOBean.supplierVO.postcode}" /></p:column>
+		
+		<p:column><h:outputLabel for="idAddCountry">Country </h:outputLabel></p:column>
+		<p:column><h:selectOneMenu id="idAddCountry" value="#{purchaseEOBean.supplierVO.countryId}">  
+                <f:selectItem itemLabel="Select One" itemValue="" />  
+                <f:selectItems value="#{purchaseEOBean.countryList}" var="vo" itemLabel="#{vo.country}" itemValue="#{vo.id}" />   
+            </h:selectOneMenu>  
+        </p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><p:commandButton value="Add Remarks" onclick="varRemarksDialog.show()" immediate="true"/></p:column>
+			<p:column colspan="3">
+			<p:panel id ="idShowRemarks" style="border:none">
+				<p:dataTable id="idShowRemarksList" value="#{purchaseEOBean.supplierVO.remarksList}" var="remarksVO" rowKey="#{remarksVO.strTimestamp}" selectionMode="single" style="width:250px" rendered="#{not empty purchaseEOBean.supplierVO.remarksList}">
+				
+					<p:column headerText="Edit" style="width:50px; text-align:center;">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{purchaseEOBean.onRemarksSelected(remarksVO)}" oncomplete="varEditRemarksDialog.show()" process="@this" update=":idEditRemarksDialog"/>
+					</p:column>
+					<p:column headerText="Delete" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-close" actionListener="#{purchaseEOBean.delRemarksList(remarksVO)}" update="@form,:idRemarksDialog,:idEditRemarksDialog,:idAddPCustomerForm:idShowRemarksList" process="@this"/>
+					</p:column>
+					<p:column headerText="Remarks Details">
+						<h:outputText value="#{remarksVO.remarksDetails}"/>
+					</p:column>
+					<p:column headerText="Time Stamp" style="width:200px; text-align:center;">
+						<h:outputText value="#{remarksVO.strTimestamp}"/>
+					</p:column>
+					
+				</p:dataTable>
+			</p:panel>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddAccName">Bank Account Name </h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddAccName" label="Bank Account Name" value="#{purchaseEOBean.supplierVO.bankName}" /></p:column>
+
+		<p:column><h:outputLabel for="idAddAccNo">Account Number </h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddAccNo" label="Account Number" value="#{purchaseEOBean.supplierVO.accountNo}" /></p:column>
+		</p:row>
+		
+		<p:row>
+		<p:column><h:outputLabel for="idAddPymtTerms">Payment Terms </h:outputLabel></p:column>
+		<p:column>
+		<h:selectOneMenu id="idAddPymtTerms" value="#{purchaseEOBean.supplierVO.paymentTerm}">  
+            <f:selectItem itemLabel="Select One" itemValue="" />  
+            <f:selectItem itemLabel="Cash" itemValue="Cash" /> 
+            <f:selectItem itemLabel="Credit Card" itemValue="Credit Card" />
+        </h:selectOneMenu>
+		</p:column>
+
+		<p:column><h:outputLabel for="idAddCrdtLmt">Credit Limit </h:outputLabel></p:column>
+		<p:column><p:inputText id="idAddCrdtLmt" label="Credit Limit" value="#{purchaseEOBean.supplierVO.creditLimit}">
+				  <f:convertNumber pattern="#,##0.00"/>
+				  </p:inputText>
+		</p:column>
+		</p:row>
+		
+	</p:panelGrid>
+</div>
+		<p:panelGrid columns="3" style="width: 1px;">
+			<p:commandButton value="Add" actionListener="#{purchaseEOBean.addCompanySuppl}" update="@form,:idAddExOrderForm"/>
+			<p:commandButton value="Cancel" actionListener="#{purchaseEOBean.resetForm}" onclick="varAddCompDialog.hide()" update="@form" process="@this" />
+		</p:panelGrid>
+</ui:composition>

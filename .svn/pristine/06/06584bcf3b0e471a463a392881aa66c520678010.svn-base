@@ -1,0 +1,376 @@
+package com.bcs.zsg.mail.service;
+
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.activation.FileDataSource;
+import javax.mail.BodyPart;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.LoggerFactory;
+
+import com.bcs.zsg.mail.helper.EmailProperties;
+
+import ch.qos.logback.classic.Logger;
+
+public class ProcessSentEmail implements Runnable {
+
+	private static final Logger logger = (Logger) LoggerFactory.getLogger(ProcessSentEmail.class);
+	
+	private String name;
+	private String subject;
+	private String content;
+	private String toEmailAddr;
+	private String ccEmailAddr;
+	private List<String> emailList;
+	private List<String> ccEmailList;
+	private List<String> fileNameList;
+	private List<File> fileList;
+	private String termsAndConditionPath;
+	private String itineraryPath;
+
+	public ProcessSentEmail(String subject, String content, String toEmailAddr) {
+		this.subject = subject;
+		this.content = content;
+		this.toEmailAddr = toEmailAddr;
+	}
+	
+	public ProcessSentEmail(String name, String subject, String content, String toEmailAddr) {
+		this.name = name;
+		this.subject = subject;
+		this.content = content;
+		this.toEmailAddr = toEmailAddr;
+	}
+	
+	public ProcessSentEmail(String name, String subject, String content, String toEmailAddr, String ccEmail, List<String> ccEmailList) {
+		this.name = name;
+		this.subject = subject;
+		this.content = content;
+		this.toEmailAddr = toEmailAddr;
+		this.ccEmailList = ccEmailList;
+	}
+	
+	public ProcessSentEmail(String subject, String content, List<String> emailList) {
+		this.subject = subject;
+		this.content = content;
+		this.emailList = emailList;
+	}
+	
+	public ProcessSentEmail(String subject, String content, String ccEmailAddr, List<String> emailList) {
+		this.subject = subject;
+		this.content = content;
+		this.ccEmailAddr = ccEmailAddr;
+		this.emailList = emailList;
+	}
+	
+	public ProcessSentEmail(String name, String subject, String content, String toEmailAddr, List<String> fileNameList) {
+		this.name = name;
+		this.subject = subject;
+		this.content = content;
+		this.toEmailAddr = toEmailAddr;
+		this.fileNameList = fileNameList;
+	}
+	
+	public ProcessSentEmail(String name, String subject, String content, String toEmailAddr, String ccEmail, List<String> ccEmailList, File file) {
+		this.name = name;
+		this.subject = subject;
+		this.content = content;
+		this.toEmailAddr = toEmailAddr;
+		this.ccEmailList = ccEmailList;
+		
+		this.fileNameList = new ArrayList<>();
+		fileNameList.add(file.getName());
+		
+		this.fileList = new ArrayList<>();
+		fileList.add(file);
+	}
+	
+	public ProcessSentEmail(String name, String subject, String content, String toEmailAddr, String ccEmail, List<String> ccEmailList, File file, String termsAndConditionPath, String itineraryPath) {
+		this.name = name;
+		this.subject = subject;
+		this.content = content;
+		this.toEmailAddr = toEmailAddr;
+		this.ccEmailList = ccEmailList;
+		
+		this.fileNameList = new ArrayList<>();
+		fileNameList.add(file.getName());
+		
+		this.fileList = new ArrayList<>();
+		fileList.add(file);
+		
+		this.termsAndConditionPath = termsAndConditionPath;
+		this.itineraryPath = itineraryPath;
+	}
+	
+	public ProcessSentEmail(String name, String subject, String content, List<String> emailList, String ccEmail, List<String> ccEmailList, File file, String termsAndConditionPath, String itineraryPath) {
+		this.name = name;
+		this.subject = subject;
+		this.content = content;
+		this.emailList = emailList;
+		this.ccEmailList = ccEmailList;
+		
+		this.fileNameList = new ArrayList<>();
+		fileNameList.add(file.getName());
+		
+		this.fileList = new ArrayList<>();
+		fileList.add(file);
+		
+		this.termsAndConditionPath = termsAndConditionPath;
+		this.itineraryPath = itineraryPath;
+	}
+
+	@Override
+	public void run() {
+		System.out.println("Sending Email....");
+		
+		final String username = EmailProperties.MAIL_USER_MAIL;
+        final String password = EmailProperties.MAIL_USER_PASSWORD;
+		
+		// Recipient's email ID needs to be mentioned.
+		String emailTo = toEmailAddr;
+
+		// Sender's email ID needs to be mentioned
+		String emailFrom = EmailProperties.MAIL_USER_FROM_ADDRESS;
+		String emailFromName = StringUtils.isBlank(name) ? EmailProperties.MAIL_USER_NAME : name;
+		
+		// Get system properties
+		Properties prop = new Properties();
+		prop.put("mail.smtp.host", EmailProperties.MAIL_SMTP_HOST);
+        prop.put("mail.smtp.port", EmailProperties.MAIL_SMTP_PORT);
+        prop.put("mail.smtp.auth", EmailProperties.MAIL_SMTP_AUTH);
+        if (EmailProperties.MAIL_SMTP_USESSL) {
+	        prop.put("mail.smtp.ssl.protocols", "TLSv1.2");
+	        prop.put("mail.smtp.socketFactory.port", EmailProperties.MAIL_SMTP_SOCKETFACTORY_PORT);
+	        prop.put("mail.smtp.socketFactory.class", EmailProperties.MAIL_SMTP_SOCKETFACTORY_CLASS);
+        }
+
+		// Get the default Session object.
+        Session session = Session.getInstance(prop,
+                new javax.mail.Authenticator() {
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(username, password);
+                    }
+                });
+        
+	    session.setDebug(false);
+	    
+		try {
+			// Create a default MimeMessage object.
+			MimeMessage message = new MimeMessage(session);
+
+			// Set From: header field of the header.
+			message.setFrom(new InternetAddress(emailFrom, emailFromName));
+
+			// Set To: header field of the header.
+			if (CollectionUtils.isNotEmpty(emailList)) {
+				for (String email : emailList) {
+					message.addRecipient(Message.RecipientType.TO, new InternetAddress(email));
+				}
+			} else
+				message.addRecipient(Message.RecipientType.TO, new InternetAddress(emailTo));
+			
+			if (StringUtils.isNotBlank(ccEmailAddr)) {
+				message.addRecipient(Message.RecipientType.CC, new InternetAddress(ccEmailAddr));
+			}
+			
+			if (CollectionUtils.isNotEmpty(ccEmailList)) {
+				for (String ccEmail : ccEmailList) {
+					message.addRecipient(Message.RecipientType.CC, new InternetAddress(ccEmail));
+				}
+			}
+
+			// Set Subject: header field
+			message.setSubject(subject);
+			//message.setHeader("X-Priority", "1");
+			
+			/*if (CollectionUtils.isNotEmpty(fileNameList)) {
+				Multipart multipart = new MimeMultipart();
+				MimeBodyPart messageBodyPart = new MimeBodyPart();
+				messageBodyPart.setContent(content, "text/html; charset=utf-8");
+				
+				for (String fileName : fileNameList) {
+					addAttachment(multipart, fileName);
+				}
+				multipart.addBodyPart(messageBodyPart);
+		        
+		        message.setContent(multipart);
+			} else {
+				// Send the actual HTML message, as big as you like
+				message.setContent(content, "text/html; charset=utf-8");
+			}*/
+			
+			if (CollectionUtils.isNotEmpty(fileList)) {
+				Multipart multipart = new MimeMultipart();
+				MimeBodyPart messageBodyPart = new MimeBodyPart();
+				messageBodyPart.setContent(content, "text/html; charset=utf-8");
+				
+				for (File file : fileList) {
+					addAttachment(multipart, file.getAbsolutePath(), file.getName());
+				}
+				if (StringUtils.isNotBlank(termsAndConditionPath)) {
+					addTermsAndConditionAttachment(multipart);
+				}
+				if (StringUtils.isNotBlank(itineraryPath)) {
+					addItineraryAttachment(multipart);
+				}
+				multipart.addBodyPart(messageBodyPart);
+		        message.setContent(multipart);
+			} else {
+				// Send the actual HTML message, as big as you like
+				message.setContent(content, "text/html; charset=utf-8");
+			}
+			
+			// Send message
+			Transport.send(message);
+		} catch (MessagingException | UnsupportedEncodingException mex) {
+			//mex.printStackTrace();
+			logger.error("Sent email failed...", mex);
+			System.out.println("Sent email failed... [ERROR] : " + mex);
+		} finally {
+			System.out.println("Sent email successfully....");
+		}
+	}
+	
+	private void addAttachment(Multipart multipart, String filePath, String fileName) {
+		try {
+	    	DataSource source = new FileDataSource(filePath);
+		    BodyPart messageBodyPart = new MimeBodyPart();        
+		    messageBodyPart.setDataHandler(new DataHandler(source));
+			messageBodyPart.setFileName(fileName);
+			multipart.addBodyPart(messageBodyPart);
+		} catch (MessagingException e) {
+			logger.error("Add attanchment failed...");
+		}
+	}
+
+	private static void addAttachment(Multipart multipart, String filename) {
+	    try {
+	    	DataSource source = new FileDataSource(filename);
+		    BodyPart messageBodyPart = new MimeBodyPart();        
+		    messageBodyPart.setDataHandler(new DataHandler(source));
+			messageBodyPart.setFileName(new File(filename).getName());
+			multipart.addBodyPart(messageBodyPart);
+		} catch (MessagingException e) {
+			logger.error("Add attanchment failed...");
+		}
+	   
+	}
+	
+	private void addTermsAndConditionAttachment(Multipart multipart) {
+		try {
+			BodyPart attachPart = new MimeBodyPart();
+			DataSource source = new FileDataSource(termsAndConditionPath);
+			attachPart.setDataHandler(new DataHandler(source));
+			attachPart.setFileName(new File(termsAndConditionPath).getName());
+			multipart.addBodyPart(attachPart);
+		} catch (MessagingException e) {
+			logger.error("Add attanchment failed...");
+		}
+	}
+	
+	private void addItineraryAttachment(Multipart multipart) {
+		try {
+			File itineraryFile = new File(itineraryPath);
+			if (!itineraryFile.exists()) {
+				logger.error("Error[ProcessSentEmail - addItineraryAttachment] file missing: " + itineraryPath);
+			} else {
+				BodyPart attachPart = new MimeBodyPart();
+				DataSource source = new FileDataSource(itineraryPath);
+				attachPart.setDataHandler(new DataHandler(source));
+				attachPart.setFileName(itineraryFile.getName());
+				multipart.addBodyPart(attachPart);
+			}
+		} catch (MessagingException e) {
+			logger.error("Add attanchment failed...");
+		}
+	}
+
+	public String getContent() {
+		return content;
+	}
+
+	public void setContent(String content) {
+		this.content = content;
+	}
+
+	public String getToEmailAddr() {
+		return toEmailAddr;
+	}
+
+	public void setToEmailAddr(String toEmailAddr) {
+		this.toEmailAddr = toEmailAddr;
+	}
+
+	public String getSubject() {
+		return subject;
+	}
+
+	public void setSubject(String subject) {
+		this.subject = subject;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public List<String> getEmailList() {
+		return emailList;
+	}
+
+	public void setEmailList(List<String> emailList) {
+		this.emailList = emailList;
+	}
+
+	public String getCcEmailAddr() {
+		return ccEmailAddr;
+	}
+
+	public void setCcEmailAddr(String ccEmailAddr) {
+		this.ccEmailAddr = ccEmailAddr;
+	}
+
+	public List<String> getCcEmailList() {
+		return ccEmailList;
+	}
+
+	public void setCcEmailList(List<String> ccEmailList) {
+		this.ccEmailList = ccEmailList;
+	}
+	
+	public String getTermsAndConditionPath() {
+		return termsAndConditionPath;
+	}
+
+	public void setTermsAndConditionPath(String termsAndConditionPath) {
+		this.termsAndConditionPath = termsAndConditionPath;
+	}
+	
+	public String getItineraryPath() {
+		return itineraryPath;
+	}
+
+	public void setItineraryPath(String itineraryPath) {
+		this.itineraryPath = itineraryPath;
+	}
+
+}

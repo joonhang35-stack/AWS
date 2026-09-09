@@ -1,0 +1,54 @@
+package com.bcs.zsg.crm.bo;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.crm.service.InvoicePosSalesService;
+import com.bcs.zsg.crm.vo.InvoicePosSalesBillingVO;
+import com.bcs.zsg.crm.vo.InvoicePosSalesItemVO;
+import com.bcs.zsg.crm.vo.InvoicePosSalesVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+
+public class InvoicePosSalesBOImpl implements InvoicePosSalesBO {
+	
+	@Autowired
+	private InvoicePosSalesService invoicePosSalesService;
+	
+	@Override
+	public void processInvoicePosSales(InvoiceVO invoiceVO) throws BusinessException {
+		invoicePosSalesService.processInvoicePosSales(invoiceVO);
+	}
+	
+	@Override
+	public List<InvoicePosSalesVO> getInvoicePosSalesList() throws BusinessException {
+		return invoicePosSalesService.getInvoicePosSalesList();
+	}
+	
+	@Override
+	public InvoicePosSalesBillingVO getBillingDetails(Long idCustomer) throws BusinessException {
+		return invoicePosSalesService.getBillingDetails(idCustomer);
+	}
+	
+	@Override
+	public List<InvoicePosSalesItemVO> getInvoicePosSalesItemList(Long idPosSales) throws BusinessException {
+		return invoicePosSalesService.getInvoicePosSalesItemList(idPosSales);
+	}
+	
+	@Override
+	public void updateInvoicePosSalesStatus( List<InvoicePosSalesVO> invoicePosSalesList) throws BusinessException {
+		invoicePosSalesService.updateInvoicePosSalesStatus(invoicePosSalesList);
+	}
+
+	@Override
+	public List<InvoicePosSalesVO> getInvoicePosSalesList(Map<String, Object> params) throws BusinessException {
+		return invoicePosSalesService.getInvoicePosSalesList(params);
+	}
+
+	@Override
+	public int getInvoicePosSalesListSize(Map<String, Object> params) throws BusinessException {
+		return invoicePosSalesService.getInvoicePosSalesListSize(params);
+	}
+}

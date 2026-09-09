@@ -1,0 +1,360 @@
+package com.bcs.zsg.feedback.web.bean;
+
+import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.feedback.bo.FeedbackBO;
+import com.bcs.zsg.mail.bo.EmailingBO;
+import com.bcs.zsg.product.vo.FeedbackVO;
+
+import org.primefaces.event.FileUploadEvent;
+import org.primefaces.model.UploadedFile;
+
+import com.bcs.zsg.common.helper.FileUploadUtils;
+import com.bcs.zsg.common.helper.AppConfigConstant;
+import java.util.UUID;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+
+public class FeedbackBean extends AppBackingBean implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	private transient FeedbackBO feedbackBO;
+
+	@Autowired
+	private transient EmailingBO emailingBO;
+
+	private List<FeedbackVO> feedbackList;
+	private FeedbackVO selectedFeedback;
+	private List<String> selectedFeedbackSections;
+	private Map<String, List<FeedbackVO>> selectedFeedbackDetailsMap;
+	private Map<String, String> feedbackLookupMap;
+
+	private String editingComments;
+	private List<FeedbackVO> customerAttachments;
+	private List<FeedbackVO> editingHosAttachments;
+	private List<Long> deletedAttachmentIds;
+	private Map<String, byte[]> newUploadedFilesMap;
+
+	public void init() {
+		try {
+			initSearchParam();
+			resetForm();
+			loadFeedbacks();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void loadFeedbacks() {
+		try {
+			feedbackList = feedbackBO.getAllFeedbacks();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void loadFeedbackDetails(FeedbackVO vo) {
+		try {
+			this.selectedFeedback = vo;
+			List<FeedbackVO> details = feedbackBO.getFeedbackDetails(vo.getIdFeedback());
+			
+			if (feedbackLookupMap == null) {
+				feedbackLookupMap = feedbackBO.getFeedbackLookupMap();
+			}
+			
+			selectedFeedbackSections = new ArrayList<String>();
+			selectedFeedbackDetailsMap = new LinkedHashMap<String, List<FeedbackVO>>();
+			
+			if (CollectionUtils.isNotEmpty(details)) {
+				FeedbackVO firstDetail = details.get(0);
+				this.selectedFeedback.setComments(firstDetail.getComments());
+				this.selectedFeedback.setAttachment(firstDetail.getAttachment());
+				this.selectedFeedback.setAttachmentHos(firstDetail.getAttachmentHos());
+				
+				for (FeedbackVO detail : details) {
+					String secCode = detail.getSectionType();
+					if (secCode != null) {
+						if (!selectedFeedbackDetailsMap.containsKey(secCode)) {
+							selectedFeedbackDetailsMap.put(secCode, new ArrayList<FeedbackVO>());
+							selectedFeedbackSections.add(secCode);
+						}
+						selectedFeedbackDetailsMap.get(secCode).add(detail);
+					}
+				}
+			}
+
+			// Load attachments from database
+			List<FeedbackVO> allAttachments = feedbackBO.getAttachmentsByFeedbackId(vo.getIdFeedback());
+			this.customerAttachments = new ArrayList<FeedbackVO>();
+			this.editingHosAttachments = new ArrayList<FeedbackVO>();
+			this.deletedAttachmentIds = new ArrayList<Long>();
+			this.editingComments = vo.getComments();
+			this.newUploadedFilesMap = new HashMap<String, byte[]>();
+
+			if (CollectionUtils.isNotEmpty(allAttachments)) {
+				for (FeedbackVO att : allAttachments) {
+					if ("cust".equals(att.getType())) {
+						this.customerAttachments.add(att);
+					} else if ("hos".equals(att.getType())) {
+						this.editingHosAttachments.add(att);
+					}
+				}
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void handleSendFeedbackEmail(FeedbackVO vo) {
+		try {
+			System.out.println("FeedbackBean.handleSendFeedbackEmail() - tourBookingId: " + vo.getTourBookingId());
+			List<FeedbackVO> list = feedbackBO.getInvoiceForFeedback(vo.getTourBookingId());
+			if (CollectionUtils.isNotEmpty(list)) {
+				emailingBO.sendCustomerFeedbackEmail(list);
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_INFO, "Feedback email sent successfully.", ""));
+			} else {
+				FacesContext.getCurrentInstance().addMessage(null,
+					new FacesMessage(FacesMessage.SEVERITY_WARN, "No eligible invoice found for this booking.", ""));
+			}
+			loadFeedbacks();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	@Override
+	public void resetForm() {
+		feedbackList = null;
+		selectedFeedback = null;
+		selectedFeedbackSections = null;
+		selectedFeedbackDetailsMap = null;
+		editingComments = null;
+		customerAttachments = null;
+		editingHosAttachments = null;
+		deletedAttachmentIds = null;
+		newUploadedFilesMap = null;
+	}
+
+	public void handleHosAttachmentUpload(FileUploadEvent event) {
+		try {
+			String originalName = event.getFile().getFileName();
+			String sanitizedOriginalName = originalName.replace(" ", "_");
+			
+			// Format: yyyymmddhhmmss_original_file_name
+			String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+			String fileNameWithTimestamp = timestamp + "_" + sanitizedOriginalName;
+			
+			byte[] fileContents;
+			try (InputStream in = event.getFile().getInputstream();
+				 ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+				byte[] buf = new byte[1024];
+				int read;
+				while ((read = in.read(buf)) != -1) {
+					bos.write(buf, 0, read);
+				}
+				fileContents = bos.toByteArray();
+			}
+			
+			if (this.newUploadedFilesMap == null) {
+				this.newUploadedFilesMap = new HashMap<String, byte[]>();
+			}
+			this.newUploadedFilesMap.put(fileNameWithTimestamp, fileContents);
+			
+			FeedbackVO att = new FeedbackVO();
+			att.setIdFeedback(selectedFeedback.getIdFeedback());
+			att.setAttachmentUrl("upload/feedback/");
+			att.setFilename(fileNameWithTimestamp);
+			att.setType("hos");
+			
+			if (this.editingHosAttachments == null) {
+				this.editingHosAttachments = new ArrayList<FeedbackVO>();
+			}
+			this.editingHosAttachments.add(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "File " + originalName + " added.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void removeHosAttachment(FeedbackVO att) {
+		try {
+			if (att.getIdAttachment() != null) {
+				this.deletedAttachmentIds.add(att.getIdAttachment());
+			} else {
+				if (this.newUploadedFilesMap != null) {
+					this.newUploadedFilesMap.remove(att.getFilename());
+				}
+			}
+			this.editingHosAttachments.remove(att);
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "Attachment removed.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public void saveFeedbackEdits() {
+		try {
+			if (selectedFeedback == null) {
+				return;
+			}
+			
+			// 1. Physically upload files to disk now
+			if (newUploadedFilesMap != null && !newUploadedFilesMap.isEmpty()) {
+				String relativePath = "/upload/feedback";
+				System.out.println("FeedbackBean DEBUG: AppConfigConstant.uploadPath = " + AppConfigConstant.uploadPath);
+				
+				for (Map.Entry<String, byte[]> entry : newUploadedFilesMap.entrySet()) {
+					String fileNameOnly = entry.getKey();
+					byte[] fileBytes = entry.getValue();
+					
+					// Print target path diagnostics
+					String fullDirPath = AppConfigConstant.uploadPath + relativePath;
+					String fullFilePath = fullDirPath + "/" + fileNameOnly;
+					System.out.println("FeedbackBean DEBUG: Target directory path = " + fullDirPath);
+					System.out.println("FeedbackBean DEBUG: Target file path = " + fullFilePath);
+					
+					try {
+						File dir = new File(fullDirPath);
+						System.out.println("FeedbackBean DEBUG: Directory exists? " + dir.exists());
+						if (!dir.exists()) {
+							boolean created = dir.mkdirs();
+							System.out.println("FeedbackBean DEBUG: Created directory structures? " + created);
+						}
+						
+						try (FileOutputStream fos = new FileOutputStream(fullFilePath)) {
+							fos.write(fileBytes);
+						}
+						System.out.println("FeedbackBean DEBUG: File successfully written to: " + fullFilePath);
+					} catch (Exception ex) {
+						System.err.println("FeedbackBean ERROR: Failed to store file: " + fullFilePath);
+						ex.printStackTrace();
+						throw ex;
+					}
+				}
+			}
+			
+			// 2. Persist database records (deletes deleted attachment records and files)
+			feedbackBO.saveFeedbackEdits(selectedFeedback.getIdFeedback(), editingComments, editingHosAttachments, deletedAttachmentIds);
+			
+			selectedFeedback.setComments(editingComments);
+			
+			// 3. Clean up memory maps
+			if (newUploadedFilesMap != null) {
+				newUploadedFilesMap.clear();
+			}
+			if (deletedAttachmentIds != null) {
+				deletedAttachmentIds.clear();
+			}
+			loadFeedbacks();
+			
+			FacesContext.getCurrentInstance().addMessage(null,
+				new FacesMessage(FacesMessage.SEVERITY_INFO, "Feedback comments and attachments updated successfully.", ""));
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public List<FeedbackVO> getFeedbackList() {
+		return feedbackList;
+	}
+
+	public void setFeedbackList(List<FeedbackVO> feedbackList) {
+		this.feedbackList = feedbackList;
+	}
+
+	public FeedbackVO getSelectedFeedback() {
+		return selectedFeedback;
+	}
+
+	public void setSelectedFeedback(FeedbackVO selectedFeedback) {
+		this.selectedFeedback = selectedFeedback;
+	}
+
+	public List<String> getSelectedFeedbackSections() {
+		return selectedFeedbackSections;
+	}
+
+	public void setSelectedFeedbackSections(List<String> selectedFeedbackSections) {
+		this.selectedFeedbackSections = selectedFeedbackSections;
+	}
+
+	public Map<String, List<FeedbackVO>> getSelectedFeedbackDetailsMap() {
+		return selectedFeedbackDetailsMap;
+	}
+
+	public void setSelectedFeedbackDetailsMap(Map<String, List<FeedbackVO>> selectedFeedbackDetailsMap) {
+		this.selectedFeedbackDetailsMap = selectedFeedbackDetailsMap;
+	}
+
+	public Map<String, String> getFeedbackLookupMap() {
+		return feedbackLookupMap;
+	}
+
+	public void setFeedbackLookupMap(Map<String, String> feedbackLookupMap) {
+		this.feedbackLookupMap = feedbackLookupMap;
+	}
+
+	public String getEditingComments() {
+		return editingComments;
+	}
+
+	public void setEditingComments(String editingComments) {
+		this.editingComments = editingComments;
+	}
+
+	public List<FeedbackVO> getCustomerAttachments() {
+		return customerAttachments;
+	}
+
+	public void setCustomerAttachments(List<FeedbackVO> customerAttachments) {
+		this.customerAttachments = customerAttachments;
+	}
+
+	public List<FeedbackVO> getEditingHosAttachments() {
+		return editingHosAttachments;
+	}
+
+	public void setEditingHosAttachments(List<FeedbackVO> editingHosAttachments) {
+		this.editingHosAttachments = editingHosAttachments;
+	}
+
+	public List<Long> getDeletedAttachmentIds() {
+		return deletedAttachmentIds;
+	}
+
+	public void setDeletedAttachmentIds(List<Long> deletedAttachmentIds) {
+		this.deletedAttachmentIds = deletedAttachmentIds;
+	}
+
+
+}

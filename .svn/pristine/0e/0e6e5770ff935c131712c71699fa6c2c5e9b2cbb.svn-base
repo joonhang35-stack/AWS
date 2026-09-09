@@ -1,0 +1,506 @@
+package com.bcs.zsg.sales.bo;
+
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderViewVO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.sales.service.InvoiceService;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.InvoiceAttachmentVO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+import com.bcs.zsg.sales.vo.InvoicePaxVO;
+import com.bcs.zsg.sales.vo.InvoicePaymentAttachmentVO;
+import com.bcs.zsg.sales.vo.InvoicePaymentVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.sales.vo.PersonEmailVO;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+
+public class InvoiceBOImpl implements InvoiceBO {
+
+	@Autowired
+	private InvoiceService invoiceService;
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvoiceList(java.lang.Long, java.lang.String)
+	 */
+	@Override
+	public List<InvoiceVO> getInvoiceList(Long companyId, String docTypeCd) throws BusinessException {
+		return invoiceService.getInvoiceList(companyId, docTypeCd);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvoiceDetails(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@Override
+	public InvoiceVO getInvoiceDetails(InvoiceVO invoiceVO) throws BusinessException {
+		return invoiceService.getInvoiceDetails(invoiceVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getCustomerList(java.lang.String, java.lang.String, java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public List<CustDetailsVO> getCustomerList(String searchType, String searchValueType, String searchValue, Long companyId) throws BusinessException {
+		return invoiceService.getCustomerList(searchType, searchValueType, searchValue, companyId);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getPassangerList(java.lang.String, java.lang.String, java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public List<CustDetailsVO> getPassangerList(String searchType, String searchValueType, String searchValue, Long companyId) throws BusinessException {
+		return invoiceService.getPassangerList(searchType, searchValueType, searchValue, companyId);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getExOrderList()
+	 */
+	@Override
+	public List<ExOrderVO> getExOrderList() throws BusinessException {
+		return invoiceService.getExOrderList();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvEOItemViewList(java.lang.Long, boolean)
+	 */
+	@Override
+	public List<InvoiceAndExchangeOrderViewVO> getInvEOItemViewList(Long companyId, boolean acctMgr, String invoiceCatCd) throws BusinessException {
+		return invoiceService.getInvEOItemViewList(companyId, acctMgr, invoiceCatCd);
+	}
+	@Override
+	public List<InvoiceAndExchangeOrderViewVO> getInvEOItemViewList(Long companyId, boolean acctMgr, String invoiceCatCd, String invItemCat) throws BusinessException {
+		return invoiceService.getInvEOItemViewList(companyId, acctMgr, invoiceCatCd, invItemCat);
+	}
+	@Override
+	public List<InvoiceAndExchangeOrderViewVO> getInvEOItemViewList(Long companyId, boolean acctMgr, String invoiceCatCd, String invItemCat, List<String> excludeInvItemCatList) throws BusinessException {
+		return invoiceService.getInvEOItemViewList(companyId, acctMgr, invoiceCatCd, invItemCat, excludeInvItemCatList);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#insertInvoice(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@Override
+	public void insertInvoice(InvoiceVO invoiceVO, Long idTourDep) throws BusinessException, QueueException {
+		invoiceService.insertInvoice(invoiceVO, idTourDep);
+	}
+	
+	@Override
+	public void insertInvoiceByEmailPayment(InvoiceVO invoiceVO, Long idTourDep)throws BusinessException, QueueException {
+		invoiceService.insertInvoiceByEmailPayment(invoiceVO, idTourDep);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#updInvCd(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@Override
+	public void updInvCd(InvoiceVO invoiceVO) throws BusinessException, QueueException {
+		invoiceService.updInvCd(invoiceVO);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#insertInvoiceHistory(java.lang.Long, java.lang.String, java.lang.String)
+	 */
+	@Override
+	public void insertInvoiceHistory(Long invId, String actionCd, String reason) throws BusinessException, QueueException {
+		invoiceService.insertInvoiceHistory(invId, actionCd, reason);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#updateInvoice(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@Override
+	public void updateInvoice(InvoiceVO invoiceVO, Long idTourDep) throws BusinessException, QueueException {
+		invoiceService.updateInvoice(invoiceVO, idTourDep);
+	}
+	
+	@Override
+	public void updateInvoice(InvoiceVO invoiceVO, Long idTourDep, Boolean isUpdateCashBook) throws BusinessException, QueueException {
+		invoiceService.updateInvoice(invoiceVO, idTourDep, isUpdateCashBook);
+	}
+	
+	@Override
+	public void updateInvoiceForEmailPayment(InvoiceVO invoiceVO, Long idTourDep) throws BusinessException, QueueException {
+		invoiceService.updateInvoiceForEmailPayment(invoiceVO, idTourDep);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#deleteInvoice(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@Override
+	public void deleteInvoice(InvoiceVO invoiceVO) throws BusinessException {
+		invoiceService.deleteInvoice(invoiceVO);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#updateInvoicePax(com.bcs.zsg.sales.vo.InvoiceVO, com.bcs.zsg.sales.vo.InvoicePaxVO)
+	 */
+	@Override
+	public void updateInvoicePax(InvoiceVO invoiceVO, InvoicePaxVO invoicePaxVO) throws BusinessException, QueueException {
+		invoiceService.updateInvoicePax(invoiceVO, invoicePaxVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getCustDetails(java.lang.Long)
+	 */
+	@Override
+	public CustDetailsVO getCustDetails(Long custId) throws BusinessException {
+		return invoiceService.getCustDetails(custId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getCustDetails(java.lang.Long, boolean, boolean)
+	 */
+	@Override
+	public CustDetailsVO getCustDetails(Long id, boolean needDetail, boolean needLangMeal) throws BusinessException {
+		return invoiceService.getCustDetails(id, needDetail, needLangMeal);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getBookingInvExist(java.lang.Long)
+	 */
+	@Override
+	public boolean getBookingInvExist(Long bookingId) throws BusinessException {
+		return invoiceService.getBookingInvExist(bookingId);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvoice(java.lang.Long)
+	 */
+	@Override
+	public InvoiceVO getInvoice(Long bookingId) throws BusinessException {
+		return invoiceService.getInvoice(bookingId);
+	}
+	
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvoice(java.lang.Long)
+	 */
+	@Override
+	public InvoiceVO getInvoiceById(Long id) throws BusinessException {
+		return invoiceService.getInvoiceById(id);
+		
+	}
+	
+
+	@Override
+	public List<InvoicePaxVO> getInvoicePaxListWithPkgId(Long pkgId) throws BusinessException {
+		return invoiceService.getInvoicePaxListWithPkgId(pkgId);
+		
+	}
+
+	@Override
+	public void updInvoicePax(AddUpdDelVO invoicePaxAUDVO) throws BusinessException {
+		// update tour dep item
+		if (CollectionUtils.isNotEmpty(invoicePaxAUDVO.getUpdList())) {
+			for (Object obj : invoicePaxAUDVO.getUpdList()) invoiceService.updateVO((InvoicePaxVO) obj);
+		} 
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#setCustLangMeal(com.bcs.zsg.sales.vo.CustDetailsVO)
+	 */
+	@Override
+	public void setPerSubInfo(CustDetailsVO custDetailsVO) throws BusinessException {
+		invoiceService.setPerSubInfo(custDetailsVO);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvoiceStatus(java.lang.Long)
+	 */
+	@Override
+	public String getInvoiceStatus(Long id) throws BusinessException {
+		return invoiceService.getInvoiceStatus(id);
+	}
+	
+	@Override
+	public List<InvoiceVO> getInvoiceDisplayList(Long companyId,String docTypeCd) throws BusinessException {
+		return invoiceService.getInvoiceDisplayList(companyId,  docTypeCd);
+	}
+
+	@Override
+	public List<InvoiceVO> getCreditNoteDisplayList(Long companyId) throws BusinessException {
+		return invoiceService.getCreditNoteDisplayList(companyId);
+	} 
+	
+	@Override
+	public List<InvoiceVO> getInvoiceListSelection(Long companyId, String docTypeCd) throws BusinessException {
+		return invoiceService.getInvoiceListSelection(companyId,docTypeCd);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvoiceListSize(java.util.Map)
+	 */
+	@Override
+	public int getInvoiceListSize(Map<String, Object> params) throws BusinessException {
+		return invoiceService.getInvoiceListSize(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvoiceList(java.util.Map)
+	 */
+	@Override
+	public List<InvoiceVO> getInvoiceList(Map<String, Object> params) throws BusinessException {
+		return invoiceService.getInvoiceList(params);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvoiceHistoryListSize(java.util.Map)
+	 */
+	@Override
+	public int getInvoiceHistoryListSize(Map<String, Object> params) throws BusinessException {
+		return invoiceService.getInvoiceHistoryListSize(params);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvoiceHistoryList(java.util.Map)
+	 */
+	@Override
+	public List<InvoiceVO> getInvoiceHistoryList(Map<String, Object> params) throws BusinessException {
+		return invoiceService.getInvoiceHistoryList(params);
+	}
+	
+	/*
+	 * 
+	 */
+	@Override
+	public List<InvoiceItemVO> getInvItemList(InvoiceVO invoiceVO) throws BusinessException {
+		return invoiceService.getInvItemList(invoiceVO);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvPmntList(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@Override
+	public List<InvoicePaymentVO> getInvPmntList(InvoiceVO invoiceVO) throws BusinessException {
+		return invoiceService.getInvPmntList(invoiceVO);
+	}
+	
+	@Override
+	public List<InvoiceVO> getInvoiceListNoCN(InvoiceVO invoiceVO) throws BusinessException {
+		return invoiceService.getInvoiceListNoCN(invoiceVO);
+	}
+	
+	@Override
+	public List<InvoiceVO> getInvoiceListForPOSUpload(Map<String, Object> params) throws BusinessException {
+		return invoiceService.getInvoiceListForPOSUpload(params);
+	}
+	
+	@Override
+	public List<EmployeeViewVO> getEmployeeViewList(Long companyId) throws BusinessException {
+		return invoiceService.getEmployeeViewList(companyId);
+	}
+	
+	@Override
+	public List<EmployeeViewVO> getFullEmployeeViewList(Long companyId) throws BusinessException {
+		return invoiceService.getFullEmployeeViewList(companyId);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#updateCashBookInvoices(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@Override
+	public void updateCashBookInvoices(InvoiceVO invoiceVO) throws BusinessException {
+		invoiceService.updateCashBookInvoices(invoiceVO);
+	}
+
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.bo.InvoiceBO#getInvPmnt(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@Override
+	public InvoicePaymentVO getInvPmnt(InvoiceVO invoiceVO) throws BusinessException {
+		return invoiceService.getInvPmnt(invoiceVO);
+	}
+
+	@Override
+	public void updateCustomerId(InvoiceVO invoiceVO) throws BusinessException {
+		invoiceService.updateCustomerId(invoiceVO);
+	}
+
+	@Override
+	public void saveInvoicePaymentVO(InvoicePaymentVO invoicePaymentVO) throws BusinessException {
+		invoiceService.saveInvoicePaymentVO(invoicePaymentVO);
+	}
+
+	@Override
+	public InvoicePaymentVO getInvPaymentById(Long id) throws BusinessException {
+		return invoiceService.getInvPaymentById(id);
+	}
+
+	@Override
+	public List<InvoiceAttachmentVO> getInvoiceAttachmentList(Long invId) throws BusinessException {
+		return invoiceService.getInvoiceAttachmentList(invId);
+	}
+
+	@Override
+	public void addDeleteInvoiceAttachment(InvoiceAttachmentVO invoiceAttachmentVO, boolean isDelete) throws BusinessException {
+		invoiceService.addDeleteInvoiceAttachment(invoiceAttachmentVO, isDelete);
+	}
+	
+	@Override
+	public void addDeleteInvoicePaymentAttachment(InvoicePaymentAttachmentVO invoicePaymentAttachmentVO, boolean isDelete) throws BusinessException {
+		invoiceService.addDeleteInvoicePaymentAttachment(invoicePaymentAttachmentVO, isDelete);
+	}
+	
+	@Override
+	public List<InvoicePaymentAttachmentVO> getInvPmntAttachmentList(Long invId) throws BusinessException {
+		return invoiceService.getInvPmntAttachmentList(invId);
+	}
+
+	@Override
+	public InvoiceVO getInvoiceByCode(String code) throws BusinessException {
+		return invoiceService.getInvoiceByCode(code);
+	}
+
+	@Override
+	public void updateRemarks(InvoiceVO invoiceVO) throws BusinessException {
+		invoiceService.updateRemarks(invoiceVO);
+	}
+	
+	@Override
+	public List<PersonEmailVO> getPersonEmailListByPersonId(Long personId) throws BusinessException {
+		return invoiceService.getPersonEmailListByPersonId(personId);
+	}
+	
+	@Override
+	public void updateInvoiceDocTypeStatus(Long idInv, String statusCd) throws BusinessException {
+		invoiceService.updateInvoiceDocTypeStatus(idInv, statusCd);
+	}
+	
+	@Override
+	public void convertToInvoice(InvoiceVO invoiceVO) throws BusinessException, QueueException {
+		invoiceService.convertToInvoice(invoiceVO);
+	}
+	
+	@Override
+	public boolean validateConvert(InvoiceVO oriVO) throws BusinessException {
+		return invoiceService.validateConvert(oriVO);
+	}
+	
+	@Override
+	public void terminateAcctTrans(InvoiceVO invoiceVO) throws BusinessException {
+		invoiceService.terminateAcctTrans(invoiceVO);
+	}
+	
+	@Override
+	public void terminateAcctTrans(InvoiceVO invoiceVO, String action) throws BusinessException {
+		invoiceService.terminateAcctTrans(invoiceVO, action);
+	}
+	
+	@Override
+	public void insertSubPaxStatement(InvoiceVO invoiceVO, Long idTourDep, boolean bySystem) throws BusinessException, QueueException {
+		invoiceService.insertSubPaxStatement(invoiceVO, idTourDep, bySystem);
+	}
+	
+	@Override
+	public List<InvoiceVO> getInvoiceByParentInvoiceId(Long idParentInv) throws BusinessException {
+		return invoiceService.getInvoiceByParentInvoiceId(idParentInv);
+	}
+	
+	@Override
+	public void updateInvoiceSubPsRunningNumber(Long idInv, Integer subPsRunningNumber) throws BusinessException {
+		invoiceService.updateInvoiceSubPsRunningNumber(idInv, subPsRunningNumber);
+	}
+	
+	@Override
+	public InvoiceVO getInvoice(Map<String, Object> params) throws BusinessException {
+		return invoiceService.getInvoice(params);
+	}
+	
+	@Override
+	public List<InvoiceVO> getSubInvoiceList(Long idParentInv) throws BusinessException {
+		return invoiceService.getSubInvoiceList(idParentInv);
+	}
+	
+	@Override
+	public List<InvoiceVO> getInvoiceListByParams(Map <String, Object> params) throws BusinessException {
+		return invoiceService.getInvoiceListByParams(params);
+	}
+	
+	@Override
+	public void updateInvoiceEInvoiceData(Long idInv, String docUuid, String submissionUid, String status) throws BusinessException {
+		invoiceService.updateInvoiceEInvoiceData(idInv, docUuid, submissionUid, status);
+	}
+	
+	@Override
+	public void updRfndNoteCd(InvoiceVO invoiceVO) throws BusinessException, QueueException {
+		invoiceService.updRfndNoteCd(invoiceVO);
+	}
+	
+	@Override
+	public InvoiceVO getInvoiceByBookingId(Long bookingId) throws BusinessException {
+		return invoiceService.getInvoiceByBookingId(bookingId);
+	}
+
+	public Boolean isInvoiceBeforeEInvoice(Long idInv, LocalDateTime targetDateTime) throws BusinessException {
+		return invoiceService.isInvoiceBeforeEInvoice(idInv, targetDateTime);
+	}
+	
+	public InvoiceVO getInvoiceByCode(String code, String docTypeCd) throws BusinessException {
+		return invoiceService.getInvoiceByCode(code, docTypeCd);
+	}
+	
+	/**
+	 * update invoice payments only for invoice converted from pax statement
+	 * @throws BusinessException 
+	 * @throws QueueException 
+	 */
+	@Override
+	public void updateInvoicePayments(InvoiceVO invoiceVO, Long idTourDep, Boolean isUpdateCashBook) throws BusinessException, QueueException {
+		invoiceService.updateInvoicePayments(invoiceVO, idTourDep, isUpdateCashBook);
+	}
+	
+	@Override
+	public int getCreditNoteDisplayListSize(Map<String, Object> params) throws BusinessException {
+		return invoiceService.getCreditNoteDisplayListSize(params);
+	}
+	
+	@Override
+	public List<InvoiceVO> getCreditNoteDisplayList(Map<String, Object> params) throws BusinessException {
+		return invoiceService.getCreditNoteDisplayList(params);
+	}
+	
+	@Override
+	public List<InvoicePaymentVO> getInvPmntListByIdCreditNote(Long idCreditNote) throws BusinessException {
+		return invoiceService.getInvPmntListByIdCreditNote(idCreditNote);
+	}
+	
+	@Override
+	public List<InvoiceVO> getInvoiceList(Map<String, Object> params, Long idCompany) throws BusinessException {
+		return invoiceService.getInvoiceList(params, idCompany);
+	}
+	
+	@Override
+	public InvoiceVO processReversePsSales(InvoiceVO invoiceVO) throws BusinessException, QueueException {
+		return invoiceService.processReversePsSales(invoiceVO);
+	}
+	
+	@Override
+	public List<InvoicePaxVO> getInvoicePaxListWithDepId(Map<String, Object> params) throws BusinessException {
+		return invoiceService.getInvoicePaxListWithDepId(params);
+	}
+	
+	@Override
+	public List<InvoiceVO> getInvoiceListToSubmitEInvoice(Map <String, Object> params, Date dateChecked) throws BusinessException {
+		return invoiceService.getInvoiceListToSubmitEInvoice(params, dateChecked);
+	}
+}

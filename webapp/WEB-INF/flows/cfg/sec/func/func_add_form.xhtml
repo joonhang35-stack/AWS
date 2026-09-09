@@ -1,0 +1,74 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varAddFuncDialog.show();
+		} else {
+			varAddFuncDialog.hide();
+		}
+	}
+</script>
+
+<h:panelGrid columns="2">
+
+	<h:outputLabel for="idFuncCode">Function Code <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idFuncCode" label="Function Code" value="#{functionBean.functionVO.functionCode}" required="true"/>
+	
+	<h:outputLabel for="idParentFunc">Parent Function</h:outputLabel>
+	<p:inputText id="idParentFunc" label="Parent Function" value="#{functionBean.functionVO.parentFunctionCode}"/>
+	
+	<h:outputLabel for="idLabel">Label (Default) <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idLabel" label="Label" value="#{functionBean.functionVO.functionName}" required="true"/>
+	
+	<h:outputLabel for="idStatus">Status <span class="required">*</span></h:outputLabel>
+	<h:selectOneMenu id="idStatus" label="Status" value="#{functionBean.functionVO.statusCode}">
+		<f:selectItems value="#{zsg:referenceDataList('STATUS')}" var="n" itemValue="#{n.code}" itemLabel="#{n.value}"/>
+	</h:selectOneMenu>
+	
+	<h:outputLabel for="idType">Type <span class="required">*</span></h:outputLabel>
+	<h:selectOneMenu id="idType" label="Type" value="#{functionBean.functionVO.typeCode}">
+		<f:selectItems value="#{zsg:referenceDataList('FUNC_TYPE_CD')}" var="n" itemValue="#{n.code}" itemLabel="#{n.value}"/>
+	</h:selectOneMenu>
+	
+	<h:outputLabel for="idEntryPage">Entry Page <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idEntryPage" label="Entry Page" value="#{functionBean.functionVO.entryURI}" required="true"/>
+	
+	<h:outputLabel for="idProcessingURI">Process URI Regex</h:outputLabel>
+	<p:inputText id="idProcessingURI" label="Process URI Regex" value="#{functionBean.functionVO.processingURI}"/>
+	
+	<h:outputLabel for="idIsSecure">Secure?</h:outputLabel>
+	<p:selectBooleanCheckbox id="idIsSecure" label="Secure" value="#{functionBean.functionVO.isSecure}"/>
+	
+	<h:outputLabel for="idMenuLevel">Menu Level <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idMenuLevel" label="Menu Level" value="#{functionBean.functionVO.level}" required="true"/>
+	
+	<h:outputLabel for="idOrderSequence">Order Sequence <span class="required">*</span></h:outputLabel>
+	<p:inputText id="idOrderSequence" label="Order Sequence" value="#{functionBean.functionVO.sequence}" required="true"/>
+	
+	<h:outputLabel for="idRemarks">Remarks</h:outputLabel>
+	<p:inputText id="idRemarks" label="Remarks" value="#{functionBean.functionVO.remarks}"/>
+	
+	<h:outputText/>
+	<h:panelGrid columns="2" style="width: 1px;">
+		<p:commandButton value="Add" actionListener="#{functionBean.addNewFunction}" update="@form,:idDataForm:idFuncList" rendered="#{empty functionBean.functionVO.uuid}"/>
+		<p:commandButton value="Edit" actionListener="#{functionBean.updateFunction}" update="@form,:idDataForm:idFuncList" oncomplete="onValidation(xhr, status, args)" rendered="#{not empty functionBean.functionVO.uuid}"/>
+		<p:commandButton value="Cancel" actionListener="#{functionBean.resetForm}" update="@form" process="@this" oncomplete="varAddFuncDialog.hide()" global="false">
+			<pe:resetEditableValues for="idAddFuncForm"/>
+		</p:commandButton>
+	</h:panelGrid>
+	
+</h:panelGrid>
+<br/>
+<h:outputLabel><span class="required">*</span> - required field</h:outputLabel>
+
+</ui:composition>

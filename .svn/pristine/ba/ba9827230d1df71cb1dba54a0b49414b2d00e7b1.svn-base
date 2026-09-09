@@ -1,0 +1,20 @@
+CREATE INDEX idx_country_country_cd
+ON country(country_cd);
+
+UPDATE person_contact pc
+JOIN (SELECT country_cd, MIN(id) AS id FROM country GROUP BY country_cd) c
+ON pc.country_cd = c.country_cd 
+SET pc.id_country_cd = c.id, pc.dt_upd = NOW(), pc.upd_by = "SYSTEM"
+WHERE pc.country_cd IS NOT NULL AND pc.status_cd = "A" AND pc.id_country_cd is null;
+
+UPDATE corporate_contact cc
+JOIN (SELECT country_cd, MIN(id) AS id FROM country GROUP BY country_cd) c
+ON cc.country_cd = c.country_cd 
+SET cc.id_country_cd = c.id, cc.dt_upd = NOW(), cc.upd_by = "SYSTEM"
+WHERE cc.country_cd IS NOT NULL AND cc.status_cd = "A" AND cc.id_country_cd is null;
+
+UPDATE person p
+JOIN (SELECT country_cd, MIN(id) AS id FROM country GROUP BY country_cd) c
+ON p.country_cd = c.country_cd 
+SET p.ec_id_country_cd = c.id, p.dt_upd = NOW(), p.upd_by = "SYSTEM"
+WHERE p.ec_country_cd IS NOT NULL AND p.ec_id_country_cd is null;

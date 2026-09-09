@@ -1,0 +1,112 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.isValidSave) {
+			varSalesCommConfigDialog.hide();
+		} else {
+			varSalesCommConfigDialog.show();
+		}
+	}
+</script>
+
+<div style="width:900px;overflow:auto;">
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:100px;"><h:outputLabel for="idDepartment">Department</h:outputLabel></p:column>
+		<p:column colspan="3">
+			<p:inputText id="idDepartment" label="Department" value="#{salesCommConfigBean.salesCommConfigVO.department}" style="width:300px;"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idGroupName">Group Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column colspan="3">
+			<p:inputText id="idGroupName" label="Group Name" value="#{salesCommConfigBean.salesCommConfigVO.groupName}"
+				required="true" style="width:300px;"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="4">
+			<p:commandButton id="idDetails" value="Add Details" oncomplete="varAddDetailDialog.show()" update=":idAddDetailDialog" immediate="true"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="4">
+			<p:dataTable id="idShowDetailList" value="#{salesCommConfigBean.salesCommConfigVO.salesCommConfigDetailList}" var="dtlVO">
+				<p:column style="width:30px;">
+					<p:commandLink styleClass="ui-icon ui-icon-pencil" actionListener="#{salesCommConfigBean.handleDetailSelect(dtlVO)}"
+						update=":idAddDetailDialog" process="@this" oncomplete="varAddDetailDialog.show()"/>
+				</p:column>
+				<p:column style="width:30px;">
+					<p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{salesCommConfigBean.delDetail(dtlVO)}"
+						update=":idSalesCommConfigForm:idShowDetailList" process="@this"/>
+					<!-- <p:commandLink styleClass="ui-icon ui-icon-close" actionListener="#{salesCommConfigBean.addDelDetailList(dtlVO)}" update=":idEditSalesCommConfigForm:idShowDetail" process="@this" rendered="#{not empty vo.id}"/> -->
+				</p:column>
+				
+				<p:column headerText="Tour Fare Range (RM)" styleClass="txt_center" style="width:120px;">
+					<h:outputText value="&lt; " rendered="#{dtlVO.fareRangetype eq 'LT'}"/>
+					<h:outputText value="&gt; " rendered="#{dtlVO.fareRangetype eq 'GT'}"/>
+					<h:outputText value="#{dtlVO.frAmt}">
+						<f:convertNumber pattern="#,##0.00"/>
+					</h:outputText>
+					<h:outputText value=" - " rendered="#{dtlVO.fareRangetype eq 'RG'}"/>
+					<h:outputText value="#{dtlVO.toAmt}" rendered="#{dtlVO.fareRangetype eq 'RG'}">
+						<f:convertNumber pattern="#,##0.00"/>
+					</h:outputText>
+				</p:column>
+				<p:column headerText="SP Comm (RM)" styleClass="txt_right" style="width:100px;">
+					<h:outputText value="#{dtlVO.spComm}">
+		        		<f:convertNumber pattern="#,##0.00"/>
+		        	</h:outputText>
+				</p:column>
+				<p:column headerText="Ref. SP Comm (RM)" styleClass="txt_right" style="width:100px;">
+					<h:outputText value="#{dtlVO.refSpComm}">
+		        		<f:convertNumber pattern="#,##0.00"/>
+		        	</h:outputText>
+				</p:column>
+				<p:column headerText="SS Comm (RM)" styleClass="txt_right" style="width:100px;">
+					<h:outputText value="#{dtlVO.ssComm}">
+		        		<f:convertNumber pattern="#,##0.00"/>
+		        	</h:outputText>
+				</p:column>
+				<p:column headerText="HOD Comm (RM)" styleClass="txt_right" style="width:100px;">
+					<h:outputText value="#{dtlVO.hodComm}">
+		        		<f:convertNumber pattern="#,##0.00"/>
+		        	</h:outputText>
+				</p:column>
+				<p:column headerText="OP Comm (RM)" styleClass="txt_right" style="width:100px;">
+					<h:outputText value="#{dtlVO.opComm}">
+		        		<f:convertNumber pattern="#,##0.00"/>
+		        	</h:outputText>
+				</p:column>
+			</p:dataTable>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idRemarks">Remarks</h:outputLabel></p:column>
+		<p:column colspan="3">
+			<p:inputTextarea id="idRemarks" label="Remarks" value="#{salesCommConfigBean.salesCommConfigVO.remarks}"
+				rows="10" cols="70" style="width:300px;"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+</div>
+<p:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{salesCommConfigBean.addSalesCommConfig}"
+		update="@form,:idForm:idSalesCommConfigList"
+		rendered="#{empty salesCommConfigBean.salesCommConfigVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{salesCommConfigBean.updSalesCommConfig}"
+		oncomplete="onValidation(xhr, status, args)" update="@form,:idForm:idSalesCommConfigList"
+		rendered="#{not empty salesCommConfigBean.salesCommConfigVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesCommConfigBean.resetForm}" oncomplete="varSalesCommConfigDialog.hide()" update="@form" process="@this" />
+</p:panelGrid>
+</ui:composition>

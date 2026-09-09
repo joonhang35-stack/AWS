@@ -1,0 +1,102 @@
+package com.bcs.zsg.common.helper;
+
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Map;
+
+import org.primefaces.json.JSONObject;
+
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+
+public class CRMUtils {
+	public static final String HTTP_GET = "GET";
+    public static final String HTTP_POST = "POST";
+    public static final String HTTP_PUT = "PUT";
+    public static final String HTTP_DELETE = "DELETE";
+    
+	private static final String TENANT_ID = "AV";
+    private static final String API_KEY = "CXDP_zfc0dEPZheQRcas8wj3APF6iy519AWCsHZZXpS0d0LA";
+    public static String callAPI(String urlStr, String method, String requestBody) throws Exception {
+
+    	URL url = new URL(urlStr);
+        HttpURLConnection connection = HttpUtils.openHttpURLConnection(
+                url,
+                method,
+                "",
+                ""
+        );
+        
+        connection.setRequestProperty("X-TENANT-ID", TENANT_ID);
+        connection.setRequestProperty("X-API-KEY", API_KEY);
+        
+        if (requestBody != null && !requestBody.isEmpty()) {
+            connection.setDoOutput(true);
+            try (OutputStream os = connection.getOutputStream()) {
+                byte[] input = requestBody.getBytes("utf-8");
+                os.write(input, 0, input.length);
+            }
+        }
+        
+        int status = connection.getResponseCode();
+        System.out.println("Status: "+status);
+        if (status != HttpUtils.STATUS_CD_OK) {
+            String error = HttpUtils.getConnectionResponse(connection);
+            throw new RuntimeException("API Error: " + status + " - " + error);
+        }
+        return HttpUtils.getConnectionResponse(connection);
+    }
+    
+    public static String getCustomerPoint(Map<String, Object> params) throws Exception {
+    	String urlStr = "http://crm-uat.applevacations.my:3030/aws-api-uat/api/webhooks/member/" + params.get("customerId");     
+        return callAPI(urlStr, HTTP_GET, null);
+    }
+    
+    public static String getPointExpirySummary(Map<String, Object> params) throws Exception {
+    	String urlStr = "http://crm-uat.applevacations.my:3030/aws-api-uat/api/webhooks/member/" + params.get("customerId") + "/points-expiry-summary";     
+        return callAPI(urlStr, HTTP_GET, null);
+    }
+    
+    public static String getPointHistory(Map<String, Object> params) throws Exception {
+    	String urlStr = "http://crm-uat.applevacations.my:3030/aws-api-uat/api/webhooks/member/" + params.get("customerId") + "/points-history";
+    	JSONObject json = new JSONObject();
+    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+    	json.put("fromDate", sdf.format((Date) params.get("fromDate")));
+    	json.put("toDate", sdf.format((Date) params.get("toDate")));
+
+    	String requestBody = json.toString();
+        return callAPI(urlStr, HTTP_POST, requestBody);
+    }
+    
+    public static String getPointTransfer(Map<String, Object> params) throws Exception {
+    	String urlStr = "http://crm-uat.applevacations.my:3030/aws-api-uat/api/webhooks/member/points-transfer";
+    	JSONObject json = new JSONObject();
+    	json.put("pointsFromId", params.get("pointsFromId"));
+    	json.put("pointsToId", params.get("pointsToId"));
+    	json.put("points", params.get("points"));
+
+    	String requestBody = json.toString();
+        return callAPI(urlStr, HTTP_POST, requestBody);
+    }
+    
+    public static String getPointAdjustment(Map<String, Object> params) throws Exception {
+    	String urlStr = "http://crm-uat.applevacations.my:3030/aws-api-uat/api/webhooks/member/points-adjustment";
+    	JSONObject json = new JSONObject();
+    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+    	json.put("customerId", params.get("customerId"));
+        json.put("points", params.get("points"));
+        json.put("remarks", params.get("remarks"));
+        json.put("referenceId", params.get("referenceId"));
+        json.put("adjustedBy", params.get("adjustedBy"));
+        json.put("status", params.get("status"));
+        json.put("pointsEffectiveDate", sdf.format((Date) params.get("pointsEffectiveDate")));
+        json.put("expiryDays", params.get("expiryDays"));
+        json.put("isExpiryEndOfMonths", params.get("isExpiryEndOfMonths"));
+        
+    	String requestBody = json.toString();
+        return callAPI(urlStr, HTTP_POST, requestBody);
+    }
+    
+    
+}

@@ -1,0 +1,822 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	template="/WEB-INF/views/layouts/main.xhtml">
+
+	<ui:define name="content">
+		<script type="text/javascript">
+			function onValidationRoomingList(xhr, status, args) {
+				if (!args.validateError) {
+					varEditRoomingListDialog.hide();
+				} else {
+					varEditRoomingListDialog.show();
+				}
+			}
+		</script>
+
+		<p:panel header="Update Rooming List">
+			<h:form id="idEditRoomingListForm">
+				<p:growl id="msg" />
+				<!-- <div style="height:500px; overflow:auto;"> -->
+				<p:panelGrid>
+					<p:row>
+						<p:column style="width:120px;">
+							<h:outputLabel>Tour Code :</h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel value="#{roomingListBean.tourDepVO.code}"></h:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel>Departure Date :</h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel value="#{roomingListBean.tourDepVO.dtDep}">
+								<f:convertDateTime pattern="dd-MMM-yyyy" />
+							</h:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idTourGuide">Tour Guide :</h:outputLabel>
+						</p:column>
+						<p:column colspan="3">
+							<p:inputTextarea label="Tour Guide" id="idTourGuide" rows="5"
+								style="width:300px"
+								value="#{roomingListBean.RLtourGuideVO.description}" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				<p:panelGrid>
+					<p:row>
+						<p:column style="vertical-align:top; width: 50%">
+							<p:panel id="idPanelLandOperator" header="Land Operator" toggleable="true">
+								<p:panelGrid>
+									<p:row>
+										<p:column style="width: 200px;">
+											<p:commandButton value="Add Land Operator"
+												update=":idSupplierListDialog"
+												oncomplete="varSupplierList.show()" style="margin-right: 5px;" />
+											<p:commandButton value="Add PIC"
+												update=":idLandOperatorPICDialog"
+												oncomplete="varLandOperatorPIC.show()"
+												actionListener="#{roomingListBean.addLandOperatorPIC}"
+												rendered="#{not empty roomingListBean.supplierVO.fullName}" />
+										</p:column>
+										<p:column>
+											<h:outputText value="#{roomingListBean.supplierVO.fullName}"
+												style="font-weight: bold;" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								<p:panel id="idLandOperatorListPanel" style="border:none;" >
+									<p:dataTable id="idSupplierListTable"
+										value="#{roomingListBean.roomingListLandOprVOList}" var="vo"
+									    >
+										<p:column headerText="Edit"
+											style="width:15px; text-align:center;">
+											<p:commandButton icon="ui-icon-pencil"
+												actionListener="#{roomingListBean.onLandOperatorPICSelected(vo)}"
+												oncomplete="varLandOperatorPIC.show()"
+												process="@this" update=":idLandOperatorPICDialog, :idEditRoomingListForm:idSupplierListTable" />
+										</p:column>
+										<p:column headerText="Delete"
+											style="width:15px; text-align:center;">
+											<p:commandButton icon="ui-icon-close"
+												actionListener="#{roomingListBean.delLandOperatorPICList(vo)}"
+												update=":idEditRoomingListForm:idLandOperatorListPanel"
+												process="@this" />
+										</p:column>
+										<p:column headerText="Name">
+											<h:outputText
+												value="#{vo.salutation} #{vo.givenName} #{vo.lastName}" />
+										</p:column>
+										<p:column headerText="Contact No" style="width: 200px;">
+											<h:outputText value="#{vo.contactNo}" escape="false"/>
+										</p:column>
+									</p:dataTable>
+								</p:panel>
+							</p:panel>
+						</p:column>
+						<p:column style="vertical-align:top; width: 50%">
+							<p:panel id="idPanelPIC" header="Apple PIC" toggleable="true">
+								<p:panelGrid>
+									<p:row>
+										<p:column style="width: 200px;">
+											<p:commandButton value="Add Apple PIC"
+												actionListener="#{roomingListBean.setTypeCd('PIC')}"
+												oncomplete="varAddEmployee.show()"
+												update=":idAddEmployeeDialog" process="@this" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								<p:panel id="idPICListPanel" style="border:none;">
+									<p:dataTable id="idPICListTable"
+										value="#{roomingListBean.PICList}" var="vo"
+										rendered="#{not empty roomingListBean.PICList}">
+										<p:column headerText="Delete"
+											style="width:50px; text-align:center;">
+											<p:commandButton icon="ui-icon-close"
+												actionListener="#{roomingListBean.deletePIC(vo)}"
+												process="@this"
+												update=":idEditRoomingListForm:idPICListPanel" />
+										</p:column>
+										<p:column headerText="Name">
+											<h:outputText value="#{vo.description}" />
+										</p:column>
+										<p:column headerText="Phone No" style="width: 150px;">
+											<h:outputText value="#{vo.description2}" />
+										</p:column>
+										<p:column headerText="Department" style="width: 150px;">
+											<h:outputText
+												value="#{bterp:lookupItemDesc('dept_type', vo.department)}" />
+										</p:column>
+									</p:dataTable>
+								</p:panel>
+							</p:panel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column style="vertical-align:top; width: 50%">
+							<p:panel id="idPanelTourLeader" header="Tour Leader" toggleable="true">
+								<p:panelGrid>
+									<p:row>
+										<p:column style="width: 200px;">
+											<p:commandButton value="Add Tour Leader"
+												actionListener="#{roomingListBean.setTypeCd('TOUR_LEAD')}"
+												update=":idAddEmployeeDialog"
+												oncomplete="varAddEmployee.show()" process="@this" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								<p:panel id="idTourLeaderListPanel" style="border:none;">
+									<p:dataTable id="idTourLeaderListTable"
+										value="#{roomingListBean.tourLeaderList}" var="vo"
+										rendered="#{not empty roomingListBean.tourLeaderList}">
+										<p:column headerText="Delete"
+											style="width:50px; text-align:center;">
+											<p:commandButton icon="ui-icon-close"
+												actionListener="#{roomingListBean.deleteTourLeader(vo)}"
+												process="@this"
+												update=":idEditRoomingListForm:idTourLeaderListPanel" />
+										</p:column>
+										<p:column headerText="Name">
+											<h:outputText value="#{vo.description}" />
+										</p:column>
+										<p:column headerText="Phone No" style="width: 150px;">
+											<h:outputText value="#{vo.description2}" />
+										</p:column>
+										<p:column headerText="Department" style="width: 150px;">
+											<h:outputText
+												value="#{bterp:lookupItemDesc('dept_type', vo.department)}" />
+										</p:column>
+									</p:dataTable>
+								</p:panel>
+							</p:panel>
+						</p:column>
+						<p:column style="vertical-align:top; width: 50%">
+							<p:panel id="idPanelTourManager" header="Tour Manager" toggleable="true">
+								<p:panelGrid>
+									<p:row>
+										<p:column style="width: 200px;">
+											<p:commandButton value="Add Tour Manager"
+												actionListener="#{roomingListBean.setTypeCd('TOUR_MANAGER')}"
+												update=":idAddEmployeeDialog"
+												oncomplete="varAddEmployee.show()" process="@this" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								<p:panel id="idTourManagerListPanel" style="border:none;">
+									<p:dataTable id="idTourManagerListTable"
+										value="#{roomingListBean.tourManagerList}" var="vo"
+										rendered="#{not empty roomingListBean.tourManagerList}">
+										<p:column headerText="Delete"
+											style="width:50px; text-align:center;">
+											<p:commandButton icon="ui-icon-close"
+												actionListener="#{roomingListBean.deleteTourManager(vo)}"
+												process="@this"
+												update=":idEditRoomingListForm:idTourManagerListPanel" />
+										</p:column>
+										<p:column headerText="Name">
+											<h:outputText value="#{vo.description}" />
+										</p:column>
+										<p:column headerText="Phone No" style="width: 150px;">
+											<h:outputText value="#{vo.description2}" />
+										</p:column>
+										<p:column headerText="Department" style="width: 150px;">
+											<h:outputText
+												value="#{bterp:lookupItemDesc('dept_type', vo.department)}" />
+										</p:column>
+									</p:dataTable>
+								</p:panel>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				<p:commandButton icon="ui-icon-refresh"
+					widgetVar="varRefreshCustDetails"
+					actionListener="#{roomingListBean.refreshInvoicePaxList()}"
+					update=":idEditRoomingListForm:idAccountCodeTable" process="@this"
+					style="display:none;" />
+				<p:panelGrid id="idEditAccCodePanel" style="margin-top: 10px;">
+					<p:row>
+						<p:column>
+							<p:dataTable id="idAccountCodeTable" rowIndexVar="rowIndex"
+								value="#{roomingListBean.invoicePaxList}" var="invoicePaxVO">
+								<p:column headerText="Seq" style="width:30px;">
+									<h:outputText value="#{rowIndex+1}" />
+								</p:column>
+
+								<p:column headerText="Invoice&lt;br/&gt;No"
+									style="width:40px;text-align:center;">
+									<h:outputText value="#{invoicePaxVO.invoiceNo}" />
+								</p:column>
+								<p:column headerText="Salesman" style="width:150px;">
+									<h:outputText value="#{invoicePaxVO.salesPerson}" />
+								</p:column>
+								<p:column headerText="Edit&lt;br/&gt;Customer"
+									style="width:50px;text-align:center;">
+									<p:commandButton icon="ui-icon-pencil"
+										actionListener="#{custBean.onCustomerSelected(null, invoicePaxVO.custDetailsVO.custId)}"
+										process="@this" update=":idEditCustDialog"
+										oncomplete="varEditCustDialog.show()" />
+								</p:column>
+								<p:column headerText="Salutation" style="width:50px;">
+									<h:outputText
+										value="#{bterp:lookupItemDesc('salutatn', invoicePaxVO.custDetailsVO.salutation)}" />
+								</p:column>
+								<p:column headerText="SurName" style="width:50px;">
+									<h:outputText value="#{invoicePaxVO.custDetailsVO.lastName}" />
+								</p:column>
+								<p:column headerText="Given Name" style="width:100px;">
+									<h:outputText value="#{invoicePaxVO.custDetailsVO.firstName}" />
+								</p:column>
+								<p:column headerText="Room&lt;br/&gt;Type"
+									style="width:50px;text-align:center;">
+									<h:outputText
+										value="#{bterp:lookupItemDesc('room_type', invoicePaxVO.roomTypeCd)} " />
+								</p:column>
+								<p:column headerText="Pairing&lt;br/&gt;No"
+									style="width:50px;text-align:center;">
+									<h:outputText id="idPairingNo"
+										value="#{invoicePaxVO.roomPairingNo}" />
+									<!-- <pe:keyFilter for="idRoomPairingNo#{rowIndex+1}" mask="num"/>   -->
+								</p:column>
+								<p:column headerText="Room Type" style="width:100px;">
+									<h:selectOneMenu id="idPaymentTerm"
+										value="#{invoicePaxVO.actRoomTypeCd}">
+										<f:selectItem itemLabel="Select One" itemValue="" />
+										<f:selectItems value="#{bterp:lookupItemList('room_type')}"
+											var="roomTypeVO" itemLabel="#{roomTypeVO.description}"
+											itemValue="#{roomTypeVO.code}" />
+									</h:selectOneMenu>
+									<!-- <p:inputText  label="Room No" value="#{invoicePaxVO.actRoomTypeCd}" />  -->
+								</p:column>
+								<p:column headerText="Pairing&lt;br/&gt;No" style="width:50px;">
+									<p:inputText id="idRoomPairingNo" maxlength="5" label="Room No"
+										value="#{invoicePaxVO.actRoomPairingNo}" style="width:50px;" />
+									<pe:keyFilter for="idRoomPairingNo" mask="num" />
+								</p:column>
+								<p:column headerText="Pairing Indicator" style="width:70px;">
+									<h:selectOneMenu id="idPairingIndicator"
+										value="#{invoicePaxVO.actRoomIndicator}">
+										<f:selectItem itemLabel="Select One" itemValue="" />
+										<f:selectItems value="#{bterp:lookupItemList('room_type')}"
+											var="roomTypeVO" itemLabel="#{roomTypeVO.description}"
+											itemValue="#{roomTypeVO.code}" />
+									</h:selectOneMenu>
+								</p:column>
+								<p:column headerText="Remarks" style="width:300px;">
+									<p:inputText label="Remarks"
+										value="#{invoicePaxVO.actRoomRemarks}" style="width:300px;" />
+								</p:column>
+							</p:dataTable>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:panel id="idPanelHotelList" header="Hotel List" toggleable="true"
+								style="margin-top: 10px;">
+								<p:panelGrid>
+									<p:row>
+										<p:column style="width: 200px;">
+											<p:commandButton value="Add E/O"
+												actionListener="#{roomingListBean.loadExOrderList('HOTEL')}"
+												update=":idEOHotelListDialog"
+												oncomplete="varEOHotelListDialog.show()" immediate="true"
+												style="margin-right: 5px;" />
+											<p:commandButton icon="ui-icon-close" value="Remove E/O"
+												actionListener="#{roomingListBean.deleteEO('HOTEL')}"
+												update=":idEditRoomingListForm:idPanelHotelList"
+												process="@this"
+												rendered="#{roomingListBean.RLHotelVO.fkId ne null}" />
+										</p:column>
+										<p:column rendered="#{roomingListBean.RLHotelVO.fkId ne null}">
+											<p:outputLabel value="E/O No. : " />
+											<p:outputLabel value="#{roomingListBean.RLHotelVO.description}" />
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+								<p:dataTable id="idHotelTable" widgetVar="purEOHotelTable"
+									value="#{roomingListBean.hotelTourVOList}" var="purHotel">
+			
+									<p:column headerText="Check In Date" style="width: 120px;"
+										styleClass="txt_center">
+										<h:outputText value="#{purHotel.checkInDt}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Check Out Date" style="width: 120px;"
+										styleClass="txt_center">
+										<h:outputText value="#{purHotel.checkOutDt}">
+											<f:convertDateTime pattern="dd-MMM-yyyy" />
+										</h:outputText>
+									</p:column>
+			
+									<p:column headerText="Hotel Name" style="width: 450px;">
+										<p:commandButton icon="ui-icon-search"
+											actionListener="#{roomingListBean.loadHotelList(purHotel)}"
+											oncomplete="varHotelListDialog.show()"
+											update=":idHotelListDialog" />&nbsp;
+										<h:outputText value="#{purHotel.name}" />
+									</p:column>
+			
+									<p:column headerText="Location/City">
+										<h:outputText value="#{purHotel.location}" />
+									</p:column>
+			
+									<p:column headerText="Contact No." style="width: 200px;">
+										<h:outputText value="#{purHotel.contact}" />
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				
+				<br />
+				<h:panelGrid columns="3" style="width: 10px;">
+					<p:commandButton value="#{msg['common.button.label.save']}"
+						actionListener="#{roomingListBean.saveAccountCode}"
+						update=":idEditRoomingListForm" />
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						actionListener="#{roomingListBean.resetForm}" action="cancel"
+						update="@form" global="false" process="@this">
+						<pe:resetEditableValues for="idEditRoomingListForm" />
+					</p:commandButton>
+					<p:commandButton actionListener="#{roomingListBean.exportToExcel}"
+						icon="ui-icon-print" value="Export" ajax="false" immediate="true" />
+				</h:panelGrid>
+			</h:form>
+		</p:panel>
+
+		<!--
+		DIALOG - SUPPLIER
+	-->
+		<p:dialog id="idSupplierListDialog" widgetVar="varSupplierList"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			hideEffect="fade" showEffect="fade" closable="true">
+			<f:facet name="header">
+				<h:outputFormat value="Land Operator" />
+			</f:facet>
+			<h:form id="idLandOperatorForm">
+				<p:dataTable value="#{roomingListBean.supplierList}" var="vo"
+					paginator="true" rows="20" filterEvent="enter"
+					widgetVar="varSupplierTable" style="width: 700px;"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single">
+					<p:ajax event="rowSelect"
+						listener="#{roomingListBean.handleSupplierSelect}"
+						oncomplete="varSupplierList.hide()"
+						update=":idEditRoomingListForm" />
+
+					<p:column headerText="Company Name" sortBy="#{vo.fullName}"
+						filterBy="#{vo.fullName}" filterMatchMode="contains">
+						<h:outputText value="#{vo.fullName}" />
+					</p:column>
+				</p:dataTable>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idLandOperatorPICDialog" widgetVar="varLandOperatorPIC"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			hideEffect="fade" showEffect="fade" closable="true">
+			<f:facet name="header">
+				<h:outputFormat value="Land Operator PIC" />
+			</f:facet>
+			<h:form id="idLandOperatorPICForm">
+				<p:growl id="msg" />
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:outputLabel for="idAddSalutate" value="Salutation" />
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idAddSalutate"
+								value="#{roomingListBean.roomingListLandOperatorVO.salutation}">
+								<f:selectItems value="#{bterp:lookupItemList('salutatn')}"
+									var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+							</h:selectOneMenu>
+						</p:column>
+						<p:column>
+							<p:outputLabel for="idAddLastName" value="Last Name" />
+						</p:column>
+						<p:column>
+							<p:inputText id="idAddLastName" label="Last Name" maxlength="100"
+								value="#{roomingListBean.roomingListLandOperatorVO.lastName}" required="true"/>
+						</p:column>
+					</p:row>
+
+					<p:row>
+						<p:column>
+							<p:outputLabel for="idAddGivenName" value="Given Name" />
+						</p:column>
+						<p:column>
+							<p:inputText id="idAddGivenName" label="Given Name" maxlength="100"
+								value="#{roomingListBean.roomingListLandOperatorVO.givenName}" />
+						</p:column>
+					</p:row>
+
+					<p:row>
+						<p:column>
+							<p:commandButton value="Add Contact"
+								oncomplete="varLandOperatorPICContactDialog.show()"
+								update=":idLandOperatorPICContactDialog"
+								actionListener="#{roomingListBean.onLandOperatorPICContactSelected(null)}"
+								immediate="true" />
+						</p:column>
+						<p:column colspan="3">
+							<p:panel id="idShowContact" style="border:none">
+								<p:dataTable id="idShowContactList"
+									value="#{roomingListBean.roomingListLandOperatorVO.roomingListLandOprContList}"
+									var="vo" rowKey="#{vo.contactNo}" selectionMode="single"
+									style="width:250px">
+									<!-- rendered="#{not empty roomingListBean.RLLandOperatorVO.landOperatorContList}" -->
+									<p:column headerText="Edit"
+										style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-pencil"
+											actionListener="#{roomingListBean.onLandOperatorPICContactSelected(vo)}"
+											oncomplete="varLandOperatorPICContactDialog.show()"
+											process="@this" update=":idLandOperatorPICContactDialog" />
+									</p:column>
+									<p:column headerText="Delete"
+										style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-close"
+											actionListener="#{roomingListBean.delLandOperatorPICContactList(vo)}"
+											update=":idLandOperatorPICForm:idShowContactList" process="@this" />
+									</p:column>
+									<p:column headerText="Contact Type">
+										<h:outputText
+											value="#{bterp:lookupItemDesc('cntc_type', vo.contactType)}" />
+									</p:column>
+									<p:column headerText="Contact No">
+										<h:outputText value="#{vo.contactNo}" />
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				<p:panelGrid columns="3" style="width: 1px;">
+					<p:commandButton value="Save"
+						actionListener="#{roomingListBean.saveAddLandOperatorDetails}"
+						update="@form, :idEditRoomingListForm:idSupplierListTable"
+						oncomplete="if (args &amp;&amp; !args.validationFailed) varLandOperatorPIC.hide()" />
+					<p:commandButton value="Cancel"
+						oncomplete="varLandOperatorPIC.hide()"
+						update="@form" process="@this">
+						<pe:resetEditableValues for="idLandOperatorPICForm" />
+					</p:commandButton>
+				</p:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idEmployeeListDialog" header="Employee List"
+			widgetVar="varEmployeeListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="true">
+			<f:facet name="header">
+				<h:outputFormat value="Apple PIC" />
+			</f:facet>
+			<h:form id="idEmployeeListForm">
+				<p:dataTable value="#{roomingListBean.employeeList}" var="vo"
+					paginator="true" rows="20" filterEvent="enter"
+					widgetVar="varSupplierTable" style="width: 650px;"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+					selectionMode="single">
+					<p:ajax event="rowSelect"
+						listener="#{roomingListBean.handleEmployeeSelect}"
+						oncomplete="varEmployeeListDialog.hide()" update=":idPICForm" />
+					<p:column headerText="Name" sortBy="#{vo.userVO.name}"
+						filterBy="#{vo.userVO.name}" filterMatchMode="contains"
+						filterStyle="width: 90%">
+						<h:outputText value="#{vo.userVO.name}" />
+					</p:column>
+					<p:column headerText="Phone No" sortBy="#{vo.userVO.mobileNumber}"
+						filterBy="#{vo.userVO.mobileNumber}" filterMatchMode="contains"
+						filterStyle="width: 90%">
+						<h:outputText value="#{vo.userVO.mobileNumber}" />
+					</p:column>
+				</p:dataTable>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idAddEmployeeDialog" widgetVar="varAddEmployee"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			hideEffect="fade" showEffect="fade" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Person In Charge" />
+			</f:facet>
+			<h:form id="idPICForm">
+				<p:growl id="idMsg" />
+				<ui:include src="../common/add_roominglist_pic.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!-- DIALOG - EDIT CUSTOMER -->
+		<p:dialog id="idEditCustDialog" widgetVar="varEditCustDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false" height="600" width="900">
+			<f:facet name="header">
+				<h:outputFormat value="Customer" />
+			</f:facet>
+			<h:form id="idEditCustForm">
+				<ui:include src="../../sales/inv/cust/add_customer.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idIDDialog" widgetVar="varIDDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Identity" />
+			</f:facet>
+			<h:form id="idIDForm">
+				<ui:include src="../../sales/inv/cust/add_identity.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idLangDialog" widgetVar="varLangDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Language" />
+			</f:facet>
+			<h:form id="idLangForm">
+				<ui:include src="../../sales/inv/cust/add_language.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idMealDialog" widgetVar="varMealDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Meal" />
+			</f:facet>
+			<h:form id="idMealForm">
+				<ui:include src="../../sales/inv/cust/add_meal.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idContactDialog" widgetVar="varContactDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Contact" />
+			</f:facet>
+			<h:form id="idContactForm">
+				<ui:include src="../../sales/inv/cust/add_contact.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idClassDialog" widgetVar="varClassDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Class" />
+			</f:facet>
+			<h:form id="idClassForm">
+				<ui:include src="../../sales/inv/cust/add_class.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idComplicationDialog" widgetVar="varComplicationDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Complication" />
+			</f:facet>
+			<h:form id="idComplicationForm">
+				<ui:include src="../../sales/inv/cust/add_complication.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idRemarksDialog" widgetVar="varRemarksDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Remark" />
+			</f:facet>
+			<h:form id="idRemarksForm">
+				<ui:include src="../../sales/inv/cust/add_remarks.xhtml" />
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="idEmailDialog" widgetVar="varEmailDialog"
+			modal="true" resizable="false" dynamic="true" draggable="true"
+			closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Email" />
+			</f:facet>
+			<h:form id="idEmailForm">
+				<ui:include src="../../sales/inv/cust/add_email.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<!--
+		DIALOG - ADD ID SCANNED COPY
+	-->
+		<p:dialog widgetVar="varAddIDScannedCopyDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Scanned Copy" />
+			</f:facet>
+
+			<h:form if="idAddIDScannedCopyForm">
+				<ui:include src="../../sales/inv/cust/add_scanned_copy.xhtml" />
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idEOListDialog" header="Exchange Order List"
+			widgetVar="varEOListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idEOListForm">
+				<p:dataTable widgetVar="varEOListTable"
+					value="#{roomingListBean.exOrderVOList}" var="vo" paginator="true"
+					rows="10"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{roomingListBean.handleEOSelect}"
+						update=":idEditRoomingListForm:idPanelAirlineSchedule"
+						oncomplete="varEOListDialog.hide();" />
+
+					<p:column headerText="Exchange Order No" sortBy="#{vo.code}"
+						filterBy="#{vo.code}" filterMatchMode="contains">
+						<h:outputText value="#{vo.code}" />
+					</p:column>
+					<p:column headerText="Exchange Order Date" sortBy="#{vo.eoDt}"
+						filterBy="#{vo.eoDt}">
+						<h:outputText value="#{vo.eoDt}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Supplier Name" sortBy="#{vo.supplierName}"
+						filterBy="#{vo.supplierName}" filterMatchMode="contains">
+						<h:outputText value="#{vo.supplierName}" />
+					</p:column>
+					<p:column headerText="Tour Code" sortBy="#{vo.tourCode}"
+						filterBy="#{vo.tourCode}" filterMatchMode="contains">
+						<h:outputText value="#{vo.tourCode}" />
+					</p:column>
+					<p:column headerText="Departure Date" sortBy="#{vo.tourDepDt}"
+						filterBy="#{vo.tourDepDt}">
+						<h:outputText value="#{vo.tourDepDt}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varEOListDialog.hide();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idEOHotelListDialog" header="Exchange Order List"
+			widgetVar="varEOHotelListDialog" modal="true" resizable="false"
+			dynamic="true" draggable="true" closable="false">
+			<h:form id="idEOHotelsListForm">
+				<p:dataTable widgetVar="varEOListTable"
+					value="#{roomingListBean.exOrderVOList}" var="vo" paginator="true"
+					rows="10"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+					<p:ajax event="rowSelect"
+						listener="#{roomingListBean.handleEOSelect}"
+						update=":idEditRoomingListForm:idPanelHotelList"
+						oncomplete="varEOHotelListDialog.hide();" />
+
+					<p:column headerText="Exchange Order No" sortBy="#{vo.code}"
+						filterBy="#{vo.code}" filterMatchMode="contains">
+						<h:outputText value="#{vo.code}" />
+					</p:column>
+					<p:column headerText="Exchange Order Date" sortBy="#{vo.eoDt}"
+						filterBy="#{vo.eoDt}">
+						<h:outputText value="#{vo.eoDt}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+					<p:column headerText="Supplier Name" sortBy="#{vo.supplierName}"
+						filterBy="#{vo.supplierName}" filterMatchMode="contains">
+						<h:outputText value="#{vo.supplierName}" />
+					</p:column>
+					<p:column headerText="Tour Code" sortBy="#{vo.tourCode}"
+						filterBy="#{vo.tourCode}" filterMatchMode="contains">
+						<h:outputText value="#{vo.tourCode}" />
+					</p:column>
+					<p:column headerText="Departure Date" sortBy="#{vo.tourDepDt}"
+						filterBy="#{vo.tourDepDt}">
+						<h:outputText value="#{vo.tourDepDt}">
+							<f:convertDateTime pattern="dd-MMM-yyyy" />
+						</h:outputText>
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varEOHotelListDialog.hide();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idHotelListDialog" widgetVar="varHotelListDialog"
+			header="Select Hotel" modal="true" resizable="false" dynamic="true"
+			draggable="true" closable="false">
+			<h:form id="idHotelListForm">
+				<p:dataTable id="idTourDepList" value="#{roomingListBean.hotelList}"
+					var="vo" paginator="true" rows="20"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+					rowsPerPageTemplate="10, 15, 20" rowKey="#{vo.id}"
+					selectionMode="single">
+					<p:ajax event="rowSelect"
+						listener="#{roomingListBean.handleHotelSelect}"
+						update=":idEditRoomingListForm:idHotelTable"
+						oncomplete="varHotelListDialog.hide()" />
+
+					<p:column headerText="Hotel Name">
+						<h:outputText value="#{vo.name}" />
+					</p:column>
+				</p:dataTable>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						onclick="varHotelListDialog.hide()" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog>
+
+		<p:dialog id="idLandOperatorPICContactDialog"
+			widgetVar="varLandOperatorPICContactDialog" modal="true"
+			resizable="false" dynamic="true" draggable="true" hideEffect="fade"
+			showEffect="fade" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Add Contact" />
+			</f:facet>
+			<h:form id="idAddContactForm">
+				<p:growl id="msg" />
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+							<p:outputLabel for="idAddContactType" value="Contact Type" />
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idAddContactType" required="true"
+								value="#{roomingListBean.roomingListLandOperatorContVO.contactType}">
+								<f:selectItems value="#{bterp:lookupItemList('cntc_type')}"
+									var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+							</h:selectOneMenu>
+						</p:column>
+						<p:column>
+							<p:outputLabel for="idAddContact" value="Contact Number"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idAddContact"
+								value="#{roomingListBean.roomingListLandOperatorContVO.contactNo}"
+								required="true" maxlength="13"/>
+							<pe:keyFilter for="idAddContact" mask="num" /> 
+						</p:column>
+					</p:row>
+
+				</p:panelGrid>
+				<p:panelGrid columns="3" style="width: 1px;">
+					<p:commandButton value="#{msg['common.button.label.ok']}"
+						actionListener="#{roomingListBean.addContact}"
+						oncomplete="if (args &amp;&amp; !args.validationFailed) varLandOperatorPICContactDialog.hide()"
+						update="@form, :idLandOperatorPICForm:idShowContact" />
+					<p:commandButton value="Cancel" update="@form"
+						oncomplete="varLandOperatorPICContactDialog.hide()"
+						process="@this" global="false">
+						<pe:resetEditableValues for="idEditRoomingListForm" />
+					</p:commandButton>
+				</p:panelGrid>
+			</h:form>
+		</p:dialog>
+
+	</ui:define>
+</ui:composition>

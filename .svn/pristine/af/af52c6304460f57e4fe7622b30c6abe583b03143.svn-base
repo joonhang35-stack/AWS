@@ -1,0 +1,70 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<style>
+	.disabled {
+		background : grey !important;
+		color : white;
+		cursor : auto;
+		pointer-events : none;
+	}
+</style>
+<p:dataTable widgetVar="varCustListTable" value="#{custBean.lazyCustDataModel}" var="custVO" paginator="true" rows="10" 
+	paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+	filterEvent="enter" lazy="true" rowKey="#{custVO.id}" selectionMode="single" 
+	rowStyleClass="#{custVO.statusCode eq 'IA' ? 'disabled' : ''}">
+	<p:ajax event="rowSelect" listener="#{cruiseBookingBean.handleCustSelect}" update=":idAddInvoiceForm:idCustDetails,:idAddInvoiceForm:idAttTo" oncomplete="varCustListDialog.hide();" process="@this"/>
+	
+	<p:column headerText="Customer&lt;br/&gt;Type" sortBy="#{custVO.pcTypeDesc}" filterBy="#{custVO.pcTypeDesc}" filterStyle="width: 90%" width="80">
+		<h:outputText value="#{custVO.pcTypeDesc}" />
+	</p:column>
+	
+	<p:column headerText="Customer No" sortBy="#{custVO.code}" filterBy="#{custVO.code}">
+		<h:outputText value="#{custVO.code}" />
+	</p:column>
+	
+	<p:column headerText="Customer Name" sortBy="#{custVO.custName}" filterBy="#{custVO.custName}" filterMatchMode="contains">
+		<h:outputText value="#{bterp:lookupItemDesc('salutatn', custVO.salutationCd)} #{custVO.custName}" />
+	</p:column>
+	
+	<p:column headerText="NickName" sortBy="#{custVO.nickName}" filterBy="#{custVO.nickName}" filterMatchMode="contains">
+		<h:outputText value="#{custVO.nickName}" />
+	</p:column>
+	
+	<p:column headerText="Company Name" sortBy="#{custVO.corporateName}" filterBy="#{custVO.corporateName}" filterMatchMode="contains">
+		<h:outputText value="#{custVO.corporateName}" />
+	</p:column>
+	
+<!-- 	<p:column headerText="Contact5" sortBy="#{custVO.perContacts}" filterBy="#{custVO.perContacts}">
+        <ui:repeat value="#{custVO.perContacts.split(',')}" var="cntc" rendered="#{not empty custVO.perContacts}">
+            <h:outputText value="#{custBean.getContactStr(cntc)}"/><br/>
+        </ui:repeat>
+	</p:column> -->
+	<p:column headerText="Contact" sortBy="#{custVO.perContacts}" filterBy="#{custVO.perContacts}">
+	    <ui:repeat value="#{custVO.perContacts.split(',')}" var="cntc" varStatus="status" rendered="#{not empty custVO.perContacts and not empty custVO.countryCode}">
+	        <h:outputText value="#{custBean.getContactStrWithCountryPair(cntc, status.index, custVO.countryCode)}"/>
+	        <br/>
+	    </ui:repeat>
+	</p:column>	
+	
+	<p:column headerText="Email" sortBy="#{custVO.email}" filterBy="#{custVO.email}">
+		<h:outputText value="#{custVO.email}"/>
+	</p:column>
+	
+	<p:column headerText="Identity" sortBy="#{custVO.identities}" filterBy="#{custVO.identities}" filterMatchMode="contains">
+        <ui:repeat value="#{custVO.identities.split(',')}" var="identity" rendered="#{not empty custVO.identities}">
+            <h:outputText value="#{custBean.getIdentityStr(identity)}"/><br/>
+        </ui:repeat>
+	</p:column>
+</p:dataTable>
+
+<h:panelGrid columns="1">
+	<p:commandButton value="#{msg['common.button.label.cancel']}" oncomplete="varCustListDialog.hide();"/>
+</h:panelGrid>
+</ui:composition>

@@ -1,0 +1,79 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+<p:panelGrid style="margin-bottom:10px;">
+	<p:row>
+		<p:column style="width: 100px;">
+			<p:outputLabel value="Merchant Code" for="idMerchantCode"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idMerchantCode" value="#{ipayConfigBean.ipayConfigVO.merchantCode}" maxlength="50" required="true"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Merchant Key" for="idMerchantKey"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idMerchantKey" value="#{ipayConfigBean.ipayConfigVO.merchantKey}" maxlength="50" required="true"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Comment" for="idComment"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idComment" value="#{ipayConfigBean.ipayConfigVO.comment}" style="width: 200px;" maxlength="255" required="true"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Remarks" for="idRemarks"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idRemarks" value="#{ipayConfigBean.ipayConfigVO.remarks}" style="width: 200px;" maxlength="255"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Admin Charges Rate" for="idAdminChargesPercent"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAdminChargesPercent" value="#{ipayConfigBean.ipayConfigVO.adminChargesPercentage}" 
+				maxlength="5" required="true">
+				<f:convertNumber pattern="0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Admin Charges Account" for="idAdminChargesAcct"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAdminChargesAcct" value="#{ipayConfigBean.ipayConfigVO.acctCode} #{ipayConfigBean.ipayConfigVO.acctDesc}" required="true" 
+				readonly="true" style="background:#ccc;margin-right: 10px;width: 200px;"/>
+			<p:commandButton icon="ui-icon-search" actionListener="#{ipayConfigBean.loadAcctList}"
+				oncomplete="varAcctListDialog.show()" update=":idAcctListDialog" process="@this"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panelGrid id="idButtonGrid" columns="3" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{ipayConfigBean.save}" 
+		update="@form, :idForm:idConfigList"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" process="@this" oncomplete="varAddConfig.hide();">
+		<pe:resetEditableValues for="idAddForm"/>
+	</p:commandButton>
+</p:panelGrid>
+
+
+		
+</ui:composition>

@@ -1,0 +1,50 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varCompanyDialog.show();
+		} else {
+			varCompanyDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column>
+			<h:outputLabel for="idCompany">Company <span class="required">*</span></h:outputLabel>
+		</p:column>
+		<p:column>
+			<h:selectOneMenu id="idCompany" label="Company" value="#{userBean.employeeVO.companyId}" required="true">  
+	            <f:selectItem itemLabel="Select One" itemValue="" />  
+				<f:selectItems value="#{userBean.companyList}" var="vo" itemLabel="#{vo.name}" itemValue="#{vo.id}" />  
+	        </h:selectOneMenu>
+        </p:column>
+        <p:column>
+			<h:outputLabel for="idDefCompany">Defalut Company</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:selectBooleanCheckbox id="idDefCompany" value="#{userBean.employeeVO.isDefaultComp}"/>
+        </p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="2" style="width: 1px;">
+	<p:commandButton value="Add" actionListener="#{userBean.addCompany}" update="@form,:idAddUserForm:idCompanyListPanel" rendered="#{userBean.companyAdd}"/>
+	<p:commandButton value="Edit" actionListener="#{userBean.updateCompany}" update="@form,:idAddUserForm:idCompanyListPanel" oncomplete="onValidation(xhr, status, args)" rendered="#{not userBean.companyAdd}"/>
+	<p:commandButton value="Cancel" actionListener="#{userBean.resetCompanyForm}" update="@form" process="@this" oncomplete="varCompanyDialog.hide()" global="false">
+		<pe:resetEditableValues for="idAddUserForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

@@ -1,0 +1,233 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">  			
+
+<style>
+.tourDepListClass .ui-datatable th div.ui-dt-c,
+.tourDepListClass .ui-datatable .ui-datatable-data td div.ui-dt-c {
+	padding: 4px 0px;
+	font-size: 10px;
+	text-align: center;
+}
+
+.tourDepListClass .ui-state-highlight,
+.tourDepListClass .ui-widget-content .ui-state-highlight {
+	border: 2px solid #7c51a1;
+	background: #7ddbfe !important;
+}
+</style>
+
+<p:growl id="msg" />
+<h:panelGrid columns="3" style="width:1px;">
+	<p:commandButton value="Add" actionListener="#{tourPkgBean.handleAddTourDepSelect}" update=":idAddTourDepDialog,:idAddTourDepForm" oncomplete="varAddTourDepDialog.show()" process="@this"/>
+	<p:commandButton value="Cancel" actionListener="#{tourPkgBean.resetForm}" oncomplete="varTourDepListDialog.hide()" process="@this"/>
+	<h:commandLink value="Export" styleClass="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ui-button-text" style="padding: .5em 1em;">  
+        <p:dataExporter type="xls" target="idTourDepList" fileName="TourDeparture" postProcessor="#{tourPkgBean.postProcessXLS}"/>  
+    </h:commandLink>
+</h:panelGrid>
+<div class="tourDepListClass">
+<p:dataTable id="idTourDepList" value="#{tourPkgBean.tourDepList}" var="vo" rowStyleClass="#{vo.groupColor eq 0 ? 'group-color-one' : 'group-color-two'}"
+	rowKey="#{vo.id}" selectionMode="single">
+	<f:facet name="header">
+		<h:panelGrid columns="1">
+			<h:outputText value="#{tourPkgBean.tourPkgVO.nameEn}"/>
+			<h:outputText value="#{tourPkgBean.tourPkgVO.nameOther}" rendered="#{not empty tourPkgBean.tourPkgVO.nameOther}"/>
+			<h:outputText value="#{tourPkgBean.tourPkgVO.nameZh}" rendered="#{not empty tourPkgBean.tourPkgVO.nameZh}"/>
+			<h:outputText value="Sector Type: #{tourPkgBean.tourPkgVO.tourPkgCountryVO.regionName}" rendered="#{not empty tourPkgBean.tourPkgVO.tourPkgCountryVO.regionName}"/>
+			<h:outputText value="Sector: #{tourPkgBean.tourPkgVO.tourPkgCountryVO.countryName}" rendered="#{not empty tourPkgBean.tourPkgVO.tourPkgCountryVO.countryName}"/>
+			<h:outputText value="Location Tag: #{tourPkgBean.tourPkgVO.tourPkgCountryVO.cityName}" rendered="#{not empty tourPkgBean.tourPkgVO.tourPkgCountryVO.cityName}"/>
+		</h:panelGrid>
+	</f:facet>
+	
+	<p:column style="width:30px;">
+		<p:rowToggler />
+	</p:column>
+	<p:column headerText="Function" style="width:60px;">
+		<p:splitButton icon="ui-icon-pencil" actionListener="#{tourPkgBean.handleTourDepSelect(vo)}" update=":idEditTourDepDialog" oncomplete="varEditTourDepDialog.show()">
+			<p:menuitem value="Clone" icon="ui-icon-plus" actionListener="#{tourPkgBean.setTourDepVO(vo)}" oncomplete="varCloneTourDepDialog.show()"/>
+			<p:menuitem value="Delete" icon="ui-icon-close" actionListener="#{tourPkgBean.setTourDepVO(vo)}" oncomplete="varDelTourDepDialog.show()"/>
+			<!-- <p:menuitem value="Send Email" icon="ui-icon-mail-closed" actionListener="#{tourPkgBean.handleSendEmail(vo)}" oncomplete="varSendEmailDialog.show()" rendered="#{vo.tourStatusCd eq 'N'}"/> -->
+		</p:splitButton>
+	</p:column>
+	<p:column headerText="Seq No" style="width:50px;">
+		<h:outputText value="#{vo.seqNo}"/>
+	</p:column>
+	<p:column headerText="Dep Date" style="width:100px;">
+		<h:outputText value="#{vo.dtDep}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText>
+		<ui:repeat value="#{vo.departDateBadgeList}" var="badgeVO">
+			<h:outputText value="#{badgeVO}" style="display:inline-block; background:white; color:green; border:1px solid green; border-radius: 5px; padding:2px; margin:2px;"  rendered="#{not empty vo.departDateBadgeList}"/>
+		</ui:repeat>
+	</p:column>
+	<p:column headerText="Status" style="width:80px;">
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" rendered="#{vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L'}"/>
+		<h:outputText value="Full" style="text-transform:uppercase; color:#F00;" rendered="#{vo.tourStatusCd eq 'F'}"/>
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}" style="text-transform:uppercase; color:#F00;"
+			rendered="#{vo.tourStatusCd eq 'I' or vo.tourStatusCd eq 'C' or vo.tourStatusCd eq 'N' or vo.tourStatusCd eq 'R' or vo.tourStatusCd eq 'C1'}"/>
+		<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}"
+		 	style="text-transform:uppercase; color:#F00;"
+			rendered="#{vo.tourStatusCd ne 'A' and vo.tourStatusCd ne 'L' and vo.tourStatusCd ne 'F'
+					and vo.tourStatusCd ne 'I' and vo.tourStatusCd ne 'C' and vo.tourStatusCd ne 'N'
+					and vo.tourStatusCd ne 'R' and vo.tourStatusCd ne 'C1'}"/>
+		<p:outputPanel style="vertical-align:middle; display:inline-block;" rendered="#{not vo.isPushToOnline}">
+			<p:graphicImage value="/img/offline.png" width="20" height="20"/>
+		</p:outputPanel>
+	</p:column>
+	<p:column headerText="Tour Code" style="width:150px;">
+		<!-- <p:commandLink id="idCopyButton" onclick="navigator.clipboard.writeText('#{vo.code}');" actionListener="#{tourPkgBean.onCopyClick()}" update="@form" global="false" process="@this">
+			<h:outputText value="#{vo.code}"/>
+		</p:commandLink>
+		<p:tooltip for="idCopyButton">Click to Copy</p:tooltip> -->
+		<p:commandLink actionListener="#{tourPkgBean.handleShowEOList(vo)}" update=":idEODetailsDialog" oncomplete="varEODetailsDialog.show()" style="color:#CC2EFA;" process="@this">
+			<h:outputText value="#{vo.code} "/>
+		</p:commandLink>
+		<h:outputText id="idTooltipLock" class="fa fa-lock" rendered="#{vo.isLock}" style="margin-left: 3px;"/>
+		<pe:tooltip for="idTooltipLock" rendered="#{vo.isLock}">
+			<h:outputText value="Invoice Locked"/>
+		</pe:tooltip>
+		<h:outputText id="idTooltipPrivate" class="fa fa-user" rendered="#{vo.isPrivateTour}" style="margin-left: 3px;"/>
+		<pe:tooltip for="idTooltipPrivate" rendered="#{vo.isPrivateTour}">
+			<h:outputText value="Private Tour"/>
+		</pe:tooltip>
+	</p:column>
+	<p:column headerText="Tour Package Name">
+		<p:commandLink actionListener="#{tourPkgBean.handleShowBookingList(vo)}" oncomplete="varBookingListDialog.show()" update=":idBookingListDialog" style="color:#CC2EFA;" process="@this">
+			<h:outputText value="#{vo.duration}" rendered="false"/>
+			<h:outputText value="PD " rendered="#{vo.isDepositPaid}"/><h:outputText value="#{vo.numDays}D/#{vo.numNights}N "/><h:outputText value="[#{vo.desc}]" style="color:#FF0000;" rendered="#{not empty vo.desc}"/>
+			<h:outputText value="[#{vo.prn}]" style="color:#0040FF;" rendered="#{not empty vo.prn}"/><h:outputText value="[S]" style="font-weight:bold; color:#{vo.isIssuedS ? '#FF0000' : '#638604'}" rendered="#{vo.travelInsS}"/><h:outputText value="[F]" style="font-weight:bold; color:#{vo.isIssuedF ? '#FF0000' : '#638604'}" rendered="#{vo.travelInsF}"/><h:outputText value="[#{vo.dailyCode}]" style="color:#000000;"  rendered="#{not empty vo.dailyCode}"/>
+			<p:graphicImage value="/img/push.gif" rendered="#{vo.isPush and (vo.tourStatusCd eq 'A' or vo.tourStatusCd eq 'L')}"/>
+		</p:commandLink>
+	</p:column>
+	<p:column headerText="Cruise" style="width:60px;">
+		<h:outputText value="#{vo.cruiseCode}"/>
+	</p:column>
+	<p:column headerText="Misc." style="width:90px;">
+		<h:outputText value="#{vo.miscAdt}" rendered="#{vo.miscAdt % 1 &gt; 0}"> <f:convertNumber pattern="#,##0.00"/></h:outputText>
+		<h:outputText value="#{vo.miscAdt}" rendered="#{vo.miscAdt % 1 &lt;= 0}"> <f:convertNumber pattern="#,##0"/></h:outputText>
+	</p:column>
+	<p:column headerText="Info" style="width:30px;">
+		<p:commandLink actionListener="#{tourPkgBean.handleTourDepSelect(vo)}" oncomplete="varTourDepMoreInfoDialog.show()" update=":idTourDepMoreInfoDialog">
+			<p:graphicImage value="/img/more.png"/>
+		</p:commandLink>
+	</p:column>
+	
+	<p:rowExpansion>
+		<p:dataTable value="#{vo.tourCruiseCabinList}" var="cabinVO">
+			<p:columnGroup type="header">
+				<p:row>
+					<p:column rowspan="2" headerText="Cabin"/>
+					<p:column colspan="2" headerText="Discount"/>
+					<p:column colspan="4" headerText="Allotment"/>
+					<p:column colspan="4" headerText="Adult (RM)"/>
+					<p:column colspan="2" headerText="Child (RM)"/>
+					<p:column colspan="1" headerText="Infant (RM)"/>
+				</p:row>
+				<p:row>
+					<p:column headerText="Level 1"/>
+					<p:column headerText="Level 2"/>
+					<p:column headerText="Cabin" style="width:70px;"/>
+					<p:column headerText="Sold" style="width:70px;"/>
+					<p:column headerText="Reserved" style="width:70px;"/>
+					<p:column headerText="Available" style="width:70px;"/>
+					<p:column headerText="1ST/2ND"/>
+					<p:column headerText="3RD"/>
+					<p:column headerText="4TH"/>
+					<p:column headerText="SGL"/>
+					<p:column headerText="3RD"/>
+					<p:column headerText="4TH"/>
+					<p:column headerText="INF"/>
+				</p:row>
+			</p:columnGroup>
+			
+			<p:column>
+				<h:outputText value="#{cabinVO.cruiseCabinCd}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.discountLvl1 gt 0 ? (cabinVO.discountLvl1 * -1) : 0}">
+					<f:convertNumber pattern="#,##0"/>
+				</h:outputText>
+				<h:outputText value=" (#{cabinVO.discountLvl1Pax})" style="color: red;"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.discountLvl2 gt 0 ? (cabinVO.discountLvl2 * -1) : 0}">
+					<f:convertNumber pattern="#,##0"/>
+				</h:outputText>
+				<h:outputText value=" (#{cabinVO.discountLvl2Pax})" style="color: red;"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.cabinAllotment}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.totalConfirmedCabin}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.totalKivCabin}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.cabinAllotment - cabinVO.totalConfirmedCabin - cabinVO.totalKivCabin}"/>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.priceTwn}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price3}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price4}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.priceSgl}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price3Chd}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.price4Chd}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:column>
+				<h:outputText value="#{cabinVO.priceInf}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</h:outputText>
+			</p:column>
+			<p:columnGroup type="footer">
+				<p:row>
+					<p:column colspan="3" style="font-weight: bold;">Total</p:column>
+					<p:column style="font-weight: bold;">#{vo.totalCabinAllotment}</p:column>
+					<p:column style="font-weight: bold;">#{vo.totalConfirmedCabin}</p:column>
+					<p:column style="font-weight: bold;">#{vo.totalKivCabin}</p:column>
+					<p:column style="font-weight: bold;">#{vo.totalBalanceCabin}</p:column>
+					<p:column colspan="7" style="font-weight: bold;"/>
+				</p:row>
+			</p:columnGroup>
+		</p:dataTable>
+	</p:rowExpansion>
+</p:dataTable>
+</div>
+<h:panelGrid columns="3" style="width:1px;">
+	<p:commandButton value="Add" actionListener="#{tourPkgBean.handleAddTourDepSelect}" update=":idAddTourDepForm" oncomplete="varAddTourDepDialog.show()" process="@this"/>
+	<p:commandButton value="Cancel" actionListener="#{tourPkgBean.resetForm}" oncomplete="varTourDepListDialog.hide()" process="@this"/>
+	<h:commandLink value="Export" styleClass="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ui-button-text" style="padding: .5em 1em;">  
+        <p:dataExporter type="xls" target="idTourDepList" fileName="TourDeparture" excludeColumns="0,1,2" postProcessor="#{tourPkgBean.postProcessXLS}"/>  
+    </h:commandLink> 
+</h:panelGrid>
+
+
+</ui:composition>

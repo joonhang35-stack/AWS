@@ -1,0 +1,192 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<style></style>
+
+	<p:growl id="msg" />
+
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.isPass) {
+				varReasonDialog.show();
+			}
+		}
+		
+		function clearFilters() {
+			varEmpListTable.clearFilters()
+			varSuplListTable.clearFilters()
+			varCustListTable.clearFilters()
+		}
+	</script>
+
+	<p:tabView id="idTabView">
+		<p:tab title="System User">
+			<h:panelGrid columns="2" style="width: 1px; margin-bottom: 4px">
+				<p:commandButton value="Add" actionListener="#{billPymtBean.onAddUser}" oncomplete="varUserDialog.show()" update=":idUserDialog" process="@this"></p:commandButton>
+				<p:commandButton value="Cancel" oncomplete="clearFilters();varProfileListDialog.hide()"/> 
+			</h:panelGrid>
+			<p:dataTable widgetVar="varEmpListTable"
+				value="#{billPymtBean.employeeList}" var="vo" paginator="true"
+				rows="10"
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}"
+				rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}"
+				selectionMode="single" filterEvent="enter">
+				<p:ajax event="rowSelect" listener="#{billPymtBean.handlePayeeSelected}" update=":idAddFuncForm:idPayee :idAddFuncForm:idPayeeType :idAddFuncForm:idPayeeSearch"
+					oncomplete="varProfileListDialog.hide();" process="@this" />
+	
+				<p:column headerText="Employee ID" sortBy="#{vo.id}" filterBy="#{vo.id}" filterMatchMode="contains">
+					<h:outputText value="#{vo.id}" />
+				</p:column>
+				<p:column headerText="User Name" sortBy="#{vo.userVO.name}" filterBy="#{vo.userVO.name}" filterMatchMode="contains" style="font-size:10px; width:200px;">
+					<h:outputText value="#{vo.userVO.name}" />
+				</p:column>
+				<p:column headerText="Login ID" sortBy="#{vo.userVO.loginId}" filterBy="#{vo.userVO.loginId}" filterMatchMode="contains" style="font-size:10px; width:200px;">
+					<h:outputText value="#{vo.userVO.loginId}" />
+				</p:column>
+				<p:column headerText="Email" sortBy="#{vo.userVO.emailAddress}" filterBy="#{vo.userVO.emailAddress}" filterMatchMode="contains" style="font-size:10px; width:200px;">
+					<h:outputText value="#{vo.userVO.emailAddress}" />
+				</p:column>
+				<p:column headerText="Name per IC" sortBy="#{vo.fullName}" filterBy="#{vo.fullName}" filterMatchMode="contains" style="font-size:10px; width:200px;">
+					<h:outputText value="#{vo.fullName}" />
+				</p:column>
+				<p:column headerText="Nickname" sortBy="#{vo.userVO.nickname}" filterBy="#{vo.userVO.nickname}" filterMatchMode="contains" style="font-size:10px; width:200px;">
+					<h:outputText value="#{vo.userVO.nickname}" />
+				</p:column>
+				<p:column headerText="Categorize" sortBy="#{bterp:lookupItemDesc('usr_staff_cat', vo.category)}" filterBy="#{bterp:lookupItemDesc('usr_staff_cat', vo.category)}" filterMatchMode="contains" style="font-size:10px; width:200px;">
+					<h:outputText value="#{bterp:lookupItemDesc('usr_staff_cat', vo.category)}" />
+				</p:column>
+				<p:column headerText="Department" sortBy="#{bterp:lookupItemDesc('dept_type', vo.department)}" filterBy="#{bterp:lookupItemDesc('dept_type', vo.department)}" filterMatchMode="contains" style="font-size:10px; width:200px;">
+					<h:outputText value="#{bterp:lookupItemDesc('dept_type', vo.department)}" />
+				</p:column>
+			</p:dataTable>
+			<h:panelGrid columns="2" style="width: 1px; margin-top: 4px">
+				<p:commandButton value="Add" actionListener="#{billPymtBean.onAddUser}" oncomplete="varUserDialog.show()" update=":idUserDialog" process="@this"></p:commandButton>
+				<p:commandButton value="Cancel" oncomplete="clearFilters();varProfileListDialog.hide()"/> 
+			</h:panelGrid>
+		</p:tab>
+		<p:tab title="Supplier List">
+			<h:panelGrid columns="2" style="width: 1px; margin-bottom: 4px">
+				<p:commandButton value="Add" actionListener="#{purchaseBean.booleanAdd}" oncomplete="varSuppOptDialog.show()" update=":idSuppOptDialog" process="@this" rendered="#{false}">
+					<f:setPropertyActionListener value="#{billPymtBean.ACTION_PAYEE_SUPPLIER}" target="#{billPymtBean.postSaveSuplAction}" />
+				</p:commandButton>
+				<p:commandButton value="Cancel" oncomplete="clearFilters();varProfileListDialog.hide()"/> 
+			</h:panelGrid>
+			<p:dataTable widgetVar="varSuplListTable" value="#{supplierBean.lazySuppDataModel}" var="supplierVO" paginator="true" rows="10" 
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+				filterEvent="enter" lazy="true" rowKey="#{supplierVO.id}" selectionMode="single">
+				
+				<p:ajax event="rowSelect" listener="#{billPymtBean.handlePayeeSelected}" update=":idAddFuncForm:idPayee :idAddFuncForm:idPayeeType :idAddFuncForm:idPayeeSearch" oncomplete="varProfileListDialog.hide();" process="@this"/>
+				
+				<p:column headerText="Supplier No" sortBy="#{supplierVO.sysNo}" style="width: 70px;" filterStyle="width:70px;" styleClass="txt_center" filterBy="#{supplierVO.sysNo}">
+					<h:outputText value="#{supplierVO.sysNo}" />
+				</p:column>
+				
+				<p:column headerText="Supplier Name" sortBy="#{supplierVO.fullName}" style="width: 190px;" filterStyle="width:190px;" styleClass="txt_center" filterBy="#{supplierVO.fullName}">
+					<h:outputText value="#{supplierVO.fullName}" />
+				</p:column>
+				
+				<p:column headerText="Supplier Type" sortBy="#{supplierVO.supplierType}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{supplierVO.supplierType}">
+					<h:outputText value="#{supplierVO.supplierType}" />
+				</p:column>
+				
+				<!-- <p:column headerText="GST Reg No" sortBy="#{supplierVO.gstRegNo}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{supplierVO.gstRegNo}">
+					<h:outputText value="#{supplierVO.gstRegNo}" />
+				</p:column> -->
+				
+				<p:column headerText="Country" sortBy="#{supplierVO.countryName}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{supplierVO.countryName}">
+					<h:outputText value="#{supplierVO.countryName}" />
+				</p:column>
+				
+				<p:column headerText="Supplier Category" sortBy="#{supplierVO.supplierCatName}" style="width: 110px;" filterStyle="width:110px;" styleClass="txt_center" filterBy="#{supplierVO.supplierCatName}">
+					<h:outputText value="#{supplierVO.supplierCatName}" />
+				</p:column>
+				
+				<!-- <p:column headerText="Contact No" sortBy="#{supplierVO.contactNo}" style="width: 200px;" filterStyle="width:200px;" filterBy="#{supplierVO.contactNo}">
+					 <ui:repeat value="#{supplierVO.contactNo.split(',')}" var="cntc" rendered="#{not empty supplierVO.contactNo}">
+			            <h:outputText value="#{cntc}"/><br/>
+			        </ui:repeat>
+				</p:column> -->
+				<!-- <p:column headerText="Email" sortBy="#{supplierVO.email}" styleClass="txt_center" filterBy="#{supplierVO.email}">
+						<h:outputText value="#{supplierVO.email}" />
+				</p:column> -->
+				
+				<!-- <p:column headerText="Updated By" sortBy="#{supplierVO.updatedBy}" style="width: 80px;" styleClass="txt_center" filterBy="#{supplierVO.updatedBy}">
+					<h:outputText value="#{supplierVO.updatedBy}" />
+				</p:column> -->
+				      
+				<!-- <p:column headerText="Updated Date" sortBy="#{supplierVO.updatedDate}" filterBy="#{supplierVO.updatedDate}">
+					<h:outputText value="#{supplierVO.updatedDate}">
+						<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss"/>  
+					</h:outputText>
+				</p:column> -->
+			</p:dataTable>
+			<h:panelGrid columns="2" style="width: 1px; margin-top: 4px">
+				<p:commandButton value="Add" actionListener="#{purchaseBean.booleanAdd}" oncomplete="varSuppOptDialog.show()" update=":idSuppOptDialog" process="@this" rendered="#{false}">
+					<f:setPropertyActionListener value="#{billPymtBean.ACTION_PAYEE_SUPPLIER}" target="#{billPymtBean.postSaveSuplAction}" />
+				</p:commandButton>
+				<p:commandButton value="Cancel" oncomplete="clearFilters();varProfileListDialog.hide()"/> 
+			</h:panelGrid>
+		</p:tab>
+		<p:tab title="Customer List">
+			<h:panelGrid columns="2" style="width: 1px; margin-bottom: 4px">
+				<p:commandButton value="Add" oncomplete="varCustListDialog.show()" update=":idCustListDialog" process="@this" rendered="#{false}">
+					<!-- <f:setPropertyActionListener value="#{billPymtBean.ACTION_PAYEE_SUPPLIER}" target="#{billPymtBean.postSaveSuplAction}" /> -->
+				</p:commandButton>
+				<p:commandButton value="Cancel" oncomplete="clearFilters();varProfileListDialog.hide()"/> 
+			</h:panelGrid>
+			<p:dataTable widgetVar="varCustListTable" value="#{custBean.lazyCustDataModel}" var="custVO" paginator="true" rows="10" 
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+				filterEvent="enter" lazy="true" rowKey="#{custVO.id}" selectionMode="single" 
+				rowStyleClass="#{custVO.statusCode eq 'IA' ? 'disabled' : ''}">
+				
+				<p:ajax event="rowSelect" listener="#{billPymtBean.handlePayeeSelected}" update=":idAddFuncForm:idPayee :idAddFuncForm:idPayeeType :idAddFuncForm:idPayeeSearch" oncomplete="varProfileListDialog.hide();" process="@this"/>
+				
+				<p:column headerText="Customer&lt;br/&gt;Type" sortBy="#{custVO.pcTypeDesc}" filterBy="#{custVO.pcTypeDesc}" filterStyle="width: 90%" width="80">
+					<h:outputText value="#{custVO.pcTypeDesc}" />
+				</p:column>
+				<p:column headerText="Customer No" sortBy="#{custVO.code}" filterBy="#{custVO.code}">
+					<h:outputText value="#{custVO.code}" />
+				</p:column>
+				<p:column headerText="Customer Name" sortBy="#{custVO.custName}" filterBy="#{custVO.custName}" filterMatchMode="contains">
+					<h:outputText value="#{bterp:lookupItemDesc('salutatn', custVO.salutationCd)} #{custVO.custName}" />
+				</p:column>
+				<p:column headerText="NickName" sortBy="#{custVO.nickName}" filterBy="#{custVO.nickName}" filterMatchMode="contains">
+					<h:outputText value="#{custVO.nickName}" />
+				</p:column>
+				<p:column headerText="Company Name" sortBy="#{custVO.corporateName}" filterBy="#{custVO.corporateName}" filterMatchMode="contains">
+					<h:outputText value="#{custVO.corporateName}" />
+				</p:column>
+				<p:column headerText="Contact" sortBy="#{custVO.perContacts}" filterBy="#{custVO.perContacts}">
+			        <ui:repeat value="#{custVO.perContacts.split(',')}" var="cntc" rendered="#{not empty custVO.perContacts}">
+			            <h:outputText value="#{custBean.getContactStrWithCountryPair(cntc,custVO.countryCode)}"/><br/>
+			        </ui:repeat>
+				</p:column>
+				<p:column headerText="Email" sortBy="#{custVO.email}" filterBy="#{custVO.email}">
+					<h:outputText value="#{custVO.email}"/>
+				</p:column>
+				<p:column headerText="Identity" sortBy="#{custVO.identities}" filterBy="#{custVO.identities}" filterMatchMode="contains">
+			        <ui:repeat value="#{custVO.identities.split(',')}" var="identity" rendered="#{not empty custVO.identities}">
+			            <h:outputText value="#{custBean.getIdentityStr(identity)}"/><br/>
+			        </ui:repeat>
+				</p:column>
+			</p:dataTable>
+			<h:panelGrid columns="2" style="width: 1px; margin-top: 4px">
+				<p:commandButton value="Add" oncomplete="varCustListDialog.show()" update=":idCustListDialog" process="@this" rendered="#{false}">
+					<!-- <f:setPropertyActionListener value="#{billPymtBean.ACTION_PAYEE_SUPPLIER}" target="#{billPymtBean.postSaveSuplAction}" /> -->
+				</p:commandButton>
+				<p:commandButton value="Cancel" oncomplete="clearFilters();varProfileListDialog.hide()"/> 
+			</h:panelGrid>
+		</p:tab>
+	</p:tabView>
+
+	<h:panelGrid columns="11" style="width: 1px;">
+	</h:panelGrid>
+</ui:composition>

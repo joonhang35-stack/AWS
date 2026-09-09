@@ -1,0 +1,1278 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<style>
+.ui-tooltip {
+	max-width: 800px;
+}
+
+body .ui-selectmanycheckbox td {
+	padding: 0px !important;
+	text-align: left !important;
+}
+
+body .ui-selectmanycheckbox label {
+	margin-right: 20px !important;
+}
+</style>
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+/* 	function onValidation(xhr, status, args) {
+		if (args.isSaved) {
+			varAddInvoiceDialog.show();
+		} else {
+			varReasonDialog.show();
+		}
+	} */
+	
+	function onValidation(xhr, status, args) {
+		if (args.isPass) {
+			varReasonDialog.show();
+		}
+	}
+</script>
+
+<c:choose>
+	<c:when test="${salesBean.docTypeCd == 'C'}">
+		<c:set value="width: 1px;" var="panelGridStyle"/>
+		<c:set value="false" var="isInvoiceBln"/>
+	</c:when>
+	<c:otherwise>
+		<c:set value=" " var="panelGridStyle"/>
+		<c:set value="true" var="isInvoiceBln"/>
+	</c:otherwise>
+</c:choose>
+
+<p:panelGrid>
+	<p:row>
+		<p:column style="vertical-align: top; width:50%;">
+			<p:fieldset legend="Customer Details">
+				<p:panelGrid id="idCustDetails">
+					<p:row>
+						<p:column>
+							<h:outputLabel>Billing Person:</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idSoldToC" label="Customer Details" value="#{salesBean.custDetailsVO.companyName}"
+								readonly="true" size="60" style="background:#ccc" rendered="#{salesBean.custDetailsVO.custType == 'C'}"/>
+							<p:inputText id="idSoldToP" label="Customer Details"
+								value="#{salesBean.custDetailsVO.contPersonName}"
+								readonly="true" size="60" style="background:#ccc" rendered="#{salesBean.custDetailsVO.custType != 'C'}"/>
+							&nbsp;
+							<p:commandButton icon="ui-icon-search" oncomplete="varCustListDialog.show()" update=":idCustListDialogDialog" process="@this" disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid'}"/>
+							&nbsp;
+							<p:commandButton icon="ui-icon-refresh" widgetVar="varRefreshCustDetails" actionListener="#{salesBean.loadNewCustomer(custBean.custDetailsVO)}" update=":idAddInvoiceForm:idCustDetails,:idAddInvoiceForm:idAttTo, :idAddInvoiceForm:idTotalUPoint, :idAddInvoiceForm:idTotalVoucher" process="@this" style="display:none;" />
+							<p:commandButton icon="ui-icon-plus" process="@this"
+								 actionListener="#{custBean.onCustomerSelected(salesBean.isAddNewCust(true), null)}" oncomplete="varEditCustDialog.show()" update=":idEditCustDialog"/>&nbsp;
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{custBean.onCustomerSelected(salesBean.isAddNewCust(false), salesBean.custDetailsVO.custId)}" process="@this" update=":idEditCustDialog" oncomplete="varEditCustDialog.show()" rendered="#{salesBean.custDetailsVO.custId ne null}" disabled="#{salesBean.disableEditCustomer}"/>&nbsp;
+							<p:commandButton icon="ui-icon-info" actionListener="#{custBean.onOnlineBookingCustomerSelected(salesBean.invoiceVO.bookingId)}" process="@this" update=":idOnlineBookingCustDialog" oncomplete="varOnlineBookingCustDialog.show()" rendered="#{salesBean.invoiceVO.orderCd eq 'online_booking' and salesBean.invoiceVO.bookingId ne null}"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="2">
+							<p:panelGrid>
+								<p:row rendered="#{salesBean.custDetailsVO.custType == 'C'}">
+									<p:column style="width:130px;">
+										<h:outputText value="Company"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.custDetailsVO.companyName}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column style="width:130px;">
+										<h:outputText value="Customer Number"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.custDetailsVO.code}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="Address Line 1"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.custDetailsVO.addressVO.addr1}#{salesBean.custDetailsVO.corAddressVO.addr1}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="Address Line 2"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.custDetailsVO.addressVO.addr2}#{salesBean.custDetailsVO.corAddressVO.addr2}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="Address Line 3"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.custDetailsVO.addressVO.addr3}#{salesBean.custDetailsVO.corAddressVO.addr3}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="City"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.custDetailsVO.addressVO.city}#{salesBean.custDetailsVO.corAddressVO.city}"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="State"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.custDetailsVO.addressVO.state}#{salesBean.custDetailsVO.corAddressVO.state}"/>
+									</p:column>
+								</p:row>
+								<p:row>
+									<p:column>
+										<h:outputText value="Postcode"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.custDetailsVO.addressVO.postcode}#{salesBean.custDetailsVO.corAddressVO.postcode}"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="Country"/>
+									</p:column>
+									<p:column>
+										<h:outputText value="#{salesBean.getCountryName(salesBean.custDetailsVO.addressVO.countryId)}#{salesBean.getCountryName(salesBean.custDetailsVO.corAddressVO.countryId)}"/>
+									</p:column>
+								</p:row>
+							</p:panelGrid>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:fieldset>
+		</p:column>
+		<p:column style="vertical-align: top; width:100%;">
+			<p:fieldset legend="#{salesBean.docTypeDesc} Issuance Status">
+				<p:panelGrid id="idInvIssStatus">
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idInvoiceNo">#{salesBean.docTypeDesc} No</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idInvoiceNo" value="#{salesBean.prefixValue} #{salesBean.invoiceVO.docTypeCd == 'P' ? salesBean.invoiceVO.psNo : salesBean.invoiceVO.code}" readonly="true" style="background:#ccc" required="true"/>
+						</p:column>
+						<p:column rowspan="3" rendered="#{not empty salesBean.invoiceVO.transferredDate}">
+							<h:outputLabel value="Transferred"
+								style="color:red; font-weight:bold; font-size:30px; display:block; text-align:left;" />
+							<p:panelGrid columns="2"
+								style="margin-left:auto; margin-right:auto; text-align:left;">
+								<h:outputLabel value="Date" style="font-weight:bold; font-size:10px;" />
+            					<h:outputLabel value=": #{salesBean.invoiceVO.formattedTransferredDate}" style="font-size:10px;" />
+            					<h:outputLabel value="By" style="font-weight:bold; font-size:10px;" />
+            					<h:outputLabel value=": #{salesBean.invoiceVO.transferredBy}" style="font-size:10px;" />
+            					<h:outputLabel value="Original TC" style="font-weight:bold; font-size:10px;" />
+            					<h:outputLabel value=": #{salesBean.invoiceVO.originalTc}" style="font-size:10px;" />
+							</p:panelGrid>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{isInvoiceBln and salesBean.docTypeCd == 'P'}">
+						<p:column>
+							<h:outputLabel for="idDocTypeStatus">#{salesBean.docTypeDesc} Status</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idDocTypeStatus" label="Doc Type Status" value="#{zsg:referenceDataValue('PS_STATUS', salesBean.invoiceVO.docTypeStatus)}" readonly="true" style="background:#ccc"/>
+						</p:column>
+					</p:row>
+					<!-- 'Joon Hang - hide payment status for split statement' -->
+					<p:row rendered="#{isInvoiceBln and salesBean.invoiceVO.docTypeStatus != 'SP'}">
+						<p:column>
+							<h:outputLabel for="idInvStatus">#{salesBean.docTypeDesc} Payment Status</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idInvStatus" label="Invoice Status" value="#{zsg:referenceDataValue('INV_STATUS', salesBean.invoiceVO.statusCd)}" readonly="true" style="background:#ccc"/>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{isInvoiceBln}">
+						<p:column>
+							<h:outputLabel for="idBookingStatus">Booking Status</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idBookingStatus" label="Booking Status" value="#{zsg:referenceDataValue('BOOK_STATUS', salesBean.invoiceVO.bookingStatusCd)}" readonly="true" style="background:#ccc"/>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{isInvoiceBln and salesBean.docTypeCd != 'P'}">
+						<p:column>
+							<h:outputLabel for="idEInvoiceStatus">E-Invoice Status</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idEInvoiceStatus" label="E-Invoice Status" value="#{salesBean.invoiceVO.eInvoiceStatus}" readonly="true" style="background:#ccc" rendered="#{salesBean.invoiceVO.eInvoiceStatus ne null}"/>
+							<p:inputText id="idEInvoiceStatus2" label="E-Invoice Status" value="#{'Not Submitted'}" readonly="true" style="background:#ccc" rendered="#{salesBean.invoiceVO.eInvoiceStatus eq null}"/>
+							<p:commandLink actionListener="#{salesBean.onEInvoice}" process="@this" update=":idEInvoiceDialog" oncomplete="varEInvoiceDialog.show()">
+								<i class="fa fa-info-circle" aria-hidden="true" />
+							</p:commandLink>	
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idCompany">Company</h:outputLabel>
+						</p:column>
+						<p:column>
+						    <p:inputText id="idCompany" label="Company" value="#{salesBean.sessionInfoBean.companyVO.code}: #{salesBean.sessionInfoBean.companyVO.name}" readonly="true" style="background:#ccc"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputLabel>Document Type</h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:outputLabel>#{salesBean.docTypeDesc}</h:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{salesBean.docTypeCd == 'I' and not empty salesBean.invoiceVO.psNo}">
+						<p:column>
+							<h:outputLabel>Convert From</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:commandLink 
+        						style="color: #db3333; text-decoration: underline;"
+        						actionListener="#{salesBean.showDocument(salesBean.invoiceVO.psNo,'P')}"
+        						oncomplete="varAddInvoiceDialog.show()"
+								update=":idAddInvoiceDialog" 
+								process="@this">
+								<h:outputText value="#{salesBean.psPrefixVal} #{salesBean.invoiceVO.psNo}"/>
+							</p:commandLink>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{salesBean.docTypeCd == 'P' and not empty salesBean.invoiceVO.code and salesBean.invoiceVO.docTypeStatus eq 'CV'}">
+						<p:column>
+							<h:outputLabel>Converted Invoice</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:commandLink 
+        						style="color: #db3333; text-decoration: underline;"
+        						actionListener="#{salesBean.showDocument(salesBean.invoiceVO.code,'I')}"
+        						oncomplete="varAddInvoiceDialog.show()"
+								update=":idAddInvoiceDialog" 
+								process="@this">
+								<h:outputText value="#{salesBean.invPrefixVal} #{salesBean.invoiceVO.code}"/>
+							</p:commandLink>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{salesBean.docTypeCd == 'P' and salesBean.invoiceVO.idParentInv ne null}">
+						<p:column>
+							<h:outputLabel>Parent Pax Statement</h:outputLabel>
+						</p:column>
+						<p:column>
+							<p:commandLink 
+        						style="color: #db3333; text-decoration: underline;"
+        						actionListener="#{salesBean.showDocument(salesBean.invoiceVO.idParentInv,'P')}"
+        						oncomplete="varAddInvoiceDialog.show()"
+								update=":idAddInvoiceDialog" 
+								process="@this">
+								<h:outputText value="#{salesBean.invoiceVO.parentPsNo}"/>
+							</p:commandLink>
+							<!-- <h:outputLabel>#{salesBean.invoiceVO.parentPsNo}</h:outputLabel> -->
+						</p:column>
+					</p:row>
+					<p:row rendered="#{salesBean.docTypeCd == 'P' and salesBean.invoiceVO.docTypeStatus == 'SP'}">
+						<p:column>
+							<h:outputLabel>Sub Pax Statement(s)</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{salesBean.invoiceVO.subInvoiceList eq null}">
+							<p:commandButton update=":idAddInvoiceForm:idInvIssStatus" value="Show" actionListener="#{salesBean.loadSubInvoiceList}"></p:commandButton>
+						</p:column>
+						<p:column>
+							<c:forEach items="#{salesBean.invoiceVO.subInvoiceList}" var="vo" >
+								<p:commandLink 
+	        						style="color: #db3333; text-decoration: underline;"
+	        						actionListener="#{salesBean.showDocument(vo.id,vo.docTypeCd)}"
+	        						oncomplete="varAddInvoiceDialog.show()"
+									update=":idAddInvoiceDialog" 
+									process="@this">
+									<h:outputText rendered="#{vo.docTypeCd eq 'P'}" value="#{salesBean.psPrefixVal}#{vo.psNo}"/> 
+									<h:outputText rendered="#{vo.docTypeCd eq 'I'}" value="#{salesBean.invPrefixVal}#{vo.code}"/> 
+								</p:commandLink> &nbsp;
+							</c:forEach>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{isInvoiceBln}">
+						<p:column>
+							<h:outputLabel for="idInvCat">#{salesBean.docTypeDesc} Category <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column>
+							<h:selectOneMenu id="idInvCat" label="#{salesBean.docTypeDesc} Category"
+								value="#{salesBean.invoiceVO.catCd}" required="true"
+								disabled="#{not empty salesBean.invoiceVO.bookingId and
+                               (not sessionInfoBean.employeeVO.department.contains('oprs')) and
+                               (not sessionInfoBean.employeeVO.department.contains('acct')) and
+                               (not sessionInfoBean.employeeVO.department.contains('it')) and
+                               (not salesBean.invPmntAuthVO.salesManager) and
+                               (not salesBean.invPmntAuthVO.asstSalesManager)}">
+								<f:selectItem itemLabel="Select One" itemValue="" />
+								<f:selectItems value="#{bterp:lookupItemList('inv_cat')}"
+									var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+								<p:ajax event="change"
+									listener="#{salesBean.handleCategoryCodeChange}"
+									update=":idAddInvoiceForm:idTourCodeSearch, :idAddInvoiceForm:idDepartureDt, :idTmpMsgListDialog, :idTmpMsgListForm, :idAddInvoiceForm:idInvDetailsTab, :idAddInvoiceForm:idAmountPanel" />
+							</h:selectOneMenu>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:outputLabel for="idARAccount" rendered="#{empty salesBean.acctVO.subCode}">A/R Account</p:outputLabel>
+							<p:outputLabel for="idARAccountSub" rendered="#{not empty salesBean.acctVO.subCode}">A/R Account</p:outputLabel>
+						</p:column>
+						<p:column>
+							<p:inputText id="idARAccount" label="A/R Account" value="#{salesBean.acctVO.code}: #{salesBean.acctVO.desc}" readonly="true" style="background:#ccc" rendered="#{empty salesBean.acctVO.subCode}"/>
+							<p:inputText id="idARAccountSub" label="A/R Account" value="#{salesBean.acctVO.code}-#{salesBean.acctVO.subCode}: #{salesBean.acctVO.desc}, #{salesBean.acctVO.subDesc}" readonly="true" style="background:#ccc" rendered="#{not empty salesBean.acctVO.subCode}"/>
+							&nbsp;<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.loadAcctARList}" oncomplete="varAcctARListDialog.show()" update=":idAcctARListDialog" process="@this" rendered="#{salesBean.invPmntAuthVO.accountManager}"/>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{isInvoiceBln}">
+						<p:column>
+							<p:outputLabel for="idConsolidatable">Consolidatable</p:outputLabel>
+						</p:column>
+						<p:column>
+							<p:outputLabel id="idConsolidatable" label="Consolidatable" value="#{salesBean.invoiceVO.isConsolEInv ? 'Yes' : 'No'}" />
+						</p:column>
+					</p:row>
+					<p:row rendered="#{isInvoiceBln}">
+						<p:column>
+							<p:outputLabel for="idApplePoint">Apple Points
+							<h:outputText id="idApplePointRemarks" value="i" styleClass="badge-info"/>
+							<span class="required">*</span>
+            				<pe:tooltip for="idApplePointRemarks" shared="true" showDelay="3000"  position="top right">
+								<h:outputText value="Yes: Apple Points / No : ONECARD UPoints" escape="true" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+							</p:outputLabel>
+						</p:column>
+						<p:column>
+							<p:selectBooleanButton id="idApplePoint" value="#{salesBean.invoiceVO.isApplePoint}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:fieldset>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:panel>
+				<p:panelGrid style="#{panelGridStyle}">
+					<p:row>
+						<p:column>
+							<h:outputLabel for="idInvDt" rendered="#{salesBean.invoiceVO.invoiceDateChangeable and not salesBean.lockAmountChanges}">#{salesBean.docTypeDesc} Date <span class="required">*</span></h:outputLabel>
+							<h:outputLabel for="idInvDtDisplay" rendered="#{not salesBean.invoiceVO.invoiceDateChangeable or salesBean.lockAmountChanges}">#{salesBean.docTypeDesc} Date</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{not isInvoiceBln}">
+							<h:outputLabel for="idCNInvoiceNo">Invoice No</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<h:outputLabel for="idAttTo">Attention To <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<!--p:column>
+							<h:outputLabel for="idPmntType">Payment Types <span class="required">*</span></h:outputLabel>
+						</p:column-->
+						<p:column>
+							<h:outputLabel for="idSalesPerson">Sales Person <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<h:outputLabel for="idTour">Tour Code <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<h:outputLabel for="idBookingNo">Booking No</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}" style="display:none">
+							<h:outputLabel for="idTotalUPoint">Total U Point</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{not isInvoiceBln}">
+							<h:outputLabel for="idCNIssuedBy">Issued By <span class="required">*</span></h:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<p:calendar id="idInvDt" label="#{salesBean.docTypeDesc} Date" value="#{salesBean.invoiceVO.invoiceDt}" navigator="true" showButtonPanel="true" readonlyInput="true" pattern="dd-MMM-yyyy" mindate="#{salesBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart, 'dd-MMM-yyyy')}" maxdate="#{salesBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd, 'dd-MMM-yyyy')}" required="true"
+								rendered="#{salesBean.invoiceVO.invoiceDateChangeable and not salesBean.lockAmountChanges}">
+								<p:ajax event="dateSelect" listener="#{salesBean.setInvoiceDueDate}" update="idInvDue,:idAddInvoiceForm:idInvDetailsTab:idInvItemListTable,:idAddInvoiceForm:idTtlAmt,:idAddInvoiceForm:idAmtDue,:idAddInvoiceForm:idTtlGST"/>
+							</p:calendar>
+							<p:inputText id="idInvDtDisplay" value="#{salesBean.invoiceVO.invoiceDt}" readonly="true" style="background:#ccc"
+								rendered="#{not salesBean.invoiceVO.invoiceDateChangeable or salesBean.lockAmountChanges}">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>
+							</p:inputText>
+						</p:column>
+						<p:column rendered="#{not isInvoiceBln}">
+							<p:inputText id="idCNInvoiceNo" label="Invoice No" value="#{salesBean.invoiceVO.cnInvNo}" maxlength="50"/>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<p:inputText id="idAttTo" label="Attention To" value="#{salesBean.invoiceVO.attnTo}" maxlength="255" required="true"/>
+						</p:column>
+						<p:column>
+							<p:inputText id="idSalesPerson" label="Sales Person" value="#{salesBean.invoiceVO.salerName}" required="true" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;"/>&nbsp;
+							<p:outputPanel id="idSalesPersonSearch" rendered="#{salesBean.addEdit or (not salesBean.addEdit and empty salesBean.invoiceVO.bookingId) or (not empty salesBean.invoiceVO.bookingId and not salesBean.invoiceVO.isLockSP)}">
+								<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.loadEmployeeList}" oncomplete="varEmployeeListDialog.show()" update=":idEmployeeListDialog" process="@this" />
+							</p:outputPanel>&nbsp;
+							<p:selectBooleanButton id="idLockSP" value="#{salesBean.invoiceVO.isLockSP}" onLabel="Lock" offLabel="Unlock" onIcon="ui-icon-locked" offIcon="ui-icon-unlocked" style="width:70px;"
+								rendered="#{not salesBean.addEdit and not empty salesBean.invoiceVO.bookingId and (salesBean.invPmntAuthVO.salesManager or salesBean.invPmntAuthVO.operationsRole or salesBean.invPmntAuthVO.asstSalesManager)}"/>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<p:inputText id="idTour" label="Tour Code" value="#{salesBean.invoiceVO.tourCd}" required="true" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;"/>&nbsp;
+							<p:outputPanel id="idTourCodeSearch">
+								<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.loadTourDepartureList}" oncomplete="varTourListDialog.show()" update=":idTourListDialog" process="@this" rendered="#{(salesBean.addEdit and not salesBean.fromBooking) or salesBean.invoiceVO.catCd != 'to'}"/>
+							</p:outputPanel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<p:inputText id="idBookingNo" label="Booking No" value="#{salesBean.invoiceVO.bookingId}" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;" rendered="#{salesBean.invoiceVO.bookingId ne null}"/>
+							<p:inputText id="idParentInvBookingNo" label="Booking No" value="#{salesBean.invoiceVO.idParentInvTourBooking}" maxlength="0" onkeydown="preventBackspace()" style="background:#ccc;" rendered="#{salesBean.invoiceVO.bookingId eq null}"/>&nbsp;
+							<!-- <p:commandButton icon="ui-icon-search" actionListener="#{salesBean.loadBookingList}" oncomplete="varBookingListDialog.show()" update=":idBookingListDialog" process="@this" rendered="#{salesBean.addEdit and not salesBean.fromBooking}"/> -->
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}" style="display:none">
+							<p:inputText id="idTotalUPoint" label="Total U Point" value="#{salesBean.invoiceVO.totalUPoint}" maxlength="0" onkeydown="preventBackspace()" readonly="true" style="background:#ccc;"/>
+						</p:column>
+						<p:column rendered="#{not isInvoiceBln}">
+							<p:inputText id="idCNIssuedBy" value="#{salesBean.invoiceVO.issuedBy}" readonly="true" style="background:#ccc"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column rendered="#{isInvoiceBln}">
+							<h:outputLabel for="idDepartureDt">Check in Date <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<h:outputLabel for="idIssuedBy">Issued By <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<h:outputLabel for="idOrderSource">Order Source <span class="required">*</span></h:outputLabel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<h:outputLabel for="idInvDue">#{salesBean.docTypeDesc} Due</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<h:outputLabel for="idGdsBookingRef">GDS Booking Reference/EO</h:outputLabel>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}" style="display:none">
+							<h:outputLabel for="idTotalVoucher">Total Apple Voucher</h:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column rendered="#{isInvoiceBln}">
+							<p:calendar id="idDepartureDt" label="Check in Date" value="#{salesBean.invoiceVO.departureDt}" navigator="true" showButtonPanel="true" readonlyInput="true" pattern="dd-MMM-yyyy" required="true"/>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<p:inputText id="idIssuedBy" value="#{salesBean.invoiceVO.issuedBy}" readonly="true" style="background:#ccc"/>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<h:selectOneMenu id="idOrderSource" label="Order Source" value="#{salesBean.invoiceVO.orderCd}" effect="fade" required="true" disabled="#{not salesBean.editablePOSUploaded}">
+								<f:selectItem itemLabel="Select One" itemValue=""/>
+								<f:selectItems value="#{bterp:lookupItemList('ordr_sorc')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+								<!-- <p:ajax process="@this" update="idTFairSalerRow"/> -->
+							</h:selectOneMenu>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<p:inputText id="idInvDue" label="Invoice Due" value="#{salesBean.invoiceVO.invoiceDue}" readonly="true" style="background:#ccc;">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>
+							</p:inputText>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<p:inputText id="idGdsBookingRef" label="GDS Booking Reference" value="#{salesBean.invoiceVO.gdsBookingRef}" maxlength="255"/>
+						</p:column>
+						<p:column rendered="#{isInvoiceBln}" style="display:none">
+							<p:inputText id="idTotalVoucher" label="Total Apple Voucher" value="#{salesBean.invoiceVO.totalVoucherPoint}" maxlength="0" onkeydown="preventBackspace()" readonly="true" style="background:#ccc;"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column rendered="#{isInvoiceBln}"></p:column>
+						<p:column rendered="#{isInvoiceBln}"></p:column>
+						<p:column rendered="#{isInvoiceBln}">Referral SP</p:column>
+					</p:row>
+					<p:row>
+						<p:column rendered="#{isInvoiceBln}"></p:column>
+						<p:column rendered="#{isInvoiceBln}"></p:column>
+						<p:column rendered="#{isInvoiceBln}">
+							<p:inputText id="idTFairSalesPerson" label="Referral SP" value="#{salesBean.invoiceVO.tfairSalerName}" readonly="true" style="background:#ccc;"/>&nbsp;
+							<p:outputPanel rendered="#{salesBean.addEdit or (not salesBean.addEdit and empty salesBean.invoiceVO.bookingId) or (not empty salesBean.invoiceVO.bookingId and not salesBean.invoiceVO.isLockSP)}">
+								<p:commandButton icon="ui-icon-search" actionListener="#{salesBean.loadEmployeeList}" oncomplete="varTFairSalerListDialog.show()" update=":idTFairSalerListDialog" process="@this" />
+							</p:outputPanel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+				<p:panelGrid>
+					<p:row rendered="#{isInvoiceBln}">
+						<p:column style="width: 50%">
+							<p:commandButton value="Add Document Ref" actionListener="#{salesBean.loadInvRefList(false, false, false, false)}" oncomplete="varInvNoDialog.show()" update=":idInvNoDialog" process="@this"/>
+<!-- 							<p:commandButton value="Add #{salesBean.docTypeDesc} Ref" actionListener="#{salesBean.loadInvRefList(false, false, false)}" oncomplete="varInvNoDialog.show()" update=":idInvNoDialog" process="@this"/>
+ -->						</p:column>
+						<p:column>
+							<p:commandButton value="Add Exchange Order" actionListener="#{salesBean.loadExOrderList}" update=":idEOListDialog" oncomplete="varEOListDialog.show()" process="@this"/>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{isInvoiceBln}">
+						<p:column style="vertical-align: top;">
+							<p:panel id ="idInvRefListPanel" style="border:none">
+								<p:dataTable id="idInvRefListTable" value="#{salesBean.invoiceVO.invoiceRefVOList}" var="invRefVO"
+									paginator="true" rows="10" 
+									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+									rendered="#{not empty salesBean.invoiceVO.invoiceRefVOList}">
+									<p:column headerText="Delete" style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteInvRef(invRefVO)}" update=":idAddInvoiceForm:idInvRefListPanel" process="@this"/>
+									</p:column>
+									
+									<p:column headerText="Invoice No">
+										<p:commandLink id="idInvRefNo"
+											actionListener="#{salesInvBean.handleInvRefNoClick(invRefVO)}" value="#{invRefVO.invRefCode ne null ? (invRefVO.docTypeCd eq 'P' ? salesBean.psPrefixVal : salesBean.invPrefixVal).concat(' ').concat(invRefVO.invRefCode) : null}"
+											style="color: #db3333;text-decoration: underline;margin-right: 10px;"
+											update=":idAddInvoiceRefDialog" process="@this" oncomplete="varAddInvoiceRefDialog.show()">	
+										</p:commandLink>
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+						<p:column style="vertical-align: top;">
+							<p:panel id ="idEOListPanel" style="border:none">
+								<p:dataTable id="idEOListTable" value="#{salesBean.invoiceVO.eoInvList}" var="eoInvVO"
+									paginator="true" rows="10" 
+									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+									rendered="#{not empty salesBean.invoiceVO.eoInvList}">
+									<p:column headerText="Delete" style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteEOInv(eoInvVO)}" update=":idAddInvoiceForm:idEOListPanel" process="@this"/>
+									</p:column>
+									
+									<p:column headerText="Exchange Order No">
+										<h:outputText value="#{eoInvVO.code}"/>
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{isInvoiceBln}">
+						<p:column style="width: 50%">
+							<p:commandButton value="Add Attachment" actionListener="#{salesBean.resetAttachmentForm}" oncomplete="varAddInvoiceAttachmentDialog.show()" update=":idAddInvoiceAttachmentDialog" process="@this" disabled="#{empty salesBean.invoiceVO.code}"/>&nbsp;&nbsp;
+							<p:commandButton value="Import #{salesBean.docTypeDesc} Attachment" actionListener="#{salesBean.loadInvRefList(false, false, true, false)}" oncomplete="varInvNoDialog.show()" update=":idInvNoDialog" process="@this" disabled="#{empty salesBean.invoiceVO.code}"/>
+							<h:outputText escape="false" value="&lt;br/&gt;" rendered="#{empty salesBean.invoiceVO.code}"/>
+							<p:outputLabel rendered="#{empty salesBean.invoiceVO.code}"><span class="required">**</span> Attachment only available while invoice created!</p:outputLabel>
+						</p:column>
+					</p:row>
+					<p:row rendered="#{isInvoiceBln}">
+						<p:column style="vertical-align: top;">
+							<p:panel id ="idInvAttachmentListPanel" style="border:none">
+								<p:dataTable id="idInvAttachmentListTable" value="#{salesBean.invoiceVO.invoiceAttachmentVOList}" var="invAttachVO"
+									paginator="true" rows="10" 
+									paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+									rendered="#{not empty salesBean.invoiceVO.invoiceAttachmentVOList}">
+									<p:column headerText="Delete" style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.setInvoiceAttachmentVO(invAttachVO)}" oncomplete="varDelAttachmentDialog.show()" process="@this"/>
+									</p:column>
+									<p:column headerText="Edit" style="width:50px; text-align:center;">
+										<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.handleInvAttachmentClick(invAttachVO)}" oncomplete="varAddInvoiceAttachmentDialog.show()" update=":idAddInvoiceAttachmentDialog" process="@this"/>
+									</p:column>
+									
+									<p:column headerText="Attachment Type">
+										<p:outputLabel value="#{bterp:lookupItemDesc('attachment_type', invAttachVO.typeCd)}"/>
+									</p:column>
+									
+									<p:column headerText="File Path">
+										<h:outputLink target="_blank" value="#{request.contextPath}#{salesBean.destinationAttachmentPath}/#{invAttachVO.filePath}" rendered="#{!salesBean.isTmpFile}" style="color: #db3333;text-decoration: underline;margin-right: 10px;">
+											<h:outputText value="#{invAttachVO.scannedPath}"/>
+										</h:outputLink>
+										<h:outputLink target="_blank" value="#{request.contextPath}#{salesBean.destinationTmpPath}/#{invAttachVO.filePath}" rendered="#{salesBean.isTmpFile}" style="color: #db3333;text-decoration: underline;margin-right: 10px;">
+											<h:outputText value="#{invAttachVO.scannedPath}"/>
+										</h:outputLink>
+									</p:column>
+								</p:dataTable>
+							</p:panel>
+						</p:column>
+					</p:row>
+				</p:panelGrid>
+			</p:panel>
+		</p:column>
+	</p:row>
+	<p:row rendered="#{isInvoiceBln}">
+		<p:column colspan="2">
+			<p:panelGrid columns="2">
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idSubjLine">RE: </h:outputLabel>
+					</p:column>
+					<p:column>
+						<p:inputText id="idSubjLine" label="RE" size="150" value="#{salesBean.invoiceVO.subjLine}" maxlength="255"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:tabView id="idInvDetailsTab">
+				<p:tab id="idInvDetailsSubTab" title="#{salesBean.docTypeDesc} Details">
+					<p:panelGrid>
+						<p:row>
+							<p:column>
+								<!--p:commandButton value="Add" actionListener="#{salesBean.setInvItemAdd(true)}" oncomplete="varAddInvoiceDetailsDialog.show()" update=":idAddInvoiceDetailsForm" immediate="true"/-->
+								<p:commandButton value="Add" actionListener="#{salesBean.resetInvItemForm}" oncomplete="varAddInvoiceDetailsDialog.show()" update=":idAddInvoiceDetailsDialog" immediate="true"
+									rendered="#{not salesBean.invoiceVO.dateInFinPeriodClosed and not salesBean.hideInvoiceDetailChange}"
+									disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid'}"/>&nbsp;&nbsp;
+									<!-- rendered="#{not salesBean.invoiceVO.dateInFinPeriodClosed and not salesBean.hideInvoiceDetailChange and salesBean.editablePOSUploaded}" -->
+								<p:commandButton value="#{salesBean.editSeq ? 'Close Seq.' : 'Edit Seq.'}" actionListener="#{salesBean.editInvoiceItemSeq}" update=":idAddInvoiceForm:idInvDetailsTab" immediate="true" />&nbsp;&nbsp;
+								<!-- <p:commandButton value="#{salesBean.editBookingSync ? 'Close Sync' : 'Sync Booking'}" actionListener="#{salesBean.editInvoiceDetailBookingSync}" update=":idAddInvoiceForm:idInvDetailsTab" immediate="true"
+									rendered="#{not empty salesBean.invoiceVO.bookingVO and not salesBean.invoiceVO.dateInFinPeriodClosed and not salesBean.hideInvoiceDetailChange and salesBean.editablePOSUploaded}"/>&nbsp;
+								<p:outputLabel rendered="#{not empty salesBean.invoiceVO.bookingId and salesBean.editBookingSync}"><span class="required">**</span> #{salesBean.invoiceVO.bookingVO.quantity} booking pax.</p:outputLabel> -->
+								<p:commandButton value="Import PS Details" actionListener="#{salesBean.loadInvRefList(false, false, false, true)}" oncomplete="varPsNoDialog.show()" update=":idPsNoDialog" immediate="true" rendered="#{salesBean.docTypeCd eq 'P'}"/>
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+					
+					<p:dataTable id="idInvItemListTable" value="#{salesBean.invoiceVO.invoiceItemList}" var="invoiceItemVO" paginator="true" rows="#{salesBean.editSeq || salesBean.editBookingSync ? 100 : 20}"
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50, 100">
+						<p:column headerText="Edit" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onInvoiceItemSelected(invoiceItemVO)}" oncomplete="varAddInvoiceDetailsDialog.show()" process="@this" update=":idAddInvoiceDetailsDialog, :idAddInvoiceForm:idTtlAmt"
+								rendered="#{not salesBean.invoiceVO.dateInFinPeriodClosed and not salesBean.hideInvoiceDetailChange and not invoiceItemVO.isLock}"/>
+								<!-- rendered="#{not salesBean.invoiceVO.dateInFinPeriodClosed and not salesBean.hideInvoiceDetailChange and salesBean.editablePOSUploaded and not invoiceItemVO.isLock}"/> -->
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteInvItem(invoiceItemVO)}" update=":idAddInvoiceForm:idInvDetailsTab,:idAddInvoiceForm:idTtlAmt,:idAddInvoiceForm:idAmtDue,:idAddInvoiceForm:idTtlGST,:idAddInvoiceForm:idEmailPayment" process="@this"
+								rendered="#{not salesBean.invoiceVO.dateInFinPeriodClosed and not salesBean.hideInvoiceDetailChange and not invoiceItemVO.isLock}"
+								disabled="#{salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid'}"/>
+								<!-- rendered="#{not salesBean.invoiceVO.dateInFinPeriodClosed and not salesBean.hideInvoiceDetailChange and salesBean.editablePOSUploaded and not invoiceItemVO.isLock}" -->
+						</p:column>
+						<p:column headerText="Seq." rendered="#{salesBean.editSeq}" style="width:50px; text-align:center;">
+							<p:inputText label="Items Sequence" value="#{invoiceItemVO.seq}" size="3" maxlength="3" onfocus="this.select();"/>
+						</p:column>
+						<p:column headerText="Sync Booking" rendered="#{salesBean.editBookingSync}" style="width:50px; text-align:center;">
+							<p:selectBooleanCheckbox value="#{invoiceItemVO.syncBooking}">
+								<p:ajax event="change" listener="#{salesBean.syncBookingWithInvoiceItem(invoiceItemVO)}"
+									update=":idAddInvoiceForm:idInvDetailsTab:idInvItemListTable,
+											:idAddInvoiceForm:idTtlAmt,:idAddInvoiceForm:idAmtDue,
+											:idAddInvoiceForm:idTtlGST,:idAddInvoiceForm:idEmailPayment"/>
+							</p:selectBooleanCheckbox>
+						</p:column>
+						<!-- <p:column headerText="code" style="width:100px;">
+							<h:outputText value="#{invoiceItemVO.code}"/>
+						</p:column> -->
+						<p:column headerText="Description" style="width:250px;">
+							<h:panelGroup layout="block" style="display: flex; align-items: center;">
+						        <h:outputText value="#{invoiceItemVO.desc}" style="margin-right: 5px;"/>
+						        <p:rowToggler rendered="#{invoiceItemVO.airfare ne 0.0}" />
+						    </h:panelGroup>
+						</p:column>
+						<p:column headerText="Sub Description" style="width:250px;">
+							<h:outputText value="#{invoiceItemVO.subDesc}"/>
+						</p:column>
+						<p:column headerText="Sales Acct">
+							<h:outputText value="#{salesBean.getAcctCd(invoiceItemVO.acctId)}"/>
+						</p:column>
+						<p:column headerText="Sales Desc" style="width:250px;">
+							<h:outputText value="#{salesBean.getAcctDesc(invoiceItemVO.acctId)}"/>
+						</p:column>
+						<p:column headerText="Qty">
+							<h:outputText value="#{invoiceItemVO.qty}"/>
+						</p:column>
+						<p:column headerText="#{salesBean.GSTPeriod ? 'Price Inc. GST' : 'Price/Unit'}" rendered="#{salesBean.invoiceVO.catCd ne 'fne' or salesBean.invoiceVO.catCd eq 'cruise'}">
+							<h:outputText value="#{invoiceItemVO.unitPrice}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>
+						<p:column headerText="Unit Price (MYR)" rendered="#{salesBean.invoiceVO.catCd eq 'fne' or salesBean.invoiceVO.catCd eq 'cruise'}">
+							<p:outputLabel id="idExchange">
+								<i class="fa fa-info-circle" aria-hidden="true" />
+							</p:outputLabel>
+							<pe:tooltip for="idExchange" shared="true" showDelay="300" targetPosition="top left" position="bottom right">
+								<h:outputText value="#{invoiceItemVO.currencyPrice} x #{invoiceItemVO.exRate} " escape="true" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+							<h:outputText value=" #{invoiceItemVO.unitPrice}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>	
+						<!-- <p:column headerText="Amount">
+							<h:outputText value="#{invoiceItemVO.amount}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>
+						<p:column headerText="GST Amount">
+							<h:outputText value="#{invoiceItemVO.taxAmount}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column> -->
+						<p:column headerText="#{salesBean.GSTPeriod ? 'Total Inc. GST' : 'Amount'}">
+							<h:outputText value="#{invoiceItemVO.taxIncAmt}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>
+						<p:column style="width:40px; text-align:center;" rendered="#{salesBean.invPmntAuthVO.salesManager or salesBean.invPmntAuthVO.operationsRole}">
+							<f:facet name="header">
+								<p:selectBooleanCheckbox value="#{salesBean.allLocked}">
+									<p:ajax event="change" listener="#{salesBean.toggleAllLocks}" update=":idAddInvoiceForm:idInvDetailsTab:idInvItemListTable" global="false"/>
+								</p:selectBooleanCheckbox>
+								<br/>
+								<h:outputText value="Lock"/>
+							</f:facet>
+							<p:selectBooleanCheckbox value="#{invoiceItemVO.isLock}">
+								<p:ajax event="change" listener="#{salesBean.changeInvoiceItemLock(invoiceItemVO)}" update=":idAddInvoiceForm:idInvDetailsTab:idInvItemListTable" global="false"/>
+							</p:selectBooleanCheckbox>
+						</p:column>
+						
+						<p:rowExpansion>
+							<!-- <p:column headerText="Edit" style="width:50px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onInvoiceItemSelected(invoiceItemVO)}" oncomplete="varAddInvoiceDetailsDialog.show()" process="@this" update=":idAddInvoiceDetailsDialog, :idAddInvoiceForm:idTtlAmt"
+									rendered="#{not salesBean.invoiceVO.dateInFinPeriodClosed and not salesBean.hideInvoiceDetailChange and salesBean.editablePOSUploaded}"/>
+							</p:column> -->
+					        <h:outputLabel value="Tour Fare: " style="margin-right: 5px; padding-left:115px" />
+					        <h:outputText value="#{invoiceItemVO.tourFare}" style="margin-left: 0;">
+					        	<f:convertNumber pattern="#,##0.00"/>
+					        </h:outputText>
+					        <!-- <p:commandLink id="idCopyButton2"
+								onclick="navigator.clipboard.writeText('#{salesBean.invoiceVO.eInvoiceRnValidationLink}');"
+								update="@form" styleClass="ui-icon ui-icon-copy" global="false" style="display: inline-block; vertical-align: middle;"
+								process="@this"></p:commandLink> -->
+							<br/>
+					        <h:outputLabel value="Airfare: " style="margin-right: 5px; padding-left:115px" />
+					        <h:outputText value="#{invoiceItemVO.airfare}" style="margin-left: 0;">
+					        	<f:convertNumber pattern="#,##0.00"/>
+					        </h:outputText>
+						</p:rowExpansion>
+					</p:dataTable>
+				</p:tab>
+				<p:tab id="idPassengerDetailsSubTab" title="Traveler Details" rendered="#{isInvoiceBln}">
+					<p:panelGrid>
+						<p:row>
+							<p:column>
+								<p:commandButton value="Add" actionListener="#{salesBean.onAddInvoicePax}" oncomplete="varAddInvoicePaxDialog.show()" update=":idAddInvoicePaxDialog" immediate="true"/>&nbsp;&nbsp;
+								<p:commandButton value="Import Traveler" actionListener="#{salesBean.loadInvRefList(true, false, false, false)}" oncomplete="varInvNoToPaxDialog.show()" update=":idInvNoToPaxDialog" immediate="true"/>&nbsp;&nbsp;
+								<p:commandButton value="#{salesBean.editPaxSeq ? 'Close Seq.' : 'Edit Seq.'}" actionListener="#{salesBean.editInvoicePaxSeq}" update=":idAddInvoiceForm:idInvDetailsTab" immediate="true" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+					
+					<p:dataTable id="idInvPaxListTable" value="#{salesBean.invoiceVO.invoicePaxList}" var="invoicePaxVO" paginator="true" rows="10" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50">
+						<p:column headerText="Edit" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onInvoicePaxSelected(invoicePaxVO)}" oncomplete="varAddInvoicePaxDialog.show()" update=":idAddInvoicePaxDialog" process="@this" rendered="#{not invoicePaxVO.isLock}"/>
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteInvPax(invoicePaxVO)}" update=":idAddInvoiceForm:idInvDetailsTab:idInvPaxListTable, :idAddInvoiceForm:idTotalUPoint, :idAddInvoiceForm:idTotalVoucher" process="@this" rendered="#{not invoicePaxVO.isLock}"/>
+						</p:column>
+						<p:column headerText="Seq." rendered="#{salesBean.editPaxSeq}" style="width:50px; text-align:center;">
+							<p:inputText label="Items Sequence" value="#{invoicePaxVO.seq}" size="3" maxlength="3" onfocus="this.select();"/>
+						</p:column>
+						<p:column headerText="Name">
+							<p:commandLink actionListener="#{salesBean.onInvoicePaxSelected(invoicePaxVO)}" update=":idAddInvoicePaxDialog" oncomplete="varAddInvoicePaxDialog.show()" style="color:#CC2EFA;" process="@this" rendered="#{invoicePaxVO.isLock}">
+								<h:outputText value="#{bterp:lookupItemDesc('salutatn', invoicePaxVO.custDetailsVO.salutation)} #{invoicePaxVO.custDetailsVO.lastName} #{invoicePaxVO.custDetailsVO.firstName}"/>
+							</p:commandLink>
+							<h:outputText value="#{bterp:lookupItemDesc('salutatn', invoicePaxVO.custDetailsVO.salutation)} #{invoicePaxVO.custDetailsVO.lastName} #{invoicePaxVO.custDetailsVO.firstName}" rendered="#{not invoicePaxVO.isLock}"/>
+						</p:column>
+						<p:column headerText="Age" style="text-align:center;">
+							<h:outputText value="#{invoicePaxVO.custDetailsVO.age}"/>
+						</p:column>
+						<p:column headerText="Passport Details" style="text-align:center;">
+							<h:outputLink id="idTTIDAttachment" target="_blank" value="#{request.contextPath}#{salesBean.destinationPassportPath}/#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}" style="color: #db3333;text-decoration: underline;" rendered="#{not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.id and not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}">
+								<h:outputText value="#{invoicePaxVO.custDetailsVO.passportIdVO.idNo}"/>
+							</h:outputLink>
+							<h:outputText value="#{invoicePaxVO.custDetailsVO.passportIdVO.idNo}" rendered="#{empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.id or empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}"/>
+							<pe:tooltip for="idTTIDAttachment" shared="true" showDelay="3000"  position="top right"
+								rendered="#{not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath and not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}">
+								<h:outputText value="#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath}" escape="true" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+							<!-- <p:commandLink id="idTTIDAttachment" value="#{invoicePaxVO.custDetailsVO.passportIdVO.idNo}" style="color: #db3333;text-decoration: underline;"
+                           		oncomplete="varPassportImageDialog.show()" 
+                           		process="@this" 
+                           		update=":idPassportImageDialog"
+                           		rendered="#{not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.id}">
+            				</p:commandLink>
+            				<pe:tooltip for="idTTIDAttachment" shared="true" showDelay="3000"  position="top right"
+								rendered="#{not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath and not empty invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}">
+								<h:outputText value="#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.scannedPath}" escape="true" style="white-space: pre-wrap"/>
+							</pe:tooltip> -->
+						</p:column>
+						<p:column headerText="Nationality" style="text-align:center;">
+							<h:outputText value="#{salesBean.handleGrabCountryById(invoicePaxVO.custDetailsVO.countryId)}" />
+						</p:column>
+						<p:column headerText="Room Type" style="text-align:center;">
+							<h:outputText value="#{bterp:lookupItemDesc('room_type', invoicePaxVO.roomTypeCd)}"/>
+						</p:column>
+						<p:column headerText="Room Pairing No" style="text-align:center;">
+							<h:outputText value="#{invoicePaxVO.roomPairingNo}"/>
+						</p:column>
+						<p:column headerText="Item Code" style="text-align:center" rendered="#{salesBean.hideCRM eq false}">
+						    <h:selectOneMenu id="idItemCode" value="#{invoicePaxVO.itemCode}">						        
+						        <f:selectItem itemLabel="Select One"/>					        
+						        <f:selectItems value="#{salesBean.availableItemCode}" var="item" itemLabel="#{item.label}" itemValue="#{item.value}" />				                       
+						    </h:selectOneMenu>
+						</p:column>
+						<p:column headerText="Trvl Ins Type" style="text-align:center;">
+							<h:selectOneMenu id="idTrvlInsType" label="Trvl Ins Type" value="#{invoicePaxVO.travelInsType}" rendered="#{invoicePaxVO.isLock}">
+								<f:selectItem itemLabel="Select One"/>
+					        	<f:selectItems value="#{bterp:lookupItemList('travel_Ins_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+						    </h:selectOneMenu>
+							<h:outputText value="#{bterp:lookupItemDesc('travel_Ins_type', invoicePaxVO.travelInsType)}" rendered="#{not invoicePaxVO.isLock}"/>
+						</p:column>
+						<p:column headerText="Trvl Ins Policy" style="text-align:center;">
+							<h:inputTextarea id="idTrvlInsPolicy" label="Trvl Ins Policy" value="#{invoicePaxVO.travelInsPolicy}" rendered="#{invoicePaxVO.isLock}">
+								<f:validateLength maximum="255"/>
+							</h:inputTextarea>
+							<h:outputText value="#{invoicePaxVO.travelInsPolicy}" rendered="#{not invoicePaxVO.isLock}"/>
+						</p:column>
+						<p:column headerText="Reference No" style="text-align:center;">
+							<h:outputText id="idReferenceNo" value="#{invoicePaxVO.referenceNoPreview}" escape="false" style="display: block; text-align: left;"/>
+							<pe:tooltip for="idReferenceNo" shared="true" showDelay="3000"  position="top right"
+								rendered="#{invoicePaxVO.referenceNoPreview.contains('......')}">
+								<h:outputText value="#{invoicePaxVO.referenceNo}" escape="false" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+						</p:column>
+					</p:dataTable>
+				</p:tab>
+				<p:tab id="idOnlineBookingPassengerDetailsSubTab" title="Online Booking Passengers" rendered="#{salesBean.invoiceVO.orderCd == 'online_booking'}">
+					<p:dataTable id="idOnlineBookingPaxListTable" value="#{salesBean.invoiceVO.onlineBookingPaxList}" var="onlineBookingPaxVO" paginator="true" rows="10" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50">
+						<p:column headerText="Convert" style="width:50px; text-align:center;">
+							<p:commandButton icon="icon-ui-info" actionListener="#{salesBean.convertToPassenger(onlineBookingPaxVO, false)}" update=":idAddInvoiceForm" process="@this"/>
+						</p:column>
+						<p:column headerText="Name">
+							<h:outputText value="#{onlineBookingPaxVO.salutationCd} #{onlineBookingPaxVO.surname} #{onlineBookingPaxVO.givenName}"/>
+						</p:column>
+						<p:column headerText="Nick Name">
+							<h:outputText value="#{onlineBookingPaxVO.nickName}"/>
+						</p:column>
+						<p:column headerText="Room Pairing No" style="text-align:center;">
+							<h:outputText value="#{onlineBookingPaxVO.roomNo}"/>
+						</p:column>
+						<p:column headerText="Gender" style="text-align:center;">
+							<h:outputText value="#{onlineBookingPaxVO.sexCd}"/>
+						</p:column>
+						<p:column headerText="IC" style="text-align:center;">
+							<h:outputText value="#{onlineBookingPaxVO.icNo}"/>
+						</p:column>
+						<p:column headerText="DOB" style="text-align:center;">
+							<h:outputText value="#{onlineBookingPaxVO.dob}">
+								<f:convertDateTime pattern="yyyy-MM-dd"/>
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Passport" style="text-align:center;">
+							<h:outputText value="#{onlineBookingPaxVO.passportNo}"/>
+						</p:column>
+						<p:column headerText="Remark">
+							<h:outputText value="#{onlineBookingPaxVO.remarks}"/>
+						</p:column>
+					</p:dataTable>
+				</p:tab>
+				<p:tab id="idPaymentsSubTab" title="Payments">
+					<p:panelGrid>
+						<p:row>
+							<p:column>
+								<p:commandButton value="Add" actionListener="#{salesBean.onAddInvoicePayment}" oncomplete="varAddInvoicePaymentsDialog.show()" immediate="true" update=":idAddInvoicePaymentsDialog" disabled="#{not salesBean.invPmntAuthVO.pmntAdd}"/>&nbsp;&nbsp;
+								<p:commandButton value="#{salesBean.editPmntSeq ? 'Close Seq.' : 'Edit Seq.'}" actionListener="#{salesBean.editInvoicePmntSeq}" update=":idAddInvoiceForm:idInvDetailsTab" immediate="true" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+					
+					<p:dataTable id="idInvPmntListTable" value="#{salesBean.invoiceVO.invoicePaymentList}" var="invPmntVO" paginator="true" rows="11" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50">
+						<p:column headerText="Edit" style="width:50px; text-align:center;">
+							<!-- <p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onInvoicePaymentSelected(invPmntVO)}" oncomplete="varAddInvoicePaymentsDialog.show()" update=":idAddInvoicePaymentsDialog" process="@this" disabled="#{not salesBean.invPmntAuthVO.pmntUpd}"
+								rendered="#{not salesBean.invoiceVO.dateInFinPeriodClosed}" /> -->
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onInvoicePaymentSelected(invPmntVO)}" oncomplete="varAddInvoicePaymentsDialog.show()" update=":idAddInvoicePaymentsDialog" process="@this"/>
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<!-- <p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteInvPmnt(invPmntVO)}" update=":idAddInvoiceForm:idInvDetailsTab,:idAddInvoiceForm:idAmtPaid,:idAddInvoiceForm:idAmtDue" process="@this" disabled="#{not salesBean.invPmntAuthVO.pmntDel}"
+								rendered="#{not salesBean.invoiceVO.dateInFinPeriodClosed}" /> -->
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteInvPmnt(invPmntVO)}" update=":idAddInvoiceForm:idInvDetailsTab,:idAddInvoiceForm:idAmtPaid,:idAddInvoiceForm:idAmtDue,:idAddInvoiceForm:idEmailPayment" process="@this" disabled="#{not salesBean.invPmntAuthVO.pmntDel}"
+								rendered="#{not bterp:finAndGSTPeriodClosedStatus(salesBean.invoiceVO.companyId, invPmntVO.pmntDt, salesBean.invPmntAuthVO.accountManager)}" />
+						</p:column>
+						<p:column headerText="Seq." rendered="#{salesBean.editPmntSeq}" style="width:50px; text-align:center;">
+							<p:inputText label="Items Sequence" value="#{invPmntVO.seq}" size="3" maxlength="3" onfocus="this.select();"/>
+						</p:column>
+						<p:column headerText="Date">
+							<h:outputText value="#{invPmntVO.pmntDt}">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>
+							</h:outputText>
+						</p:column>
+						<p:column headerText="BD Date">
+							<h:outputText value="#{invPmntVO.cashBookDt}">
+								<f:convertDateTime pattern="dd-MMM-yyyy"/>  
+							</h:outputText>
+						</p:column>
+						<p:column headerText="Payment Type">
+							<h:outputText value="#{bterp:lookupItemDesc('pymt_type', invPmntVO.pmntTypeCd)}"/>
+							&nbsp;
+							<h:outputLink target="_blank" value="#{request.contextPath}#{salesBean.destinationPaymentAttachmentPath}/#{invPmntVO.invoicePaymentAttachmentList[0].filePath}"
+								style="color: #0040FF;text-decoration: underline;"
+								rendered="#{invPmntVO.invoicePaymentAttachmentList ne null and invPmntVO.invoicePaymentAttachmentList.size() gt 0}">
+								<i class="fa fa-upload" /> 
+							</h:outputLink>
+						</p:column>
+						<p:column headerText="Reference No">
+							<h:outputText value="#{invPmntVO.refNo}"/>
+						</p:column>
+						<p:column headerText="Payment For">
+							<h:outputText value="#{invPmntVO.pmntFor}"/>
+						</p:column>
+						<p:column headerText="Recieved From">
+							<h:outputText value="#{invPmntVO.recievedFr}"/>
+						</p:column>
+						<p:column headerText="Amount">
+							<!--h:outputText value="#{invPmntVO.amount}"/-->
+							<h:outputText value="#{invPmntVO.amount}">
+				        		<f:convertNumber pattern="#,##0.00"/>
+				        	</h:outputText>
+						</p:column>
+						<p:column headerText="Issued By">
+							<h:outputText value="#{invPmntVO.issuerId eq NULL ? 'SYSTEM' : salesBean.getUserName(invPmntVO.issuerId)}"/>
+						</p:column>
+						<p:column headerText="Issued Date">
+							<h:outputText value="#{invPmntVO.createdDate}">
+								<f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss a"/>
+							</h:outputText>
+							<p:graphicImage id="idIssuedDate" value="/img/more.png" width="11" style="margin-left: 3px;" rendered="#{not empty invPmntVO.invPmntTooltip}"/>
+							<pe:tooltip for="idIssuedDate" shared="true" showDelay="3000"  position="top right"
+								rendered="#{not empty invPmntVO.invPmntTooltip}" >
+								<h:outputText value="#{invPmntVO.invPmntTooltip}" escape="false" style="white-space: pre-wrap"/>
+							</pe:tooltip>
+						</p:column>
+						<!-- <p:column headerText="Attachment">
+							<h:outputText value="#{invPmntVO.invoicePaymentAttachmentList ne null and invPmntVO.invoicePaymentAttachmentList.size() gt 0}" style="text-transform:uppercase; color:#F00;"/>
+							<i class="fa fa-upload" value="#{invPmntVO.invoicePaymentAttachmentList ne null and invPmntVO.invoicePaymentAttachmentList.size() gt 0}"/>
+						</p:column> -->
+						<p:column style="width:40px; text-align:center;">
+							<f:facet name="header">
+								<p:selectBooleanCheckbox value="#{salesBean.allPrinted}">
+									<p:ajax event="change" listener="#{salesBean.toggleAllPrints}" update=":idAddInvoiceForm:idInvDetailsTab:idInvPmntListTable" global="false"/>
+								</p:selectBooleanCheckbox>
+								<br/>
+								<h:outputText value="Print"/>
+							</f:facet>
+							<p:selectBooleanCheckbox value="#{invPmntVO.print}" rendered="#{invPmntVO.id ne null}"/>
+						</p:column>
+					</p:dataTable>
+				</p:tab>
+				<p:tab id="idVoucherSubTab" title="Vouchers" rendered="#{salesBean.hideCRM eq false}" disabled="#{not salesBean.voucherWorkable}">
+					<p:panelGrid>
+						<p:row>
+							<p:column>
+								<p:commandButton value="Claim Voucher" actionListener="#{custBean.handleVoucherCatalog}" update=":idVoucherCatalogForm" oncomplete="varVoucherCatalogDialog.show()"/>&nbsp;&nbsp;
+								<p:commandButton value="Apply Voucher" actionListener="#{custBean.handleCustomerVoucher(salesBean.custDetailsVO.custId, salesBean.invoiceVO.voucherList)}" update=":idClaimedVoucherDialog" oncomplete="varClaimedVoucherDialog.show()" immediate="true" />
+							</p:column>
+						</p:row>
+					</p:panelGrid>
+					
+					<p:dataTable id="idInvVoucherListTable" value="#{salesBean.invoiceVO.voucherList}" var="invVoucherVO" paginator="true" rows="10" 
+						paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+						rowsPerPageTemplate="20, 30, 50">
+						<!-- <p:column headerText="Edit" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-pencil" actionListener="#{salesBean.onInvoicePaymentSelected(invPmntVO)}" oncomplete="varAddInvoicePaymentsDialog.show()" update=":idAddInvoicePaymentsDialog" process="@this"/>
+						</p:column>
+						<p:column headerText="Delete" style="width:50px; text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.deleteInvPmnt(invPmntVO)}" update=":idAddInvoiceForm:idInvDetailsTab,:idAddInvoiceForm:idAmtPaid,:idAddInvoiceForm:idAmtDue,:idAddInvoiceForm:idEmailPayment" process="@this" disabled="#{not salesBean.invPmntAuthVO.pmntDel}"
+								rendered="#{not bterp:finAndGSTPeriodClosedStatus(salesBean.invoiceVO.companyId, invPmntVO.pmntDt, salesBean.invPmntAuthVO.accountManager)}" />
+						</p:column>
+						<p:column headerText="Seq." rendered="#{salesBean.editPmntSeq}" style="width:50px; text-align:center;">
+							<p:inputText label="Items Sequence" value="#{invPmntVO.seq}" size="3" maxlength="3" onfocus="this.select();"/>
+						</p:column> -->
+						
+						<p:column headerText="Delete" style="text-align:center;">
+							<p:commandButton icon="ui-icon-close" actionListener="#{salesBean.removeInvVoucher(invVoucherVO)}" 
+								update=":idAddInvoiceForm:idInvDetailsTab,:idAddInvoiceForm:idTtlAmt,:idAddInvoiceForm:idAmtDue,:idAddInvoiceForm:idTtlGST,:idAddInvoiceForm:idEmailPayment" process="@this" rendered="#{invVoucherVO.statusCode eq 'P'}"/>
+						</p:column>
+						<p:column headerText="ID" style="text-align:center;">
+							<h:outputText value="#{invVoucherVO.voucherId}"/>
+						</p:column>
+						<p:column headerText="Code" style="text-align:center;">
+							<h:outputText value="#{invVoucherVO.voucherCode}"/>
+						</p:column>
+						<p:column headerText="Points" style="text-align:center;">
+							<h:outputText value="#{invVoucherVO.pointsUsed}"/>
+						</p:column>
+						<p:column headerText="Quantity" style="text-align:center;">
+							<h:outputText value="#{invVoucherVO.qty}"/>
+						</p:column>
+						<p:column headerText="Description">
+							<h:outputText value="#{invVoucherVO.voucherDesc}"/>
+						</p:column>
+						<p:column headerText="Amount" style="text-align:center;">
+							<h:outputText value="#{invVoucherVO.amount}">
+								<f:convertNumber pattern="#,##0.00"/>
+							</h:outputText>
+						</p:column>
+						
+					</p:dataTable>
+				</p:tab>
+			</p:tabView>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column colspan="2">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						#{salesBean.docTypeDesc} Activate &nbsp;
+						<p:selectBooleanButton id="idTrvWarrantChecked" value="#{salesBean.invoiceVO.trvWarrantChecked}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" rendered="#{salesBean.invPmntAuthVO.useTrvlWrrnt and not salesBean.invoiceVO.dateInFinPeriodClosed}"/>
+						
+						<p:outputPanel rendered="#{not empty salesBean.invoiceVO.bookingVO and salesBean.invPmntAuthVO.operationsRoles}">
+							&nbsp;&nbsp;#{salesBean.docTypeDesc} Lock &nbsp;
+							<p:selectBooleanButton value="#{salesBean.invoiceVO.bookingVO.lockStatus}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close">
+								<p:ajax event="change" listener="#{salesBean.changeBookingLockStatus}" global="false" update=":idAddInvoiceForm:idPanelRemarks"/>
+							</p:selectBooleanButton>
+						</p:outputPanel>
+						
+						&nbsp;&nbsp;
+						Skip Auto Submit &nbsp;
+						<p:selectBooleanButton id="idSkipAutoSubmit" value="#{salesBean.invoiceVO.skipAutoSubmit}" onLabel="Yes" offLabel="No" onIcon="ui-icon-check" offIcon="ui-icon-close" />
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:panelGrid>
+				<p:row>
+					<p:column style="width: 120px;padding-top: 10px;vertical-align: top;">
+						<p:outputLabel value="Documents Required"/>
+					</p:column>
+					<p:column>
+						<p:selectManyCheckbox id="idSelNotedItem" value="#{salesBean.invoiceVO.noteItemsList}"  style="width:330px;">
+				        	<f:selectItems value="#{bterp:lookupItemList('note_items')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+						</p:selectManyCheckbox>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+		<p:column>
+			<p:panelGrid id="idAmountPanel">
+				<!-- <p:row>
+					<p:column>
+						<h:outputLabel for="idGSTExcAmt">Total Before GST:</h:outputLabel>
+					</p:column>
+					<p:column>
+						<p:inputText id="idGSTExcAmt" value="#{salesBean.invoiceVO.taxExcAmt}" readonly="true" style="text-align:right;background:#ccc">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idGSTIncAmt">Total After GST:</h:outputLabel>
+					</p:column>
+					<p:column>
+						<p:inputText id="idGSTIncAmt" value="#{salesBean.invoiceVO.taxIncAmt}" readonly="true" style="text-align:right;background:#ccc">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idRoundingAmt">Rounding Adjustment:</h:outputLabel>
+					</p:column>
+					<p:column>
+						<p:inputText id="idRoundingAmt" value="#{salesBean.invoiceVO.roundingAmt}" readonly="true" style="text-align:right;background:#ccc">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row> -->
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idTourFareAmt">Tour Fare</h:outputLabel>
+						<p:inputText id="idTourFareAmt" value="#{salesBean.invoiceVO.tourFareAmt}" readonly="true" style="text-align:right;background:#ccc;margin-left:298px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idAirTicketAmt">Air Ticket</h:outputLabel>
+						<p:inputText id="idAirTicketAmt" value="#{salesBean.invoiceVO.airTicketAmt}" readonly="true" style="text-align:right;background:#ccc;margin-left:298px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idVoucherAmt">Voucher</h:outputLabel>
+						<p:inputText id="idVoucherAmt" value="#{salesBean.invoiceVO.voucherAmt}" readonly="true" style="text-align:right;background:#ccc;margin-left:305px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<p:row rendered="#{salesBean.invoiceVO.disbursementAmt ne 0.0}">
+					<p:column>
+						<h:outputLabel for="idDisbAmt">Disbursement</h:outputLabel>
+						<p:inputText id="idDisbAmt" value="#{salesBean.invoiceVO.disbursementAmt}" readonly="true" style="text-align:right;background:#ccc;margin-left:272px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<!-- <p:outputLabel id="idTotalCurrency">
+							<i class="fa fa-info-circle" aria-hidden="true" />
+						</p:outputLabel>
+						<pe:tooltip for="idTotalCurrency" shared="true" showDelay="300" targetPosition="top left" position="bottom right" rendered="#{salesBean.invoiceVO.catCd eq 'fne'}">
+							<h:outputText value="#{salesBean.invoiceVO.totalCurrency}" escape="true" style="white-space: pre-wrap"/>
+						</pe:tooltip> -->
+						<h:outputLabel for="idTtlAmt">#{salesBean.GSTPeriod ? 'Total Inclusive of GST:' : 'Total Amount Payable:'}</h:outputLabel>
+						<p:inputText id="idTtlAmt" value="#{salesBean.invoiceVO.amount}" readonly="true" style="text-align:right;background:#ccc;margin-left:223px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<!-- 'Joon Hang - hide payment status for split statement' -->
+				<p:row rendered="#{salesBean.invoiceVO.docTypeStatus ne 'SP' or salesBean.showHideAmtDue}">
+					<p:column>
+						<h:outputLabel for="idAmtPaid">Amount Paid:</h:outputLabel>
+						<p:inputText id="idAmtPaid" value="#{salesBean.invoiceVO.amtPaid}" readonly="true" style="text-align:right;background:#ccc;margin-left:274px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<!-- 'Joon Hang - hide payment status for split statement' -->
+				<p:row rendered="#{salesBean.invoiceVO.docTypeStatus ne 'SP' or salesBean.showHideAmtDue}">
+					<p:column>
+						<h:outputLabel for="idAmtDue">Amount Due:</h:outputLabel>
+
+						<p:inputText id="idAmtDue" value="#{salesBean.invoiceVO.balance}" readonly="true" style="text-align:right;background:#ccc;margin-left:275px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+				<!-- 'Joon Hang - hide payment status for split statement' -->
+				<p:row rendered="#{salesBean.invoiceVO.docTypeStatus eq 'SP'}">
+					<p:column>
+						<p:commandButton id="idShowAmtDueButton" value="#{salesBean.showHideAmtDue ? 'Hide' : 'Make it Visible'}" actionListener="#{salesBean.toggleShowHideAmtDue}" update="idAmountPanel"/>
+						<pe:tooltip for="idShowAmtDueButton" value="#{salesBean.showHideAmtDue ? 'Click to hide the Amount Paid and Amount Due details.' : 'Click to show the Amount Paid and Amount Due details.'}"/>
+					</p:column>
+				</p:row>
+				<p:row rendered="#{salesBean.GSTPeriod}">
+					<p:column>
+						<h:outputLabel for="idTtlGST">Total GST:</h:outputLabel>
+
+						<p:inputText id="idTtlGST" value="#{salesBean.invoiceVO.taxAmt}" readonly="true" style="text-align:right;background:#ccc;margin-left:275px">
+							<f:convertNumber pattern="#,##0.00"/>
+						</p:inputText>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column style="width: 250px;">
+			<p:panelGrid id="idPanelRemarks">
+				<p:row>
+					<p:column>
+						<h:outputLabel>Additional Remarks</h:outputLabel>&nbsp;&nbsp;
+						<p:commandButton value="Import Remarks" actionListener="#{salesBean.loadTmpMsgList}" oncomplete="varTmpMsgListDialog.show()" update=":idTmpMsgListDialog" disabled="#{salesBean.disabledRemarks}"/>&nbsp;&nbsp;
+						<p:commandButton value="Import Remarks By #{salesBean.docTypeDesc}" actionListener="#{salesBean.loadInvRefList(false, true, false, false)}" oncomplete="varInvNoDialog.show()" update=":idInvNoDialog" disabled="#{salesBean.disabledRemarks}"/>&nbsp;&nbsp;
+						<p:commandButton value="Edit Remarks" oncomplete="varEditRemarksDialog.show()" update=":idEditRemarks" rendered="#{salesBean.invPmntAuthVO.salesManager and (salesBean.invoiceVO.statusCd eq 'VD' or salesBean.invoiceVO.statusCd eq 'CC')}"/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column rendered="#{!salesBean.disabledRemarks}" ><p:inputTextarea id="idComments" label="Additional Remarks" value="#{salesBean.invoiceVO.remarks}" rows="10" cols="70" style="width:510px;"/></p:column>
+					<p:column rendered="#{salesBean.disabledRemarks}" ><p:inputTextarea id="idDisbabledComments" label="Additional Remarks" value="#{salesBean.invoiceVO.remarks}" rows="10" cols="70" readonly="true" style="background:#ccc;width:510px"/></p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+		<p:column>
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<h:outputLabel>Internal Remarks</h:outputLabel>
+						<!-- <p:commandButton value="empty" style="background-color: white;color: white;border: none;" disabled="true"/> -->
+						<p:commandButton icon="ui-icon-script" value="Remarks Log" actionListener="#{salesBean.loadInvHistoryRemarkList}" oncomplete="varInvLogDialog.show()" update=":idInvLogDialog" style="margin-left: 251px;" />
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column><p:inputTextarea id="idInternalRemarks" label="Internal Remarks" value="#{salesBean.invoiceVO.internalRemarks}" rows="10" cols="70" style="width:510px"/></p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="15" style="width: 1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{salesBean.addInvoice}" update="@form" rendered="#{salesBean.addEdit}"/>
+	<!--p:commandButton value="#{msg['common.button.label.update']}" oncomplete="onValidation(xhr, status, args)" update="@form,:idInvListForm:idInvListTable" rendered="#{not salesBean.addEdit and (salesBean.invoiceVO.statusCd eq 'BL' or salesBean.invoiceVO.statusCd eq 'PD' or salesBean.invoiceVO.statusCd eq 'IN' or salesBean.invoiceVO.statusCd eq 'DP'  or salesBean.invoiceVO.statusCd eq 'FP') }"/-->
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{salesBean.validatePostedInvoiceAmount}" oncomplete="if (args &amp;&amp; !args.validationFailed) varReasonDialog.show();" update="@form" 
+		rendered="#{
+		(
+		not salesBean.addEdit
+		and (
+			salesBean.docTypeCd ne 'I' or (salesBean.invoiceVO.invoiceDt &lt; salesBean.eInvStartDt) or salesBean.invPmntAuthVO.invEditAdhocInv
+			) 
+		and (salesBean.invoiceVO.docTypeCd ne 'P' or salesBean.invoiceVO.docTypeStatus eq 'OP') 
+		and (salesBean.invoiceVO.statusCd eq 'BL' or salesBean.invoiceVO.statusCd eq 'PD' or salesBean.invoiceVO.statusCd eq 'IN' or salesBean.invoiceVO.statusCd eq 'DP'  or salesBean.invoiceVO.statusCd eq 'FP') 
+		and salesBean.invoiceVO.eInvoiceStatus ne 'Submitted' and salesBean.invoiceVO.eInvoiceStatus ne 'Valid'
+		and salesBean.invBeforeEInv
+		)
+		or
+		(
+		not salesBean.addEdit
+		and salesBean.docTypeCd eq 'I'
+		and salesBean.invPmntAuthVO.invEditConvertedInv
+		and (salesBean.invoiceVO.statusCd eq 'BL' or salesBean.invoiceVO.statusCd eq 'PD' or salesBean.invoiceVO.statusCd eq 'IN' or salesBean.invoiceVO.statusCd eq 'DP'  or salesBean.invoiceVO.statusCd eq 'FP') 
+		)
+		}"
+	/>
+	<p:commandButton value="Save Payment/Remark" actionListener="#{salesBean.validatePostedInvoiceAmount}" oncomplete="if (args &amp;&amp; !args.validationFailed) varUpdPmntReasonDialog.show();" update="@form" styleClass="nowrap"
+		rendered="#{
+		not salesBean.addEdit
+		
+		and (salesBean.invoiceVO.docTypeCd ne 'P' or salesBean.invoiceVO.docTypeStatus eq 'OP') 
+		and (salesBean.invoiceVO.statusCd eq 'BL' or salesBean.invoiceVO.statusCd eq 'PD' or salesBean.invoiceVO.statusCd eq 'IN' or salesBean.invoiceVO.statusCd eq 'DP'  or salesBean.invoiceVO.statusCd eq 'FP') 
+		and (not salesBean.invBeforeEInv or salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid')
+		and salesBean.docTypeCd ne 'P'
+		}"
+	/>
+	<p:commandButton value="Save Internal Remark" actionListener="#{salesBean.validatePostedInvoiceAmount}" oncomplete="if (args &amp;&amp; !args.validationFailed) varUpdInternalRemarkReasonDialog.show();" update="@form" styleClass="nowrap"
+		rendered="#{
+		not salesBean.addEdit
+		and (salesBean.invoiceVO.docTypeCd eq 'P' and salesBean.invoiceVO.docTypeStatus eq 'RW') 
+		and (salesBean.invoiceVO.statusCd eq 'BL' or salesBean.invoiceVO.statusCd eq 'PD' or salesBean.invoiceVO.statusCd eq 'IN' or salesBean.invoiceVO.statusCd eq 'DP'  or salesBean.invoiceVO.statusCd eq 'FP') 
+		}"
+	/>
+	<p:commandButton value="Save Item Acct Code" actionListener="#{salesBean.validatePostedInvoiceAmount}" oncomplete="if (args &amp;&amp; !args.validationFailed) varUpdAccReasonDialog.show();" update="@form" styleClass="nowrap"
+		rendered="#{
+		not salesBean.addEdit
+		and salesBean.saveAccCodeOnly
+		and (not salesBean.invBeforeEInv or salesBean.invoiceVO.eInvoiceStatus eq 'Submitted' or salesBean.invoiceVO.eInvoiceStatus eq 'Valid')
+		and salesBean.docTypeCd ne 'P'
+		and false
+		}"
+	/>
+	<p:commandButton value="#{msg['common.button.label.new']}" actionListener="#{salesBean.newInvoice}" update="@form" rendered="#{not salesBean.addEdit and salesBean.invoiceVO.docTypeCd ne 'I' and not (salesBean.invoiceVO.docTypeCd eq 'P' and (salesBean.invoiceVO.docTypeStatus eq 'RW' or salesBean.invoiceVO.docTypeStatus eq 'CV' or salesBean.invoiceVO.docTypeStatus eq 'SP' or salesBean.invoiceVO.statusCd eq 'CC' or salesBean.invoiceVO.statusCd eq 'VD'))}" process="@this"></p:commandButton>
+	
+    <p:spacer width="20"></p:spacer>
+	
+	<p:commandButton icon="ui-icon-mail-closed" value="Email Payment" actionListener="#{salesBean.invoicePaymentEmail}" immediate="true" oncomplete="varEmailPaymentDialog.show()" 
+		update="@form, :idEmailPaymentDialog" rendered="#{not salesBean.addEdit and not (salesBean.invoiceVO.docTypeCd eq 'P' and (salesBean.invoiceVO.docTypeStatus eq 'RW' or salesBean.invoiceVO.docTypeStatus eq 'CV' or salesBean.invoiceVO.docTypeStatus eq 'SP' or salesBean.invoiceVO.statusCd eq 'CC' or salesBean.invoiceVO.statusCd eq 'VD'))}" style="background: red;width: 140px;color:#ffffff;" id="idEmailPayment" disabled="#{salesBean.disabledEmailPayment}"/>
+	<p:commandButton value="Transfer" style="width: 80px;" actionListener="#{salesBean.handleTransfer(false)}" oncomplete="varAvailableTourDepListDialog.show()" update=":idAvailableTourDepList" process="@this"
+		rendered="#{(not empty salesBean.invoiceVO.bookingId and not salesBean.addEdit and salesBean.invoiceVO.bookingTypeCd ne 'CRUISE' and (salesBean.invoiceVO.statusCd ne 'VD' and salesBean.invoiceVO.statusCd ne 'CC'))
+		and (not sessionInfoBean.employeeVO.department.contains('sale') or salesBean.invPmntAuthVO.salesManager) 
+		and not (salesBean.invoiceVO.docTypeCd eq 'P' and (salesBean.invoiceVO.docTypeStatus eq 'RW' or salesBean.invoiceVO.docTypeStatus eq 'CV' or salesBean.invoiceVO.docTypeStatus eq 'SP' or salesBean.invoiceVO.statusCd eq 'CC' or salesBean.invoiceVO.statusCd eq 'VD'))}"/><!--  and not salesBean.invoiceVO.dateInFinPeriodClosed) -->
+	<p:commandButton value="Transfer" style="width: 80px;" actionListener="#{salesBean.handleSelectCruiseTransfer()}" oncomplete="varAvailableCruiseDepListDialog.show()" update=":idAvailableTourDepList" process="@this"
+		rendered="#{(not empty salesBean.invoiceVO.bookingId and not salesBean.addEdit and salesBean.invoiceVO.bookingTypeCd eq 'CRUISE' and (salesBean.invoiceVO.statusCd ne 'VD' and salesBean.invoiceVO.statusCd ne 'CC'))
+		and (not sessionInfoBean.employeeVO.department.contains('sale') or salesBean.invPmntAuthVO.salesManager)
+		and not (salesBean.invoiceVO.docTypeCd eq 'P' and (salesBean.invoiceVO.docTypeStatus eq 'RW' or salesBean.invoiceVO.docTypeStatus eq 'CV' or salesBean.invoiceVO.docTypeStatus eq 'SP' or salesBean.invoiceVO.statusCd eq 'CC' or salesBean.invoiceVO.statusCd eq 'VD'))}"/>
+	<p:commandButton value="Split" actionListener="#{salesBean.beforeSplitPaxStatement}" update="@form, :idSubStatementCntForm" style="width: 80px;" rendered="#{salesBean.docTypeCd == 'P' and not salesBean.addEdit and salesBean.invoiceVO.docTypeStatus eq 'OP' and salesBean.invoiceVO.idParentInv eq null and (salesBean.invoiceVO.statusCd ne 'CC' and salesBean.invoiceVO.statusCd ne 'VD')}" oncomplete="if (args &amp;&amp; !args.validationFailed) varSubStatementCntDialog.show();"/>
+	<p:commandButton icon="ui-icon-mail-closed" value="Notify" actionListener="#{salesBean.invoiceSendEmail}" style="width: 80px;" immediate="true" oncomplete="varSendEmailDialog.show()" update="@form" rendered="#{not salesBean.addEdit and not (salesBean.invoiceVO.docTypeCd eq 'P' and (salesBean.invoiceVO.docTypeStatus eq 'RW' or salesBean.invoiceVO.docTypeStatus eq 'CV' or salesBean.invoiceVO.docTypeStatus eq 'SP' or salesBean.invoiceVO.statusCd eq 'CC' or salesBean.invoiceVO.statusCd eq 'VD'))}" disabled="#{salesBean.disabledRemarks}" />
+	<p:commandButton rendered="#{salesBean.docTypeCd != 'P' and not empty salesBean.invoiceVO.id}" styleClass="nowrap" style="width: 80px;" value="E-Invoice" actionListener="#{salesBean.onEInvoice}" process="@this" update=":idEInvoiceDialog" oncomplete="varEInvoiceDialog.show()"></p:commandButton>
+	<p:commandButton value="Send To Review" update=":idSingleSendReviewDialog" styleClass="nowrap" rendered="#{salesBean.docTypeCd == 'P' and not salesBean.addEdit and salesBean.invoiceVO.docTypeStatus eq 'OP' and (salesBean.invoiceVO.statusCd ne 'CC' and salesBean.invoiceVO.statusCd ne 'VD')}" oncomplete="if (args &amp;&amp; !args.validationFailed) varSingleSendReviewDialog.show();" style="background: orange;width: 120px;"/>
+	
+	<p:spacer width="20"></p:spacer>
+	
+	<p:commandButton icon="ui-icon-print" value="Print" actionListener="#{salesBean.printInvoice('Invoice')}" ajax="false" style="width: 80px;" rendered="#{not salesBean.addEdit and not (salesBean.invoiceVO.docTypeCd eq 'P' and (salesBean.invoiceVO.docTypeStatus eq 'RW' or salesBean.invoiceVO.docTypeStatus eq 'CV' or salesBean.invoiceVO.docTypeStatus eq 'SP' or salesBean.invoiceVO.statusCd eq 'CC' or salesBean.invoiceVO.statusCd eq 'VD'))}" />
+	<p:commandButton icon="ui-icon-print" value="Digital" actionListener="#{salesBean.printInvoiceWithLetterHead('Invoice')}" ajax="false" style="width: 80px;" rendered="#{not salesBean.addEdit}" />
+<!--<p:commandButton icon="ui-icon-print" value="Receipt" actionListener="#{salesBean.printInvoice('Receipt')}" ajax="false" style="width: 80px;" process="@this" rendered="#{not salesBean.addEdit and (salesBean.invoiceVO.invoicePaymentList.size() gt 0) and not (salesBean.invoiceVO.docTypeCd eq 'P' and (salesBean.invoiceVO.docTypeStatus eq 'RW' or salesBean.invoiceVO.docTypeStatus eq 'CV' or salesBean.invoiceVO.docTypeStatus eq 'SP'  or salesBean.invoiceVO.statusCd eq 'CC' or salesBean.invoiceVO.statusCd eq 'VD'))}"/> -->
+	<p:commandButton icon="ui-icon-print" value="Receipt" actionListener="#{salesBean.printInvoice('Receipt')}" ajax="false" style="width: 80px;" process="@this" rendered="#{not salesBean.addEdit and not (salesBean.invoiceVO.docTypeCd eq 'P' and (salesBean.invoiceVO.docTypeStatus eq 'CV' or salesBean.invoiceVO.docTypeStatus eq 'SP' or salesBean.invoiceVO.statusCd eq 'CC' or salesBean.invoiceVO.statusCd eq 'VD'))}"/> 
+	<p:commandButton icon="ui-icon-mail-closed" value="Email" actionListener="#{salesBean.invoiceEmail}" immediate="true" oncomplete="varEmailInvoiceDialog.show()" 
+		update="@form, :idEmailInvoiceDialog" rendered="#{not salesBean.addEdit and not (salesBean.invoiceVO.docTypeCd eq 'P' and (salesBean.invoiceVO.docTypeStatus eq 'RW' or salesBean.invoiceVO.docTypeStatus eq 'CV' or salesBean.invoiceVO.docTypeStatus eq 'SP' or salesBean.invoiceVO.statusCd eq 'CC' or salesBean.invoiceVO.statusCd eq 'VD'))}" style="background: blue;width: 80px;color:#ffffff;"/>
+	
+	<p:spacer width="20"></p:spacer>
+	
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{salesBean.closeForm}" update="@form, :idInvListForm" process="@this" oncomplete="varAddInvoiceDialog.hide()">
+		<p:resetInput target="idAddInvoiceForm" />
+	</p:commandButton>
+	
+</h:panelGrid>
+</ui:composition>

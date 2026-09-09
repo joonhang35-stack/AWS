@@ -1,0 +1,29 @@
+package com.bcs.zsg.common.helper;
+
+import org.apache.commons.lang.StringUtils;
+import org.quartz.Job;
+
+import com.bcs.zsg.scheduler.SchedulerApp;
+import com.bcs.zsg.scheduler.helper.EnumJobKey;
+import com.bcs.zsg.scheduler.helper.TriggerType;
+
+public class SchedulerUtils {
+
+	public static void rescheduleJob(String time, EnumJobKey jobKey, Class<? extends Job> clazz, String jobName, boolean isRemoveJob) throws Exception {
+		String timePattern = "";
+		if (StringUtils.isNotBlank(time)) { // 0 59 12 1/1 * ? * Daily at 12:59  ||  0/30 * * * * ? every 30 sec
+			String[] timeSplitList = time.split(":");
+			timePattern = "0 " + (StringUtils.equals(timeSplitList[1], "00") ? "0" : timeSplitList[1]) + " " + timeSplitList[0] + " 1/1 * ? *";
+			
+			if (isRemoveJob) {
+				SchedulerApp.getInstance().removeJob(jobKey, TriggerType.Schedule.toString(), jobName);
+			}
+			SchedulerApp.getInstance().scheduledJob(jobKey, 
+					TriggerType.Schedule, clazz, jobName, timePattern);
+		}
+	}
+	
+	public static void scheduleJob(String time, EnumJobKey jobKey, Class<? extends Job> clazz, String jobName) throws Exception {
+		rescheduleJob(time, jobKey, clazz, jobName, true);
+	}
+}

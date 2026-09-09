@@ -1,0 +1,273 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="headIncludes">
+<style>
+	table.column-button td {
+		border:0 !important;
+	}
+	td.group-color-0 {
+		background: #FFFFFF;
+	}
+	td.group-color-1 {
+		background: #FCFCD6;
+	}
+	td.group-color-2 {
+		background: #FDE7BF;
+	}
+	td.group-color-3 {
+		background: #FFCCCC;
+	}
+</style>
+</ui:define>
+
+<ui:define name="content">
+<p:panel header="Tour Insurance">
+<h:form id="idForm">
+    <p:growl id="msg"/>
+    <h:panelGrid columns="14" cellpadding="0" cellspacing="8" style="margin-bottom:10px; width:1px">
+    	<h:outputLabel>Tour Code</h:outputLabel>
+		<h:outputLabel>Date From</h:outputLabel>
+		<h:outputLabel>Date To</h:outputLabel>
+		<h:outputLabel>Category</h:outputLabel>
+		<h:outputLabel>Country</h:outputLabel>
+		<h:outputLabel>Policy(F)</h:outputLabel>
+		<h:outputLabel>Policy(S)</h:outputLabel>
+		<h:outputLabel>Issued(F)</h:outputLabel>
+		<h:outputLabel>Issued(S)</h:outputLabel>
+		<h:outputLabel>Status</h:outputLabel>
+		<h:outputLabel>Tour Status</h:outputLabel>
+<!-- 		<h:outputLabel>Export Range</h:outputLabel>
+ -->
+ 		<h:outputLabel/>
+		<h:outputLabel/>
+		<h:panelGroup colspan="14"/>
+		
+		<p:column>
+			<p:inputText id="idTourCode" value="#{tourInsBean.searchParamVO.obj8}" style="width:150px"/>
+			<p:watermark for="idTourCode" value="Tour Code"/>
+		</p:column>
+		<p:calendar value="#{tourInsBean.searchParamVO.fromDate}" id="idFromDate" showButtonPanel="true" size="17"
+			pattern="#{config['date.display.pattern']}" navigator="true" display="inline"/>
+		<p:calendar value="#{tourInsBean.searchParamVO.toDate}" id="idToDate" showButtonPanel="true" size="17"
+			pattern="#{config['date.display.pattern']}" navigator="true" display="inline"/>
+		<h:selectOneMenu id="idTourCat" label="Category" value="#{tourInsBean.searchParamVO.obj5}">
+			<f:selectItem itemLabel="- Select one -"/>
+			<f:selectItems value="#{tourInsBean.tourCatViewList}" var="catVO" itemLabel="#{catVO.desc}" itemValue="#{catVO.id}" />
+		</h:selectOneMenu>
+		<p:selectCheckboxMenu id="idCountry" label="Country" value="#{tourInsBean.searchParamVO.arrayObj1}" 
+			filter="true" filterMatchMode="contains" style="display:block;">
+			<f:selectItems value="#{tourInsBean.countryList}" var="cVO" itemLabel="#{cVO.country}" itemValue="#{cVO.id}"/>
+		</p:selectCheckboxMenu>
+		<h:selectOneMenu id="idPolicyFilterF" label="Policy F" value="#{tourInsBean.searchParamVO.obj1}">
+			<f:selectItem itemLabel="All"/>
+			<f:selectItem itemLabel="Filled" itemValue="0"/>
+			<f:selectItem itemLabel="Blank" itemValue="1"/>
+		</h:selectOneMenu>
+		<h:selectOneMenu id="idPolicyFilterS" label="Policy S" value="#{tourInsBean.searchParamVO.obj6}">
+			<f:selectItem itemLabel="All"/>
+			<f:selectItem itemLabel="Filled" itemValue="0"/>
+			<f:selectItem itemLabel="Blank" itemValue="1"/>
+		</h:selectOneMenu>
+		<h:selectOneMenu id="idIssuedFilterF" label="Issued F" value="#{tourInsBean.searchParamVO.obj2}">
+			<f:selectItem itemLabel="All"/>
+			<f:selectItem itemLabel="Checked" itemValue="1"/>
+			<f:selectItem itemLabel="Uncheck" itemValue="0"/>
+		</h:selectOneMenu>
+		<h:selectOneMenu id="idIssuedFilterS" label="Issued S" value="#{tourInsBean.searchParamVO.obj7}">
+			<f:selectItem itemLabel="All"/>
+			<f:selectItem itemLabel="Checked" itemValue="1"/>
+			<f:selectItem itemLabel="Uncheck" itemValue="0"/>
+		</h:selectOneMenu>
+		<h:selectOneMenu id="idStatus" label="Status" value="#{tourInsBean.searchParamVO.obj3}">
+			<f:selectItem itemLabel="Active" itemValue="AC"/>
+			<f:selectItem itemLabel="Inactive" itemValue="IA"/>
+		</h:selectOneMenu>
+		<h:selectOneMenu id="idTourStatus" label="Status" value="#{tourInsBean.searchParamVO.obj4}">
+			<f:selectItem itemLabel="- Select one -"/>
+			<f:selectItems value="#{bterp:lookupItemList('tour_status')}" var="statusVO" itemLabel="#{statusVO.description}" itemValue="#{statusVO.code}" />
+		</h:selectOneMenu>
+<!-- 		<h:selectOneMenu id="idExportRange" label="Export" value="#{tourInsBean.exportRange}">
+			<f:selectItem itemLabel="More than 7" itemValue="All_Search"/>
+			<f:selectItem itemLabel="From 2 to 7" itemValue="Pax2-7_Search"/>
+		</h:selectOneMenu> -->
+		<p:commandButton icon="ui-icon-search" value="Search" actionListener="#{tourInsBean.loadTourDepartureInsList}" update="@form" />
+		<p:commandButton icon="ui-icon-print" value="Export" actionListener="#{tourInsBean.printTourInsuranceList()}" ajax="false"/>
+	</h:panelGrid>
+	
+	<p:dataTable id="idInsListTable" widgetVar="varInsListTable" value="#{tourInsBean.tourDepList}" var="vo" paginator="true" rows="500" 
+		paginatorTemplate="#{bterp:pageTemplate()}" rowsPerPageTemplate="500, 1000, 1500">
+		
+		<p:column headerText="Date" style="width:250px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<h:outputText value="#{vo.dtDep}">
+				<f:convertDateTime pattern="#{config['date.display.pattern2']}" />
+			</h:outputText>
+		</p:column>
+		<p:column headerText="Category" style="width:80px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<h:outputText value="#{vo.tourCategoryName}"/> 
+		</p:column>
+		<p:column headerText="Country" style="width:100px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<h:outputText value="#{vo.countryName}"/> 
+		</p:column>
+		<p:column headerText="Tour Code" style="width:220px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<p:commandLink actionListener="#{tourInsBean.handleShowBookingListFromSearch(vo)}" oncomplete="varBookingListDialog.show()" update=":idBookingListDialog" style="color:#0040FF;" process="@this">
+				<h:outputText value="#{vo.code}"/>
+			</p:commandLink> 
+			<p:graphicImage id="idTooltipTourCode" value="/img/more.png" width="11" style="margin-left: 3px;" rendered="#{(not empty vo.departDateBadgeCode) or (not empty vo.tourBadgeCode) or (vo.isPrivateTour)}"/>
+			<pe:tooltip for="idTooltipTourCode">
+				<h:panelGroup>
+            		<h:panelGroup rendered="#{not empty vo.departDateBadgeCode}">
+                		<h:outputText value="#{bterp:lookupItemDesc('depart_date_badge', vo.departDateBadgeCode)}"/>
+            		</h:panelGroup>
+            		<h:panelGroup rendered="#{not empty vo.departDateBadgeCode and not empty vo.tourBadgeCode}">
+                		<br />
+            		</h:panelGroup>
+            		<h:panelGroup rendered="#{not empty vo.tourBadgeCode}">
+                		<h:outputText value="#{bterp:lookupItemDesc('tour_badge', vo.tourBadgeCode)}"/>
+            		</h:panelGroup>
+            		<h:panelGroup rendered="#{vo.isPrivateTour}">
+            			<h:outputText value="Private Tour"/>
+            		</h:panelGroup>
+        		</h:panelGroup>
+			</pe:tooltip>
+		</p:column>
+		<p:column headerText="Tour Status" style="width:80px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<h:outputText value="#{bterp:lookupItemDesc('tour_status', vo.tourStatusCd)}"/>
+		</p:column>
+		<p:column headerText="Days" style="width:30px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<h:outputText value="#{vo.numDays}"/> 
+		</p:column>
+		<p:column headerText="Nights" style="width:30px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<h:outputText value="#{vo.numNights}"/> 
+		</p:column>
+		<p:column headerText="Tour Fare" style="width:90px; text-align:right;" styleClass="group-color-#{vo.groupColor}">
+			<h:outputText value="#{vo.fullTwn + vo.miscAdt}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</h:outputText>  
+		</p:column>
+		<p:column headerText="Travel Ins." style="width:80px; text-align:right;" styleClass="group-color-#{vo.groupColor}">
+			<h:outputText value="#{vo.airlineTrvlIns}">
+				<f:convertNumber pattern="#,##0.00"/>
+			</h:outputText>  
+		</p:column>
+		<p:column headerText="Total Pax" style="width:50px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<h:outputText value="#{vo.quantity}"/>
+		</p:column>
+		<p:column headerText="Ins Invoice" style="width:50px; text-align:center;" styleClass="group-color-#{vo.groupColor}">	
+			<p:commandLink id="idIssuedDoc" onclick="navigator.clipboard.writeText('#{vo.totalNotIssuedDocNo}');" global="false" layout="block" >
+				<h:outputText value="#{vo.totalInv - vo.totalNotIssuedDoc} / #{vo.totalInv}"/>
+			</p:commandLink>
+			<pe:tooltip for="idIssuedDoc" shared="true" showDelay="0" myPosition="left center" atPosition="right center"
+				rendered="#{not empty vo.totalNotIssuedDocNo}">
+				<h:outputText value="#{vo.totalNotIssuedDocNo}" escape="true" style="white-space: pre-wrap"/>
+			</pe:tooltip>
+			<p:commandLink onclick="copyTextFromInput('#{vo.copyPasteDetails}');" global="false" actionListener="#{tourInsBean.onCopyClick}" update="@form" process="@this">
+				<i class="fa fa-clipboard" />
+			</p:commandLink>
+		</p:column>
+		<p:column headerText="Ins. Policy (F)" style="width:130px;" styleClass="group-color-#{vo.groupColor}">
+			<h:inputTextarea id="idPolicyF" rows="2" value="#{vo.travelInsPolicyF}" disabled="#{!vo.addEdit}" style="width:95%"/>
+		</p:column>
+		<p:column headerText="Issued(F)" style="width:50px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<p:selectBooleanCheckbox id="idIssuedF" value="#{vo.isIssuedF}" disabled="#{!vo.addEdit}"/>
+		</p:column>
+		<p:column headerText="Ins. Policy (S)" style="width:130px;" styleClass="group-color-#{vo.groupColor}">
+			<h:inputTextarea id="idPolicyS" rows="2" value="#{vo.travelInsPolicyS}" disabled="#{!vo.addEdit}" style="width:95%">
+				<f:validateLength maximum="255"/>
+			</h:inputTextarea>
+		</p:column>
+		<p:column headerText="Issued(S)" style="width:50px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<p:selectBooleanCheckbox id="idIssuedS" value="#{vo.isIssuedS}" disabled="#{!vo.addEdit}"/>
+		</p:column>
+		<p:column headerText="Remain T/C" style="width:50px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<p:selectBooleanCheckbox id="idRemainTc" value="#{vo.isRemainTc}" disabled="#{!vo.addEdit}"/>
+		</p:column>
+		<p:column headerText="Remarks" styleClass="group-color-#{vo.groupColor}">
+			<h:inputTextarea id="idInsRemarks" rows="2" value="#{vo.insuranceRemarks}" disabled="#{!vo.addEdit}" style="width:95%"/>
+		</p:column>
+		<p:column headerText="Updated By" style="width:80px; text-align:center;" styleClass="group-color-#{vo.groupColor}">
+			<p:outputLabel id="idUpdatedInfo" value="View" rendered="#{not empty vo.updatedBy}">
+			   <i class="fa fa-info-circle" aria-hidden="true" />
+			</p:outputLabel>
+		   <pe:tooltip for="idUpdatedInfo" shared="true" showDelay="300" targetPosition="top right" position="bottom right" rendered="#{not empty vo.updatedBy}">
+				<h:outputText value="#{vo.updatedBy} " style="white-space: pre-wrap" escape="false"/>
+				<!-- <h:outputText value="On: #{vo.updatedDate}[BR]" style="white-space: pre-wrap">
+					<f:convertDateTime pattern="dd-MMM-yyyy HH:mm:ss" />
+				</h:outputText> -->
+		   </pe:tooltip>
+		</p:column>
+		<p:column style="width:80px;">
+			<h:panelGrid columns="2" id="idColumnButton" style="border:0 !important;" styleClass="column-button">
+				<p:commandButton icon="ui-icon-pencil" actionListener="#{vo.setAddEdit(true)}" rendered="#{!vo.addEdit and vo.statusCode eq 'AC'}"
+					update=":idForm:idInsListTable"/>
+				<p:commandButton icon="ui-icon-print" actionListener="#{tourInsBean.printTourInsuranceNameList(vo)}" ajax="false" rendered="#{!vo.addEdit and vo.statusCode eq 'AC'}"/>
+				<p:commandButton icon="ui-icon-disk" actionListener="#{tourInsBean.saveTourDepartureInsurance(vo)}" rendered="#{vo.addEdit}"
+					update=":idForm:idInsListTable"/>
+				<p:commandButton icon="ui-icon-close" actionListener="#{vo.setAddEdit(false)}" rendered="#{vo.addEdit}"
+					update=":idForm:idInsListTable"/>
+			</h:panelGrid>
+		</p:column>
+	</p:dataTable>
+</h:form>
+</p:panel>
+
+<!--
+	DIALOG - BOOKING LIST
+-->
+<p:dialog id="idBookingListDialog" header="Booking Made"
+	widgetVar="varBookingListDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" hideEffect="fade" showEffect="fade"
+	closable="false">
+	<h:form id="idBookingListForm">
+		<ui:include src="booking_list.xhtml" />
+	</h:form>
+</p:dialog>
+
+<!--
+	DIALOG - BOOKING DETAILS
+-->
+<p:dialog id="idBookingDetailsDialog" header="Booking Details"
+	widgetVar="varBookingDetailsDialog" modal="true" resizable="false"
+	dynamic="true" draggable="true" closable="false">
+	<h:form id="idBookingDetailsForm">
+		<ui:include src="booking_details.xhtml" />
+	</h:form>
+</p:dialog>
+
+<p:dialog id="idAddInvoiceRefDialog" header="Invoice"
+	widgetVar="varAddInvoiceRefDialog" modal="true" resizable="false"
+	dynamic="true" closable="true" styleClass="invoiceRefDialog">
+	<h:form id="idAddInvoiceRefForm">
+		<div style="height:550px;">
+		<ui:include src="../../sales/inv/add_ref_invoice.xhtml" />
+		</div>
+	</h:form>
+</p:dialog>
+
+<!-- <p:dialog id="idPassportImageDialog"
+			widgetVar="varPassportImageDialog" header="Passport Image"
+			modal="true" resizable="false" draggable="true" closable="true"
+			width="800" height="600">
+			<h:form style="height: 100%;">
+				<iframe
+					src="#{request.contextPath}#{salesBean.destinationPassportPath}/#{invoicePaxVO.custDetailsVO.passportIdVO.identityDetailVO.filePath}"
+					style="width: 100%; height: 100%;" frameborder="0"></iframe>
+				<h:panelGrid columns="1">
+					<p:commandButton value="#{msg['common.button.label.cancel']}"
+						oncomplete="varPassportImageDialog.hide();" />
+				</h:panelGrid>
+			</h:form>
+		</p:dialog> -->
+
+</ui:define>
+</ui:composition>

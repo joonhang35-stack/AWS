@@ -1,0 +1,136 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+					template="/WEB-INF/views/layouts/main.xhtml"
+					xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<ui:define name="content">
+
+<p:panel header="Sales Commission Report" toggleable="true" toggleSpeed="500">
+	<h:form id="idReportForm">
+		<p:growl id="msg"/>
+		
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:110px;">
+					<h:outputLabel>Departure Date</h:outputLabel>
+				</p:column>
+				<p:column style="width:10px;">
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column style="width:80px;">
+				 	<p:calendar id="idDepartureDateFr" label="Departure Date From" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{salesCommReportBean.searchParamVO.obj1}"/>
+					<p:watermark for="idDepartureDateFr" value="Departure Date From" />
+				</p:column>
+				<p:column style="width:80px;">
+					<p:calendar id="idDepartureDateTo" label="Departure Date To" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{salesCommReportBean.searchParamVO.obj2}"/>
+					<p:watermark for="idDepartureDateTo" value="Departure Date To" />
+				</p:column>
+				<p:column>
+					<p:commandButton icon="ui-icon-print" value="Print [Excel]" actionListener="#{salesCommReportBean.print('XLS')}" ajax="false" style="width:120px" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Invoice Date</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+				 	<p:calendar id="idInvoiceDateFr" label="Invoice Date From" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{salesCommReportBean.searchParamVO.obj3}"/>
+					<p:watermark for="idInvoiceDateFr" value="Invoice Date From" />
+				</p:column>
+				<p:column>
+					<p:calendar id="idInvoiceDateTo" label="Invoice Date To" pattern="dd-MMM-yyyy" navigator="true" showButtonPanel="true" value="#{salesCommReportBean.searchParamVO.obj4}"/>
+					<p:watermark for="idInvoiceDateTo" value="Invoice Date To" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Department</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+				 	<p:selectCheckboxMenu label="Department" value="#{salesCommReportBean.idDepartmentList}" filter="true" filterMatchMode="startsWith">
+						<f:selectItems value="#{salesCommReportBean.salesCommConfigList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.department}"/>
+					</p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Staff Department</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu label="Staff Department" value="#{salesCommReportBean.idStaffDepartmentList}" filter="true" filterMatchMode="startsWith">
+				        <f:selectItems value="#{bterp:lookupItemList('dept_type')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+				    </p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Sales Person</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+				 	<p:selectCheckboxMenu label="Sales Person" value="#{salesCommReportBean.idSalesPersonList}" filter="true" filterMatchMode="startsWith">
+						<f:selectItems value="#{salesCommReportBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+					</p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel>Referral SP</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+				 	<p:selectCheckboxMenu label="Referral SP" value="#{salesCommReportBean.idRefSalesPersonList}" filter="true" filterMatchMode="startsWith">
+						<f:selectItems value="#{salesCommReportBean.employeeList}" var="vo" itemValue="#{vo.id}" itemLabel="#{vo.userVO.name}"/>
+					</p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			
+			<p:row>
+				<p:column>
+					<h:outputLabel>Order Source</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectCheckboxMenu label="Order Source" value="#{salesCommReportBean.idOrderSourceList}" filter="true" filterMatchMode="startsWith">
+				        <f:selectItems value="#{bterp:lookupItemList('ordr_sorc')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"/>
+				    </p:selectCheckboxMenu>
+				</p:column>
+			</p:row>
+			
+			<p:row>
+				<p:column></p:column>
+				<p:column>
+					<p:separator style="width:2px;height:20px"/>
+				</p:column>
+				<p:column>
+					<p:selectBooleanCheckbox value="#{salesCommReportBean.hideCreditNote}" itemLabel="Hide Credit Note" style="width:150px; display:block;"/>
+				</p:column>
+			</p:row>
+			
+		</p:panelGrid>
+	</h:form>
+</p:panel>
+	
+</ui:define>
+</ui:composition>

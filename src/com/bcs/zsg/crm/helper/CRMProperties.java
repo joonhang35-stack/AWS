@@ -1,0 +1,57 @@
+package com.bcs.zsg.crm.helper;
+
+import org.apache.commons.lang.StringUtils;
+
+import com.bcs.zsg.core.helper.PropertiesLookup;
+
+public final class CRMProperties {
+	public static String PROPERTYFILE = "crm-innoqb.properties";
+	
+	public static String SYSTEM_API_SANDBOX = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.sandbox");
+	public static String SYSTEM_API_ACTUAL = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.actual");
+	
+	public static String SYSTEM_APP_CONTEXT = PropertiesLookup.getProperty(PROPERTYFILE, "system.application.context");
+	
+	public static String SYSTEM_API_REQUEST_HEADER_HOST = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.request.header.host");
+	public static String SYSTEM_REQUEST_HEADER_TENANT_ID = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.request.header.tenant.id");
+	public static String SYSTEM_REQUEST_HEADER_AUTHORIZATION = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.request.header.authorization");
+	public static String SYSTEM_API_REQUEST_HEADER_CONTENT_TYPE = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.request.header.contenttype");
+	
+	public static String API_POSTING_SALES_INVOICE = PropertiesLookup.getProperty(PROPERTYFILE, "api.posting.sales.inv");
+	public static String API_RETRIEVE_SALES_INVOICE = PropertiesLookup.getProperty(PROPERTYFILE, "api.retrieve.sales.inv");
+	
+	public static String API_POSTING_MEMBER = PropertiesLookup.getProperty(PROPERTYFILE, "api.posting.member");
+	public static String API_RETRIEVE_MEMBER = PropertiesLookup.getProperty(PROPERTYFILE, "api.retrieve.member");
+	
+	public static String API_POSTING_CONTACT = PropertiesLookup.getProperty(PROPERTYFILE, "api.posting.contact");
+	public static String API_RETRIEVE_CONTACT = PropertiesLookup.getProperty(PROPERTYFILE, "api.retrieve.contact");
+	
+	public static String SYSTEM_API_POSTING_SALES_SCHEDULER = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.posting.sales.scheduler");
+	public static String SYSTEM_API_POSTING_SALES_SCHEDULER_TIME_MINS = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.posting.sales.scheduler.timeminute");
+	
+	public static String SYSTEM_API_POSTING_CUSTOMER = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.posting.customer");
+//	public static String SYSTEM_API_POSTING_CUSTOMER_SCHEDULER_TIME_MINS = PropertiesLookup.getProperty(PROPERTYFILE, "system.api.posting.customer.scheduler.timeminute");
+	
+	public static String TESTING = PropertiesLookup.getProperty(PROPERTYFILE, "testing");
+	public static String HIDE = PropertiesLookup.getProperty(PROPERTYFILE, "hide");
+	
+	public static String getSystemApiUrl() {
+		if (TESTING.equals("true")) {
+			return SYSTEM_API_SANDBOX;
+		} else {
+			return SYSTEM_API_ACTUAL;
+		}
+	}
+	
+	public static boolean isTesting() {
+		return StringUtils.equalsIgnoreCase(TESTING, "true");
+	}
+
+	public static boolean isHide() {
+		return StringUtils.equalsIgnoreCase(HIDE, "true");
+	}
+	
+	public static boolean isCustomerPosting() {
+		return StringUtils.equalsIgnoreCase(SYSTEM_API_POSTING_CUSTOMER, "true");
+	}
+}

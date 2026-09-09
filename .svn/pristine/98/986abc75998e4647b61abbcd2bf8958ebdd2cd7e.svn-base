@@ -1,0 +1,46 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varEditlookupDialog.show();
+		} else {
+			varEditlookupDialog.hide();
+		}
+	}
+	</script>
+	
+
+
+<h:panelGrid columns="2" style="margin-bottom:10px; width:5px">
+	
+	<h:outputLabel for="idCode">Code</h:outputLabel>
+	<h:outputText id="idCode" label="Code" value="#{lookUpBean.lookupCategoryVO.code}" style="width:200px" required="true"/>
+	<h:outputLabel for="idDescription">description</h:outputLabel>
+	<p:inputText id="idDescription" label="Description" value="#{lookUpBean.lookupCategoryVO.description}" style="width:200px" required="true"/>
+	<h:outputLabel for="idRemarks">Remarks</h:outputLabel>
+	<p:inputText id="idRemarks" label="Remarks" value="#{lookUpBean.lookupCategoryVO.remarks}" style="width:200px" required="true"/>
+	<h:outputText/>
+	<h:panelGrid id="idButtonGrid" columns="3" style="width: 1px;">
+		<p:commandButton id="idBtnEditSubmit" actionListener="#{lookUpBean.editLookUp}" value="#{msg['common.button.label.save']}" update="@form,:idForm:idLookUpCategoryTable,:idForm:idLookUpCategorySearch" oncomplete="onValidation(xhr, status, args)"/>
+		<p:commandButton id="idBtnEditCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{lookUpBean.resetForm}" update="@form" process="@this" oncomplete="varEditlookupDialog.hide()" global="false">
+			<pe:resetEditableValues for="idEditLookUpForm"/>
+		</p:commandButton>
+	</h:panelGrid>
+	<h:outputText/>
+	
+</h:panelGrid>
+<br/>
+<h:outputLabel><span class="required">*</span> - required field</h:outputLabel>
+
+</ui:composition>

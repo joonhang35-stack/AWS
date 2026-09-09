@@ -1,0 +1,99 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			template="/WEB-INF/views/layouts/main.xhtml">
+	
+<ui:define name="content">
+	<p:panel header="Account Code Config - Cruise">
+		<h:form id="idForm">
+			<p:growl id="msg"/>
+			<h:panelGrid columns="2" style="margin-top: 15px; width: 10px;">
+				<p:commandButton value="#{msg['common.label.action.add']}" actionListener="#{acctCodeConfigBean.addAccountCode}" update=":idForm" />
+			</h:panelGrid>
+			<p:dataTable id="idAccountCodeTable" value="#{acctCodeConfigBean.accountCodeConfigVOList}" var="vo" style="width: 1000px;"> 
+
+				<p:column  headerText="Item Code" style="width:150px;">
+					<h:outputText value="#{vo.code}" rendered="#{not vo.isEditable}"/>
+					<p:selectOneMenu id="idItemCode" label="Item Code" value="#{vo.code}" required="true"
+						filter="true" filterMatchMode="contains" effect="fade" style="width: 150px" rendered="#{vo.isEditable}">
+						<f:selectItem itemLabel="Select One" itemValue=""/>
+						<f:selectItems value="#{acctCodeConfigBean.invEoItemList}" var="itm" itemLabel="#{itm.code} - #{itm.description}" itemValue="#{itm.code}"/>
+						<p:ajax listener="#{acctCodeConfigBean.handleInvEoItemSelect(vo)}" event="change" update=":idForm"/>
+					</p:selectOneMenu>
+				</p:column>
+				<p:column  headerText="Item Description">
+					  <h:outputText value="#{vo.description}"/>
+				</p:column>
+
+				<p:column headerText="Account" style="width:200px;text-align:center"> 
+					<p:autoComplete id="dd" value="#{vo.accountCode}" completeMethod="#{acctCodeConfigBean.complete}" size="10">  
+     					<p:ajax event="itemSelect" listener="#{acctCodeConfigBean.handleAccountCodeKeyUp(vo)}" 
+     						update=":idForm"/>  
+    				</p:autoComplete>&nbsp;
+    				<p:commandButton icon="ui-icon-search" actionListener="#{acctCodeConfigBean.selectAccountCodeConfig(vo)}"
+    					oncomplete="varAcctSubCatList.show()" update=":idAcctSubCatList" process="@this"/>
+    				<p:commandButton icon="ui-icon-close" actionListener="#{acctCodeConfigBean.removeAccountCodeConfig(vo)}"
+    					update=":idForm" process="@this"/>
+				</p:column>
+				<p:column headerText="Account Description" style="width:200px;"> 
+					<h:outputText escape="false" value="#{vo.accountDesc}"/>
+				</p:column>
+				<p:column headerText="Group" style="width:100px;"> 
+					<p:inputText value="#{vo.grouping}" maxlength="3" size="5" required="true" label="Group"/>
+				</p:column>
+				<p:column>
+					<p:commandButton value="#{msg['common.label.action.delete']}" actionListener="#{acctCodeConfigBean.selectAccountCodeConfig(vo)}"
+						process="@this" oncomplete="varDelConfigDialog.show()" rendered="#{vo.isEditable}"/>
+				</p:column>
+				<p:column headerText="Lock Item" style="width:40px; text-align:center;">
+					<p:selectBooleanCheckbox value="#{vo.isLock}"/>
+				</p:column>
+								
+			</p:dataTable> 	
+			
+			<h:panelGrid columns="2" style="margin-top: 15px; width: 10px;">
+				<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{acctCodeConfigBean.saveAccountCode}" update=":idForm" />
+			</h:panelGrid>
+		</h:form>		
+	</p:panel>
+	
+	<!--
+		DIALOG - ACCOUNT SUB CAT LIST
+	-->
+	<p:dialog id="idAcctSubCatList" widgetVar="varAcctSubCatList" modal="true" resizable="false" dynamic="true" draggable="true" closable="true">
+		<h:form id="idAcctListForm">
+			<p:dataTable id="idAcctListTable" value="#{acctCodeConfigBean.acctList}" var="vo" paginator="true" rows="20" 
+				paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+				rowsPerPageTemplate="10, 20, 30" rowKey="#{vo.id}" selectionMode="single" filterEvent="enter">
+				<p:ajax event="rowSelect" listener="#{acctCodeConfigBean.handleSubAcctSelect}" oncomplete="varAcctSubCatList.hide()" update=":idForm"/>
+				 
+				<p:column headerText="Account No" sortBy="#{vo.code}-#{vo.subCode}" filterBy="#{empty vo.subCode ? vo.code : vo.code.concat('-').concat(vo.subCode)}" filterMatchMode="contains">
+					<h:outputText value="#{vo.code}" />  
+					<h:outputText value=" - #{vo.subCode}" rendered="#{not empty vo.subDesc}" />
+				</p:column>
+				<p:column headerText="Description" sortBy="#{vo.desc}, #{vo.subDesc}" filterBy="#{empty vo.subDesc ? vo.desc : vo.desc.concat(',').concat(vo.subDesc)}" filterMatchMode="contains">
+					<h:outputText value="#{vo.desc}" />
+					<h:outputText value=" , #{vo.subDesc}" rendered="#{not empty vo.subDesc}" />
+				</p:column>
+			</p:dataTable>
+		</h:form>
+	</p:dialog>
+
+	<p:confirmDialog widgetVar="varDelConfigDialog"
+		message="Are you sure want to delete this record?">
+		<h:form>
+			<p:growl id="msg" />
+			<p:commandButton value="Yes"
+				actionListener="#{acctCodeConfigBean.deleteAccountCode}"
+				update=":idForm" oncomplete="varDelConfigDialog.hide();" />
+			<p:commandButton value="Cancel" oncomplete="varDelConfigDialog.hide()" />
+		</h:form>
+	</p:confirmDialog>
+</ui:define>
+</ui:composition>

@@ -1,0 +1,76 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+<div style="height:400px; overflow:auto;">
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:150px;"><h:outputLabel for="idType">Type <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<h:selectOneMenu id="idType" label="Type" value="#{airlineBean.airlineScheduleItemVO.typeCd}" effect="fade" required="true">
+				<f:selectItem itemLabel="Depart" itemValue="Depart"/>
+				<f:selectItem itemLabel="Via" itemValue="Via"/>
+				<f:selectItem itemLabel="Transit" itemValue="Transit"/>
+				<f:selectItem itemLabel="Domestic" itemValue="Domestic"/>
+				<f:selectItem itemLabel="Return" itemValue="Return"/>
+			</h:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idFlightCd">Flight Code <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idFlightCd" label="Flight Code" value="#{airlineBean.airlineScheduleItemVO.flightCd}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idFrom">From <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idFrom" label="From" value="#{airlineBean.airlineScheduleItemVO.fromAirportCd}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idTo">To <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idTo" label="To" value="#{airlineBean.airlineScheduleItemVO.toAirportCd}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idETD">ETD <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idETD" label="ETD" value="#{airlineBean.airlineScheduleItemVO.etd}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idETA">ETA <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idETA" label="ETA" value="#{airlineBean.airlineScheduleItemVO.eta}" required="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idDD">Departure Date </h:outputLabel></p:column>
+		<p:column><p:calendar pattern="dd-MMM-yyyy" id="idDD" label="Departure Date" value="#{airlineBean.airlineScheduleItemVO.departureDate}" navigator="true" showButtonPanel="true"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idDA">Arrival Date </h:outputLabel></p:column>
+		<p:column><p:calendar pattern="dd-MMM-yyyy" id="idDA" label="Arrival Date" value="#{airlineBean.airlineScheduleItemVO.arrivalDate}" navigator="true" showButtonPanel="true"/></p:column>
+	</p:row>
+	<!-- <p:row>
+		<p:column><h:outputLabel for="idOverNight">Over Night</h:outputLabel></p:column>
+		<p:column><p:selectBooleanButton id="idOverNight" value="#{airlineBean.airlineScheduleItemVO.isNextDay}" onLabel="Yes" offLabel="No"/></p:column>
+	</p:row> -->
+	<!-- p:row>
+		<p:column><h:outputLabel for="idTktValidity">Ticket Validity (Day) <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:inputText id="idTktValidity" label="Ticket Validity" value="#{airlineBean.airlineScheduleItemVO.tktValidity}" required="true"/></p:column>
+	</p:row -->
+	<p:row>
+		<p:column><h:outputLabel for="idRemarks">Remarks</h:outputLabel></p:column>
+		<p:column><p:inputTextarea id="idRemarks" label="Remarks" value="#{airlineBean.airlineScheduleItemVO.remarks}" style="width:300px;"/></p:column>
+	</p:row>
+</p:panelGrid>
+</div>
+<h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{airlineBean.addAirlineScheduleItem}" update="@form,:idAirlineSchedulesForm:idShowScheduleList, :idAddAirlineScheduleForm" rendered="#{empty airlineBean.airlineScheduleItemVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{airlineBean.updAirlineScheduleItem}" update="@form,:idAirlineSchedulesForm:idShowScheduleList" oncomplete="varEditAirlineScheduleItemDialog.hide()" rendered="#{not empty airlineBean.airlineScheduleItemVO.id}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{airlineBean.resetScheduleForm}" oncomplete="varAddAirlineScheduleItemDialog.hide(),varEditAirlineScheduleItemDialog.hide()" process="@this" update="@form, :idAddAirlineScheduleForm">
+		<pe:resetEditableValues for="idAddAirlineScheduleItemForm,idEditAirlineScheduleItemForm,idAddAirlineScheduleForm"/>
+	</p:commandButton>
+</h:panelGrid>
+
+</ui:composition>

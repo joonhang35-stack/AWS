@@ -1,0 +1,675 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+	  			
+<p:growl id="msg"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+<p:panelGrid>
+	<p:row>
+		<p:column style="width:160px;"><h:outputLabel>Exchange Order No (XO #) </h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idShowEO" label="Exchange Order No" value="#{billPymtBean.exOrderBillVO.eoCode}" disabled="true"/>&nbsp;
+			<p:commandButton actionListener="#{billPymtBean.loadExOrder}" icon="ui-icon-search" oncomplete="varEOListDialog.show()" update=":idEOListDialog" 
+				process="@this" disabled="#{billPymtBean.dateInFinPeriodClosed}"/>
+			<p:commandButton actionListener="#{billPymtBean.resetExOrderForm}" icon="ui-icon-close" update="idShowEO,idEOInvListTable" 
+				process="@this" disabled="#{billPymtBean.dateInFinPeriodClosed}"/>
+			<p:commandButton id="idViewEOButton" icon="ui-icon-carat-1-n" actionListener="#{purchaseEOBean.onEOSelected(billPymtBean.exOrderVO)}" 
+				update=":idViewEODialog" oncomplete="varViewEODialog.show()" disabled="#{empty billPymtBean.exOrderBillVO.eoCode}"/>
+		</p:column>
+		<p:column style="width:80px"><h:outputLabel>Status </h:outputLabel></p:column>
+		<p:column><h:outputLabel value="#{zsg:referenceDataValue('BILL_STATUS', billPymtBean.exOrderBillVO.status)}"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column></p:column>
+		<p:column></p:column>
+		<p:column style="width:100px;"><h:outputLabel for="idEInvoiceStatus">E-Invoice Status</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idEInvoiceStatus" label="E-Invoice Status" value="#{billPymtBean.exOrderBillVO.eInvoiceStatus}" readonly="true" style="background:#ccc" rendered="#{billPymtBean.exOrderBillVO.eInvoiceStatus ne null}"/>
+			<p:inputText id="idEInvoiceStatus2" label="E-Invoice Status" value="#{'Not Submitted'}" readonly="true" style="background:#ccc" rendered="#{billPymtBean.exOrderBillVO.eInvoiceStatus eq null}"/>
+			&nbsp;&nbsp;&nbsp;<p:commandButton icon="ui-icon-info" actionListener="#{billPymtBean.onEInvoice}" process="@this" update=":idEInvoiceDialog" oncomplete="varEInvoiceDialog.show()"></p:commandButton>	
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idSupplierType">Supplier Type </h:outputLabel></p:column>
+		<p:column>
+			<h:outputText id="idSupplierType" label="Supplier Type" value="#{billPymtBean.supplierVO.supplierTypeStr}" disabled="#{billPymtBean.dateInFinPeriodClosed}"/>
+        </p:column>
+        <p:column><h:outputLabel for="idBillNo">Bill No </h:outputLabel></p:column>
+		<p:column>
+			<h:outputLabel id="idBillNo" label="Bill No" value="#{billPymtBean.exOrderBillVO.code}" disabled="#{not enabled}" />
+        </p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idShowSuppName">Supplier Name </h:outputLabel><span class="required">*</span></p:column>
+		<p:column>
+			<p:outputPanel style="display: flex; align-items: center">
+				<p:selectOneMenu id="idShowSuppName" Label="Supplier Name" value="#{billPymtBean.supplierVO.id}" required="true" 
+					disabled="#{billPymtBean.dateInFinPeriodClosed or (billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Submitted' or billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Valid')}" 
+					style="width:350px;" onkeydown="return false;" filter="true" filterMatchMode="contains" onShow="blockSupplierArrowKeys()">  
+		           <f:selectItem itemLabel="Select One" itemValue="" />  
+		           <f:selectItems value="#{billPymtBean.supplierList}" var="vo" itemLabel="#{vo.fullName}" itemValue="#{vo.id}" /> 
+		           <p:ajax update="idViewSupplierButton,idShowSuppName,idSupplierType,idPaymentTerm,tabView:idAPAcct,idShowEO,idViewEOButton,idEOInvListTable,idDueDt" listener="#{billPymtBean.handleSupplierChange}" /> 
+			    </p:selectOneMenu>&nbsp;
+			    <!-- <p:inputText id="idShowSuppName" label="Supplier Name" value="#{billPymtBean.supplierVO.fullName}" readonly="true" style="width: 310px; background:#ccc"/>&nbsp; -->
+			    <!-- <p:commandButton id="idSupplierList" icon="ui-icon-search" oncomplete="varSupplierDialog.show()"/>  -->
+			    <p:commandButton id="idViewSupplierButton" icon="ui-icon-carat-1-n" actionListener="#{purchaseBean.onSupplierSelected(billPymtBean.supplierVO)}" 
+					update=":idViewSupplierDialog" oncomplete="varViewSupplierDialog.show()" disabled="#{empty billPymtBean.supplierVO.id}"/>
+				<p:commandButton id="idEditSupplierButton" icon="ui-icon-pencil" actionListener="#{purchaseBean.onSupplierSelected(billPymtBean.supplierVO)}" 
+					update=":idSuppOptDialog" oncomplete="varSuppOptDialog.show()" disabled="#{empty billPymtBean.supplierVO.id}">
+					<f:setPropertyActionListener value="#{billPymtBean.ACTION_SUPPLIER}" target="#{billPymtBean.postSaveSuplAction}" />
+				</p:commandButton>
+			</p:outputPanel>
+		</p:column>
+        <p:column><h:outputLabel for="idBillDt">Bill Date </h:outputLabel></p:column>
+		<p:column>
+			<p:calendar pattern="#{config['date.display.pattern']}" id="idBillDt" label="Bill Date" 
+						mindate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart, 'dd-MMM-yyyy')}" 
+						maxdate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd, 'dd-MMM-yyyy')}"  
+						value="#{billPymtBean.exOrderBillVO.billDt}" readonlyInput="true" navigator="true" showButtonPanel="true" disabled="#{billPymtBean.dateInFinPeriodClosed}" >
+				<p:ajax update=":idAddFuncForm:idBillDt,:idAddFuncForm:idInvDt" event="dateSelect" listener="#{billPymtBean.exOrderBillVO.setInvoiceDt(billPymtBean.exOrderBillVO.billDt)}"/>
+			</p:calendar>
+        </p:column>
+    </p:row>
+    <p:row>
+    	<p:column><h:outputLabel for="idPayee">Payee </h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idPayeeType" value="#{zsg:referenceDataValue('PAYEE_TYPE', billPymtBean.exOrderBillVO.payeeType)}" readonly="true" style="width: 60px; background:#ccc"/>&nbsp;
+			<p:inputText id="idPayee" label="Payee" value="#{billPymtBean.exOrderBillVO.payeeDisplayName}" readonly="true" style="width: 310px; background:#ccc"/>&nbsp;
+			<p:outputPanel id="idPayeeSearch">
+				<!-- <p:commandButton icon="ui-icon-search" actionListener="#{billPymtBean.loadEmployeeList('PAYEE')}" oncomplete="varEmployeeListDialog.show()" update=":idEmployeeListDialog" process="@this"
+					disabled="#{billPymtBean.dateInFinPeriodClosed or (billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Submitted' or billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Valid')}"/> -->
+				<p:commandButton icon="ui-icon-search" actionListener="#{billPymtBean.loadEmployeeList('PAYEE')}" oncomplete="varProfileListDialog.show()" update=":idProfileListDialog" process="@this"
+					disabled="#{billPymtBean.dateInFinPeriodClosed or (billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Submitted' or billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Valid')}"/>
+				<p:commandButton rendered="#{false}" icon="ui-icon-plus" actionListener="#{billPymtBean.onAddUser}" oncomplete="varUserDialog.show()" update=":idUserDialog" process="@this"
+					disabled="#{billPymtBean.dateInFinPeriodClosed or (billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Submitted' or billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Valid')}"/>&nbsp;
+				<p:commandButton icon="ui-icon-close" actionListener="#{billPymtBean.clearPayee}" update="idPayee idPayeeType idPayeeSearch" process="@this" rendered="#{not empty billPymtBean.exOrderBillVO.idPayee}"
+					disabled="#{billPymtBean.dateInFinPeriodClosed or (billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Submitted' or billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Valid')}"/>
+			</p:outputPanel>
+		</p:column>
+		<p:column></p:column>
+		<p:column></p:column>
+    </p:row>
+	<p:row>
+		<p:column><h:outputLabel>Reason For Expense </h:outputLabel></p:column>
+		<p:column>
+			<p:inputTextarea id="idExpReason" label="Reason For Expense" rows="3" cols="50" value="#{billPymtBean.exOrderBillVO.exReason}"/>
+	 	</p:column>
+		<p:column><h:outputLabel>Comments </h:outputLabel></p:column>
+		<p:column>
+			<p:inputTextarea id="idComments" label="Comments" rows="3" cols="50" value="#{billPymtBean.exOrderBillVO.comments}"/>
+		</p:column>
+	</p:row>
+	<p:row>
+	<p:column><h:outputLabel for="idPaymentTerm">Payment Term</h:outputLabel></p:column>
+		
+	<p:column> 
+	<h:selectOneMenu id="idPaymentTerm" value="#{billPymtBean.exOrderBillVO.paymentTerm}" disabled="#{billPymtBean.dateInFinPeriodClosed}">
+		<f:selectItem itemLabel="Select One" itemValue="" />  
+		<f:selectItems value="#{bterp:lookupItemList('pymt_term')}" var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}"  />
+		<p:ajax event="change" listener="#{billPymtBean.handlePaymentTerm()}" update=":idAddFuncForm:idDueDt"/>
+	</h:selectOneMenu>
+	</p:column>
+	</p:row> 
+	<p:row>
+		<p:column><h:outputLabel for="idInvAmt">Bill Amount <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idInvAmt" label="Bill Amount" value="#{billPymtBean.exOrderBillVO.billAmt}" required="true" 
+				disabled="#{billPymtBean.dateInFinPeriodClosed  or (billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Submitted' or billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Valid')}">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				<p:ajax event="change" update="idTtlAmt,idAmtDue,:idAddAcctSubCatForm" global="false"/>
+			</p:inputText>
+		</p:column>
+		<p:column><h:outputLabel for="idDueDt">Due Date <span class="required">*</span></h:outputLabel></p:column>
+		<p:column><p:calendar pattern="#{config['date.display.pattern']}" id="idDueDt" label="Due Date" value="#{billPymtBean.exOrderBillVO.dueDt}" required="true" navigator="true" showButtonPanel="true" disabled="#{billPymtBean.dateInFinPeriodClosed}"/></p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idInvNo">Sundry Creditors Invoice/CN No </h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idInvNo" label="Sundry Creditors Invoice/CN No" value="#{billPymtBean.exOrderBillVO.cnNumber}" maxlength="100" disabled="#{billPymtBean.dateInFinPeriodClosed}" converter="trimConverter"/>
+		</p:column>
+		<p:column><h:outputLabel>Tour Code </h:outputLabel></p:column>
+		<p:column>
+	        <p:inputText id="idAddTourCd" label="Tour Code" value="#{billPymtBean.exOrderBillVO.tourCode}" readonly="true" size="30" disabled="#{billPymtBean.dateInFinPeriodClosed}"/>&nbsp;
+	        <p:commandButton icon="ui-icon-search" actionListener="#{billPymtBean.loadTour}" update=":idTourCodeList" oncomplete="varTourCodeList.show()" process="@this" disabled="#{billPymtBean.dateInFinPeriodClosed}"/>
+			<p:commandButton icon="ui-icon-close" actionListener="#{billPymtBean.clearTourCode}" update="idAddTourCd idDepDt" process="@this" disabled="#{billPymtBean.dateInFinPeriodClosed}"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idInvDt">Sundry Creditors Invoice/CN Date </h:outputLabel></p:column>
+		<p:column><p:calendar pattern="#{config['date.display.pattern']}" id="idInvDt" label="Sundry Creditors Invoice/CN Date" 
+					mindate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart, 'dd-MMM-yyyy')}" 
+					maxdate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd, 'dd-MMM-yyyy')}" 
+					value="#{billPymtBean.exOrderBillVO.invoiceDt}" readonlyInput="true" navigator="true" showButtonPanel="true" disabled="true"/></p:column><!-- disabled="#{billPymtBean.dateInFinPeriodClosed}" -->
+		<p:column><h:outputLabel for="idDepDt">Departure Date </h:outputLabel></p:column>
+			<!--<p:inputText id="idDepDt" value="#{billPymtBean.exOrderBillVO.depDt}">readonly="true" style="background:#ccc" -->
+			<!--<f:convertDateTime pattern="dd-MMM-yyyy" /> -->
+		<p:column><p:calendar pattern="#{config['date.display.pattern']}" id="idDepDt" label="Departure Date" value="#{billPymtBean.exOrderBillVO.depDt}" navigator="true" showButtonPanel="true" disabled="#{billPymtBean.dateInFinPeriodClosed}"/></p:column>
+ 	</p:row>
+ 	<p:row>
+ 		<p:column>Is E-Invoice?</p:column>
+		<p:column>
+			<!-- <h:outputText id="idTourDesc" value="#{billPymtBean.exOrderBillVO.tourDesc}"/> -->
+			<p:selectOneButton id="idIsEInvoice" value="#{billPymtBean.exOrderBillVO.isEInvoice}" style="display: flex" styleClass="nowrap">
+	            <f:selectItem itemLabel="Yes" itemValue="#{true}" />
+	            <f:selectItem itemLabel="No" itemValue="#{false}" />
+	        </p:selectOneButton>
+		</p:column>
+		<p:column></p:column>
+		<p:column style="width:350px;"></p:column>
+ 	</p:row>
+ 	<p:row>
+   		<p:column colspan="2">
+	   		<p:panel id="idEoBillPersonListTable" style="border:0;" rendered="#{not empty billPymtBean.exOrderBillVO.id}">
+				<p:dataTable value="#{billPymtBean.exOrderBillVO.eoBillPersonList}" var="personVO" paginator="true" rows="5" 
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+					rowsPerPageTemplate="5, 10, 20" style="width:750px;">
+					
+					<f:facet name="header" style="text-align:left;" >
+						<p:commandButton value="Add" actionListener="#{billPymtBean.loadEmployeeList('PERSON')}" oncomplete="varEmployeeListDialog.show()" update=":idEmployeeListDialog" immediate="true"/>
+						Person List
+					</f:facet>
+					<!-- <p:column headerText="Edit" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-pencil" actionListener="#{billPymtBean.loadEmployeeList('PERSON')}" oncomplete="varEmployeeListDialog.show()" update=":idEmployeeListDialog" process="@this"/>
+					</p:column> -->
+					<p:column headerText="Delete" style="width:50px; text-align:center;">
+						<p:commandButton icon="ui-icon-close" actionListener="#{billPymtBean.deleteEoBillPerson(personVO)}" update=":idAddFuncForm:idEoBillPersonListTable" process="@this"/>
+					</p:column>
+					<p:column headerText="Person" style="width:350px;">
+						<!-- <h:outputText value="#{personVO.userName}"/> -->
+						<h:outputText value="#{personVO.idUser eq NULL ? 'SYSTEM' : billPymtBean.getUserName(personVO.idUser)}"/>
+					</p:column>
+					<p:column headerText="Amount" style="width:150px;" styleClass="txt_center">
+						<!-- <h:outputText value="#{personVO.amount}">
+			        		<f:convertNumber pattern="#,##0.00"/>
+			        	</h:outputText> -->
+			        	<p:inputText id="idPersonAmountToAllocate" label="Amount to Allocate" value="#{personVO.amount}" style="text-align:right;">
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							<p:ajax event="blur" listener="#{billPymtBean.onBillPersonCalc()}" update=":idAddFuncForm:idEoBillPersonListTable" process="@this"/>
+						</p:inputText>
+					</p:column>
+					<p:column headerText="Issued By">
+						<h:outputText value="#{personVO.createdBy}"/>
+					</p:column>
+					<p:column headerText="Issued Date">
+						<h:outputText value="#{personVO.createdDate}">
+							<f:convertDateTime pattern="dd-MMM-yyyy hh:mm:ss a"/>
+						</h:outputText>
+					</p:column>
+					
+					<p:columnGroup type="footer">
+			            <p:row>
+			            	<p:column footerText=""/>
+			                <p:column footerText="Total:" style="text-align:right"/>
+			                <p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalAmtPerson)}" style="text-align:right" />
+			                <p:column footerText="" colspan="2"/> 
+			            </p:row>  
+					</p:columnGroup>
+				</p:dataTable>
+			</p:panel>
+    	</p:column>
+    	<p:column></p:column>
+		<p:column></p:column>
+    </p:row>
+ 	<p:row>
+ 		<p:column colspan="4">
+ 			<p:panel id="idEOInvListTable" style="border:0;">
+	 			<p:dataTable widgetVar="purEOInvTable" value="#{billPymtBean.exOrderVO.eoInvList}" var="purEO" rendered="#{not empty billPymtBean.exOrderVO.eoInvList}">
+					<f:facet name="header">
+						AWS Invoices
+					</f:facet>
+					<p:column headerText="View" style="width: 80px; text-align: center;">
+						<!-- <p:commandButton icon="ui-icon-carat-1-n" actionListener="#{salesBean.onInvoiceSelectedEO(purEO)}" 
+							update=":idViewInvoiceDialog" oncomplete="varViewInvoiceDialog.show()"/> -->
+						<p:commandButton icon="ui-icon-carat-1-n" actionListener="#{salesInvBean.handleInvRefNoClick(purEO.invId, false)}"
+							update=":idAddInvoiceRefDialog" oncomplete="varAddInvoiceRefDialog.show()"/>
+					</p:column>
+					<p:column headerText="Invoice No.">
+						<h:outputText rendered="#{purEO.docTypeCd eq 'I'}" value="#{billPymtBean.invPrefixVal} #{purEO.code}" /> 
+						<h:outputText rendered="#{purEO.docTypeCd eq 'P'}" value="#{billPymtBean.psPrefixVal} #{purEO.code}" /> 
+					</p:column>
+					<p:column headerText="Invoice Date"> 
+						<h:outputText value="#{purEO.invDateView}">   
+							<f:convertDateTime pattern="#{config['date.display.pattern']}" />
+						</h:outputText> 
+					</p:column>
+					<p:column headerText="Customer No.">
+						<h:outputText value="#{purEO.customerID}"/>
+					</p:column>
+					<p:column headerText="Customer Name">
+						<h:outputText value="#{purEO.customerName}"/>
+					</p:column>
+					<p:column headerText="Sales Amount">
+						<h:outputText value="#{purEO.salesAmount}">    
+							<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+						</h:outputText>
+					</p:column>
+				</p:dataTable>
+			</p:panel>
+ 		</p:column>
+ 	</p:row>
+ 	<p:row>
+ 		<p:column colspan="4">
+ 			<p:panelGrid>
+				<p:row>
+					<p:column style="width: 50%">
+						<p:commandButton value="Add Attachment" actionListener="#{billPymtBean.resetAttachmentForm}" oncomplete="varAddEOBillAttachmentDialog.show()" update=":idAddEOBillAttachmentDialog" process="@this" disabled="#{empty billPymtBean.exOrderBillVO.code}"/>&nbsp;&nbsp;
+						<h:outputText escape="false" value="&lt;br/&gt;" rendered="#{empty billPymtBean.exOrderBillVO.code}"/>
+						<p:outputLabel rendered="#{empty billPymtBean.exOrderBillVO.code}"><span class="required">**</span> Attachment only available while bill created!</p:outputLabel>
+					</p:column>
+				</p:row>
+				</p:panelGrid>
+				<p:panelGrid style="width: 50%">
+				<p:row>
+					<p:column>
+						<p:panel id ="idEOBillAttachmentListPanel" style="border:none">
+							<p:dataTable id="idEOBillAttachmentListTable" value="#{billPymtBean.exOrderBillVO.billAttachmentList}" var="attachVO"
+								paginator="true" rows="10" 
+								paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink}  Page: {JumpToPageDropdown} {RowsPerPageDropdown}" 
+								rendered="#{not empty billPymtBean.exOrderBillVO.billAttachmentList}">
+								<p:column headerText="Delete" style="width:50px; text-align:center;">
+									<p:commandButton icon="ui-icon-close" actionListener="#{billPymtBean.setBillAttachmentVO(attachVO)}" oncomplete="varDelAttachmentDialog.show()" process="@this"/>
+								</p:column>
+								<p:column headerText="Edit" style="width:50px; text-align:center;">
+									<p:commandButton icon="ui-icon-pencil" actionListener="#{billPymtBean.handleBillAttachmentClick(attachVO)}" oncomplete="varAddEOBillAttachmentDialog.show()" update=":idAddEOBillAttachmentDialog" process="@this"/>
+								</p:column>
+								
+								<p:column headerText="Attachment Type">
+									<p:outputLabel value="#{bterp:lookupItemDesc('eo_bill_attachment_type', attachVO.typeCd)}"/>
+								</p:column>
+								
+								<p:column headerText="File Path">
+									<h:outputLink target="_blank" value="#{request.contextPath}#{billPymtBean.destinationAttachmentPath}/#{attachVO.filePath}" style="color: #db3333;text-decoration: underline;margin-right: 10px;">
+										<h:outputText value="#{attachVO.scannedPath}"/>
+									</h:outputLink>
+								</p:column>
+							</p:dataTable>
+						</p:panel>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+ 		</p:column>
+ 	</p:row>
+	<p:row>
+	<p:column colspan="4">
+	<p:tabView id="tabView" >
+	<p:tab id="tabGLItems" title="General Ledger Items">
+		<p:panelGrid>
+			<p:row>
+				<p:column><h:outputLabel for="idAddCompCode">Company Code </h:outputLabel></p:column>
+				<p:column>
+					<h:outputText id="idAddCompCode" value="#{sessionInfoBean.companyVO.name}"/>
+				</p:column>
+				<p:column><h:outputLabel for="idAPAcct">A/P Acct <span class="required">*</span></h:outputLabel></p:column>
+				<p:column>
+					<h:selectOneMenu id="idAPAcct" label="A/P Acct" value="#{billPymtBean.acctTransVO.acctId}" required="true" disabled="true">
+			           <f:selectItems value="#{billPymtBean.liabilityList}" var="vo" itemLabel="#{vo.desc}" itemValue="#{vo.id}" />
+				    </h:selectOneMenu>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		<p:fieldset id="idTabGLItemsFS" legend="General Ledger Account (G/L Acct) Details ">
+			<p:commandButton value="Add" actionListener="#{billPymtBean.onAddGLAcct}" oncomplete="varAcctSubCatDialog.show()" 
+				update=":idAcctSubCatDialog" process="@this" disabled="#{billPymtBean.dateInFinPeriodClosed  or (billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Submitted' or billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Valid')}" style="margin-bottom:10px;"/>
+				
+			<p:dataTable id="idBillPmntGLAcct" value="#{billPymtBean.acctTransVO.acctTransList}" var="purBillPmnt" rowKey="#{purBillPmnt.code}" selectionMode="single">
+				<p:column headerText="Edit" style="width:1px; text-align:center;">
+					<p:commandButton icon="ui-icon-pencil" actionListener="#{billPymtBean.onGLAcctSelected(purBillPmnt)}"
+						update=":idAddFuncForm:tabView:idBillPmntGLAcct,:idEditAcctDialog," process="@this"
+						oncomplete="varEditAcctDialog.show()"
+						disabled="#{billPymtBean.dateInFinPeriodClosed}"/>
+ 				</p:column>
+				<p:column headerText="Delete" style="width:1px; text-align:center;">
+					<p:commandButton icon="ui-icon-close" actionListener="#{billPymtBean.delGLAcctList(purBillPmnt)}" 
+						update=":idAddFuncForm:tabView:idTabGLItemsFS,:idAddFuncForm:tabView:idBillPmntGLAcct,:idAddFuncForm:msg,:idAddFuncForm:idEOAmt" 
+						process="@this" 
+						disabled="#{billPymtBean.dateInFinPeriodClosed or (billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Submitted' or billPymtBean.exOrderBillVO.eInvoiceStatus eq 'Valid')}"/>
+				</p:column>
+				<p:column headerText="Account No" style="width: 5px;" styleClass="txt_center">
+					<h:outputText value="#{purBillPmnt.code}"/>
+				</p:column>
+				<p:column headerText="Description" style="width: 5px;" styleClass="txt_center">
+					<h:outputText label="Description" value="#{purBillPmnt.desc}"/>
+				</p:column>
+				<p:column headerText="Remarks" style="width: 5px;" styleClass="txt_center">
+					<p:outputLabel id="idRemarks" rendered="#{not empty purBillPmnt.remarks}">
+						<i class="fa fa-info-circle" />
+					</p:outputLabel>
+					<pe:tooltip for="idRemarks" value="#{purBillPmnt.remarks}"></pe:tooltip>
+				</p:column>
+				<p:column headerText="Class Code" style="width: 5px;" styleClass="txt_center">
+			            <h:outputText label="Class Code" value="#{purBillPmnt.eInvoiceClassCode}"/>
+				</p:column>
+				<p:column headerText="Amount" style="width: 5px;" styleClass="txt_center">
+					<h:outputText value="#{purBillPmnt.amount}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+					</h:outputText>
+				</p:column>
+				<p:column headerText="GST Amount" style="width: 5px;" styleClass="txt_center" rendered="#{billPymtBean.GSTPeriod}">
+					<h:outputText value="#{purBillPmnt.taxAmount}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+					</h:outputText>
+				</p:column>
+				<p:column headerText="Amount Inc. GST" style="width: 5px;" styleClass="txt_center" rendered="#{billPymtBean.GSTPeriod}">
+					<h:outputText value="#{purBillPmnt.amountIncludeTax}">
+						<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+					</h:outputText>
+				</p:column>
+			</p:dataTable>
+		</p:fieldset>
+	</p:tab>
+	 <p:tab id="tabPymnt" title="Payments">	
+		<p:commandButton value="Add" actionListener="#{billPymtBean.retrievePymtDetails}" oncomplete="onValidationPaymentDialog(xhr, status, args)" 
+			process="@this"
+			update=":idAddFuncForm:msg,:idBankAcctDialog,:idPymtDialog,:idAddPymtForm:idAddAmtPaid,:idAddFuncForm:idInvAmt" style="margin-bottom:10px;"/>
+			
+		<p:dataTable id="idBillPmnt" value="#{billPymtBean.billPaymentList}" var="purBillPmnt" >
+			<p:column headerText="Print" style="width:150px; text-align:center;">
+				<p:commandButton icon="ui-icon-print" value="PV" actionListener="#{billPymtBean.printPV(purBillPmnt)}" process="@this" ajax="false" rendered="#{not empty purBillPmnt.id}"/>
+				<p:commandButton icon="ui-icon-print" value="PV" disabled="true" rendered="#{empty purBillPmnt.id}"/>
+			</p:column>
+			
+			<p:column headerText="Edit" style="width:50px; text-align:center;">  
+	            <p:commandButton icon="ui-icon-pencil" actionListener="#{billPymtBean.onPymtSelected(purBillPmnt)}"
+					update=":idAddFuncForm:tabView:idBillPmnt,:idEditPymtDialog" process="@this" oncomplete="varEditPymtDialog.show()"/>
+	        </p:column>
+			<p:column headerText="Delete" style="width:50px; text-align:center;">
+				<p:commandButton icon="ui-icon-close" actionListener="#{billPymtBean.onPymtSelected(purBillPmnt)}" process="@this" 
+					oncomplete="varDelPaymentDialog.show()"/>
+			</p:column>
+			<p:column headerText="Payment No" style="width: 150px;" styleClass="txt_center">
+		            <h:outputText label="Payment No" value="BP-#{purBillPmnt.code} "/>
+			</p:column>
+			<p:column headerText="Bank Name" style="width: 150px;" styleClass="txt_center">
+		            <h:outputText label="Bank Name" value="#{purBillPmnt.bankName} "/>
+			</p:column>
+	        <p:column headerText="GL Account" style="width: 5px;" styleClass="txt_center">
+		            <h:outputText label="GL Account" value="#{purBillPmnt.bankAcct}"/>
+			</p:column>
+			<p:column headerText="Transaction Date" style="width: 5px;" styleClass="txt_center">
+		            <h:outputText label="Transaction Date" value="#{purBillPmnt.pymtDt}">
+		            <f:convertDateTime pattern="#{config['date.display.pattern']}" />
+		            </h:outputText>
+			</p:column>
+			<p:column headerText="Supplier Name" style="width: 5px;" styleClass="txt_center">
+		            <h:outputText label="Supplier Name" value="#{purBillPmnt.payee}"/>
+			</p:column>
+			<p:column headerText="Cheque No" style="width: 5px;" styleClass="txt_center">
+		            <h:outputText label="Cheque No" value="#{purBillPmnt.refNum}"/>
+			</p:column>
+			<p:column headerText="Cheque Amount" style="width: 5px;" styleClass="txt_center">
+		            <h:outputText label="Amount Paid" value="#{purBillPmnt.chqAmount}">
+		            <f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+		            </h:outputText>
+			</p:column>
+			<p:column headerText="Amount Paid" style="width: 150px;" styleClass="txt_center">
+		            <h:outputText label="Amount Paid" value="#{purBillPmnt.pmntAmount}">
+		            	<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+		            </h:outputText>
+			</p:column>
+			
+			<!-- <p:columnGroup type="footer">  
+	            <p:row>  
+	            	<p:column footerText="" colspan="9"/> 
+	                <p:column footerText="Totals:"  style="text-align:right"  />  
+	                <p:column footerText="#{billPymtBean.getDoubleDecimalFormat(config['amount.format.pattern'], billPymtBean.totalPymtAmt)}" />
+	            </p:row>  
+      			</p:columnGroup>  -->
+		</p:dataTable>
+	</p:tab>
+</p:tabView>
+</p:column> 
+</p:row>
+</p:panelGrid>
+
+<style> 
+	.alignTopGrid table td {
+    	vertical-align: middle;
+	}
+	.alignTopGrid > tbody > tr > td {
+    	vertical-align: top !important;
+	}
+	
+	.alignTopGrid .ui-datatable-header.ui-widget-header {
+	    padding: 0 !important;
+	    margin: 0 !important;
+	}
+</style>
+
+<p:panelGrid id="idJournalList" columns="2" styleClass="alignTopGrid">
+	<c:forEach var="jourVO" items="#{billPymtBean.exOrderBillVO.journalList}" varStatus="loop">
+	
+		<!-- Journal Items -->
+		<p:panelGrid style="width: 100%">
+			<p:row>
+				<p:column>
+					<p:commandButton value="Add Item" actionListener="#{journalBean.handleJourItemAddNew(jourVO)}" 
+												oncomplete="varJourItemDialog.show()" update=":idJourItemDialog" process="@this"
+												disabled="#{journalBean.dateInFinPeriodClosed}"/>
+				</p:column>
+				<p:column>
+					<p:commandButton value="Delete Journal" style="float: right" actionListener="#{journalBean.setJournalVO(jourVO)}" 
+												oncomplete="varDelJourDialog.show()" update=":idDelJourDialog" process="@this"
+												disabled="#{journalBean.dateInFinPeriodClosed}"/>
+				</p:column>
+				
+			</p:row>
+			<p:row>
+				<p:column colspan="2">
+					<h:outputLabel for="idJournalDt#{loop.index}" >Journal Date </h:outputLabel>
+				<!-- </p:column>
+				<p:column style="width: 190px"> -->
+					<p:calendar pattern="#{config['date.display.pattern']}" id="idJournalDt#{loop.index}" label="Journal Date" 
+											value="#{jourVO.journalDt}" required="true" style="margin-left: 15px"
+											navigator="true" showButtonPanel="true" 
+											mindate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtStart, 'dd-MMM-yyyy')}" 
+											maxdate="#{billPymtBean.dateFormat(bterp:finPeriodLockVO(sessionInfoBean.companyVO.id).dtEnd, 'dd-MMM-yyyy')}"  
+											disabled="#{jourVO.dateInFinPeriodClosed}"> 
+											<!-- 
+											mindate="#{billPymtBean.exOrderBillVO.finPeriodLockVO.dtStart}" 
+											maxdate="#{billPymtBean.exOrderBillVO.finPeriodLockVO.dtEnd}"
+											-->
+						<!-- <p:ajax event="dateSelect" listener="#{journalBean.handleDateChange}" /> -->
+					</p:calendar>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column colspan="2">
+					<p:panel style="border:none">
+						<p:dataTable widgetVar="varJournalTable" value="#{jourVO.journalCartList}" var="vo" paginator="true" rows="20" 
+							paginatorTemplate="#{bterp:pageTemplate()}" 
+							rowsPerPageTemplate="20, 30, 50" emptyMessage="#{msg['tbl.empty.message']}" 
+							rendered="#{not empty jourVO.journalCartList}">
+							
+							<f:facet name="header" style="font-size: 30px">
+								<div style="background-color: #000; padding-top: 2px; padding-bottom: 2px">
+							        Journal Details - JE #{jourVO.sysNo}
+							    </div>
+				                <!-- Journal Details - JE #{jourVO.sysNo} -->
+				                <!-- <p:commandButton icon="ui-icon-pencil" style="background: #ccc;"></p:commandButton> -->
+				            </f:facet>
+							
+							<p:columnGroup type="header">
+								<!-- <p:row rendered="#{journalBean.isGSTPeriod}">
+									<p:column colspan="6">
+									</p:column>
+									<p:column colspan="2" headerText="Amount Inc. GST" />
+								</p:row> -->
+								<p:row>
+									<p:column headerText="#{msg['common.label.action.edit']}" 
+												style="width: 40px; width:1px; text-align:center;" />
+													
+									<p:column headerText="#{msg['common.label.action.delete']}" 
+												style="width:40px; text-align:center;" />
+									<p:column headerText="Account" style="width: 80px;" styleClass="txt_center" />
+									<p:column headerText="Description" styleClass="txt_left" />
+									<!-- <p:column headerText="GST Amount" style="width: 110px;" rendered="#{journalBean.isGSTPeriod}"/> -->
+									<p:column headerText="Amount" style="width: 110px;" />
+									<p:column headerText="Debit" style="width: 110px;" />
+									<p:column headerText="Credit" style="width: 110px;" />
+								</p:row>
+							</p:columnGroup>
+							<p:column>
+								<p:commandButton icon="ui-icon-pencil" 
+										actionListener="#{journalBean.handleJourItemSelect(vo, jourVO)}"
+										update=":idJourItemDialog"
+										process="@this"
+										oncomplete="varJourItemDialog.show()"
+										disabled="#{journalBean.dateInFinPeriodClosed}"/>
+							</p:column>
+					 				
+							<p:column>
+								<p:commandButton icon="ui-icon-close" actionListener="#{journalBean.delSingleJournal(vo, jourVO)}" 
+										update=":idAddFuncForm:idJournalList" process="@this"
+										disabled="#{journalBean.dateInFinPeriodClosed}"/>
+							</p:column>
+							<p:column>
+								<h:outputText value="#{vo.code}" />
+							</p:column>
+							<p:column>
+								<h:outputText value="#{vo.desc}" />
+							</p:column>
+							<!-- <p:column styleClass="txt_right" rendered="#{journalBean.isGSTPeriod}">
+								<h:outputText value="#{vo.taxAmount}">
+					        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								</h:outputText>
+							</p:column> -->
+							<p:column styleClass="txt_right" >
+								<h:outputText value="#{vo.debit > 0.00 ? vo.debit : vo.credit}">
+					        		<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+					        	</h:outputText>
+							</p:column>
+							<p:column styleClass="txt_right">
+									<h:outputText value="#{vo.debit != 0.00 ? (0.00 > vo.amountIncludeTax ? -1 * vo.amountIncludeTax : vo.amountIncludeTax) : 0.00}">
+									<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+									</h:outputText>
+							</p:column>
+							<p:column styleClass="txt_right">
+								<h:outputText value="#{vo.credit != 0.00 ? (0.00 > vo.amountIncludeTax ? -1 * vo.amountIncludeTax : vo.amountIncludeTax) : 0.00}" >
+									<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+								</h:outputText>
+							</p:column>
+		
+							<p:columnGroup type="footer">  
+						        <p:row>  
+						        	<p:column footerText="" colspan="3"/> 
+						            <p:column footerText="Total:"  style="text-align:right" /> 
+									<p:column style="text-align:right" rendered="#{journalBean.isGSTPeriod and false}">
+							   	 		<f:facet name="footer">
+							                <h:outputText value="#{jourVO.amtCalcViewVO.totalTax.doubleValue()}">
+												<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							                </h:outputText>
+							            </f:facet>
+									</p:column>
+						        	<p:column footerText="" /> 
+									<p:column style="text-align:right" >
+							   	 		<f:facet name="footer">
+							                <h:outputText value="#{jourVO.totalDbtAmt.doubleValue()}">
+												<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							                </h:outputText>
+							            </f:facet>
+									</p:column>
+									<p:column style="text-align:right" >
+							   	 		<f:facet name="footer">
+							                <h:outputText value="#{jourVO.totalCrdAmt.doubleValue()}">
+												<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+							                </h:outputText>
+							            </f:facet>
+									</p:column>
+						        </p:row> 
+				   			</p:columnGroup>
+						</p:dataTable>
+					</p:panel>
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+	</c:forEach>
+	
+</p:panelGrid>
+	
+<p:panelGrid id="idEOAmt">
+	<p:row rendered="#{billPymtBean.GSTPeriod}">
+		<p:column></p:column>
+		<p:column style="width:200px;"><h:outputLabel for="idGSTAmt">GST Amount</h:outputLabel></p:column>
+		<p:column style="width:100px;">
+			<p:inputText id="idGSTAmt" value="#{billPymtBean.amtCalcViewVO.totalTax}" readonly="true" style="text-align:right;background:#ccc">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column></p:column>
+		<p:column style="width:200px;"><h:outputLabel for="idTtlAmt">#{billPymtBean.GSTPeriod ? 'Amount Inclusive GST:' : 'Total Amount:'}</h:outputLabel></p:column>
+		<p:column style="width:100px;">
+			<p:inputText id="idTtlAmt" value="#{billPymtBean.amtCalcViewVO.totalAmountIncludeTax}" readonly="true" style="text-align:right;background:#ccc">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<!-- <p:row>
+		<p:column></p:column>
+		<p:column><h:outputLabel for="idRoundAmt">Rounding Adjustment:</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idRoundAmt" value="#{billPymtBean.amtCalcViewVO.totalRounding}" readonly="true" style="text-align:right;background:#ccc">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column></p:column>
+		<p:column><h:outputLabel for="idTtlAmt">Total Amount:</h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idTtlAmt" value="#{billPymtBean.amtCalcViewVO.totalAmountAfterRounding}" readonly="true" style="text-align:right;background:#ccc">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</p:inputText>
+		</p:column>
+	</p:row> -->
+	<p:row>
+		<p:column></p:column>
+		<p:column>
+			<h:outputLabel for="idAmtPaid">Payment Amount:</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAmtPaid" value="#{billPymtBean.amtCalcViewVO.totalAmountPaid}" readonly="true" style="text-align:right;background:#ccc"> 
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column></p:column>
+		<p:column>
+			<h:outputLabel for="idAmtDue">Current Balance:</h:outputLabel>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAmtDue" value="#{billPymtBean.amtCalcViewVO.totalBalance}" readonly="true" style="text-align:right;background:#ccc">
+				<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+
+<h:panelGrid columns="5" style="width:1px"> 
+	<p:commandButton value="Save" actionListener="#{billPymtBean.addSingleBill}" update="@form" process="@form" rendered="#{empty billPymtBean.exOrderBillVO.id}"/>
+	<!-- <p:commandButton value="Save" update="@form" process="@form" rendered="#{not empty billPymtBean.exOrderBillVO.id and billPymtBean.exOrderBillVO.status ne 'CC' and billPymtBean.exOrderBillVO.status ne 'VD'  and billPymtBean.exOrderBillVO.eInvoiceStatus ne 'Submitted' and billPymtBean.exOrderBillVO.eInvoiceStatus ne 'Valid'}"> -->
+	<!-- temporary allow everyone to edit even after e invoice submission -->
+	<p:commandButton value="Save" update="@form" process="@form" rendered="#{not empty billPymtBean.exOrderBillVO.id and billPymtBean.exOrderBillVO.status ne 'CC' and billPymtBean.exOrderBillVO.status ne 'VD'}">
+		<!-- <f:actionListener binding="#{journalBean.saveJournalCartFromBill()}"></f:actionListener>
+		<f:actionListener binding="#{journalBean.onJournalSelected(billPymtBean.exOrderBillVO.idJournal)}"></f:actionListener> -->
+		<f:actionListener binding="#{billPymtBean.editSingleBill()}"></f:actionListener>
+	</p:commandButton>
+	<p:commandButton value="Cancel" actionListener="#{billPymtBean.resetForm}" update="@form,:idBillListForm" oncomplete="varAddFuncDialog.hide()" process="@this" style="margin-right: 100px">
+		<pe:resetEditableValues for="idAddFuncForm"/>
+	</p:commandButton>
+	<p:commandButton disabled="#{empty billPymtBean.exOrderBillVO.id}" styleClass="nowrap" value="Post Journal" actionListener="#{journalBean.onPostJournal(billPymtBean.exOrderBillVO, billPymtBean.acctTransVO.acctTransList)}" process="@this" update=":idJournalDetailsDialog msg" oncomplete="if (args &amp;&amp; !args.validationFailed) varJournalDetailsDialog.show()"></p:commandButton>
+	<p:commandButton rendered="#{not empty billPymtBean.exOrderBillVO.id}" styleClass="nowrap" value="E-Invoice" actionListener="#{billPymtBean.onEInvoice}" process="@this" update=":idEInvoiceDialog" oncomplete="varEInvoiceDialog.show()"></p:commandButton>
+	<p:commandButton value="New" update="@form" process="@form" rendered="#{not empty billPymtBean.exOrderBillVO.id}">
+		<f:actionListener binding="#{journalBean.handleJournalDetailAddNew()}"></f:actionListener>
+		<f:actionListener binding="#{billPymtBean.addBill()}"></f:actionListener>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

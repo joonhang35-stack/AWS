@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.springframework.org/schema/webflow http://www.springframework.org/schema/webflow/spring-webflow.xsd"
+      start-state="campaign_list">
+	
+	<var name="campaignBean" class="com.bcs.zsg.product.web.bean.CampaignBean"/>
+	
+	<view-state id="campaign_list">
+		<on-entry>
+			<evaluate expression="campaignBean.init()"/>
+		</on-entry>
+		<transition on="addCampaign" to="add_campaign" />
+		<transition on="listCampaign" to="campaign_list" />
+	</view-state>
+	
+	<view-state id="add_campaign" view="/WEB-INF/flows/product/campaign/add_campaign.xhtml" >
+		<on-entry>
+			<evaluate expression="campaignBean.loadTourPkgList()"/>
+		</on-entry>
+		<!-- <transition on="save" to="campaign_list"/> -->
+		<transition on="back" to="campaign_list"/>
+	</view-state>
+	
+	<end-state id="finish"/>
+	
+</flow>

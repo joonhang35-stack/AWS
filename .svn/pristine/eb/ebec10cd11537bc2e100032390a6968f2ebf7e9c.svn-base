@@ -1,0 +1,123 @@
+package com.bcs.zsg.maintenance.web.bean;
+
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.primefaces.json.JSONException;
+import org.primefaces.json.JSONObject;
+
+import com.bcs.zsg.acct.helper.KeycloakProperties;
+import com.bcs.zsg.common.helper.JwtVerifierService;
+import com.bcs.zsg.common.helper.KeycloakUtils;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.crm.sec.vo.KeycloakAccessTokenClaimVO;
+import com.bcs.zsg.crm.sec.vo.KeycloakAccessTokenVO;
+import com.bcs.zsg.crm.sec.vo.KeycloakUserVO;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.nimbusds.jose.JWSObject;
+
+public class KeycloakCallbackBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+	
+	private List<KeycloakUserVO> keycloakUserList;
+	
+	private KeycloakUserVO keycloakUserVO;
+	private KeycloakAccessTokenClaimVO keycloakAccessTokenClaimVO;
+	
+	@Override
+	public void resetForm() {
+		
+	}
+	
+	public void init() {
+		resetForm();
+		
+		try {
+			String code = getParamValue("code");
+			
+			if (StringUtils.isNotBlank(code)) {
+				System.out.println("CYY code: " + code);
+				KeycloakAccessTokenVO tokenVO = exchangeAuthCode(code);
+				
+				JwtVerifierService verifier =
+				        new JwtVerifierService(
+				        		KeycloakProperties.ENV_BASE_URL_SANDBOX + KeycloakProperties.API_LOGIN
+				        );
+
+				boolean valid = verifier.verifyToken(tokenVO.getAccessToken());
+				
+				System.out.println("CYY valid: " + valid);
+				
+				JWSObject jwsObject = JWSObject.parse(tokenVO.getAccessToken());
+
+		        Map<String, Object> payload =
+		                jwsObject.getPayload().toJSONObject();
+
+		        JSONObject xJsonObject = new JSONObject(payload);
+		        System.out.println(xJsonObject.toString(4));
+		        
+		        Gson gson = new GsonBuilder()
+			            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+			            .create();
+		        keycloakAccessTokenClaimVO = gson.fromJson(xJsonObject.toString(), KeycloakAccessTokenClaimVO.class);
+			    
+//				System.out.println("CYY claimVO.getExp(): " + keycloakAccessTokenClaimVO.getExp());
+//				System.out.println("CYY claimVO.getEmail(): " + keycloakAccessTokenClaimVO.getEmail());
+//				System.out.println("CYY claimVO.getFamilyName(): " + keycloakAccessTokenClaimVO.getFamilyName());
+//				System.out.println("CYY claimVO.getGivenName(): " + keycloakAccessTokenClaimVO.getGivenName());
+		        
+				KeycloakUserVO keycloakUserVO = KeycloakUtils.getUser(keycloakAccessTokenClaimVO.getSub(), getSessionInfoBean().getCompanyVO());
+				
+//		        UserInfo user = new UserInfo();
+//
+//		        user.setUserId((String) payload.get("sub"));
+//		        user.setUsername((String) payload.get("preferred_username"));
+//		        user.setEmail((String) payload.get("email"));
+			} else {
+				System.out.println("CYY NO code: " + code);
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public KeycloakAccessTokenVO exchangeAuthCode(String code) throws JSONException {
+		try {
+			KeycloakAccessTokenVO tokenVO = KeycloakUtils.exchangeAuthCode(code, KeycloakUtils.getCallbackUrl(), "", getSessionInfoBean().getCompanyVO());
+			return tokenVO;
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} 
+
+		return new KeycloakAccessTokenVO();
+	}
+
+	public KeycloakUserVO getKeycloakUserVO() {
+		return keycloakUserVO;
+	}
+
+	public void setKeycloakUserVO(KeycloakUserVO keycloakUserVO) {
+		this.keycloakUserVO = keycloakUserVO;
+	}
+
+	public List<KeycloakUserVO> getKeycloakUserList() {
+		return keycloakUserList;
+	}
+
+	public void setKeycloakUserList(List<KeycloakUserVO> keycloakUserList) {
+		this.keycloakUserList = keycloakUserList;
+	}
+
+	public KeycloakAccessTokenClaimVO getKeycloakAccessTokenClaimVO() {
+		return keycloakAccessTokenClaimVO;
+	}
+
+	public void setKeycloakAccessTokenClaimVO(KeycloakAccessTokenClaimVO keycloakAccessTokenClaimVO) {
+		this.keycloakAccessTokenClaimVO = keycloakAccessTokenClaimVO;
+	}
+}

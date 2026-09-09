@@ -1,0 +1,3538 @@
+package com.bcs.zsg.sales.dao;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.SQLQuery;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.transform.Transformers;
+import org.hibernate.type.DateType;
+import org.hibernate.type.DoubleType;
+import org.hibernate.type.LongType;
+import org.hibernate.type.TimestampType;
+import org.primefaces.model.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.bcs.zsg.acct.bo.ChartOfAcctBO;
+import com.bcs.zsg.acct.dao.ChartOfAcctDAO;
+import com.bcs.zsg.acct.dao.EInvoiceDAO;
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.helper.CRMUtils;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.FunctionUtils;
+import com.bcs.zsg.common.helper.LookupItemConstant;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.component.security.vo.UserVO;
+import com.bcs.zsg.core.dao.BaseHibernateDAO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.core.helper.BaseContext;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.maintenance.bo.AppSettingBO;
+import com.bcs.zsg.maintenance.helper.ConstantAppSetting;
+import com.bcs.zsg.maintenance.vo.AppSettingVO;
+import com.bcs.zsg.product.bo.TourPackageBO;
+import com.bcs.zsg.product.dao.InvoiceAndExchangeOrderDAO;
+import com.bcs.zsg.product.dao.TourPackageDAO;
+import com.bcs.zsg.product.helper.ProductConstant;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderVO;
+import com.bcs.zsg.product.vo.InvoiceAndExchangeOrderViewVO;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.purchase.vo.AddressVO;
+import com.bcs.zsg.purchase.vo.CorAddressVO;
+import com.bcs.zsg.purchase.vo.CorContactVO;
+import com.bcs.zsg.purchase.vo.EOInvoiceVO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.purchase.vo.PersonVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.BookingVO;
+import com.bcs.zsg.sales.vo.CustDetailsVO;
+import com.bcs.zsg.sales.vo.IdentityDetailVO;
+import com.bcs.zsg.sales.vo.InvoiceAttachmentVO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+import com.bcs.zsg.sales.vo.InvoicePaxRefNoVO;
+import com.bcs.zsg.sales.vo.InvoicePaxVO;
+import com.bcs.zsg.sales.vo.InvoicePaymentAttachmentVO;
+import com.bcs.zsg.sales.vo.InvoicePaymentVO;
+import com.bcs.zsg.sales.vo.InvoiceReferenceVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.sales.vo.InvoiceVoucherVO;
+import com.bcs.zsg.sales.vo.OnlineBookingPassengerVO;
+import com.bcs.zsg.sales.vo.PersonAttachmentVO;
+import com.bcs.zsg.sales.vo.PersonClassVO;
+import com.bcs.zsg.sales.vo.PersonComplicationVO;
+import com.bcs.zsg.sales.vo.PersonContactVO;
+import com.bcs.zsg.sales.vo.PersonEmailVO;
+import com.bcs.zsg.sales.vo.PersonLangVO;
+import com.bcs.zsg.sales.vo.PersonMealVO;
+
+public class InvoiceDAOImpl extends BaseHibernateDAO implements InvoiceDAO {
+
+	@Autowired
+	protected transient ChartOfAcctBO chartOfAcctBO;
+	@Autowired
+	protected transient TourPackageBO tourPackageBO;
+	@Autowired
+	protected transient AppSettingBO appSettingBO;
+	@Autowired
+	private ChartOfAcctDAO chartOfAcctDAO;
+	@Autowired
+	private TourPackageDAO tourPackageDAO;
+	@Autowired
+	private EInvoiceDAO eInvoiceDAO;
+	@Autowired
+	private InvoiceAndExchangeOrderDAO invoiceAndExchangeOrderDAO;
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceList(java.lang.Long, java.lang.String)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceList(Long companyId, String docTypeCd) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		criteria.add(Restrictions.eq("companyId", companyId));
+		criteria.add(Restrictions.eq("docTypeCd", docTypeCd));
+		criteria.addOrder(Order.desc("invoiceDt"));
+		criteria.addOrder(Order.desc("id"));
+		List<InvoiceVO> ls = criteria.list();
+		
+		for (InvoiceVO vo : ls) {
+			vo.setCustDetailsVO(getCustDetails(vo.getCustomerId(), false, false));
+			TourDepartureVO tourDeptVO = tourPackageDAO.getTourDepById(vo.getTourDepId());
+			if (tourDeptVO != null) vo.setTourCd(tourDeptVO.getCode());
+		}
+		return ls;
+	}
+
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceList(java.lang.Long, java.lang.String)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceListSelection(Long companyId, String docTypeCd) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select i.id,i.code,i.dt_inv,i.amount, ");
+		sb.append("c.id AS 'custId', ");
+		sb.append("case when c.pc_type_cd = 'C' then (case when p2.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p2.salutation_cd else '' end) when c.pc_type_cd = 'P' then (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) end as salutation_cd, ");
+		sb.append("case when c.pc_type_cd = 'C' then p2.first_name when c.pc_type_cd = 'P' then p.first_name end as first_name, ");
+		sb.append("case when c.pc_type_cd = 'C' then p2.last_name when c.pc_type_cd = 'P' then p.last_name end as last_name, ");
+		sb.append(" i.id_issuer,i.ID_SALER, c.code as custCd " );
+		sb.append(" from invoice i inner join ");
+		sb.append("customer c on c.id = i.id_customer left join person p on (c.pc_type_cd = 'P' and c.id_pc = p.id) ");
+		sb.append(" left join corporate o on (c.pc_type_cd = 'C' AND c.id_corporate = o.id ) ");
+		sb.append(" left join person p2 on (c.pc_type_cd = 'C' and o.id_person = p2.id) "); 
+		sb.append(" where i.ID_COMPANY='" + companyId + "' and i.DOC_TYPE_CD='" + docTypeCd + "' "); 
+		sb.append("order by i.DT_INV desc, i.id desc ");
+		Query query = createSQLQuery(sb.toString());
+
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue()); 
+			vo.setCode((String) row[1]);   
+			vo.setInvoiceDt((Date) row[2]);   
+			vo.setAmount(Double.parseDouble(row[3].toString()));        
+			if(row[4] != null ) vo.setCustomerId( Long.parseLong(row[4].toString()));    
+			
+			vo.setCustName(row[5].toString() + " " + row[6].toString()+ " " + row[7].toString());    
+			vo.setIssuerId(Long.parseLong(row[8].toString()));
+			vo.setSalerId(Long.parseLong(row[9].toString()));
+			if(row[10] != null ) vo.setCustCd((String) row[10]);
+			invoiceList.add(vo);
+		}
+		return invoiceList;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceList(java.lang.Long, java.lang.String)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceDisplayList(Long companyId,String docTypeCd) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select iv.id as inv_id, ");
+		sb.append("iv.code as inv_cd, ");
+		sb.append("iv.dt_inv as dt_inv, ");
+		sb.append("iv.dt_departure as dt_departure, ");
+		sb.append("iv.amount as inv_amt, ");
+		sb.append("iv.balance as inv_bln, ");
+		sb.append("iv.inv_due as inv_due, ");
+		sb.append("iv.status_cd as status_cd, ");
+		sb.append("iv.id_tour_booking as id_tour_booking, ");
+		sb.append("tdp.code as tour_code, ");
+		sb.append("iv.id_customer as id_cust, ");
+		sb.append("usr.user_name as user_name, ");
+		sb.append("ps.first_name as cust_first_name, ");
+		sb.append("ps.last_name as cust_last_name, ");
+		sb.append("case when ps.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then ps.salutation_cd else '' end as cust_salutation, ");
+		sb.append("cm.corporate_name as company_name, ");
+		sb.append("cm.code as cust_cd ");
+		sb.append("from invoice iv, tour_dep tdp, employee ep, sec_user usr, customer cm, person ps ");
+		sb.append("where iv.id_company = :idCompany and iv.doc_type_cd = :docTypeCd and ");
+		sb.append("iv.id_saler=ep.id and ep.u_sec_user=usr.uuid and iv.id_customer=cm.id and iv.id_tour_dep=tdp.id and cm.id_pc=ps.id ");
+		sb.append("order by iv.dt_inv desc, iv.code desc");
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", companyId);
+		query.setParameter("docTypeCd", docTypeCd);
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setCode((String) row[1]);
+			vo.setInvoiceDt((Date) row[2]);
+			vo.setDepartureDt((Date) row[3]);
+			vo.setAmount(Double.parseDouble(row[4].toString()));
+			vo.setBalance(Double.parseDouble(row[5].toString()));
+			vo.setInvoiceDue((Date) row[6]);
+			vo.setStatusCd((String) row[7]);
+			if(row[8] == null )
+			{ vo.setBookingId(null);
+			}else{	vo.setBookingId(  Long.parseLong(row[8].toString()));
+			} 
+			if(row[9] != null ) vo.setTourCd( row[9].toString());   
+			if(row[10] != null ) vo.setCustomerId( Long.parseLong(row[10].toString()));   
+			if(row[11] != null ) vo.setSalerName( row[11].toString());
+			vo.setCustName(row[13].toString() + " " + row[12].toString());   
+			vo.setCustSalutation(row[14].toString() );
+			vo.setCoName((row[15] != null) ? row[15].toString() : null);
+			vo.setCustCd((row[16] != null) ? row[16].toString() : null);
+			invoiceList.add(vo);
+		}
+		return invoiceList;
+	}
+
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceList(java.lang.Long, java.lang.String)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getCreditNoteDisplayList(Long companyId) throws BusinessException { 
+		StringBuilder sb = new StringBuilder();
+		sb.append("select iv.id as inv_id, ");
+		sb.append("iv.code as inv_cd, ");
+		sb.append("iv.dt_inv as dt_inv, ");
+		sb.append("iv.dt_departure as dt_departure, ");
+		sb.append("iv.amount as inv_amt, ");
+		sb.append("iv.balance as inv_bln, ");
+		sb.append("iv.inv_due as inv_due, ");
+		sb.append("iv.status_cd as status_cd, ");
+		sb.append("iv.id_tour_booking as id_tour_booking, ");
+		sb.append("iv.id_customer as id_cust, ");
+		sb.append("usr.user_name as user_name, ");
+		sb.append("ps.first_name as cust_first_name, ");
+		sb.append("ps.last_name as cust_last_name, ");
+		sb.append("case when ps.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then ps.salutation_cd else '' end as cust_salutation, ");
+		sb.append("cm.corporate_name as company_name, ");
+		sb.append("iv.cn_inv_no as cn_inv_no, ");
+		sb.append("cm.code as cust_cd, ");
+		sb.append("iv.rn_no as rn_no, iv.e_invoice_status as e_invoice_status, iv.cn_ps_no ");
+		sb.append("from invoice iv, employee ep, sec_user usr, customer cm, person ps ");
+		sb.append("where iv.id_company = :idCompany and iv.doc_type_cd = :docTypeCd and ");
+		sb.append("iv.id_saler=ep.id and ep.u_sec_user=usr.uuid and iv.id_customer=cm.id and cm.id_pc=ps.id ");
+		sb.append("order by iv.dt_inv desc, iv.id desc");
+		
+		System.out.println(sb.toString());
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", companyId);
+		query.setParameter("docTypeCd", "C");
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setCode((String) row[1]);
+			vo.setInvoiceDt((Date) row[2]);
+			vo.setDepartureDt((Date) row[3]);
+			vo.setAmount(Double.parseDouble(row[4].toString()));
+			vo.setBalance(Double.parseDouble(row[5].toString()));
+			vo.setInvoiceDue((Date) row[6]);
+			vo.setStatusCd((String) row[7]);
+			if(row[8] == null )
+			{ vo.setBookingId(null);
+			}else{	vo.setBookingId(  Long.parseLong(row[8].toString()));
+			} 
+			//if(row[9] != null ) vo.setTourCd( row[9].toString());   
+			if(row[9] != null ) vo.setCustomerId( Long.parseLong(row[9].toString()));   
+			if(row[10] != null ) vo.setSalerName( row[10].toString());   
+			//vo.setCustName( row[11].toString() + " " + row[12].toString() );   
+			vo.setCustName(row[12].toString() + " " + row[11].toString());   
+			vo.setCustSalutation(row[13].toString() );
+			vo.setCoName((row[14] != null) ? row[14].toString() : null);
+			vo.setCnInvNo((row[15] != null) ? row[15].toString() : null);
+			vo.setCustCd((row[16] != null) ? row[16].toString() : null);
+			vo.setRnNo((row[17] != null) ? row[17].toString() : null);
+			vo.seteInvoiceStatus((row[18] != null) ? row[18].toString() : null);
+			vo.setCnPsNo((row[19] != null) ? row[19].toString() : null);
+			invoiceList.add(vo);
+		}
+		return invoiceList;
+	}
+
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceDetails(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public InvoiceVO getInvoiceDetails(InvoiceVO invoiceVO) throws BusinessException {
+		invoiceVO.setCustDetailsVO(getCustDetails(invoiceVO.getCustomerId()));
+		invoiceVO.setAcctVO(chartOfAcctDAO.getAcctVO(invoiceVO.getAcctId()));
+		
+		if (invoiceVO.getCustDetailsVO() != null)
+			invoiceVO.getCustDetailsVO().setContPersonName(FunctionUtils.getContPersonName(invoiceVO.getCustDetailsVO().getContPersonName(),
+					invoiceVO.getCustDetailsVO().getNickName(), invoiceVO.getCustDetailsVO().getTitle(), invoiceVO.getCustDetailsVO().getSalutation()));
+
+		TourDepartureVO tourDeptVO = tourPackageDAO.getTourDepById(invoiceVO.getTourDepId());
+		if (tourDeptVO != null) invoiceVO.setTourCd(tourDeptVO.getCode());
+		List<EmployeeViewVO> employeeList = getFullEmployeeViewList(invoiceVO.getCompanyId());
+		for(EmployeeViewVO vo : employeeList) {
+			if(vo.getId().longValue() == invoiceVO.getSalerId().longValue()) {
+				invoiceVO.setSalerName(vo.getUserVO().getName());
+			}
+			if(vo.getId().longValue() == invoiceVO.getIssuerId().longValue()) {
+				invoiceVO.setIssuedBy(vo.getUserVO().getName());
+			}
+			if (invoiceVO.getTfairSalerId() != null && vo.getId().longValue() == invoiceVO.getTfairSalerId().longValue()) {
+				invoiceVO.setTfairSalerName(vo.getUserVO().getName());
+			}
+		}
+		Criteria criteria = createCriteria(InvoiceItemVO.class);
+		criteria.add(Restrictions.eq("invId", invoiceVO.getId()));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.addOrder(Order.asc("seq"));
+		criteria.addOrder(Order.asc("id"));
+		invoiceVO.setInvoiceItemList(criteria.list());
+		if (CollectionUtils.isNotEmpty(invoiceVO.getInvoiceItemList())) {
+			for (InvoiceItemVO vo : invoiceVO.getInvoiceItemList()) {
+				InvoiceAndExchangeOrderVO invEOVO = getInvEOItems(vo.getInvEOItemId());
+				if (invEOVO != null) {
+					vo.setInvItemCd(invEOVO.getCode());
+				}
+
+				AcctVO acctVO = chartOfAcctDAO.getAcctVO(vo.getAcctId());
+				if (acctVO != null) {
+					if (acctVO.getSubCode().equals("")) {
+						vo.setSalesAcctCd(acctVO.getCode());
+						vo.setSalesAcctDesc(acctVO.getDesc());
+					} else {
+						vo.setSalesAcctCd(acctVO.getCode() + "-" + acctVO.getSubCode());
+						vo.setSalesAcctDesc(acctVO.getDesc() + ", " + acctVO.getSubDesc());
+					}
+				}
+				
+				if (vo.getAirfare() != 0.0) {
+				    BigDecimal unitPrice = BigDecimal.valueOf(vo.getUnitPrice());
+				    BigDecimal airfare = BigDecimal.valueOf(vo.getAirfare());
+				    
+				    // Subtract airfare from unitPrice
+				    BigDecimal tourFare = unitPrice.subtract(airfare);
+
+				    // Set the calculated value back to tourFare
+				    vo.setTourFare(tourFare.doubleValue());
+				}
+				
+				InvoiceAndExchangeOrderVO invoiceAndExchangeOrderVO = null;
+				if (vo.getInvEOItemId() != null) {
+					invoiceAndExchangeOrderVO = invoiceAndExchangeOrderDAO.getInvoiceAndExchangeOrderVO(vo.getInvEOItemId());
+				} else if (StringUtils.isNotBlank(vo.getCode())) {
+					invoiceAndExchangeOrderVO = invoiceAndExchangeOrderDAO.getInvoiceAndExchangeOrderVO(vo.getCode());
+				}
+				
+				if (invoiceAndExchangeOrderVO != null)	vo.setTypeCd(invoiceAndExchangeOrderVO.getTypeCd());
+			}
+		} else invoiceVO.setInvoiceItemList(new ArrayList<InvoiceItemVO>());
+		
+		// Get booking status code
+		BookingVO bookingVO = null;
+		criteria = createCriteria(BookingVO.class);
+		if (invoiceVO.getBookingId() != null) {
+			criteria.add(Restrictions.eq("id", invoiceVO.getBookingId()));
+			bookingVO = (BookingVO) criteria.uniqueResult();
+		} else if (invoiceVO.getIdParentInvTourBooking() != null) {
+			criteria.add(Restrictions.eq("id", invoiceVO.getIdParentInvTourBooking()));
+			bookingVO = (BookingVO) criteria.uniqueResult();
+		}
+		if (bookingVO != null) {
+			invoiceVO.setBookingStatusCd(bookingVO.getStatusCode());
+			invoiceVO.setBookingTypeCd(bookingVO.getTypeCd());
+			invoiceVO.setCabinQty(bookingVO.getCabinQty()); // for EO report print out
+			invoiceVO.setNumOfPax(bookingVO.getQuantity()); // for EO report print out
+			invoiceVO.setBookingVO(bookingVO);
+		}
+		
+		criteria = createCriteria(InvoicePaxVO.class);
+		criteria.add(Restrictions.eq("invId", invoiceVO.getId()));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.addOrder(Order.asc("seq"));
+		criteria.addOrder(Order.asc("id"));
+		invoiceVO.setInvoicePaxList(criteria.list());
+		if (CollectionUtils.isNotEmpty(invoiceVO.getInvoicePaxList())) {
+			for (InvoicePaxVO vo : invoiceVO.getInvoicePaxList()) {
+				vo.setCustDetailsVO(getCustDetails(vo.getCustId(), true, true));
+				// Lock to not able to edit passenger detail
+				if (bookingVO != null && bookingVO.getLockStatus()) {
+					vo.setIsLock(true);
+				}
+				criteria = createCriteria(InvoicePaxRefNoVO.class);
+				criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+				criteria.add(Restrictions.eq("invPaxId", vo.getId()));
+				vo.setInvoicePaxRefNoList(criteria.list());
+			}
+		} else invoiceVO.setInvoicePaxList(new ArrayList<InvoicePaxVO>());
+
+		invoiceVO.setInvoicePaymentList(getInvPmntList(invoiceVO.getId()));
+		Double amtPaid = 0.0;
+		if (CollectionUtils.isNotEmpty(invoiceVO.getInvoicePaymentList())) {
+			for (InvoicePaymentVO vo : invoiceVO.getInvoicePaymentList()) {
+				if (vo.getCashBookDt() != null) {
+					vo.setFinPeriod(LookupItemUtils.getFinPeriodClosedStatus(invoiceVO.getCompanyId(), vo.getCashBookDt()) != -1);
+				} else {
+					vo.setFinPeriod(LookupItemUtils.getFinPeriodClosedStatus(invoiceVO.getCompanyId(), vo.getPmntDt()) != -1);
+				}
+				amtPaid += vo.getAmount();
+			}
+		} else invoiceVO.setInvoicePaymentList(new ArrayList<InvoicePaymentVO>());
+		
+		invoiceVO.setAmtPaid(amtPaid);
+				
+		for (InvoicePaymentVO invPmntVO : invoiceVO.getInvoicePaymentList()) {
+			invPmntVO.setInvoicePaymentAttachmentList(getInvPmntAttachmentList(invPmntVO.getId()));
+			invPmntVO.setInvPmntTooltip(getInvPmntHistTooltip(invoiceVO.getId(),invPmntVO.getId()));
+		}
+
+		criteria = createCriteria(EOInvoiceVO.class);
+		criteria.add(Restrictions.eq("invId", invoiceVO.getId()));
+		invoiceVO.setEoInvList(criteria.list());
+		if (CollectionUtils.isNotEmpty(invoiceVO.getEoInvList())) {
+			for (EOInvoiceVO vo : invoiceVO.getEoInvList()) {
+				criteria = createCriteria(ExOrderVO.class);
+				criteria.add(Restrictions.eq("id", vo.getEoId()));
+				ExOrderVO exOrderVO = (ExOrderVO) criteria.uniqueResult();
+				if (exOrderVO != null) vo.setCode(exOrderVO.getCode());
+			}
+		}
+		
+		// Get invoice reference list
+		criteria = createCriteria(InvoiceReferenceVO.class);
+		criteria.add(Restrictions.eq("invId", invoiceVO.getId()));
+		invoiceVO.setInvoiceRefVOList(criteria.list());
+		
+		if (CollectionUtils.isNotEmpty(invoiceVO.getInvoiceRefVOList())) {
+			for (InvoiceReferenceVO refVO : invoiceVO.getInvoiceRefVOList()) {
+				InvoiceVO vo = getInvoiceById(refVO.getInvRefId());
+				refVO.setDocTypeCd(vo.getDocTypeCd());
+			}
+		}
+		
+		// Get invoice Attachment list
+		criteria = createCriteria(InvoiceAttachmentVO.class);
+		criteria.add(Restrictions.eq("invId", invoiceVO.getId()));
+		invoiceVO.setInvoiceAttachmentVOList(criteria.list());
+		
+		invoiceVO.setVoucherList(getInvoiceVoucherList(invoiceVO.getId()));
+		
+		// Get online booking pax list
+		if (SalesConstant.BOOKING_ORDER_TYPE_ONLINE.equals(invoiceVO.getOrderCd())) {
+			criteria = createCriteria(OnlineBookingPassengerVO.class);
+			criteria.add(Restrictions.eq("idBooking", invoiceVO.getBookingId()));
+			invoiceVO.setOnlineBookingPaxList(criteria.list());
+		}
+		
+		// Get parent ps no (if is children)
+		if (invoiceVO.getIdParentInv() != null) {
+			InvoiceVO parentInv = getInvoiceById(invoiceVO.getIdParentInv());
+			if (parentInv != null) {
+				invoiceVO.setParentPsNo(parentInv.getPsNo());
+			}
+		}
+		
+		if (StringUtils.isNotBlank(invoiceVO.geteInvoiceDocumentUuid())) {
+			invoiceVO.seteInvoiceDocumentVO(eInvoiceDAO.getEInvoiceByUuid(invoiceVO.geteInvoiceDocumentUuid()));
+		}
+		
+		if (StringUtils.isNotBlank(invoiceVO.geteInvoiceRnDocumentUuid())) {
+			invoiceVO.seteInvoiceRnDocumentVO(eInvoiceDAO.getEInvoiceByUuid(invoiceVO.geteInvoiceRnDocumentUuid()));
+		}
+		
+		// Get sub stmt list
+//		if (invoiceVO.getDocTypeCd().equals("P") && invoiceVO.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_SPLIT)) {
+//			invoiceVO.setSubInvoiceList(getSubInvoiceList(invoiceVO.getId()));
+//		}
+
+		return invoiceVO;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvPmntList(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoicePaymentVO> getInvPmntList(Long invoiceId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select ip.id, ip.id_inv as invId, ip.id_issuer as issuerId, ip.id_bank as bankId, ").
+			append("ip.dt_pmnt as pmntDt, ip.code, ip.pmnt_type_cd as pmntTypeCd, ip.ref_no as refNo, ip.pmnt_for as pmntFor, ").
+			append("ip.received_from as recievedFr, ip.amount, ip.id_inv_pmnt as invPmnt, ip.id_cashbook as idCashBook, ").
+			append("ip.status_cd as statusCode, ip.dt_created as createdDate, ip.created_by as createdBy, ip.dt_upd as updatedDate, ").
+			append("ip.upd_by as updatedBy, cb.dt_trans as cashBookDt, ip.id_credit_note as creditNoteId, ip.id_parent_pmnt as idParentPmnt ").
+		append("from invoice_pmnt ip ").
+			append("left join invoice_pmnt parent on ip.id_parent_pmnt = parent.id ").
+			append("left join inv_pmnt_cashbook_link link on link.status_cd = :statusCd and ").
+			// if parent pmnt has parent pmnt, then take parent's parent pmnt cb date
+			append("(case when parent.id_parent_pmnt is not null then parent.id_parent_pmnt when ip.id_parent_pmnt is not null then ip.id_parent_pmnt else ip.id end) = link.id_inv_pmnt ").
+			append("left join cash_book cb on cb.status_cd = :statusCd and link.id_cash_book = cb.id ").
+		append("where ip.status_cd = :statusCd and ip.id_inv = :invId ").
+		append("order by ip.seq, ip.id");
+		
+		SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+		query.addScalar("id", LongType.INSTANCE);
+		query.addScalar("invId", LongType.INSTANCE);
+		query.addScalar("issuerId", LongType.INSTANCE);
+		query.addScalar("bankId", LongType.INSTANCE);
+		query.addScalar("pmntDt", DateType.INSTANCE);
+		query.addScalar("code");
+		query.addScalar("pmntTypeCd");
+		query.addScalar("refNo");
+		query.addScalar("pmntFor");
+		query.addScalar("recievedFr");
+		query.addScalar("amount", DoubleType.INSTANCE);
+		query.addScalar("invPmnt");
+		query.addScalar("idCashBook", LongType.INSTANCE);
+		query.addScalar("statusCode");
+		query.addScalar("createdDate", TimestampType.INSTANCE);
+		query.addScalar("createdBy");
+		query.addScalar("updatedDate", TimestampType.INSTANCE);
+		query.addScalar("updatedBy");
+		query.addScalar("cashBookDt", DateType.INSTANCE);
+		query.addScalar("creditNoteId", LongType.INSTANCE);
+		query.addScalar("idParentPmnt", LongType.INSTANCE);
+		query.setParameter("invId", invoiceId);
+		query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+		query.setResultTransformer(Transformers.aliasToBean(InvoicePaymentVO.class));
+		return query.list();
+	}
+	
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getCustomerList(java.lang.String, java.lang.String, java.lang.String, java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CustDetailsVO> getCustomerList(String searchType, String searchValueType, String searchValue, Long companyId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select c.id, cp.id as id_co, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.id when c.pc_type_cd = 'C' then cp.id_person else '' end as id_person, ");
+		sb.append("c.pc_type_cd, ");
+		sb.append("IFNULL((case ");
+		sb.append("when c.pc_type_cd = 'P' then (SELECT description FROM lookup_item l where lookup_cat_cd = '" + CommonConstant.LOOKUP_CAT_CD_SALUTATN + "' and code = (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end)) ");
+		sb.append("when c.pc_type_cd = 'C' then (SELECT description FROM lookup_item l where lookup_cat_cd = '" + CommonConstant.LOOKUP_CAT_CD_SALUTATN + "' and code = cp.salutation_cd) ");
+		sb.append("else '' ");
+		sb.append("end), '') as salutation, ");
+		sb.append("case when c.pc_type_cd = 'P' then CONCAT_WS(' ',p.last_name,p.first_name) when c.pc_type_cd = 'C' then CONCAT_WS(' ',cp.last_name,cp.first_name) else '' end as customer_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) when c.pc_type_cd = 'C' then cp.salutation_cd else '' end as cust_salutatn, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.last_name when c.pc_type_cd = 'C' then cp.last_name else '' end as cust_last_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.first_name when c.pc_type_cd = 'C' then cp.first_name else '' end as cust_first_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then '' when c.pc_type_cd = 'C' then cp.name else '' end as company_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.email when c.pc_type_cd = 'C' then cp.email else '' end as email, ");
+		sb.append("c.code as custCd ");
+		sb.append("from ");
+		sb.append("customer c left join person p on case when c.pc_type_cd = 'P' then c.id_pc = p.id end ");
+		sb.append("left join ");
+		sb.append("(select co.id as id, co.id_person as id_person, co.name, case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end as salutation_cd, p.last_name, p.first_name, p.email from ");
+		sb.append("corporate co left join person p on co.id_person = p.id) cp on ");
+		//sb.append("case when c.pc_type_cd = 'C' then c.id_pc = cp.id end ");
+		sb.append("case when c.pc_type_cd = 'C' then c.id_corporate = cp.id end ");
+		sb.append("where ");
+		sb.append("c.id_company = " + companyId + " ");
+		sb.append("and c.status_cd = '" + CommonConstant.STATUS_CD_ACTIVE + "' ");
+		if (StringUtils.isNotEmpty(searchType)) {
+			if (searchType.equals("NM")) {
+				sb.append("and case ");
+				sb.append("when c.pc_type_cd = 'P' then CONCAT_WS(' ',p.last_name,p.first_name) like '%" + searchValue + "%' ");
+				sb.append("when c.pc_type_cd = 'C' then CONCAT_WS(' ',cp.last_name,cp.first_name)  like '%" + searchValue + "%' ");
+				sb.append("end ");
+			} else if (searchType.equals("CO")) {
+				sb.append("and case ");
+				sb.append("when c.pc_type_cd = 'C' then cp.name like '%" + searchValue + "%' ");
+				sb.append("end ");
+			} else if (searchType.equals("ID")) {
+				sb.append("and case ");
+				sb.append("when c.pc_type_cd = 'P' then p.id in (select id_person from person_identity where type_cd = '" + searchValueType + "' and number like '" + searchValue + "%' group by id_person) ");
+				sb.append("when c.pc_type_cd = 'C' then cp.id_person in (select id_person from person_identity where type_cd = '" + searchValueType + "' and number like '" + searchValue + "%' group by id_person) ");
+				sb.append("end ");
+			}
+		}
+ 
+		List<Object> query = createSQLQuery(sb.toString()).list();
+		List<CustDetailsVO> ls = new ArrayList<CustDetailsVO>(query.size());
+		CustDetailsVO vo = null;
+
+		for (int i = 0; i < query.size(); i++) {
+			vo = new CustDetailsVO();
+			Object[] row = (Object[]) query.get(i);
+
+			if (row[0] != null) vo.setCustId(((BigInteger) row[0]).longValue());
+			if (row[1] != null) vo.setCorId(((BigInteger) row[1]).longValue());
+			if (row[2] != null) vo.setPersonId(Long.parseLong((String) row[2]));
+			if (row[3] != null) vo.setCustType((String) row[3]);
+			vo.setContPersonName((String) row[4] + " " + (String) row[5]);
+			vo.setSalutation((String) row[6]);
+			vo.setLastName((String) row[7]);
+			vo.setFirstName((String) row[8]);
+			if (row[9] != null) vo.setCompanyName((String) row[9]);
+			if (row[10] != null) vo.setEmail((String) row[10]);
+			if (row[11] != null) vo.setCode((String) row[11]);
+
+			Query subQuery = null;
+
+			if (vo.getCustType().equals("C")) {
+				subQuery = createQuery("FROM CorAddressVO WHERE id_corporate = :id");
+				subQuery.setParameter("id", vo.getCorId());
+				CorAddressVO corAddressVO = (CorAddressVO) subQuery.uniqueResult();
+				if (corAddressVO != null) vo.setCorAddressVO(corAddressVO);
+
+				subQuery = createQuery("FROM CorContactVO WHERE id_corporate = :id");
+				subQuery.setParameter("id", vo.getCorId());
+				if (subQuery.list().size() > 0) vo.setCorContactList(subQuery.list());
+
+			} else {
+				subQuery = createQuery("FROM AddressVO WHERE id_person = :id");
+				subQuery.setParameter("id", vo.getPersonId());
+				AddressVO addressVO = (AddressVO) subQuery.uniqueResult();
+				if (addressVO != null) vo.setAddressVO(addressVO);
+
+				subQuery = createQuery("FROM PersonContactVO WHERE id_person = :id");
+				subQuery.setParameter("id", vo.getPersonId());
+				if (subQuery.list().size() > 0) vo.setContactList(subQuery.list());
+			}
+
+			ls.add(vo);
+		}
+		return ls;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getPassangerList(java.lang.String, java.lang.String, java.lang.String, java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<CustDetailsVO> getPassangerList(String searchType, String searchValueType, String searchValue, Long companyId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT c.id,c.corporate_name, case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end as salutation_cd, p.first_name, p.last_name, c.pc_type_cd, c.code from customer c inner join person p on c.id_pc = p.id ");
+		sb.append("where ");
+		sb.append("c.id_company = " + companyId + " ");
+		sb.append("and c.status_cd = '" + CommonConstant.STATUS_CD_ACTIVE + "' "); 
+
+		List<Object> query = createSQLQuery(sb.toString()).list();
+		List<CustDetailsVO> ls = new ArrayList<CustDetailsVO>(query.size());
+		CustDetailsVO vo = null;
+
+		for (int i = 0; i < query.size(); i++) {
+			vo = new CustDetailsVO();
+			Object[] row = (Object[]) query.get(i);
+
+			if (row[0] != null) vo.setCustId(((BigInteger) row[0]).longValue()); 
+			if (row[1] != null) vo.setCompanyName((String) row[1]); 
+			vo.setContPersonName((String) row[2] + " " + (String) row[3]+ " " + (String) row[4]); 
+			vo.setCustType((String) row[5]);
+			if (row[6] != null) vo.setCode((String) row[6]);
+
+			ls.add(vo);
+		}
+		return ls;
+	}
+
+	/*
+	 * (non-Javadoc) no use
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getExOrderList()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ExOrderVO> getExOrderList() {
+		Criteria criteriaEX = createCriteria(ExOrderVO.class);
+		criteriaEX.addOrder(Order.asc("id"));
+		Criteria criteriaSup = createCriteria(SupplierVO.class);
+		Criteria criteriaPer = createCriteria(PersonVO.class);
+
+		List<ExOrderVO> exOrderVO = new ArrayList<ExOrderVO>();
+		List<SupplierVO> supplierVO = new ArrayList<SupplierVO>();
+		List<PersonVO> personVO = new ArrayList<PersonVO>();
+
+		if (CollectionUtils.isNotEmpty(criteriaEX.list())) exOrderVO = criteriaEX.list();
+		if (CollectionUtils.isNotEmpty(criteriaSup.list())) supplierVO = criteriaSup.list();
+		if (CollectionUtils.isNotEmpty(criteriaPer.list())) personVO = criteriaPer.list();
+
+		for(int i = 0; i < exOrderVO.size(); i++) {
+			for(int j = 0; j < supplierVO.size(); j++) {
+				if(exOrderVO.get(i).getSupplierId().equals(supplierVO.get(j).getId())){
+					for(int k = 0; k < personVO.size(); k++) {
+						if(supplierVO.get(j).getPersonId().equals(personVO.get(k).getId())){
+							exOrderVO.get(i).setSuppFullName(personVO.get(k).getLastName() + " " + personVO.get(k).getGivenName());
+							break;
+						}
+					}
+					break;
+				}
+			}
+		}
+
+		return exOrderVO;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvEOItemViewList(java.lang.Long, boolean)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceAndExchangeOrderViewVO> getInvEOItemViewList(Long companyId, boolean acctMgr, String invoiceCatCd, String invItemCat, List<String> excludeInvItemCatList) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("FROM InvoiceAndExchangeOrderViewVO ");
+		sb.append("WHERE id_company = :companyId ");
+		if (!acctMgr) sb.append("AND acct_mgr_use = :acctMgrUse ");
+		if (StringUtils.isNotEmpty(invoiceCatCd)) sb.append("AND (IFNULL(inv_cat, '') = '' or FIND_IN_SET(:invosqliceCatCd, inv_cat) > 0) ");
+		if (StringUtils.isNotEmpty(invItemCat)) sb.append("AND cat_cd = :invItemCat ");
+		if (CollectionUtils.isNotEmpty(excludeInvItemCatList))	sb.append("AND cat_cd NOT IN :excludeInvItemCatList ");
+		sb.append("AND is_show = :isShow ");
+		sb.append("ORDER BY cat_cd, type_cd, description ");
+		
+		Query query = createQuery(sb.toString());
+		if (!acctMgr) query.setBoolean("acctMgrUse", false);
+		if (StringUtils.isNotEmpty(invoiceCatCd)) query.setString("invoiceCatCd", invoiceCatCd);
+		if (StringUtils.isNotEmpty(invItemCat)) query.setString("invItemCat", invItemCat);
+		if (CollectionUtils.isNotEmpty(excludeInvItemCatList))	query.setParameterList("excludeInvItemCatList", excludeInvItemCatList);
+		query.setLong("companyId", companyId);
+		query.setBoolean("isShow", true);
+		return query.list();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceByBooking(java.lang.Long)
+	 */
+	@Override
+	public InvoiceVO getInvoiceByBooking(Long idBooking) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		criteria.add(Restrictions.eq("bookingId", idBooking));
+		criteria.setMaxResults(1);
+		return (InvoiceVO) criteria.uniqueResult();
+	}
+
+	public InvoiceAndExchangeOrderVO getInvEOItems(Long invEOItemId) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceAndExchangeOrderVO.class);
+		criteria.add(Restrictions.eq("id", invEOItemId));
+		criteria.addOrder(Order.asc("id"));
+		return (InvoiceAndExchangeOrderVO) criteria.uniqueResult();
+	}
+
+	@Override
+	public CustDetailsVO getCustDetails(Long custId) throws BusinessException {
+		return getCustDetails(custId, true, false);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public CustDetailsVO getCustDetails(Long custId, boolean needDetail, boolean needLangMeal) throws BusinessException {
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("select c.id, cp.id as id_co, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.id when c.pc_type_cd = 'C' then cp.id_person else '' end as id_person, ");
+		sb.append("c.pc_type_cd, ");
+		sb.append("case ");
+		sb.append("when c.pc_type_cd = 'P' then (SELECT description FROM lookup_item l where lookup_cat_cd = '" + CommonConstant.LOOKUP_CAT_CD_SALUTATN + "' and code = (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end)) ");
+		sb.append("when c.pc_type_cd = 'C' then (SELECT description FROM lookup_item l where lookup_cat_cd = '" + CommonConstant.LOOKUP_CAT_CD_SALUTATN + "' and code = cp.salutation_cd) ");
+		sb.append("else '' ");
+		sb.append("end as salutation, ");
+		sb.append("case when c.pc_type_cd = 'P' then CONCAT_WS(' ',p.last_name,p.first_name) when c.pc_type_cd = 'C' then CONCAT_WS(' ',cp.last_name,cp.first_name) else '' end as customer_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) when c.pc_type_cd = 'C' then cp.salutation_cd else '' end as cust_salutatn, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.last_name when c.pc_type_cd = 'C' then cp.last_name else '' end as cust_last_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.first_name when c.pc_type_cd = 'C' then cp.first_name else '' end as cust_first_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then '' when c.pc_type_cd = 'C' then cp.name else '' end as company_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.email when c.pc_type_cd = 'C' then cp.email else '' end as email, ");
+		sb.append("c.code, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.nick_name when c.pc_type_cd = 'C' then cp.nick_name else '' end as nick_name, ");
+		sb.append("p.upoint, p.apple_voucher_point, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.title when c.pc_type_cd = 'C' then cp.title else '' end as title, ");
+//		sb.append("p.tax_id_no, p.id_country, p.race, p.dt_birth, p.age, p.sex_cd, c.is_lock, cp.gst_reg_no ");
+		sb.append("case when c.pc_type_cd = 'P' then p.tax_id_no when c.pc_type_cd = 'C' then cp.tax_id_no else '' end as tax_id_no, ");
+		sb.append("p.id_country, p.race, p.dt_birth, p.age, p.sex_cd, c.is_lock, cp.gst_reg_no, cp.reg_no, cp.sst_reg_no ");
+		sb.append(", ( ");
+		sb.append("SELECT ");
+		sb.append("  GROUP_CONCAT( ");
+		sb.append("    CONCAT(type_cd, '|', country_cd) SEPARATOR ',' ");
+		sb.append("  ) ");
+		sb.append("FROM ");
+		sb.append("  person_contact ");
+		sb.append("WHERE ");
+		sb.append("  id_person = c.id_pc ");
+	    sb.append(") AS 'country_codes' ");
+	    sb.append(", c.crm_id ");
+	    sb.append("from ");
+		sb.append("customer c left join person p on case when c.pc_type_cd = 'P' then c.id_pc = p.id end ");
+		sb.append("left join ");
+		sb.append("(select co.id as id, co.id_person as id_person, co.name, (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) AS salutation_cd, p.last_name, p.first_name, p.email, p.nick_name, p.title, co.gst_reg_no, co.tax_id_no, co.reg_no, co.sst_reg_no from ");
+		sb.append("corporate co left join person p on co.id_person = p.id) cp on ");
+		sb.append("case when c.pc_type_cd = 'C' then c.id_corporate = cp.id end ");
+		sb.append("where c.id = '" + custId + "'");
+		
+		Object query = createSQLQuery(sb.toString()).uniqueResult();
+		CustDetailsVO vo = new CustDetailsVO();
+		Object[] row = (Object[]) query;
+
+		if (row[0] != null) vo.setCustId(((BigInteger) row[0]).longValue());
+		if (row[1] != null) vo.setCorId(((BigInteger) row[1]).longValue());
+		if (row[2] != null) vo.setPersonId(Long.parseLong((String) row[2]));
+		if (row[3] != null) vo.setCustType((String) row[3]);
+		vo.setFullName((String) row[5]);
+		vo.setContPersonName(((StringUtils.isNotBlank((String) row[4]) && !StringUtils.equals((String) row[4], LookupItemConstant.SALUTATION_EMPTY_CD)) ? (String) row[4] + " " : "") + (String) row[5]);
+		vo.setSalutation((String) row[6]);
+		vo.setLastName((String) row[7]);
+		vo.setFirstName((String) row[8]);
+		if (row[9] != null) vo.setCompanyName((String) row[9]);
+		if (row[10] != null) vo.setEmail((String) row[10]);
+		if (row[11] != null) vo.setCode((String) row[11]);
+		if (row[12] != null) vo.setNickName((String) row[12]);
+		if (row[13] != null) vo.setuPoint(Integer.parseInt(row[13].toString()));
+		if (row[14] != null) vo.setApplePoint(Integer.parseInt(row[14].toString()));
+		if (row[15] != null) vo.setTitle((String) row[15]);
+		if (row[16] != null) vo.setTaxIdNo((String) row[16]);
+		if (row[17] != null) vo.setCountryId(((BigInteger) row[17]).longValue());
+		if (row[18] != null) vo.setRace((String) row[18]);
+		if (row[19] != null) vo.setDob((Date) row[19]);
+		if (row[20] != null) vo.setAge(Integer.parseInt(row[20].toString()));
+		if (row[21] != null) vo.setSex((String) row[21]);
+		if (row[22] != null) vo.setIsLock((Boolean) row[22]);
+		if (row[23] != null) vo.setGstRegNo((String) row[23]);
+		if (row[24] != null) vo.setRegNo((String) row[24]);
+		if (row[25] != null) vo.setSstRegNo((String) row[25]);
+		if (row[26] != null) vo.setCountryCode((String) row[26]);
+		if (row[27] != null) vo.setCrmId((String) row[27]);
+		
+//		if (StringUtils.isNotEmpty(vo.getTitle()) && StringUtils.isNotEmpty(vo.getTitle()) && !vo.getSalutation().equals(vo.getTitle())) {
+//			String custName = LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_SALUTATN, vo.getTitle()) + " " + (String) row[5] +
+//					" (" + (String) row[4] + ")";
+//			vo.setContPersonName(custName);
+		
+//		if (StringUtils.isNotEmpty(vo.getTitle()) || StringUtils.isNotEmpty(vo.getNickName())) {
+//			String custNameWithTitle = "";
+//			if (StringUtils.isNotEmpty(vo.getTitle()) && StringUtils.isNotEmpty(vo.getTitle()) && !vo.getSalutation().equals(vo.getTitle()))
+//				custNameWithTitle += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_SALUTATN, vo.getTitle());
+//			if (StringUtils.isNotEmpty(vo.getNickName())) custNameWithTitle += " " + vo.getNickName();
+//			
+//			if (StringUtils.isNotEmpty(custNameWithTitle))
+//				vo.setContPersonName(vo.getContPersonName() + " (" + custNameWithTitle.trim() + ")");
+//		}
+		
+
+		if (needDetail) {
+			Criteria criteria;
+			if (vo.getCustType().equals("C")) {
+				criteria = createCriteria(CorAddressVO.class);
+				criteria.add(Restrictions.eq("corporateId", vo.getCorId()));
+				criteria.add(Restrictions.eq("addrType", CommonConstant.BILL_ADDR));
+				CorAddressVO corAddressVO = (CorAddressVO) criteria.uniqueResult();
+        		if (corAddressVO != null) vo.setCorAddressVO(corAddressVO);
+
+				criteria = createCriteria(CorContactVO.class);
+				criteria.add(Restrictions.eq("corporateId", vo.getCorId()));
+				criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+				vo.setCorContactList(criteria.list());
+				for(CorContactVO ccVO : vo.getCorContactList()) {
+					String fullNo = FunctionUtils.phoneNumber(ccVO.getCountryCd(), ccVO.getContactNo());
+					ccVO.setFullPhoneNo(fullNo);
+				}
+
+			} else {
+				criteria = createCriteria(AddressVO.class);
+				criteria.add(Restrictions.eq("personId", vo.getPersonId()));
+				criteria.add(Restrictions.eq("addrType", CommonConstant.BILL_ADDR));
+				AddressVO addressVO = (AddressVO) criteria.uniqueResult();
+        		if (addressVO != null) vo.setAddressVO(addressVO);
+        		
+        		criteria = createCriteria(AddressVO.class);
+				criteria.add(Restrictions.eq("personId", vo.getPersonId()));
+				criteria.add(Restrictions.eq("addrType", CommonConstant.MAIL_ADDR));
+				AddressVO mailAddressVO = (AddressVO) criteria.uniqueResult();
+        		if (mailAddressVO != null) vo.setMailAddressVO(mailAddressVO);
+
+				criteria = createCriteria(PersonContactVO.class);
+				criteria.add(Restrictions.eq("personId", vo.getPersonId()));
+				criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+				vo.setContactList(criteria.list());
+			}
+
+			criteria = createCriteria(IdentityVO.class);
+			criteria.add(Restrictions.eq("personId", vo.getPersonId()));
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			vo.setIdentityList(criteria.list());
+			
+			// Retrieve identity details
+			if (CollectionUtils.isNotEmpty(vo.getIdentityList())) {
+				for (IdentityVO iVO : vo.getIdentityList()) {
+					iVO.setIdentityDetailVO(new IdentityDetailVO());
+					criteria = createCriteria(IdentityDetailVO.class);
+	        		criteria.add(Restrictions.eq("personIdentityId", iVO.getId()));
+	    			IdentityDetailVO identityDetailVO = (IdentityDetailVO) criteria.uniqueResult();
+	        		if (identityDetailVO != null) iVO.setIdentityDetailVO(identityDetailVO);
+				}
+			}
+			
+			criteria = createCriteria(PersonEmailVO.class);
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			criteria.add(Restrictions.eq("idPerson", vo.getPersonId()));
+			vo.setEmailList(criteria.list());
+
+			if (needLangMeal) {
+				criteria = createCriteria(PersonLangVO.class);
+				criteria.add(Restrictions.eq("personId", vo.getPersonId()));
+				List<PersonLangVO> langList = criteria.list();
+				vo.setLangList(langList);
+				
+				if (CollectionUtils.isNotEmpty(langList)) {
+					vo.setPersonLangList(langList);
+					vo.setLangCdList(new ArrayList<String>());
+					for(PersonLangVO langVO : langList) {
+						vo.getLangCdList().add(langVO.getLangCd());
+					}
+				}
+
+				criteria = createCriteria(PersonMealVO.class);
+				criteria.add(Restrictions.eq("personId", vo.getPersonId()));
+				List<PersonMealVO> mealList = criteria.list();
+				vo.setMealList(mealList);
+				
+				if (CollectionUtils.isNotEmpty(mealList)) {
+					vo.setPersonMealList(mealList);
+					vo.setMealCdList(new ArrayList<String>());
+					for(PersonMealVO mealVO : mealList) {
+						vo.getMealCdList().add(mealVO.getMealCd());
+					}
+				}
+				
+				criteria = createCriteria(PersonClassVO.class);
+				criteria.add(Restrictions.eq("personId", vo.getPersonId()));
+				List<PersonClassVO> classList = criteria.list();
+				if (CollectionUtils.isNotEmpty(classList)) {
+					vo.setPersonClassList(classList);
+					vo.setClassCdList(new ArrayList<String>());
+					for(PersonClassVO classVO : classList) {
+						vo.getClassCdList().add(classVO.getClassCd());
+					}
+				}
+				
+				criteria = createCriteria(PersonComplicationVO.class);
+				criteria.add(Restrictions.eq("personId", vo.getPersonId()));
+				List<PersonComplicationVO> complicationList = criteria.list();
+				if (CollectionUtils.isNotEmpty(complicationList)) {
+					vo.setPersonComplicationList(complicationList);
+					vo.setCompliCdList(new ArrayList<String>());
+					for(PersonComplicationVO compliVO : complicationList) {
+						vo.getCompliCdList().add(compliVO.getComplicationCd());
+					}
+				}
+				
+				criteria = createCriteria(PersonAttachmentVO.class);
+				criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+				criteria.add(Restrictions.eq("personId", vo.getPersonId()));
+				vo.setAttachmentList(criteria.list());
+				
+				
+			}
+		}
+		return vo;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#deleteAcctTrans(com.bcs.zsg.sales.vo.InvoiceVO, com.bcs.zsg.acct.vo.AcctTransVO)
+	 */
+	@Override
+	public void deleteAcctTrans(InvoiceVO invoiceVO, AcctTransVO acctTransVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Delete FROM AcctTransVO ");
+		sb.append("WHERE sys_cd = :sysCd ");
+		sb.append("AND sys_no = :sysNo ");
+		sb.append("AND ref_no = :refNo ");
+		sb.append("AND debit = 0 ");
+
+		Query query = createQuery(sb.toString());
+		query.setString("sysCd", acctTransVO.getSysCode());
+		query.setString("sysNo", acctTransVO.getSysNo());
+		query.setString("refNo", acctTransVO.getRefNo());
+		query.executeUpdate();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getAcctTransVO(java.lang.String, java.lang.String, java.lang.String, java.lang.String)
+	 */
+	@Override
+	public AcctTransVO getAcctTransVO(String sysCd, String invId, String invItemId, Long companyId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("FROM AcctTransVO WHERE ");
+		sb.append("sys_cd = :sysCd ");
+		sb.append("AND sys_no = :sysNo ");
+		sb.append("AND ref_no = :refNo ");
+		sb.append("AND id_company = :companyId ");
+
+		Query query = createQuery(sb.toString());
+		query.setString("sysCd", sysCd);
+		query.setString("sysNo", invId);
+		query.setString("refNo", invItemId);
+		query.setLong("companyId", companyId);
+		AcctTransVO acctTransVO = (AcctTransVO) query.uniqueResult();
+		return acctTransVO;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#updateBooking(java.lang.Long, java.lang.String, java.lang.String, java.lang.Long, java.lang.Long)
+	 */
+	@Override
+	public void updateBooking(Long bookingId, String pmntStaus, String status, Long salerId, Long customerId, String orderTypeCd, Long tfairSalerId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE BookingVO SET dt_upd = NOW(), status_cd = :statusCd ");
+		if (pmntStaus != null) sb.append(", pmnt_status_cd = :pmntStatusCd ");
+		if (salerId != null) sb.append(", id_employee = :employeeId ");
+		if (tfairSalerId != null) sb.append(", id_saler_tfair = :tfairSalerId ");
+		if (customerId != null) sb.append(", id_Cust = :customerId ");
+		if (StringUtils.isNotBlank(orderTypeCd)) sb.append(", order_type_cd = :orderTypeCd ");
+		sb.append("WHERE id = :id and pmnt_status_cd != :pmntStatusCdKIVEXP and status_cd != :statusCdCancelled and status_cd != :statusCdVoid");
+		Query query = createQuery(sb.toString());
+		if (pmntStaus != null) query.setString("pmntStatusCd", pmntStaus);
+		if (salerId != null) query.setLong("employeeId", salerId);
+		if (tfairSalerId != null) query.setLong("tfairSalerId", tfairSalerId);
+		if (customerId != null) query.setLong("customerId", customerId);
+		if (StringUtils.isNotBlank(orderTypeCd)) query.setString("orderTypeCd", orderTypeCd);
+		query.setString("statusCd", status);
+		query.setLong("id", bookingId);
+		query.setString("pmntStatusCdKIVEXP", SalesConstant.BOOKING_PMNT_STATUS_KIVEXP);
+		query.setString("statusCdCancelled", CommonConstant.STATUS_CD_CANCELLED);
+		query.setString("statusCdVoid", CommonConstant.STATUS_CD_VOID);
+		query.executeUpdate();
+		
+		if (CommonConstant.STATUS_CD_VOID.equals(status) || CommonConstant.STATUS_CD_CANCELLED.equals(status)) {
+			sb = new StringBuilder();
+			sb.append("UPDATE tour_dep t, tour_booking b SET t.tour_status_cd = :tourStatusCd ");
+			sb.append("WHERE b.id = :bookingId AND t.id = b.id_tour_dep AND t.tour_status_cd = :fullStatus");
+			query = createSQLQuery(sb.toString());
+			query.setParameter("tourStatusCd", ProductConstant.TOUR_STATUS_CD_AVAILABLE);
+			query.setParameter("bookingId", bookingId);
+			query.setParameter("fullStatus", ProductConstant.TOUR_STATUS_CD_FULL);
+			query.executeUpdate();
+		}
+		
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getBookingExist(java.lang.Long)
+	 */
+	@Override
+	public boolean getBookingInvExist(Long bookingId) throws BusinessException {
+		boolean rtnValue = true;
+
+		Criteria criteria = createCriteria(InvoiceVO.class);
+		criteria.add(Restrictions.eq("bookingId", bookingId));
+		if (criteria.list().size() > 0) {
+			rtnValue = true;
+		} else {
+			rtnValue = false;
+		}
+
+		return rtnValue;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getBookingExist(java.lang.Long)
+	 */
+	@Override
+	public InvoiceVO getInvoice(Long bookingId) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		criteria.add(Restrictions.eq("bookingId", bookingId));
+		criteria.setMaxResults(1);
+		return (InvoiceVO) criteria.uniqueResult();
+	}
+
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getBookingExist(java.lang.Long)
+	 */
+	@Override
+	public InvoiceVO getInvoiceById(Long id) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		criteria.add(Restrictions.eq("id", id));
+		return (InvoiceVO) criteria.uniqueResult();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoicePaxVO> getInvoicePaxListWithPkgId(Long pkgId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("SELECT ip.id, ip.id_inv, ip.id_cust, ip.room_type_cd, ip.room_pairing_no, ip.travel_ins_type, ip.travel_ins_policy, ");
+		sb.append("ip.ticket_no, ip.special_request, ip.lang_cd, ip.act_room_type_cd, ip.act_room_pairing_no, ip.act_room_indicator, ");
+		sb.append("ip.act_room_remarks, ip.act_room_remarks_f, ip.status_cd, ");
+		sb.append("i.code, usr.user_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) when c.pc_type_cd = 'C' then cp.salutation_cd else '' end as cust_salutatn, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.last_name when c.pc_type_cd = 'C' then cp.last_name else '' end as cust_last_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.first_name when c.pc_type_cd = 'C' then cp.first_name else '' end as cust_first_name ");
+		sb.append("FROM invoice_pax ip ");
+		sb.append("INNER JOIN invoice i ON i.id = ip.id_inv ");
+		sb.append("LEFT JOIN employee e ON e.id = i.id_saler ");
+		sb.append("LEFT JOIN sec_user usr ON usr.uuid = e.u_sec_user ");
+		sb.append("LEFT JOIN customer c ON c.id = ip.id_cust ");
+		sb.append("LEFT JOIN person p ON p.id = c.id_pc ");
+		sb.append("LEFT JOIN ");
+		sb.append("(SELECT co.id AS id, co.id_person AS id_person, co.name, (CASE WHEN p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' THEN p.salutation_cd ELSE '' END) AS salutation_cd, p.last_name, p.first_name, p.email, p.nick_name FROM ");
+		sb.append("corporate co LEFT JOIN person p on co.id_person = p.id) cp ON CASE WHEN c.pc_type_cd = 'C' THEN c.id_corporate = cp.id END ");
+		sb.append("WHERE i.id_tour_dep = :pkgId AND ip.status_cd = 'A' ");
+		sb.append("AND i.status_cd NOT IN ('CC', 'VD') ");
+		sb.append("AND (i.doc_type_cd = 'I' OR (i.doc_type_cd = 'P' AND IFNULL(i.doc_type_status, '') IN ('OP', 'RW'))) ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("pkgId", pkgId);
+		
+		List<Object> results = query.list();
+		List<InvoicePaxVO> invoicePaxVOList = new ArrayList<InvoicePaxVO>();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoicePaxVO vo = new InvoicePaxVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setInvId(((BigInteger) row[1]).longValue());
+			vo.setCustId(((BigInteger) row[2]).longValue());
+			vo.setRoomTypeCd((String) row[3]);
+			vo.setRoomPairingNo(Integer.parseInt(row[4].toString()));
+			vo.setTravelInsType((String) row[5]);
+			vo.setTravelInsPolicy((String) row[6]);
+			vo.setTicketNo((String) row[7]);
+			vo.setSpclReq((String) row[8]);
+			vo.setLangCd((String) row[9]);
+			vo.setActRoomTypeCd((String) row[10]);
+			vo.setActRoomPairingNo(row[11] != null ? Integer.parseInt(row[11].toString()) : null);
+			vo.setActRoomIndicator((String) row[12]);
+			vo.setActRoomRemarks((String) row[13]);
+			vo.setActRoomRemarksFlg((Boolean) row[14]);
+			vo.setStatusCode((String) row[15]);
+			vo.setInvoiceNo((String) row[16]);
+			vo.setSalesPerson((String) row[17]);
+			String custName = "";
+			if (row[19] != null) {
+				custName = (String) row[19];
+			}
+			if (row[20] != null) {
+				custName = custName.concat(" ").concat((String) row[20]);
+			}
+			vo.setCustName(custName);
+			vo.setCustDetailsVO(new CustDetailsVO());
+			
+			vo.getCustDetailsVO().setCustId(vo.getCustId());
+			vo.getCustDetailsVO().setSalutation((String) row[18]);
+			vo.getCustDetailsVO().setLastName((String) row[19]);
+			vo.getCustDetailsVO().setFirstName((String) row[20]);
+			
+			invoicePaxVOList.add(vo);
+		}
+		
+		return invoicePaxVOList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoicePaxVO> getInvoicePaxListWithDepId(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("SELECT ip.id, ip.id_inv, ip.id_cust, ip.room_type_cd, ip.room_pairing_no, ip.travel_ins_type, ip.travel_ins_policy, ");
+		sb.append("ip.ticket_no, ip.special_request, ip.lang_cd, ip.act_room_type_cd, ip.act_room_pairing_no, ip.act_room_indicator, ");
+		sb.append("ip.act_room_remarks, ip.act_room_remarks_f, ip.status_cd, ");
+		sb.append("i.code, usr.user_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) when c.pc_type_cd = 'C' then cp.salutation_cd else '' end as cust_salutatn, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.last_name when c.pc_type_cd = 'C' then cp.last_name else '' end as cust_last_name, ");
+		sb.append("case when c.pc_type_cd = 'P' then p.first_name when c.pc_type_cd = 'C' then cp.first_name else '' end as cust_first_name ");
+		sb.append("FROM invoice_pax ip ");
+		sb.append("INNER JOIN invoice i ON i.id = ip.id_inv ");
+		sb.append("LEFT JOIN employee e ON e.id = i.id_saler ");
+		sb.append("LEFT JOIN sec_user usr ON usr.uuid = e.u_sec_user ");
+		sb.append("LEFT JOIN customer c ON c.id = ip.id_cust ");
+		sb.append("LEFT JOIN person p ON p.id = c.id_pc ");
+		sb.append("LEFT JOIN ");
+		sb.append("(SELECT co.id AS id, co.id_person AS id_person, co.name, (CASE WHEN p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' THEN p.salutation_cd ELSE '' END) AS salutation_cd, p.last_name, p.first_name, p.email, p.nick_name FROM ");
+		sb.append("corporate co LEFT JOIN person p on co.id_person = p.id) cp ON CASE WHEN c.pc_type_cd = 'C' THEN c.id_corporate = cp.id END ");
+		sb.append("LEFT JOIN tour_booking tb on CASE WHEN i.id_tour_booking IS NULL AND i.id_parent_inv_tour_booking IS NOT NULL THEN i.id_parent_inv_tour_booking ELSE i.id_tour_booking END = tb.id and i.id_company = tb.id_company ");
+		sb.append("WHERE i.id_tour_dep = :idTourDep AND ip.status_cd = 'A' ");
+		if (params.get("inclInvCC") != null && "Y".equals(params.get("inclInvCC"))) {
+//			sb.append("AND i.status_cd IN ('CC', 'VD') ");
+			sb.append("AND (IFNULL(tb.status_cd, '') IN ('CC', 'VD') || IFNULL(pmnt_status_cd, '') = 'KIVEXP') ");
+		} else {
+//			sb.append("AND i.status_cd NOT IN ('CC', 'VD') ");
+			sb.append("AND IFNULL(tb.status_cd, '') NOT IN ('CC', 'VD') AND IFNULL(pmnt_status_cd, '') != 'KIVEXP' ");
+		}
+		sb.append("AND (i.doc_type_cd = 'I' OR (i.doc_type_cd = 'P' AND IFNULL(i.doc_type_status, '') IN ('OP', 'RW'))) ");
+		sb.append("AND (i.id_tour_booking is not null or i.id_parent_inv_tour_booking is not null) ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idTourDep", params.get("idTourDep"));
+		
+		List<Object> results = query.list();
+		List<InvoicePaxVO> invoicePaxVOList = new ArrayList<InvoicePaxVO>();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoicePaxVO vo = new InvoicePaxVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setInvId(((BigInteger) row[1]).longValue());
+			vo.setCustId(((BigInteger) row[2]).longValue());
+			vo.setRoomTypeCd((String) row[3]);
+			vo.setRoomPairingNo(Integer.parseInt(row[4].toString()));
+			vo.setTravelInsType((String) row[5]);
+			vo.setTravelInsPolicy((String) row[6]);
+			vo.setTicketNo((String) row[7]);
+			vo.setSpclReq((String) row[8]);
+			vo.setLangCd((String) row[9]);
+			vo.setActRoomTypeCd((String) row[10]);
+			vo.setActRoomPairingNo(row[11] != null ? Integer.parseInt(row[11].toString()) : null);
+			vo.setActRoomIndicator((String) row[12]);
+			vo.setActRoomRemarks((String) row[13]);
+			vo.setActRoomRemarksFlg((Boolean) row[14]);
+			vo.setStatusCode((String) row[15]);
+			vo.setInvoiceNo((String) row[16]);
+			vo.setSalesPerson((String) row[17]);
+			String custName = "";
+			if (row[19] != null) {
+				custName = (String) row[19];
+			}
+			if (row[20] != null) {
+				custName = custName.concat(" ").concat((String) row[20]);
+			}
+			vo.setCustName(custName);
+			vo.setCustDetailsVO(new CustDetailsVO());
+			
+			vo.getCustDetailsVO().setCustId(vo.getCustId());
+			vo.getCustDetailsVO().setSalutation((String) row[18]);
+			vo.getCustDetailsVO().setLastName((String) row[19]);
+			vo.getCustDetailsVO().setFirstName((String) row[20]);
+			
+			invoicePaxVOList.add(vo);
+		}
+		
+		return invoicePaxVOList;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#insertInvoiceHistory(java.lang.Long, java.lang.String, java.lang.String)
+	 */
+	@Override
+	public void insertInvoiceHistory(Long invId, String actionCd, String reason) throws BusinessException {
+		Query query = createSQLQuery("CALL prc_invoice(:p_id, :p_action, :p_reason)");
+		query.setParameter("p_id", invId);
+		query.setParameter("p_action", actionCd);
+		query.setParameter("p_reason", reason);
+		query.executeUpdate();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#setCustLangMeal(com.bcs.zsg.sales.vo.CustDetailsVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public void setPerSubInfo(CustDetailsVO custDetailsVO) throws BusinessException {
+		//Query subQuery = null;
+
+		/*if (custDetailsVO != null) {
+			//custDetailsVO.setLangList(new ArrayList<PersonLangVO>());
+			//custDetailsVO.setMealList(new ArrayList<PersonMealVO>());
+			//custDetailsVO.setLangVOList(new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>()));
+			//custDetailsVO.setMealVOList(new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>()));
+		}*/
+		
+		//subQuery = createQuery("FROM PersonLangVO WHERE id_person = :id");
+		//subQuery.setParameter("id", custDetailsVO.getPersonId());
+		Criteria criteria = createCriteria(PersonLangVO.class);
+		criteria.add(Restrictions.eq("personId", custDetailsVO.getPersonId()));
+		custDetailsVO.setLangList(criteria.list());
+		if (CollectionUtils.isEmpty(custDetailsVO.getLangList())) custDetailsVO.setLangList(new ArrayList<PersonLangVO>());
+		
+		//subQuery = createQuery("FROM PersonMealVO WHERE id_person = :id");
+		//subQuery.setParameter("id", custDetailsVO.getPersonId());
+		criteria = createCriteria(PersonMealVO.class);
+		criteria.add(Restrictions.eq("personId", custDetailsVO.getPersonId()));
+		custDetailsVO.setMealList(criteria.list());
+		if (CollectionUtils.isEmpty(custDetailsVO.getMealList())) custDetailsVO.setMealList(new ArrayList<PersonMealVO>());
+		
+		criteria = createCriteria(PersonContactVO.class);
+		criteria.add(Restrictions.eq("personId", custDetailsVO.getPersonId()));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		custDetailsVO.setContactList(criteria.list());
+		if (CollectionUtils.isEmpty(custDetailsVO.getContactList())) custDetailsVO.setContactList(new ArrayList<PersonContactVO>());
+		
+		criteria = createCriteria(IdentityVO.class);
+		criteria.add(Restrictions.eq("personId", custDetailsVO.getPersonId()));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		custDetailsVO.setIdentityList(criteria.list());
+		if (CollectionUtils.isEmpty(custDetailsVO.getIdentityList())) custDetailsVO.setIdentityList(new ArrayList<IdentityVO>());
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceStatus(java.lang.Long)
+	 */
+	@Override
+	public String getInvoiceStatus(Long id) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		criteria.add(Restrictions.eq("id", id));
+		criteria.setMaxResults(1);
+		InvoiceVO invoiceVO = (InvoiceVO) criteria.uniqueResult();
+		return invoiceVO.getStatusCd();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceListSize(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getInvoiceListSize(Map<String, Object> params) throws BusinessException {
+		/* PARAM: eoInvoice [For EO call invoice list use] */
+		if (params.get("eoInvoice") != null) return getInvoiceListSize4EO(params);
+		
+		StringBuilder sbFilters = new StringBuilder();
+		boolean ljBooking = false, ljTourDep = false, ljCust = false, ljPerson = false, ljSecUser = false, ljParentInv = false, ljStatusCd = false;
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sbFilters.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+//				if ("code".equals(entry.getKey())) sbFilters.append("iv.code like '%").append(entry.getValue()).append("%'");
+				if ("code".equals(entry.getKey())) {
+				    if (params.get("type") != null) {
+				        String[] type = (String[]) params.get("type");
+				        List<String> typeList = Arrays.asList(type);				        
+				        boolean hasPaxStmt = typeList.contains(SalesConstant.DOC_TYPE_CD_PAX_STMT);
+				        boolean hasInvoice = typeList.contains(SalesConstant.DOC_TYPE_CD_INVC);			        
+				        if (hasPaxStmt && !hasInvoice) {
+				            sbFilters.append("iv.ps_no like '%").append(entry.getValue()).append("%'");
+				        } else if (!hasPaxStmt && hasInvoice) {
+				        	sbFilters.append("iv.code like '%").append(entry.getValue()).append("%'");
+				        } else {
+				        	sbFilters.append("(iv.ps_no like '%").append(entry.getValue()).append("%' ");
+				        	sbFilters.append("OR iv.code like '%").append(entry.getValue()).append("%')");
+				        }
+				    } else {
+				        sbFilters.append("iv.code like '%").append(entry.getValue()).append("%'");
+				    }
+				}
+				else if ("invoiceDt".equals(entry.getKey())) sbFilters.append("date_format(iv.dt_inv, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("departureDt".equals(entry.getKey())) sbFilters.append("date_format(iv.dt_departure, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("salerName".equals(entry.getKey())) {
+					sbFilters.append("usr.user_name like '%").append(entry.getValue()).append("%'");
+					ljSecUser = true;
+				}
+				else if ("custCd".equals(entry.getKey())) {
+					sbFilters.append("cm.code like '%").append(entry.getValue()).append("%'");
+					ljCust = true;
+				} else if ("custName".equals(entry.getKey())) {
+					sbFilters.append("concat(ps.last_name, ' ', ps.first_name) like '%").append(entry.getValue()).append("%'");
+					ljPerson = true;
+				} else if ("coName".equals(entry.getKey())) {
+					sbFilters.append("cm.corporate_name like '%").append(entry.getValue()).append("%'");
+					ljCust = true;
+				} else if ("tourCd".equals(entry.getKey())) {
+					sbFilters.append("tdp.code like '%").append(entry.getValue()).append("%'");
+					ljTourDep = true;
+				}	else if ("bookingId".equals(entry.getKey())) sbFilters.append("(iv.id_tour_booking like '%").append(entry.getValue()).append("%'").append(" or iv.id_parent_inv_tour_booking like '%").append(entry.getValue()).append("%') ");
+				else if ("amount".equals(entry.getKey())) sbFilters.append("iv.amount like '").append(entry.getValue()).append("%'");
+				else if ("balance".equals(entry.getKey())) sbFilters.append("iv.balance like '").append(entry.getValue()).append("%'");
+				else if ("invoiceDue".equals(entry.getKey())) sbFilters.append("date_format(iv.inv_due, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("statusCd".equals(entry.getKey())) {
+					sbFilters.append("upper(d_inv_status.ref_value) like upper('%").append(entry.getValue()).append("%')");
+					ljStatusCd = true;
+				}
+				else if ("bookingStatusCd".equals(entry.getKey())) {
+//					sbFilters.append("tb.status_cd in (select ref_cd from com_ref_data where cat_cd = 'BOOK_STATUS' and lcase(ref_value) like lcase('").append(entry.getValue()).append("%'))");
+					sbFilters.append("lcase(d_tb_status.ref_value) LIKE '%").append(entry.getValue().toLowerCase()).append("%' ");
+					ljBooking = true;
+				}
+				else if ("updatedBy".equals(entry.getKey())) sbFilters.append("iv.upd_by like '%").append(entry.getValue()).append("%'");
+				else if ("updatedDate".equals(entry.getKey())) sbFilters.append("date_format(iv.dt_upd, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("tickets".equals(entry.getKey())) sbFilters.append("(select GROUP_CONCAT(case when ip.ticket_no = '' then null else ip.ticket_no end separator ', ') from invoice_pax ip where ip.id_inv = iv.id) like '%").append(entry.getValue()).append("%'");
+				else if ("referenceNoList".equals(entry.getKey())) sbFilters.append("(SELECT GROUP_CONCAT(CONCAT(ref_type, ': ', ref_no) SEPARATOR '<br/>') FROM invoice_pax_ref_no iprn JOIN invoice_pax ip ON iprn.id_inv_pax = ip.id WHERE ip.id_inv = iv.id AND ip.status_cd = 'A' AND iprn.status_cd = 'A') like '%").append(entry.getValue()).append("%'");
+				else if ("internalRemarks".equals(entry.getKey())) sbFilters.append("iv.internal_remarks like '%").append(entry.getValue()).append("%'");
+				else if ("psNo".equals(entry.getKey())) sbFilters.append("iv.ps_no like '%").append(entry.getValue()).append("%'");
+				else if ("docTypeStatus".equals(entry.getKey())) sbFilters.append("upper((select ref_value from com_ref_data where ref_cd = iv.doc_type_status)) like upper('%").append(entry.getValue()).append("%')");
+				else if ("eInvoiceStatus".equals(entry.getKey())) sbFilters.append("iv.e_invoice_status like '%").append(entry.getValue()).append("%'");
+				else if ("parentPsNo".equals(entry.getKey())) {
+					sbFilters.append("pr.ps_no like '%").append(entry.getValue()).append("%'");
+					ljParentInv = true;
+				}
+				if (filters.size() > 1 && it.hasNext()) sbFilters.append(" and ");
+			}
+			sbFilters.append(")");
+		}
+		
+		if (params.get("pmntStatus") != null || params.get("pmntStatusList") != null)	ljBooking = true;
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("select count(iv.id) ");
+		/*sb.append("from invoice iv left join tour_booking tb on iv.id_tour_booking = tb.id and iv.id_company = tb.id_company, ");
+		sb.append("tour_dep tdp, employee ep, sec_user usr, customer cm, person ps ");*/
+		sb.append("from invoice iv ");
+		if (ljBooking) {
+			sb.append("left join tour_booking tb on iv.id_tour_booking = tb.id and iv.id_company = tb.id_company ");
+			sb.append("left join tour_booking pr_tb on iv.id_parent_inv_tour_booking = pr_tb.id and iv.id_company = pr_tb.id_company ");
+			sb.append("left join com_ref_data d_tb_status on CASE WHEN tb.status_cd IS NULL THEN pr_tb.status_cd ELSE tb.status_cd END = d_tb_status.ref_cd and d_tb_status.cat_cd = 'BOOK_STATUS' ");
+		}
+		if (ljTourDep)
+			sb.append("left join tour_dep tdp on iv.id_tour_dep = tdp.id ");
+		if (ljSecUser) {
+			sb.append("left join employee ep on iv.id_saler = ep.id and iv.id_company = ep.id_company ");
+			sb.append("left join sec_user usr on ep.u_sec_user = usr.uuid ");
+		}
+		if (ljCust || ljPerson)
+			sb.append("left join customer cm on iv.id_customer = cm.id and iv.id_company = cm.id_company ");
+		if (ljPerson)
+			sb.append("left join person ps on cm.id_pc = ps.id ");
+		if (ljParentInv) {
+			sb.append("left join invoice pr on pr.id = iv.id_parent_inv ");
+		}
+		if (ljStatusCd) {
+			sb.append("left join com_ref_data d_inv_status on iv.status_cd = d_inv_status.ref_cd and d_inv_status.cat_cd = 'INV_STATUS' ");
+		}
+		
+		sb.append("where iv.id_company = :idCompany and iv.doc_type_cd in :docTypeCd ");
+		
+		if (params.get("notViewableCatCode") != null) sb.append("and iv.cat_cd not in :notViewableCatCode ");
+		
+		if (params.get("orderSourceCode") != null) sb.append("and iv.order_cd = :orderSourceCode ");
+		
+		if (params.get("invoiceCategoryCode") != null) sb.append("and iv.cat_cd = :invoiceCategoryCode ");
+		
+		if (params.get("eInvoiceStatusList") != null)	sb.append("and iv.e_invoice_status in :eInvoiceStatusList ");
+		
+		if (params.get("fromDate") != null && params.get("toDate") != null) sb.append("and date(iv.dt_inv) BETWEEN date(:fromDate) and date(:toDate) ");
+		
+		if (params.get("fromDate") != null) sb.append("and date(iv.dt_inv) >= date(:fromDate) ");
+		
+		if (params.get("toDate") != null) sb.append("and date(iv.dt_inv) <= date(:toDate) ");
+		
+		if (params.get("depDateFrom") != null && params.get("depDateTo") != null) sb.append("and date(iv.dt_departure) BETWEEN date(:depDateFrom) and date(:depDateTo) ");
+		
+		if (params.get("depDateFrom") != null) sb.append("and date(iv.dt_departure) >= date(:depDateFrom) ");
+		
+		if (params.get("depDateTo") != null) sb.append("and date(iv.dt_departure) <= date(:depDateTo) ");
+		
+		if (params.get("invFrom") != null && params.get("invTo") != null) sb.append("and CAST(iv.code as signed) BETWEEN CAST(:invFrom as signed) and CAST(:invTo as signed) ");
+		
+		if (params.get("invFrom") != null) sb.append("and CAST(iv.code as signed) >= CAST(:invFrom as signed) ");
+		
+		if (params.get("invTo") != null) sb.append("and CAST(iv.code as signed) <= CAST(:invTo as signed) ");
+		
+		if (params.get("docTypeStatus") != null)	sb.append("and iv.doc_type_status in :docTypeStatus ");
+		
+		if (params.get("paxStatementStatus") != null) {
+			String paxStatementStatus = (String) params.get("paxStatementStatus");
+			if (StringUtils.isNotEmpty(paxStatementStatus)) {
+				if (paxStatementStatus.equals(ProductConstant.PAX_STMT_STATUS_OPENED)) {
+					sb.append("and iv.doc_type_status = '"+ProductConstant.PAX_STMT_STATUS_OPENED+"' ");
+				} else if (paxStatementStatus.equals(ProductConstant.PAX_STMT_STATUS_REVIEWING)) {
+					sb.append("and iv.doc_type_status = '"+ProductConstant.PAX_STMT_STATUS_REVIEWING+"' ");
+				} else if (paxStatementStatus.equals(ProductConstant.PAX_STMT_STATUS_CONVERTED)) {
+					sb.append("and iv.doc_type_status = '"+ProductConstant.PAX_STMT_STATUS_CONVERTED+"' ");
+				} else if (paxStatementStatus.equals(ProductConstant.PAX_STMT_STATUS_SPLIT)) {
+					sb.append("and iv.doc_type_status = '"+ProductConstant.PAX_STMT_STATUS_SPLIT+"' ");
+				} 
+			}
+		}
+		
+//		if (params.get("isConsolEInv") != null && (Boolean) params.get("isConsolEInv"))	sb.append("and iv.is_consol_e_invoice = :isConsolEInv and (iv.e_invoice_status not in ('Submitted', 'Valid') or iv.e_invoice_status is null) ");
+//		if (params.get("isConsolEInv") != null && (Boolean) params.get("isConsolEInv"))	{
+//			// load all invoices for grace period six months
+//			sb.append("and (iv.is_consol_e_invoice = :isConsolEInv ");
+//			sb.append("or iv.is_consol_e_invoice != :isConsolEInv) ");
+//			sb.append("and (iv.e_invoice_status not in ('Submitted', 'Valid') or iv.e_invoice_status is null) ");
+//			sb.append("and iv.status_cd != 'VD' ");
+//		}
+		
+		if (params.get("isConsolEInv") != null && (Boolean) params.get("isConsolEInv"))	{
+			// grace period ends
+			sb.append("and iv.is_consol_e_invoice = :isConsolEInv ");
+			sb.append("and (iv.e_invoice_status not in ('Submitted', 'Valid') or iv.e_invoice_status is null) ");
+			sb.append("and iv.status_cd != 'VD' ");
+		}
+		
+		if (sbFilters.length() > 0) {
+			sb.append(sbFilters);
+		}
+		
+		if (params.get("pmntStatus") != null) {
+			String pmntStatus = (String) params.get("pmntStatus");
+			if (StringUtils.isNotEmpty(pmntStatus)) {
+				if (pmntStatus.equals(SalesConstant.PMNT_STATUS_REQUIRED)) {
+//					sb.append(" and (SELECT IFNULL(SUM(amount), 0) FROM invoice_pmnt WHERE id_inv = iv.id AND status_cd = 'A') = 0 and iv.status_cd != 'CC' and iv.status_cd != 'VD' and (EXISTS (SELECT 1 FROM invoice_pmnt p WHERE p.id_inv = iv.id AND p.pmnt_type_cd = 'rfd' AND p.status_cd = 'A') AND (tb.id is not null AND tb.status_cd = 'CC')) != 1 ");
+					sb.append(" and (iv.amount - iv.balance) = 0 and iv.status_cd != 'CC' and iv.status_cd != 'VD' and (EXISTS (SELECT 1 FROM invoice_pmnt p WHERE p.id_inv = iv.id AND p.pmnt_type_cd = 'rfd' AND p.status_cd = 'A') AND (tb.id is not null AND tb.status_cd = 'CC')) != 1 ");
+				} else if (pmntStatus.equals(SalesConstant.PMNT_STATUS_FAIL)) {
+//					sb.append(" and (SELECT IFNULL(SUM(amount), 0) FROM invoice_pmnt WHERE id_inv = iv.id AND status_cd = 'A') = 0 and iv.status_cd = 'VD' ");
+					sb.append(" and (iv.amount - iv.balance) = 0 and iv.status_cd = 'VD' ");
+				} else if (pmntStatus.equals(SalesConstant.PMNT_STATUS_REFUND_N_CC)) {
+					sb.append(" and (EXISTS (SELECT 1 FROM invoice_pmnt p WHERE p.id_inv = iv.id AND p.pmnt_type_cd = 'rfd' AND p.status_cd = 'A') AND (tb.id is not null AND tb.status_cd = 'CC')) = 1 ");
+				} 
+			}
+		}
+		
+		if (params.get("pmntStatusList") != null) {
+			List<String> pmntStatusList = (List<String>) params.get("pmntStatusList");
+			if(CollectionUtils.isNotEmpty(pmntStatusList)) {
+				sb.append(" and ( 0 ");
+				
+				String requiredQuery = " ((iv.amount - iv.balance) = 0 and iv.status_cd != 'CC' and iv.status_cd != 'VD' and (EXISTS (SELECT 1 FROM invoice_pmnt p WHERE p.id_inv = iv.id AND p.pmnt_type_cd = 'rfd' AND p.status_cd = 'A') AND (tb.id is not null AND tb.status_cd = 'CC')) != 1) ";
+				String pmntFailQuery = " ((iv.amount - iv.balance) = 0 and iv.status_cd = 'VD') ";
+				String hasRfndQuery = " ((EXISTS (SELECT 1 FROM invoice_pmnt p WHERE p.id_inv = iv.id AND p.pmnt_type_cd = 'rfd' AND p.status_cd = 'A') AND (tb.id is not null AND tb.status_cd = 'CC')) = 1) ";
+				
+				for (String pmntStatus : pmntStatusList) {
+//					String pmntStatus = pmntStatusList.get(j);
+					if (pmntStatus.equals(SalesConstant.PMNT_STATUS_REQUIRED)) {
+						sb.append(" or " + requiredQuery);
+					} else if (pmntStatus.equals(SalesConstant.PMNT_STATUS_FAIL)) {
+						sb.append(" or " + pmntFailQuery);
+					} else if (pmntStatus.equals(SalesConstant.PMNT_STATUS_REFUND_N_CC)) {
+						sb.append(" or " + hasRfndQuery);
+					} else if (pmntStatus.equals("OTH")) {
+						sb.append(" or (not " + requiredQuery + " and not " + pmntFailQuery + " and not " + hasRfndQuery + ") ");
+					}
+				}
+				
+				sb.append(" ) ");
+			}
+		}
+		
+		if (params.get("insIssued") != null) {
+			String insIssued = (String) params.get("insIssued");
+			if (StringUtils.isNotEmpty(insIssued)) {
+				StringBuilder sbIns = new StringBuilder();
+				sbIns.append("AND CASE WHEN (iv.id_tour_booking IS NOT NULL OR iv.id_parent_inv_tour_booking IS NOT NULL) THEN ");
+				sbIns.append("( ");
+					sbIns.append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A') != 0 AND ");
+					sbIns.append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A') = ");
+					sbIns.append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A' ");
+						sbIns.append("AND p.travel_ins_type IN (" + SalesConstant.SGL_TRVL_INS_TYPE_LIST + ") ");
+						sbIns.append("AND TRIM(IFNULL(p.travel_ins_policy, '')) != '') ");
+				sbIns.append(") ");
+				sbIns.append("ELSE 0 END = ");
+				if (insIssued.equals(BaseConstant.YES)) {
+					sb.append(sbIns + " 1 ");
+				} else if (insIssued.equals(BaseConstant.NO)) {
+					sb.append(sbIns + " 0 ");
+				}
+			}
+		}
+		
+//		System.out.println("InvoiceDAOImpl.getInvoiceListSize()");
+//		System.out.println(sb.toString());
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", params.get("companyId"));
+//		query.setParameter("docTypeCd", params.get("type"));
+		if (params.get("type") != null)	query.setParameterList("docTypeCd", (String[]) params.get("type"));
+		if (params.get("notViewableCatCode") != null) query.setParameterList("notViewableCatCode", (List<String>) params.get("notViewableCatCode"));
+		if (params.get("orderSourceCode") != null) query.setParameter("orderSourceCode", params.get("orderSourceCode"));
+		if (params.get("invoiceCategoryCode") != null) query.setParameter("invoiceCategoryCode", params.get("invoiceCategoryCode"));
+		if (params.get("fromDate") != null && params.get("toDate") != null) {
+			query.setParameter("fromDate", params.get("fromDate"));
+			query.setParameter("toDate", params.get("toDate"));
+		}
+		if (params.get("fromDate") != null) query.setParameter("fromDate", params.get("fromDate"));
+		if (params.get("toDate") != null) query.setParameter("toDate", params.get("toDate"));
+		if (params.get("depDateFrom") != null) query.setParameter("depDateFrom", params.get("depDateFrom"));
+		if (params.get("depDateTo") != null) query.setParameter("depDateTo", params.get("depDateTo"));
+		if (params.get("invFrom") != null && params.get("invTo") != null) {
+			query.setParameter("invFrom", params.get("invFrom"));
+			query.setParameter("invTo", params.get("invTo"));
+		}
+		if (params.get("invFrom") != null)			query.setParameter("invFrom", params.get("invFrom"));
+		if (params.get("invTo") != null)			query.setParameter("invTo", params.get("invTo"));
+		if (params.get("docTypeStatus") != null)	query.setParameterList("docTypeStatus", (String[]) params.get("docTypeStatus"));
+		if (params.get("eInvoiceStatusList") != null)	query.setParameterList("eInvoiceStatusList", (String[]) params.get("eInvoiceStatusList"));
+		if (params.get("eInvoiceStatus") != null)	query.setParameter("eInvoiceStatus", params.get("eInvoiceStatus"));
+		if (params.get("isConsolEInv") != null && (Boolean) params.get("isConsolEInv"))	query.setParameter("isConsolEInv", params.get("isConsolEInv"));
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceList(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceList(Map<String, Object> params) throws BusinessException {
+		/* PARAM: eoInvoice [For EO call invoice list use] */
+		if (params.get("eoInvoice") != null) return getInvoiceList4EO(params);
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("select iv.id as inv_id, ");
+		sb.append("iv.code as inv_cd, ");
+		sb.append("iv.dt_inv as dt_inv, ");
+		sb.append("iv.dt_departure as dt_departure, ");
+		sb.append("iv.amount as inv_amt, ");
+		sb.append("iv.balance as inv_bln, ");
+		sb.append("iv.inv_due as inv_due, ");
+		sb.append("iv.status_cd as status_cd, ");
+		sb.append("tb.status_cd as booking_status_cd, ");
+		sb.append("iv.id_tour_booking as id_tour_booking, ");
+		sb.append("tdp.code as tour_code, ");
+		sb.append("iv.id_customer as id_cust, ");
+		sb.append("usr.user_name as user_name, ");
+		sb.append("ps.first_name as cust_first_name, ");
+		sb.append("ps.last_name as cust_last_name, ");
+		sb.append("case when ps.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then ps.salutation_cd else '' end as cust_salutation, ");
+		sb.append("cm.corporate_name as company_name, ");
+		sb.append("cm.code as cust_cd, iv.upd_by, iv.dt_upd, ");
+		sb.append("(SELECT GROUP_CONCAT(case when ticket_no = '' then null else ticket_no end separator ', ') FROM invoice_pax WHERE id_inv = iv.id and status_cd = 'A') AS 'tickets', ");
+		sb.append("iv.internal_remarks as internal_remarks, ");
+		sb.append("iv.id_dpt as deparment, iv.order_cd, iv.transferred_date, iv.cat_cd as category_code, iv.ps_no as ps_no, iv.doc_type_status as docTypeStatus, ");
+		sb.append("(iv.amount - iv.balance) AS amt_paid, ");
+		sb.append("(SELECT GROUP_CONCAT(CONCAT(ref_type, ': ', ref_no) SEPARATOR '<br/>') FROM invoice_pax_ref_no iprn ");
+		sb.append("JOIN invoice_pax ip ON iprn.id_inv_pax = ip.id WHERE ip.id_inv = iv.id AND ip.status_cd = 'A' AND iprn.status_cd = 'A') AS ref_no_list, ");
+		sb.append("iv.id_parent_inv_tour_booking as id_parent_inv_tour_booking, iv.e_invoice_status as e_invoice_status, pr.ps_no as parent_ps_no, ");
+		sb.append("iv.is_consol_e_invoice as is_consol_e_invoice, iv.doc_type_cd, ");
+		sb.append("(EXISTS (SELECT 1 FROM invoice_pmnt p WHERE p.id_inv = iv.id AND p.pmnt_type_cd = 'rfd' AND p.status_cd = 'A') AND (tb.id is not null AND tb.status_cd = 'CC')) AS has_refund, ");
+		sb.append("pr_tb.status_cd as parent_booking_status_cd, e_inv.doc_status_reason as eInvDocStatusReason ");
+		sb.append(", CASE WHEN (iv.id_tour_booking IS NOT NULL OR iv.id_parent_inv_tour_booking IS NOT NULL) THEN ");
+		sb.append("( ");
+			sb.append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A') != 0 AND ");
+			sb.append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A') = ");
+			sb.append("(SELECT COUNT(*) FROM invoice_pax p WHERE p.id_inv = iv.id AND p.status_cd = 'A' ");
+				sb.append("AND p.travel_ins_type IN (" + SalesConstant.SGL_TRVL_INS_TYPE_LIST + ") ");
+				sb.append("AND TRIM(IFNULL(p.travel_ins_policy, '')) != '') ");
+		sb.append(") ");
+		sb.append("ELSE 0 END AS has_insurance, ep.department as epDepartment ");
+		sb.append(",(select posting_status from invoice_pos_sales ips where iv.id = ips.id_invoice and ips.status_cd = 'AC' limit 1) as postingSalesStatus ");
+		sb.append(",(select remarks from invoice_pos_sales ips where iv.id = ips.id_invoice and ips.status_cd = 'AC' limit 1) as postingSalesRemarks ");
+		sb.append("from invoice iv left join tour_booking tb on iv.id_tour_booking = tb.id and iv.id_company = tb.id_company ");
+		sb.append("left join tour_dep tdp on iv.id_tour_dep = tdp.id ");
+		sb.append("left join employee ep on iv.id_saler = ep.id and iv.id_company = ep.id_company ");
+		sb.append("left join sec_user usr on ep.u_sec_user = usr.uuid ");
+		sb.append("left join customer cm on iv.id_customer = cm.id and iv.id_company = cm.id_company ");
+		sb.append("left join person ps on cm.id_pc = ps.id ");
+		sb.append("left join invoice pr on pr.id = iv.id_parent_inv ");
+		sb.append("left join com_ref_data d_inv_status on iv.status_cd = d_inv_status.ref_cd and d_inv_status.cat_cd = 'INV_STATUS' ");
+		sb.append("left join tour_booking pr_tb on iv.id_parent_inv_tour_booking = pr_tb.id and iv.id_company = pr_tb.id_company ");
+		sb.append("left join com_ref_data d_tb_status on CASE WHEN tb.status_cd IS NULL THEN pr_tb.status_cd ELSE tb.status_cd END = d_tb_status.ref_cd and d_tb_status.cat_cd = 'BOOK_STATUS' ");
+		sb.append("left join e_invoice_document e_inv on iv.e_invoice_document_uuid = e_inv.document_uuid ");
+		sb.append("where iv.id_company = :idCompany and iv.doc_type_cd in :docTypeCd ");
+		
+		if (params.get("notViewableCatCode") != null) sb.append("and iv.cat_cd not in :notViewableCatCode ");
+		
+		if (params.get("orderSourceCode") != null) sb.append("and iv.order_cd = :orderSourceCode ");
+		
+		if (params.get("invoiceCategoryCode") != null) sb.append("and iv.cat_cd = :invoiceCategoryCode ");
+		
+		if (params.get("eInvoiceStatusList") != null)	sb.append("and iv.e_invoice_status in :eInvoiceStatusList ");
+		
+		if (params.get("fromDate") != null && params.get("toDate") != null) sb.append("and date(iv.dt_inv) BETWEEN date(:fromDate) and date(:toDate) ");
+		
+		if (params.get("fromDate") != null) sb.append("and date(iv.dt_inv) >= date(:fromDate) ");
+//		System.out.println(params.get("fromDate"));
+		
+		if (params.get("toDate") != null) sb.append("and date(iv.dt_inv) <= date(:toDate) ");
+		
+		if (params.get("depDateFrom") != null && params.get("depDateTo") != null) sb.append("and date(iv.dt_departure) BETWEEN date(:depDateFrom) and date(:depDateTo) ");
+		
+		if (params.get("depDateFrom") != null) sb.append("and date(iv.dt_departure) >= date(:depDateFrom) ");
+		
+		if (params.get("depDateTo") != null) sb.append("and date(iv.dt_departure) <= date(:depDateTo) ");
+		
+		if (params.get("invFrom") != null && params.get("invTo") != null) sb.append("and CAST(iv.code as signed) BETWEEN CAST(:invFrom as signed) and CAST(:invTo as signed) ");
+		
+		if (params.get("invFrom") != null) sb.append("and CAST(iv.code as signed) >= CAST(:invFrom as signed) ");
+		
+		if (params.get("invTo") != null) sb.append("and CAST(iv.code as signed) <= CAST(:invTo as signed) ");
+		
+		if (params.get("docTypeStatus") != null)	sb.append("and iv.doc_type_status in :docTypeStatus ");
+		
+		if (params.get("paxStatementStatus") != null) {
+			String paxStatementStatus = (String) params.get("paxStatementStatus");
+			if (StringUtils.isNotEmpty(paxStatementStatus)) {
+				if (paxStatementStatus.equals(ProductConstant.PAX_STMT_STATUS_OPENED)) {
+					sb.append("and iv.doc_type_status = '"+ProductConstant.PAX_STMT_STATUS_OPENED+"' ");
+				} else if (paxStatementStatus.equals(ProductConstant.PAX_STMT_STATUS_REVIEWING)) {
+					sb.append("and iv.doc_type_status = '"+ProductConstant.PAX_STMT_STATUS_REVIEWING+"' ");
+				} else if (paxStatementStatus.equals(ProductConstant.PAX_STMT_STATUS_CONVERTED)) {
+					sb.append("and iv.doc_type_status = '"+ProductConstant.PAX_STMT_STATUS_CONVERTED+"' ");
+				} else if (paxStatementStatus.equals(ProductConstant.PAX_STMT_STATUS_SPLIT)) {
+					sb.append("and iv.doc_type_status = '"+ProductConstant.PAX_STMT_STATUS_SPLIT+"' ");
+				} 
+			}
+		}
+		
+//		if (params.get("isConsolEInv") != null && (Boolean) params.get("isConsolEInv"))	sb.append("and iv.is_consol_e_invoice = :isConsolEInv and (iv.e_invoice_status not in ('Submitted', 'Valid') or iv.e_invoice_status is null) ");
+//		if (params.get("isConsolEInv") != null && (Boolean) params.get("isConsolEInv"))	{
+//			// load all invoices for grace period six months
+//			sb.append("and (iv.is_consol_e_invoice = :isConsolEInv ");
+//			sb.append("or iv.is_consol_e_invoice != :isConsolEInv) ");
+//			sb.append("and (iv.e_invoice_status not in ('Submitted', 'Valid') or iv.e_invoice_status is null) ");
+//			sb.append("and iv.status_cd != 'VD' ");
+//		}
+		if (params.get("isConsolEInv") != null && (Boolean) params.get("isConsolEInv"))	{
+			// grace period ends
+			sb.append("and iv.is_consol_e_invoice = :isConsolEInv ");
+			sb.append("and (iv.e_invoice_status not in ('Submitted', 'Valid') or iv.e_invoice_status is null) ");
+			sb.append("and iv.status_cd != 'VD' ");
+		}
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				
+				if ("code".equals(entry.getKey())) {
+				    if (params.get("type") != null) {
+				        String[] type = (String[]) params.get("type");
+				        List<String> typeList = Arrays.asList(type);				        
+				        boolean hasPaxStmt = typeList.contains(SalesConstant.DOC_TYPE_CD_PAX_STMT);
+				        boolean hasInvoice = typeList.contains(SalesConstant.DOC_TYPE_CD_INVC);  
+				        if (hasPaxStmt && !hasInvoice) {
+				            sb.append("iv.ps_no like '%").append(entry.getValue()).append("%'");
+				        } else if (!hasPaxStmt && hasInvoice) {
+				            sb.append("iv.code like '%").append(entry.getValue()).append("%'");
+				        } else {
+				            sb.append("(iv.ps_no like '%").append(entry.getValue()).append("%' ");
+				            sb.append("OR iv.code like '%").append(entry.getValue()).append("%')");
+				        }
+				    } else {
+				        sb.append("iv.code like '%").append(entry.getValue()).append("%'");
+				    }
+				}
+				else if ("invoiceDt".equals(entry.getKey())) sb.append("date_format(iv.dt_inv, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("departureDt".equals(entry.getKey())) sb.append("date_format(iv.dt_departure, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("salerName".equals(entry.getKey())) sb.append("usr.user_name like '%").append(entry.getValue()).append("%'");
+				else if ("custCd".equals(entry.getKey())) sb.append("cm.code like '%").append(entry.getValue()).append("%'");
+				else if ("custName".equals(entry.getKey())) sb.append("concat(ps.last_name, ' ', ps.first_name) like '%").append(entry.getValue()).append("%'");
+				else if ("coName".equals(entry.getKey())) sb.append("cm.corporate_name like '%").append(entry.getValue()).append("%'");
+				else if ("tourCd".equals(entry.getKey())) sb.append("tdp.code like '%").append(entry.getValue()).append("%'");
+				else if ("bookingId".equals(entry.getKey())) sb.append("(iv.id_tour_booking like '%").append(entry.getValue()).append("%'").append(" or iv.id_parent_inv_tour_booking like '%").append(entry.getValue()).append("%') ");
+				else if ("amount".equals(entry.getKey())) sb.append("iv.amount like '").append(entry.getValue()).append("%'");
+				else if ("balance".equals(entry.getKey())) sb.append("iv.balance like '").append(entry.getValue()).append("%'");
+				else if ("invoiceDue".equals(entry.getKey())) sb.append("date_format(iv.inv_due, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("statusCd".equals(entry.getKey())) sb.append("upper(d_inv_status.ref_value) like upper('%").append(entry.getValue()).append("%')");
+				else if ("bookingStatusCd".equals(entry.getKey())) sb.append("lcase(d_tb_status.ref_value) LIKE '%").append(entry.getValue().toLowerCase()).append("%'");
+				else if ("updatedBy".equals(entry.getKey())) sb.append("iv.upd_by like '%").append(entry.getValue()).append("%'");
+				else if ("updatedDate".equals(entry.getKey())) sb.append("date_format(iv.dt_upd, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("tickets".equals(entry.getKey())) sb.append("(select GROUP_CONCAT(case when ip.ticket_no = '' then null else ip.ticket_no end separator ', ') from invoice_pax ip where ip.id_inv = iv.id) like '%").append(entry.getValue()).append("%'");
+				else if ("referenceNoList".equals(entry.getKey())) sb.append("(SELECT GROUP_CONCAT(CONCAT(ref_type, ': ', ref_no) SEPARATOR '<br/>') FROM invoice_pax_ref_no iprn JOIN invoice_pax ip ON iprn.id_inv_pax = ip.id WHERE ip.id_inv = iv.id AND ip.status_cd = 'A' AND iprn.status_cd = 'A') like '%").append(entry.getValue()).append("%'");
+				else if ("internalRemarks".equals(entry.getKey())) sb.append("iv.internal_remarks like '%").append(entry.getValue()).append("%'");
+				else if ("psNo".equals(entry.getKey())) sb.append("iv.ps_no like '%").append(entry.getValue()).append("%'");
+				else if ("docTypeStatus".equals(entry.getKey())) sb.append("upper((select ref_value from com_ref_data where ref_cd = iv.doc_type_status)) like upper('%").append(entry.getValue()).append("%')");
+				else if ("eInvoiceStatus".equals(entry.getKey())) sb.append("iv.e_invoice_status like '%").append(entry.getValue()).append("%'");
+				else if ("parentPsNo".equals(entry.getKey())) sb.append("pr.ps_no like '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		
+		if (params.get("pmntStatus") != null) {
+			String pmntStatus = (String) params.get("pmntStatus");
+			if (StringUtils.isNotEmpty(pmntStatus)) {
+				if (pmntStatus.equals(SalesConstant.PMNT_STATUS_REQUIRED)) {
+					sb.append(" having amt_paid = 0 and status_cd != 'CC' and status_cd != 'VD' and has_refund != 1 ");
+				} else if (pmntStatus.equals(SalesConstant.PMNT_STATUS_FAIL)) {
+					sb.append(" having amt_paid = 0 and status_cd = 'VD' ");
+				} else if (pmntStatus.equals(SalesConstant.PMNT_STATUS_REFUND_N_CC)) {
+					sb.append(" having has_refund = 1 ");
+				} 
+			}
+		}
+		
+		if (params.get("pmntStatusList") != null) {
+			List<String> pmntStatusList = (List<String>) params.get("pmntStatusList");
+			if(CollectionUtils.isNotEmpty(pmntStatusList)) {
+				sb.append(" having 0 ");
+				
+				String requiredQuery = " (amt_paid = 0 and status_cd != 'CC' and status_cd != 'VD' and has_refund != 1) ";
+				String pmntFailQuery = " (amt_paid = 0 and status_cd = 'VD') ";
+				String hasRfndQuery = " (has_refund = 1) ";
+				
+				for (String pmntStatus : pmntStatusList) {
+//					String pmntStatus = pmntStatusList.get(j);
+					if (pmntStatus.equals(SalesConstant.PMNT_STATUS_REQUIRED)) {
+						sb.append(" or " + requiredQuery);
+					} else if (pmntStatus.equals(SalesConstant.PMNT_STATUS_FAIL)) {
+						sb.append(" or " + pmntFailQuery);
+					} else if (pmntStatus.equals(SalesConstant.PMNT_STATUS_REFUND_N_CC)) {
+						sb.append(" or " + hasRfndQuery);
+					} else if (pmntStatus.equals("OTH")) {
+						sb.append(" or (not " + requiredQuery + " and not " + pmntFailQuery + " and not " + hasRfndQuery + ") ");
+					}
+				}
+			}
+		}
+		
+		if (params.get("insIssued") != null) {
+			String insIssued = (String) params.get("insIssued");
+			if (StringUtils.isNotEmpty(insIssued)) {
+				if (insIssued.equals(BaseConstant.YES)) {
+					sb.append(" having has_insurance = 1 ");
+				} else if (insIssued.equals(BaseConstant.NO)) {
+					sb.append(" having has_insurance = 0 ");
+				}
+			}
+		}
+		
+		sb.append(" order by ");
+		String sortField = (String) params.get("sortField");
+		
+		if (sortField == null && 
+				(Arrays.asList((String[]) params.get("type")).contains(SalesConstant.DOC_TYPE_CD_INVC) 
+						|| Arrays.asList((String[]) params.get("type")).contains(SalesConstant.DOC_TYPE_CD_CRDT_NOTE))) 
+			sb.append("iv.dt_inv desc, cast(iv.code as decimal) desc");
+		else if (sortField == null && Arrays.asList((String[]) params.get("type")).contains(SalesConstant.DOC_TYPE_CD_PAX_STMT)) sb.append("iv.dt_inv desc, iv.ps_no desc"); // if is pax stmt, sort by ps no
+		else {
+			if ("code".equals(sortField)) sb.append("CASE WHEN iv.doc_type_cd = '" + SalesConstant.DOC_TYPE_CD_INVC+"' THEN 1 ELSE 2 END, CASE WHEN iv.doc_type_cd = '" + SalesConstant.DOC_TYPE_CD_PAX_STMT + "' THEN cast(iv.ps_no as decimal) ELSE cast(iv.code as decimal) END");
+			else if ("invoiceDt".equals(sortField)) sb.append("iv.dt_inv");
+			else if ("departureDt".equals(sortField)) sb.append("iv.dt_departure");
+			else if ("salerName".equals(sortField)) sb.append("usr.user_name");
+			else if ("custCd".equals(sortField)) sb.append("cast(cm.code as decimal)");
+			else if ("custName".equals(sortField)) sb.append("concat(ps.last_name, ' ', ps.first_name)");
+			else if ("coName".equals(sortField)) sb.append("cm.corporate_name");
+			else if ("tourCd".equals(sortField)) sb.append("case when tdp.code is not null then cast(tdp.code as decimal) else tdp.code end");
+			else if ("bookingId".equals(sortField)) sb.append("iv.id_tour_booking");
+			else if ("amount".equals(sortField)) sb.append("iv.amount");
+			else if ("balance".equals(sortField)) sb.append("iv.balance");
+			else if ("invoiceDue".equals(sortField)) sb.append("iv.inv_due");
+			else if ("statusCd".equals(sortField)) sb.append("iv.status_cd");
+			else if ("bookingStatusCd".equals(sortField)) sb.append("tb.status_cd");
+			else if ("updatedBy".equals(sortField)) sb.append("iv.upd_by");
+			else if ("updatedDate".equals(sortField)) sb.append("iv.dt_upd");
+			else if ("tickets".equals(sortField)) sb.append("(SELECT GROUP_CONCAT(case when ticket_no = '' then null else ticket_no end separator ', ') FROM invoice_pax WHERE id_inv = iv.id)");
+			else if ("referenceNoList".equals(sortField)) sb.append("(SELECT GROUP_CONCAT(CONCAT(ref_type, ': ', ref_no) SEPARATOR '<br/>') FROM invoice_pax_ref_no iprn JOIN invoice_pax ip ON iprn.id_inv_pax = ip.id WHERE ip.id_inv = iv.id AND ip.status_cd = 'A' AND iprn.status_cd = 'A')");
+			else if ("internalRemarks".equals(sortField)) sb.append("iv.internal_remarks");
+			else if ("orderCd".equals(sortField)) sb.append("iv.order_cd");
+			else if ("catCd".equals(sortField)) sb.append("iv.cat_cd");
+			else if ("psNo".equals(sortField)) sb.append("iv.ps_no");
+			else if ("docTypeStatus".equals(sortField)) sb.append("iv.doc_type_status");
+			else if ("eInvoiceStatus".equals(sortField)) sb.append("iv.e_invoice_status");
+			else if ("parentPsNo".equals(sortField)) sb.append("pr.ps_no");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+//		System.out.println("InvoiceDAOImpl.getInvoiceList()");
+//		System.out.println(sb.toString());
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", params.get("companyId"));
+//		query.setParameter("docTypeCd", params.get("type"));
+		if (params.get("type") != null)	query.setParameterList("docTypeCd", (String[]) params.get("type"));
+		if (params.get("notViewableCatCode") != null) query.setParameterList("notViewableCatCode", (List<String>) params.get("notViewableCatCode"));
+		if (params.get("orderSourceCode") != null) query.setParameter("orderSourceCode", params.get("orderSourceCode"));
+		if (params.get("invoiceCategoryCode") != null) query.setParameter("invoiceCategoryCode", params.get("invoiceCategoryCode"));
+		if (params.get("fromDate") != null && params.get("toDate") != null) {
+			query.setParameter("fromDate", params.get("fromDate"));
+			query.setParameter("toDate", params.get("toDate"));
+		}
+		if (params.get("fromDate") != null) query.setParameter("fromDate", params.get("fromDate"));
+		if (params.get("toDate") != null) query.setParameter("toDate", params.get("toDate"));
+		if (params.get("depDateFrom") != null) query.setParameter("depDateFrom", params.get("depDateFrom"));
+		if (params.get("depDateTo") != null) query.setParameter("depDateTo", params.get("depDateTo"));
+		if (params.get("invFrom") != null && params.get("invTo") != null) {
+			query.setParameter("invFrom", params.get("invFrom"));
+			query.setParameter("invTo", params.get("invTo"));
+		}
+		if (params.get("invFrom") != null) query.setParameter("invFrom", params.get("invFrom"));
+		if (params.get("invTo") != null) query.setParameter("invTo", params.get("invTo"));
+		if (params.get("docTypeStatus") != null)	query.setParameterList("docTypeStatus", (String[]) params.get("docTypeStatus"));
+		if (params.get("eInvoiceStatusList") != null)	query.setParameterList("eInvoiceStatusList", (String[]) params.get("eInvoiceStatusList"));
+		if (params.get("eInvoiceStatus") != null)	query.setParameter("eInvoiceStatus", params.get("eInvoiceStatus"));
+		if (params.get("parentPsNo") != null)	query.setParameter("parentPsNo", params.get("parentPsNo"));
+		if (params.get("isConsolEInv") != null && (Boolean) params.get("isConsolEInv"))	query.setParameter("isConsolEInv", params.get("isConsolEInv"));
+		if (params.get("first") != null && (Integer) params.get("first") >= 0)	query.setFirstResult((Integer) params.get("first"));
+		if (params.get("pageSize") != null && (Integer) params.get("pageSize") >= 0)	query.setMaxResults((Integer) params.get("pageSize"));
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setCode((String) row[1]);
+			vo.setInvoiceDt((Date) row[2]);
+			vo.setDepartureDt((Date) row[3]);
+			vo.setAmount(Double.parseDouble(row[4].toString()));
+			vo.setBalance(Double.parseDouble(row[5].toString()));
+			vo.setInvoiceDue((Date) row[6]);
+			vo.setStatusCd((String) row[7]);
+			vo.setBookingStatusCd((String) row[8]);
+			if(row[9] != null) vo.setBookingId(Long.parseLong(row[9].toString()));
+			if(row[10] != null) vo.setTourCd( row[10].toString());   
+			if(row[11] != null) vo.setCustomerId( Long.parseLong(row[11].toString()));   
+			if(row[12] != null) vo.setSalerName( row[12].toString());
+			vo.setCustName(row[14].toString() + " " + row[13].toString());   
+			vo.setCustSalutation(row[15].toString() );
+			vo.setCoName((row[16] != null) ? row[16].toString() : null);
+			vo.setCustCd((row[17] != null) ? row[17].toString() : null);
+			vo.setUpdatedBy((String) row[18]);
+			vo.setUpdatedDate((Date) row[19]);
+			vo.setTickets(row[20] == null ? null : row[20].toString());
+			vo.setInternalRemarks((row[21] != null) ? row[21].toString() : null);
+			vo.setIdDepartment((String) row[22]);
+			vo.setOrderCd((String) row[23]);
+			if (row[24] != null) vo.setTransferredDate((Date) row[24]);
+			vo.setCatCd((String) row[25]);
+			vo.setPsNo((String) row[26]);
+			vo.setDocTypeStatus((String) row[27]);
+			vo.setAmtPaid(Double.parseDouble(row[28].toString()));
+			if (row[29] != null)	vo.setReferenceNoList((String) row[29]);
+			if (row[30] != null)	vo.setIdParentInvTourBooking(Long.parseLong(row[30].toString()));
+			if (row[31] != null)	vo.seteInvoiceStatus((String) row[31]);
+			if (row[32] != null)	vo.setParentPsNo((String) row[32]);
+			if (row[33] != null)	vo.setIsConsolEInv((Boolean) row[33]);
+			if (row[34] != null)	vo.setDocTypeCd((String) row[34]);
+			if (row[35] != null) {
+				if (row[35] instanceof BigInteger) {
+					vo.setHasRefund(((BigInteger) row[35]).longValue() == 1);
+				} else if (row[35] instanceof Integer) {
+					vo.setHasRefund(((Integer) row[35]).longValue() == 1);
+				}
+			}
+			String referenceNoList = (String) row[29];
+			if (referenceNoList != null && !referenceNoList.isEmpty()) {
+		        String firstReference = referenceNoList.split("<br/>")[0];
+		        if (referenceNoList.contains("<br/>")) {
+		            vo.setReferenceNoListPrev(firstReference + " ......");
+		        } else {
+		            vo.setReferenceNoListPrev(firstReference);
+		        }
+		    }
+			
+			if (vo.getBookingId() == null && vo.getIdParentInvTourBooking() != null) {
+				vo.setBookingId(vo.getIdParentInvTourBooking());
+				if (row[36] != null)	vo.setBookingStatusCd((String) row[36]);
+			}
+			
+			if (row[37] != null)	vo.seteInvoiceErr((String) row[37]);
+			
+//			if (vo.getHasRefund() != null) {
+//				vo.setShowCcRfdBadge(vo.getHasRefund());
+//				
+//				if (vo.getShowCcRfdBadge()) {
+//					if (StringUtils.isNotEmpty(vo.getBookingStatusCd())) {
+//						if (!vo.getBookingStatusCd().equals(CommonConstant.STATUS_CD_CANCELLED)) {
+//							vo.setShowCcRfdBadge(false);
+//						}
+//					}
+//				}
+//			} else {
+//				vo.setShowCcRfdBadge(false);
+//			}
+			
+			if (row[38] != null) {
+				if (row[38] instanceof BigInteger) {
+					vo.setShowTrvlInsBadge(((BigInteger) row[38]).longValue() == 1);
+				} else if (row[38] instanceof Integer) {
+					vo.setShowTrvlInsBadge(((Integer) row[38]).longValue() == 1);
+				}
+			}
+			
+			if (row[39] != null)	vo.setSalerDept((String) row[39]);
+			if (row[40] != null)	vo.setPostingSalesStatus((String) row[40]);
+			if (row[41] != null)	vo.setPostingSalesRemarks((String) row[41]);
+			
+			invoiceList.add(vo);
+		}
+		return invoiceList;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceHistoryListSize(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getInvoiceHistoryListSize(Map<String, Object> params) throws BusinessException {
+		/* PARAM: eoInvoice [For EO call invoice list use] */
+		if (params.get("eoInvoice") != null) return getInvoiceListSize4EO(params);
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("select count(iv.id_hist) ");
+		sb.append("from invoice_history iv ");
+		sb.append("where iv.id_company = :idCompany and iv.doc_type_cd = :docTypeCd and iv.id_hist = :id ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("updatedBy".equals(entry.getKey())) sb.append("iv.upd_by like '%").append(entry.getValue()).append("%'");
+				else if ("updatedDate".equals(entry.getKey())) sb.append("date_format(iv.dt_upd, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("internalRemarks".equals(entry.getKey())) sb.append("iv.internal_remarks like '%").append(entry.getValue()).append("%'");
+				else if ("remarks".equals(entry.getKey())) sb.append("iv.remarks like '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("id", params.get("idHist"));
+		query.setParameter("idCompany", params.get("companyId"));
+		query.setParameter("docTypeCd", params.get("type"));
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceHistoryList(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceHistoryList(Map<String, Object> params) throws BusinessException {
+		/* PARAM: eoInvoice [For EO call invoice list use] */
+		if (params.get("eoInvoice") != null) return getInvoiceList4EO(params);
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("select iv.id_hist as inv_id, ");
+		sb.append("iv.upd_by, iv.dt_upd, ");
+		sb.append("iv.internal_remarks as internal_remarks, ");
+		sb.append("iv.remarks as remarks ");
+		sb.append("from invoice_history iv ");
+		sb.append("where iv.id_company = :idCompany and iv.doc_type_cd = :docTypeCd and iv.id_hist = :id ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("updatedBy".equals(entry.getKey())) sb.append("iv.upd_by like '%").append(entry.getValue()).append("%'");
+				else if ("updatedDate".equals(entry.getKey())) sb.append("date_format(iv.dt_upd, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("internalRemarks".equals(entry.getKey())) sb.append("iv.internal_remarks like '%").append(entry.getValue()).append("%'");
+				else if ("remarks".equals(entry.getKey())) sb.append("iv.remarks like '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		sb.append(" order by ");
+		String sortField = (String) params.get("sortField");
+		
+		if (sortField == null) sb.append("iv.dt_upd desc");
+		else {
+			if ("updatedBy".equals(sortField)) sb.append("iv.upd_by");
+			else if ("updatedDate".equals(sortField)) sb.append("iv.dt_upd");
+			else if ("internalRemarks".equals(sortField)) sb.append("iv.internal_remarks");
+			else if ("remarks".equals(sortField)) sb.append("iv.remarks");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("id", params.get("idHist"));
+		query.setParameter("idCompany", params.get("companyId"));
+		query.setParameter("docTypeCd", params.get("type"));
+		query.setFirstResult((Integer) params.get("first"));
+		query.setMaxResults((Integer) params.get("pageSize"));
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setUpdatedBy((String) row[1]);
+			vo.setUpdatedDate((Date) row[2]);
+			vo.setInternalRemarks((row[3] != null) ? row[3].toString() : null);
+			vo.setRemarks((row[4] != null) ? row[4].toString() : null);
+			
+			invoiceList.add(vo);
+		}
+		return invoiceList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceListForPOSUpload(Map<String, Object> params) throws BusinessException {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("SELECT i.id, i.code, i.dt_inv, i.doc_type_cd, i.order_cd, i.amount, i.status_cd, i.dt_upd, i.id_company, t.grand_total as prev_trans_amt ");
+		sb.append("FROM invoice i ");
+		sb.append("LEFT JOIN ");
+		sb.append("		(SELECT id_invoice, SUM(grand_total) AS grand_total ");
+		sb.append("		FROM pos_upload_sales_trans ");
+		sb.append("		WHERE status_cd = :statusActive ");
+		sb.append("		GROUP BY id_invoice) t ON i.id = t.id_invoice ");
+		sb.append("WHERE i.order_cd = :orderCd AND i.doc_type_cd = 'P' AND i.doc_type_status NOT IN ('SP', 'CL') ");
+		
+//		sb.append("WHERE order_cd = :orderCd AND doc_type_cd = 'I' ");
+		if (params.get("idCompany") != null) {
+			sb.append("AND i.id_company = :idCompany ");
+		}
+		if (params.get("date") != null) {
+			sb.append("AND DATE(i.dt_inv) = DATE('" + sdf.format((Date) params.get("date")) + "') ");
+			sb.append("AND i.status_cd != :statusVoid AND i.status_cd != :statusCancelled ");
+			sb.append("OR (i.order_cd = :orderCd AND i.doc_type_cd = 'P' AND DATE(i.dt_upd) != DATE(i.dt_inv) AND DATE(i.dt_upd) = DATE('" + sdf.format((Date) params.get("date")) + "') AND (i.status_cd IN (:statusVoid, :statusCancelled))) ");
+			sb.append("OR ( ");
+				sb.append(" i.order_cd = :orderCd AND i.doc_type_cd = 'P' ");
+				sb.append(" AND DATE(i.dt_upd) != DATE(i.dt_inv) ");
+				sb.append(" AND DATE(i.dt_upd) = DATE('" + sdf.format((Date) params.get("date")) + "') ");
+				sb.append(" AND t.grand_total != i.amount ");
+			sb.append(" ) ");
+//			sb.append("OR (order_cd = :orderCd AND doc_type_cd = 'I' AND DATE(dt_upd) != DATE(dt_inv) AND DATE(dt_upd) = DATE('" + sdf.format((Date) params.get("date")) + "') AND (status_cd = :statusVoid)) ");
+//			sb.append("OR (order_cd = :orderCd AND doc_type_cd = 'I' AND DATE(dt_upd) != DATE(dt_inv) AND DATE(dt_upd) = DATE('" + sdf.format((Date) params.get("date")) + "') AND (status_cd = :statusCancelled)) ");
+		}
+		sb.append(" UNION ");
+		sb.append("SELECT inv.id, inv.code, inv.dt_inv, inv.doc_type_cd, cn_inv.order_cd, inv.amount, inv.status_cd, inv.dt_upd, inv.id_company, null ");
+		sb.append("FROM invoice inv ");
+		sb.append("	LEFT JOIN invoice cn_inv ON cn_inv.code = inv.cn_inv_no AND cn_inv.doc_type_cd = 'I' ");
+		sb.append("	LEFT JOIN invoice cn_ps ON cn_ps.code = inv.cn_ps_no AND cn_ps.doc_type_cd  = 'P' ");
+		sb.append("WHERE ifnull(cn_inv.order_cd, cn_ps.order_cd) = 'in_house_1u' AND inv.doc_type_cd = 'C' ");
+		if (params.get("idCompany") != null) {
+			sb.append("AND inv.id_company = :idCompany ");
+		}
+		if (params.get("date") != null) {
+			sb.append("AND DATE(inv.dt_inv) = DATE('" + sdf.format((Date) params.get("date")) + "') ");
+			sb.append("AND inv.status_cd != :statusCancelled ");
+		}
+		
+//		System.out.println(sb.toString());
+		
+		Query query = createSQLQuery(sb.toString());
+		if (params.get("idCompany") != null) query.setParameter("idCompany", params.get("idCompany"));
+		if (params.get("orderCd") != null) query.setParameter("orderCd", params.get("orderCd"));
+		query.setParameter("statusCancelled", CommonConstant.STATUS_CD_CANCELLED);
+		query.setParameter("statusVoid", CommonConstant.STATUS_CD_VOID);
+		query.setParameter("statusActive", BaseConstant.STATUS_ACTIVE);
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+		
+		List<String> acctList = new ArrayList<>();
+		AppSettingVO appSettingVO = appSettingBO.getAppSettingByCode(ConstantAppSetting.MAINT_POS_CONFIG_GL_ACCT_TO_EXCLUDE);
+		
+		if (StringUtils.isNotBlank(appSettingVO.getValue())) {
+			List<String> strAcctList = Arrays.asList(appSettingVO.getValue().split(","));
+			
+			for (String acctExclude : strAcctList) {
+				acctList.add(acctExclude);
+			}
+		}
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setCode((String) row[1]);
+			vo.setInvoiceDt((Date) row[2]);
+			vo.setDocTypeCd((String) row[3]);
+			vo.setOrderCd((String) row[4]);
+			vo.setAmount(Double.parseDouble(row[5].toString()));
+			vo.setStatusCd((String) row[6]);
+			
+			// If Status Void then use voided date as invoice date
+			if (StringUtils.equals(vo.getStatusCd(), CommonConstant.STATUS_CD_VOID) ||
+					StringUtils.equals(vo.getStatusCd(), CommonConstant.STATUS_CD_CANCELLED)) 
+				vo.setInvoiceDt((Date) row[7]);
+			
+			vo.setCompanyId(((BigInteger) row[8]).longValue());
+			
+			if (row[9] != null)	vo.setPrevPOSTransAmt(Double.parseDouble(row[9].toString()));
+			
+			Criteria criteria = createCriteria(InvoiceItemVO.class);
+			criteria.add(Restrictions.eq("invId", vo.getId()));
+			criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+			vo.setInvoiceItemList(criteria.list());
+			
+			// Exclude invoice item with account that match with configuration setting
+			List<InvoiceItemVO> tempItemVOList = new ArrayList<>();
+			if (CollectionUtils.isNotEmpty(vo.getInvoiceItemList()) && CollectionUtils.isNotEmpty(acctList)) {
+				for (InvoiceItemVO itemVO : vo.getInvoiceItemList()) {
+					boolean accountExcludeMatch = false;
+					
+					for (String idAcct : acctList) {
+						if (itemVO.getAcctId().equals(Long.valueOf(idAcct))) {
+							accountExcludeMatch = true;
+							break;
+						}
+					}
+					
+					if (!accountExcludeMatch) tempItemVOList.add(itemVO);
+				}
+				
+				AmountCalcViewVO amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(new AmountCalcViewVO(), false, tempItemVOList, null, false);
+				vo.setAmount(amtCalcViewVO.getTotalAmountAfterRounding().doubleValue());
+			}
+			
+			if (vo.getPrevPOSTransAmt() != null) {
+				// if prev trans amt not null, means got previous POS transaction
+				vo.setAmount(new BigDecimal(vo.getAmount()).subtract(new BigDecimal(vo.getPrevPOSTransAmt())).doubleValue());
+				vo.setInvoiceDt((Date) params.get("date"));
+			}
+			
+			invoiceList.add(vo);
+		}
+		
+		return invoiceList;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceListSelectionSize(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	private int getInvoiceListSize4EO(Map<String, Object> params) throws BusinessException {
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("select count(i.id) ");
+		sb.append("from invoice i inner join ");
+		sb.append("customer c on c.id = i.id_customer left join person p on (c.pc_type_cd = 'P' and c.id_pc = p.id) ");
+		sb.append("left join corporate o on (c.pc_type_cd = 'C' AND c.id_corporate = o.id ) ");
+		sb.append("left join person p2 on (c.pc_type_cd = 'C' and o.id_person = p2.id) ");
+		sb.append("left join (SELECT e.id, s.user_name FROM employee e left join sec_user s on e.u_sec_user = s.uuid) si on i.id_issuer = si.id ");
+		sb.append("where i.id_company = :companyId and i.doc_type_cd in :docTypeCd ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("code".equals(entry.getKey())) {
+					sb.append("case when i.doc_type_cd = 'I' then i.code when i.doc_type_cd = 'P' then i.ps_no else i.code end ");
+					sb.append("like '%").append(entry.getValue()).append("%'");
+				}
+				else if ("invoiceDt".equals(entry.getKey())) sb.append("date_format(i.dt_inv, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("custCd".equals(entry.getKey())) sb.append("c.code like '%").append(entry.getValue()).append("%'");
+				else if ("custName".equals(entry.getKey())) {
+					sb.append("concat(case when c.pc_type_cd = 'C' then p2.last_name when c.pc_type_cd = 'P' then p.last_name end, ' ', case when c.pc_type_cd = 'C' then p2.first_name when c.pc_type_cd = 'P' then p.first_name end) like '%").append(entry.getValue()).append("%'");
+				}
+				else if ("amount".equals(entry.getKey())) sb.append("i.amount like '").append(entry.getValue()).append("%'");
+				else if ("issuedBy".equals(entry.getKey())) sb.append("si.user_name like '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("companyId", params.get("companyId"));
+//		query.setParameter("docTypeCd", params.get("type"));
+		if (params.get("type") != null)	query.setParameterList("docTypeCd", (String[]) params.get("type"));
+		
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceListSelection(java.util.Map)
+	 */
+	@SuppressWarnings("unchecked")
+	private List<InvoiceVO> getInvoiceList4EO(Map<String, Object> params) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select i.id,i.code,i.dt_inv,i.amount, ");
+		sb.append("c.id AS 'custId', ");
+		sb.append("case when c.pc_type_cd = 'C' then (case when p2.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p2.salutation_cd else '' end) when c.pc_type_cd = 'P' then (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end) end as salutation_cd, ");
+		sb.append("case when c.pc_type_cd = 'C' then p2.first_name when c.pc_type_cd = 'P' then p.first_name end as first_name, ");
+		sb.append("case when c.pc_type_cd = 'C' then p2.last_name when c.pc_type_cd = 'P' then p.last_name end as last_name, ");
+		sb.append("i.id_issuer, i.id_saler, c.code as custCd, si.user_name, i.doc_type_cd, i.doc_type_status, i.ps_no ");
+		sb.append("from invoice i inner join ");
+		sb.append("customer c on c.id = i.id_customer left join person p on (c.pc_type_cd = 'P' and c.id_pc = p.id) ");
+		sb.append("left join corporate o on (c.pc_type_cd = 'C' AND c.id_corporate = o.id ) ");
+		sb.append("left join person p2 on (c.pc_type_cd = 'C' and o.id_person = p2.id) ");
+		sb.append("left join (SELECT e.id, s.user_name FROM employee e left join sec_user s on e.u_sec_user = s.uuid) si on i.id_issuer = si.id ");
+		sb.append("where i.id_company = :companyId and i.doc_type_cd in :docTypeCd ");
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				if ("code".equals(entry.getKey())) {
+					sb.append("case when i.doc_type_cd = 'I' then i.code when i.doc_type_cd = 'P' then i.ps_no else i.code end ");
+					sb.append("like '%").append(entry.getValue()).append("%'");
+				}
+				else if ("invoiceDt".equals(entry.getKey())) sb.append("date_format(i.dt_inv, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("custCd".equals(entry.getKey())) sb.append("c.code like '%").append(entry.getValue()).append("%'");
+				else if ("custName".equals(entry.getKey())) {
+					sb.append("concat(case when c.pc_type_cd = 'C' then p2.last_name when c.pc_type_cd = 'P' then p.last_name end, ' ', case when c.pc_type_cd = 'C' then p2.first_name when c.pc_type_cd = 'P' then p.first_name end) like '%").append(entry.getValue()).append("%'");
+				}
+				else if ("amount".equals(entry.getKey())) sb.append("i.amount like '").append(entry.getValue()).append("%'");
+				else if ("issuedBy".equals(entry.getKey())) sb.append("si.user_name like '%").append(entry.getValue()).append("%'");
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		sb.append(" order by ");
+		String sortField = (String) params.get("sortField");
+		
+		if (sortField == null) sb.append("i.dt_inv desc, i.id desc");
+		else {
+			if ("code".equals(sortField)) sb.append("cast(i.code as decimal)");
+			else if ("invoiceDt".equals(sortField)) sb.append("i.dt_inv");
+			else if ("custCd".equals(sortField)) sb.append("cast(c.code as decimal)");
+			else if ("custName".equals(sortField)) sb.append("concat(case when c.pc_type_cd = 'C' then p2.last_name when c.pc_type_cd = 'P' then p.last_name end, ' ', case when c.pc_type_cd = 'C' then p2.first_name when c.pc_type_cd = 'P' then p.first_name end)");
+			else if ("amount".equals(sortField)) sb.append("i.amount");
+			else if ("issuedBy".equals(sortField)) sb.append("si.user_name");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("companyId", params.get("companyId"));
+//		query.setParameter("docTypeCd", params.get("type"));
+		if (params.get("type") != null)	query.setParameterList("docTypeCd", (String[]) params.get("type"));
+
+		query.setFirstResult((Integer) params.get("first"));
+		query.setMaxResults((Integer) params.get("pageSize"));
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+		
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue()); 
+			vo.setCode((String) row[1]);   
+			vo.setInvoiceDt((Date) row[2]);   
+			vo.setAmount(Double.parseDouble(row[3].toString()));        
+			if(row[4] != null) vo.setCustomerId( Long.parseLong(row[4].toString()));    
+			vo.setCustName(row[5].toString() + " " + row[7].toString()+ " " + row[6].toString());    
+			vo.setIssuerId(Long.parseLong(row[8].toString()));
+			vo.setSalerId(Long.parseLong(row[9].toString()));
+			if(row[10] != null) vo.setCustCd((String) row[10]);
+			vo.setIssuedBy(row[11].toString());
+			if(row[12] != null) vo.setDocTypeCd(row[12].toString());
+			if(row[13] != null) vo.setDocTypeStatus(row[13].toString());
+			if(row[14] != null) vo.setPsNo(row[14].toString());
+			
+			invoiceList.add(vo);
+		}
+		return invoiceList;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceItemList(java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceItemVO> getInvoiceItemList(Long idInv) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceItemVO.class);
+		criteria.add(Restrictions.eq("invId", idInv));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		return criteria.list();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#terminateInvoiceItems(com.bcs.zsg.sales.vo.InvoiceVO, java.lang.String, java.lang.String)
+	 */
+	@Override
+	public void terminateInvoiceItems(InvoiceVO invoiceVO, String sysCd) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE InvoiceItemVO SET statusCode = :statusCode, updatedDate = now(), updatedBy = :updatedBy WHERE invId = :idInv");
+		// update invoice item
+		Query query = createQuery(sb.toString());
+		query.setString("statusCode", BaseConstant.STATUS_DELETED);
+		query.setString("updatedBy", BaseContext.getUserFullName() == null ? BaseContext.getLoginId() : BaseContext.getUserFullName());
+		query.setLong("idInv", invoiceVO.getId());
+		int count = query.executeUpdate();
+		
+		if (0 < count) {
+			//chartOfAcctDAO.terminateAcctTrans(sysCd, invoiceVO.getCode(), statusCrDr, invoiceVO.getCompanyId());
+			sb = new StringBuilder();
+			sb.append("UPDATE account_trans SET status_cd = :statusCode WHERE sys_cd = :sysCode AND id_company = :idCompany AND sys_no = :sysNo AND sys_no != ref_no");
+			// update account trans
+			query = createSQLQuery(sb.toString());
+			query.setString("statusCode", BaseConstant.STATUS_TERMINATED);
+			query.setString("sysCode", sysCd);
+			query.setLong("idCompany", invoiceVO.getCompanyId());
+			query.setString("sysNo", invoiceVO.getCode());
+			query.executeUpdate();
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#deleteInvoiceEOLink(java.lang.Long, java.lang.Long)
+	 */
+	@Override
+	public void deleteInvoiceEOLink(Long idInv, Long idEO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("DELETE FROM ex_order_inv WHERE ");
+		if (idInv != null) sb.append("id_inv = :idInv");
+		else sb.append("id_eo = :idEO");
+		
+		Query query = createSQLQuery(sb.toString());
+		if (idInv != null) query.setLong("idInv", idInv);
+		else query.setLong("idEO", idEO);
+		query.executeUpdate();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#terminateInvoiceSubInfo(java.lang.String, java.lang.Long)
+	 */
+	@Override
+	public void terminateInvoiceSubInfo(String table, Long idInv) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		//sb.append("UPDATE invoice_pmnt SET status_cd = :statusCode WHERE id_inv = :idInv");
+		sb.append("UPDATE ").append(table).append(" SET status_cd = :statusCode");
+		if (!"invoice_pax".equals(table)) sb.append(", dt_upd = NOW(), upd_by = :updatedBy");
+		sb.append(" WHERE id_inv = :idInv");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setString("statusCode", BaseConstant.STATUS_DELETED);
+		if (!"invoice_pax".equals(table))
+			query.setString("updatedBy", BaseContext.getUserFullName() == null ? BaseContext.getLoginId() : BaseContext.getUserFullName());
+		query.setLong("idInv", idInv);
+		query.executeUpdate();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getAcctTransListByInv(java.lang.String, java.lang.String, java.lang.String, java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AcctTransVO> getAcctTransListByInv(String sysCd, String sysNo, Long companyId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("FROM AcctTransVO WHERE ");
+		sb.append("sys_cd = :sysCd ");
+		sb.append("AND sys_no = :sysNo ");
+		sb.append("AND id_company = :companyId AND sys_no != ref_no ");
+		sb.append("AND type_cd is null");
+
+		Query query = createQuery(sb.toString());
+		query.setString("sysCd", sysCd);
+		query.setString("sysNo", sysNo);
+		query.setLong("companyId", companyId);
+		return query.list();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#updateInvoiceCode(java.lang.String, java.lang.String)
+	 */
+	@Override
+	public void updateInvoiceCode(String uuid, String code, String docTypeCd) throws BusinessException {
+		updateInvoiceCode(uuid, code, docTypeCd, null);
+	}
+	
+	@Override
+	public void updateInvoiceCode(String uuid, String code, String docTypeCd, String rnNo) throws BusinessException {
+		String sysCd = CommonConstant.SYS_NUM_CD_INVC;
+		// Credit Note
+		if (docTypeCd.equals("C")) {
+			sysCd = CommonConstant.SYS_NUM_CD_CRDT_NOTE;
+		} else if (docTypeCd.equals("P")) {
+			sysCd = CommonConstant.SYS_NUM_CD_PAX_STMT;
+		}
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append(" UPDATE InvoiceVO SET code = :code ");
+		
+		if (docTypeCd.equals("P")) {
+			sb.append(" , ps_no = :code ");
+		}
+		
+		if (docTypeCd.equals("C") && StringUtils.isNotEmpty(rnNo)) {
+			sb.append(" , rn_no = '" + rnNo + "' ");
+		}
+		
+		sb.append(" WHERE docTypeCd = :docTypeCd AND code = :uuid ");
+		
+		Query query = createQuery(sb.toString());
+		query.setString("code", code);
+		query.setString("docTypeCd", docTypeCd);
+		query.setString("uuid", uuid);
+		query.executeUpdate();
+		
+		sb = new StringBuilder();
+		sb.append("UPDATE AcctTransVO SET sysNo = :code, refNo = REPLACE(refNo, :uuid, :code), source = REPLACE(source, :uuid, :code) WHERE sysCode = :sysCode AND sysNo = :uuid");
+		
+		query = createQuery(sb.toString());
+		query.setString("code", code);
+		query.setString("sysCode", sysCd);
+		query.setString("uuid", uuid);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updateRfndNoteCode(Long id, String docTypeCd, String rnNo) throws BusinessException {
+		String sysCd = CommonConstant.SYS_NUM_CD_CRDT_NOTE;
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append(" UPDATE InvoiceVO SET rn_no = :rnNo ");
+		sb.append(" WHERE docTypeCd = :docTypeCd AND id = :id ");
+		
+		Query query = createQuery(sb.toString());
+		query.setLong("id", id);
+		query.setString("docTypeCd", docTypeCd);
+		query.setString("rnNo", rnNo);
+		query.executeUpdate();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#updateInvoicePmntCode(java.lang.String, java.lang.String)
+	 */
+	@Override
+	public void updateInvoicePmntCode(String uuid, String code) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("UPDATE InvoicePaymentVO SET code = :code WHERE code = :uuid");
+		
+		Query query = createQuery(sb.toString());
+		query.setString("code", code);
+		query.setString("uuid", uuid);
+		query.executeUpdate();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvItemList(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceItemVO> getInvItemList(InvoiceVO invoiceVO) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceItemVO.class);
+		criteria.add(Restrictions.eq("invId", invoiceVO.getId()));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		List<InvoiceItemVO> ls = criteria.list();
+		
+		return ls;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvPmntList(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoicePaymentVO> getInvPmntList(InvoiceVO invoiceVO) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoicePaymentVO.class);
+		criteria.add(Restrictions.eq("invId", invoiceVO.getId()));
+		criteria.add(Restrictions.eq("pmntTypeCd", "credit_note"));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		List<InvoicePaymentVO> ls = criteria.list();
+		
+		return ls;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getInvoiceListNoCN(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceListNoCN(InvoiceVO invoiceVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		/*sb.append("select i.id,i.code,i.dt_inv,i.amount, ");
+		sb.append("c.id AS 'custId', ");
+		sb.append("case when c.pc_type_cd = 'C' then o.name when c.pc_type_cd = 'P' then CONCAT_WS(' ', p.salutation_cd, p.last_name, p.first_name) end as custName, ");
+		sb.append("i.id_issuer,i.id_saler, c.code as custCd ");
+		sb.append("from invoice i ");
+		sb.append("inner join customer c on c.id = i.id_customer left join person p on (c.pc_type_cd = 'P' and c.id_pc = p.id) ");
+		sb.append("left join corporate o on (c.pc_type_cd = 'C' AND c.id_corporate = o.id ) ");
+		sb.append("left join person p2 on (c.pc_type_cd = 'C' and o.id_person = p2.id) ");
+		sb.append("where i.id_company = " + invoiceVO.getCompanyId() + " and i.doc_type_cd = 'I' ");
+		sb.append("and i.code not in (select cn_inv_no from invoice where id_company = " + invoiceVO.getCompanyId() + " and doc_type_cd = 'C' and status_cd not in ('CC', 'VD')) ");
+		sb.append("and i.id in (select id_inv from invoice_pmnt where status_cd = 'A' and pmnt_type_cd = 'credit_note') ");
+		sb.append("order by i.dt_inv desc, i.id desc ");*/
+		
+		sb.append("select iv.id, iv.code, iv.dt_inv, iv.amount, ").
+			append("c.id AS 'custId', ").
+			append("case when c.pc_type_cd = 'C' then o.name when c.pc_type_cd = 'P' then CONCAT_WS(' ', (case when p.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then p.salutation_cd else '' end), p.last_name, p.first_name) end as custName, ").
+			append("iv.id_issuer,iv.id_saler, c.code as custCd, ip.amount as amtPaid, ip.ref_no, ip.id as invPmntId, iv.doc_type_cd, iv.doc_type_status, iv.ps_no ").
+		append("from invoice iv ").
+			append("inner join customer c on c.id = iv.id_customer left join person p on (c.pc_type_cd = 'P' and c.id_pc = p.id) ").
+			append("left join corporate o on (c.pc_type_cd = 'C' AND c.id_corporate = o.id ) ").
+			append("left join person p2 on (c.pc_type_cd = 'C' and o.id_person = p2.id), ").
+			append("invoice_pmnt ip ").
+		append("where iv.id_company = :idCompany and iv.doc_type_cd in ('I', 'P') and ip.status_cd = 'A' ").
+			append("and iv.id = ip.id_inv and ip.pmnt_type_cd = 'credit_note' and ifnull(ip.id_credit_note, '') = '' ").
+			append("and iv.status_cd != 'VD' ").
+		append("order by iv.dt_inv desc, iv.id desc ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", invoiceVO.getCompanyId());
+
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue()); 
+			vo.setCode((String) row[1]);   
+			vo.setInvoiceDt((Date) row[2]);   
+			vo.setAmount(Double.parseDouble(row[3].toString()));        
+			if(row[4] != null ) vo.setCustomerId( Long.parseLong(row[4].toString()));    
+			
+			vo.setCustName(row[5].toString());    
+			vo.setIssuerId(Long.parseLong(row[6].toString()));
+			vo.setSalerId(Long.parseLong(row[7].toString()));
+			if(row[8] != null ) vo.setCustCd((String) row[8]);
+			vo.setAmtPaid(Double.parseDouble(row[9].toString()));
+			vo.setRefNo(row[10].toString());
+			vo.setInvPmntId(((BigInteger) row[11]).longValue());
+			vo.setDocTypeCd((String) row[12]);
+			vo.setDocTypeStatus((String) row[13]);
+			vo.setPsNo((String) row[14]);
+			
+			// don't show converted ps crdt_note pmnt
+			// to avoid duplication
+			if (StringUtils.isNotBlank(vo.getDocTypeCd()) && vo.getDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_PAX_STMT)
+					&& StringUtils.isNotBlank(vo.getDocTypeStatus()) && vo.getDocTypeStatus().equals(ProductConstant.PAX_STMT_STATUS_CONVERTED)) {
+				continue;
+			}
+			
+			invoiceList.add(vo);
+		}
+		return invoiceList;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getAcctTransByInv(java.lang.String, java.lang.String, java.lang.Long, java.lang.String)
+	 */
+	@Override
+	public AcctTransVO getAcctTransByInv(String sysCd, String sysNo, Long companyId, String typeCd) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("FROM AcctTransVO WHERE ");
+		sb.append("sys_cd = :sysCd ");
+		sb.append("AND sys_no = :sysNo ");
+		sb.append("AND id_company = :companyId AND sys_no != ref_no ");
+		sb.append("AND type_cd = :typeCd");
+
+		Query query = createQuery(sb.toString());
+		query.setString("sysCd", sysCd);
+		query.setString("sysNo", sysNo);
+		query.setLong("companyId", companyId);
+		query.setString("typeCd", typeCd);
+
+		AcctTransVO acctTransVO = (AcctTransVO) query.uniqueResult();
+		return acctTransVO;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getEmployeeViewList(java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<EmployeeViewVO> getEmployeeViewList(Long companyId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select e.id as idEmployee, u.id as idUser, u.user_name, u.email, e.full_name, u.login_id, e.nick_name, e.category, e.department from employee e left join sec_user u on e.u_sec_user = u.uuid ");
+		sb.append("where e.id_company = :idCompany and e.u_sec_user != 'superman' and u.status_cd = 'A'");
+		sb.append("order by u.user_name ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", companyId);
+		//query.setParameter("department", str);
+		
+		List<Object> results = query.list();
+		List<EmployeeViewVO> employeeList = new ArrayList<EmployeeViewVO>();
+
+		for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+			Object[] row = (Object[]) it.next();
+			EmployeeViewVO vo = new EmployeeViewVO();
+			vo.setUserVO(new UserVO());
+			
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.getUserVO().setId(((BigInteger) row[1]).longValue());
+			vo.getUserVO().setName((String) row[2]);
+			vo.getUserVO().setEmailAddress((String) row[3]);
+			vo.setFullName((String) row[4]);
+			if (row[5] != null)	vo.getUserVO().setLoginId((String) row[5]);
+			if (row[6] != null)	vo.getUserVO().setNickname((String) row[6]);
+			if (row[7] != null)	vo.setCategory((String) row[7]);
+			if (row[8] != null)	vo.setDepartment((String) row[8]);
+			
+			employeeList.add(vo);
+		}
+		return employeeList;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#getEmployeeViewList(java.lang.Long)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<EmployeeViewVO> getFullEmployeeViewList(Long companyId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select e.id as idEmployee, e.department as department, u.id as idUser, u.user_name, u.email from employee e left join sec_user u on e.u_sec_user = u.uuid ");
+		sb.append("where e.id_company = :idCompany and e.u_sec_user != 'superman'");
+		sb.append("order by u.user_name ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", companyId);
+		//query.setParameter("department", str);
+		
+		List<Object> results = query.list();
+		List<EmployeeViewVO> employeeList = new ArrayList<EmployeeViewVO>();
+
+		for (Iterator<Object> it = results.iterator(); it.hasNext();) {
+			Object[] row = (Object[]) it.next();
+			EmployeeViewVO vo = new EmployeeViewVO();
+			vo.setUserVO(new UserVO());
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setDepartment((String) row[1]);
+			vo.getUserVO().setId(((BigInteger) row[2]).longValue());
+			vo.getUserVO().setName((String) row[3]);
+			vo.getUserVO().setEmailAddress((String) row[4] );
+			employeeList.add(vo);
+		}
+		return employeeList;
+	}
+	
+	/*
+	 * 
+	 */
+	@Override
+	public void updateInvoicePaymentRef(Long companyId, String creditNoteNo, Long creditNoId, Long invPmntId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("update invoice_pmnt set id_credit_note = null, ref_no = '' where id_credit_note = :creditNoId ");
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("creditNoId", creditNoId);
+		query.executeUpdate();
+		
+//		System.out.println("CYY companyId: " + companyId);
+//		System.out.println("CYY creditNoteNo: " + creditNoteNo);
+//		System.out.println("CYY creditNoId: " + creditNoId);
+//		System.out.println("CYY invPmntId: " + invPmntId);
+		
+		sb = new StringBuilder();
+		sb.append("update invoice i, invoice_pmnt p ");
+		sb.append("set p.ref_no = :refNo, ");
+		sb.append("p.id_credit_note = :creditNoId ");
+		sb.append("where i.id_company = :idCompany and i.doc_type_cd in ('I','P') and i.id = p.id_inv and p.id = :invPmntId ");
+		sb.append("and p.status_cd = :statusCd and p.pmnt_type_cd = 'credit_note' ");
+		
+//		System.out.println("InvoiceDAOImpl.updateInvoicePaymentRef()");
+//		System.out.println(sb.toString());
+		
+		query = createSQLQuery(sb.toString());
+		query.setParameter("refNo", "CN" + creditNoteNo);
+		query.setParameter("idCompany", companyId);
+		query.setParameter("creditNoId", creditNoId);
+		query.setParameter("invPmntId", invPmntId);
+		query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updatePsPaymentRef(Long companyId, String creditNoteNo, Long creditNoId, Long invPmntId) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		
+		// no need clear id_credit_note, cuz if updatePSInvoicePaymentRef is called, then updateInvoicePaymentRef will be called before
+//		sb.append("update invoice_pmnt set id_credit_note = null, ref_no = '' where id_credit_note = :creditNoId and  ");
+//		Query query = createSQLQuery(sb.toString());
+//		query.setParameter("creditNoId", creditNoId);
+//		query.executeUpdate();
+		
+		sb = new StringBuilder();
+		sb.append("update invoice i, invoice_pmnt p ");
+		sb.append("set p.ref_no = :refNo, ");
+		sb.append("p.id_credit_note = :creditNoId ");
+		sb.append("where i.id_company = :idCompany and i.doc_type_cd in ('I','P') and i.id = p.id_inv and p.id = :invPmntId ");
+		sb.append("and p.status_cd = :statusCd and p.pmnt_type_cd = 'credit_note' ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("refNo", "CN" + creditNoteNo);
+		query.setParameter("idCompany", companyId);
+		query.setParameter("creditNoId", creditNoId);
+		query.setParameter("invPmntId", invPmntId);
+		query.setParameter("statusCd", BaseConstant.STATUS_ACTIVE);
+		query.executeUpdate();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.bcs.zsg.sales.dao.InvoiceDAO#updateCashBookInvoices(com.bcs.zsg.sales.vo.InvoiceVO)
+	 */
+	@Override
+	public void updateCashBookInvoices(InvoiceVO invoiceVO) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append("update inv_pmnt_cashbook_link l, invoice i, invoice_pmnt ip ").
+			append("set l.status_cd = :statusCdDel, l.dt_upd = now(), l.upd_by = :updBy ").
+		append("where i.id = ip.id_inv and ip.id = l.id_inv_pmnt and l.id_company = :idCompany and i.id = :invoiceId and ip.status_cd = :statusCdDel and l.status_cd = :statusCdAct ");
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("updBy", BaseContext.getUserFullName() == null ? BaseContext.getLoginId() : BaseContext.getUserFullName());
+		query.setParameter("idCompany", invoiceVO.getCompanyId());
+		query.setParameter("invoiceId", invoiceVO.getId());
+		query.setParameter("statusCdDel", BaseConstant.STATUS_DELETED);
+		query.setParameter("statusCdAct", BaseConstant.STATUS_ACTIVE);
+		query.executeUpdate();
+		
+		sb = new StringBuilder();
+		sb.append("update cash_book c, ").
+			append("(select l.id_cash_book, group_concat(if(l.status_cd='A', l.invoice_no, null) order by if(l.status_cd='A', l.invoice_no, null)) as 'invoices' ").
+			append("from inv_pmnt_cashbook_link l, (select * from inv_pmnt_cashbook_link where id_invoice = :invoiceId group by id_cash_book) i ").
+			append("where l.id_company = i.id_company and l.id_cash_book = i.id_cash_book and l.id_company = :idCompany ").
+			append("group by l.id_cash_book) a ").
+		append("set c.invoices = a.invoices ").
+		append("where c.id = a.id_cash_book ");
+		query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", invoiceVO.getCompanyId());
+		query.setParameter("invoiceId", invoiceVO.getId());
+		query.executeUpdate();
+	}
+	
+	@Override
+	public InvoicePaymentVO getInvPmnt(InvoiceVO invoiceVO) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoicePaymentVO.class);
+		criteria.add(Restrictions.eq("creditNoteId", invoiceVO.getId()));
+		criteria.setMaxResults(1);
+		return (InvoicePaymentVO) criteria.uniqueResult();
+	}
+
+	@Override
+	public InvoicePaymentVO getInvPaymentById(Long id) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoicePaymentVO.class);
+		criteria.add(Restrictions.eq("id", id));
+		criteria.setMaxResults(1);
+		return (InvoicePaymentVO) criteria.uniqueResult();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceAttachmentVO> getInvoiceAttachmentList(Long invId) throws BusinessException {
+		// Get invoice Attachment list
+		Criteria criteria = getSession().createCriteria(InvoiceAttachmentVO.class);
+		criteria.add(Restrictions.eq("invId", invId));
+		return criteria.list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoicePaymentAttachmentVO> getInvPmntAttachmentList(Long idInvPmnt) throws BusinessException {
+		// Get invoice pamymeny attachment list
+		Criteria criteria = getSession().createCriteria(InvoicePaymentAttachmentVO.class);
+		criteria.add(Restrictions.eq("idInvPmnt", idInvPmnt));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		return criteria.list();
+	}
+
+	@Override
+	public String getInvPmntHistTooltip(Long invId, Long histId) throws BusinessException {
+	    StringBuilder sb = new StringBuilder();
+	    sb.append("SELECT GROUP_CONCAT(CONCAT(DATE_FORMAT(min_dt_upd, '%d-%b-%Y %h:%i:%s %p'), ' by ', upd_by, '<br/>') ");
+	    sb.append("ORDER BY min_dt_upd DESC SEPARATOR '') AS upd_hist_list ");
+	    sb.append("FROM ( ");
+	    sb.append("    SELECT MIN(dt_upd) AS min_dt_upd, upd_by ");
+	    sb.append("    FROM invoice_pmnt_history ");
+	    sb.append("    WHERE id_inv = :invId AND id_hist = :histId ");
+	    sb.append("    GROUP BY id_issuer, dt_pmnt, code, ");
+	    sb.append("        pmnt_type_cd, ref_no, pmnt_for, received_from, amount, status_cd ");
+	    sb.append(") AS grouped_data");
+
+	    SQLQuery query = (SQLQuery) createSQLQuery(sb.toString());
+	    query.addScalar("upd_hist_list");
+	    query.setParameter("invId", invId);
+	    query.setParameter("histId", histId);
+
+	    String result = (String) query.uniqueResult();
+
+	    return result != null ? result : "";
+	}
+
+
+	@Override
+	public InvoiceVO getInvoiceByCode(String code) throws BusinessException {
+		return getInvoiceByCode(code, SalesConstant.DOC_TYPE_CD_INVC);
+	}
+	
+	@Override
+	public InvoiceVO getInvoiceByCode(String code, String docTypeCd) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		if (docTypeCd.equals(SalesConstant.DOC_TYPE_CD_INVC) || docTypeCd.equals(SalesConstant.DOC_TYPE_CD_CRDT_NOTE))	
+			criteria.add(Restrictions.eq("code", code));
+		else if (docTypeCd.equals(SalesConstant.DOC_TYPE_CD_PAX_STMT))	
+			criteria.add(Restrictions.eq("psNo", code));
+		criteria.add(Restrictions.eq("docTypeCd", docTypeCd));
+		return (InvoiceVO) criteria.uniqueResult();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<PersonEmailVO> getPersonEmailListByPersonId(Long personId) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(PersonEmailVO.class);
+		criteria.add(Restrictions.eq("idPerson", personId));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		criteria.addOrder(Order.desc("isPrimary"));
+		List<PersonEmailVO> emailList = criteria.list();
+		return emailList;
+	}
+
+	@Override
+	public void updateStatus(InvoiceVO invoiceVO) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		Query query = createSQLQuery("update invoice set status_cd = :statusCd, upd_by = :updatedBy, dt_upd = now() where id = :id");
+		query.setParameter("statusCd", invoiceVO.getStatusCd());
+		query.setParameter("updatedBy", updatedBy);
+		query.setParameter("id", invoiceVO.getId());
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updateInvoiceAmount(InvoiceVO invoiceVO, Boolean updVersion, Boolean updRemarks) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append(" update invoice set amount = :amount, balance = :balance, is_inv_paid = :isInvPaid, ");
+		if (updRemarks)	sb.append(" remarks = :remarks, internal_remarks = :internalRemarks, ");
+		if (updVersion)	sb.append(" version = version + 1, ");
+		sb.append(" note_items = :noteItems, ");
+		sb.append(" upd_by = :updatedBy, dt_upd = now() ");
+		sb.append(" where id = :id ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("amount", invoiceVO.getAmount());
+		query.setParameter("balance", invoiceVO.getBalance());
+		query.setParameter("isInvPaid", invoiceVO.getIsInvPaid());
+		if (updRemarks)	{
+			query.setParameter("remarks", invoiceVO.getRemarks());
+			query.setParameter("internalRemarks", invoiceVO.getInternalRemarks());
+		}
+		query.setParameter("noteItems", invoiceVO.getNoteItems());
+		query.setParameter("updatedBy", updatedBy);
+		query.setParameter("id", invoiceVO.getId());
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updateInvoiceDocTypeStatus(Long idInv, String statusCd) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		Query query = createSQLQuery("update invoice set doc_type_status = :statusCd, upd_by = :updatedBy, dt_upd = now() where id = :id");
+		query.setParameter("statusCd", statusCd);
+		query.setParameter("updatedBy", updatedBy);
+		query.setParameter("id", idInv);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public List<InvoiceVO> getInvoiceByParentInvoiceId(Long idParentInv) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		criteria.add(Restrictions.eq("idParentInv", idParentInv));
+		List<InvoiceVO> invoiceList = criteria.list();
+		return invoiceList;
+	}
+	
+	@Override
+	public void updateInvoiceSubPsRunningNumber(Long idInv, Integer subPsRunningNumber) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		Query query = createSQLQuery("update invoice set sub_ps_running_number = :subPsRunningNumber, upd_by = :updatedBy, dt_upd = now() where id = :id");
+		query.setParameter("subPsRunningNumber", subPsRunningNumber);
+		query.setParameter("updatedBy", updatedBy);
+		query.setParameter("id", idInv);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public InvoiceVO getInvoice(Map<String, Object> params) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		
+		if (params.get("psNo") != null) {
+			criteria.add(Restrictions.eq("psNo", params.get("psNo")));
+		}
+		
+		if (params.get("code") != null) {
+			criteria.add(Restrictions.eq("code", params.get("code")));
+		}
+		
+		if (params.get("docTypeCd") != null) {
+			criteria.add(Restrictions.eq("docTypeCd", params.get("docTypeCd")));
+		}
+		
+		return (InvoiceVO) criteria.uniqueResult();
+	}
+	
+	@Override
+	public List<InvoiceVO> getSubInvoiceList(Long idParentInv) throws BusinessException {
+		StringBuilder sb = new StringBuilder();
+		sb.append(" select i.id, i.ps_no, i.code, i.doc_type_cd, i.id_company, i.amount, i.balance, i.status_cd, i.travel_warrant_chk, i.is_inv_paid "); 
+		sb.append(" from invoice i "); 
+		sb.append(" where i.id_parent_inv=" + idParentInv);
+
+		Query query = createSQLQuery(sb.toString());
+
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue()); 
+			vo.setPsNo((String) row[1]);   
+			vo.setCode((String) row[2]);   
+			vo.setDocTypeCd((String) row[3]);   
+			vo.setCompanyId(((BigInteger) row[4]).longValue()); 
+			if (row[5] != null) vo.setAmount(Double.parseDouble(row[5].toString()));      
+			if (row[6] != null) vo.setBalance(Double.parseDouble(row[6].toString())); 
+			vo.setStatusCd((String) row[7]);  
+			if (row[8] != null) vo.setTrvWarrantChecked((Boolean) row[8]);
+			if (row[9] != null) vo.setIsInvPaid((Boolean) row[9]);
+			invoiceList.add(vo);
+		}
+		return invoiceList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceListByParams(Map<String, Object> params) throws BusinessException {
+		Criteria criteria = createCriteria(InvoiceVO.class);
+		if (params.get("companyId") != null)
+			criteria.add(Restrictions.eq("companyId", params.get("companyId")));
+		if (params.get("docTypeCd") != null)
+			criteria.add(Restrictions.eq("docTypeCd", params.get("docTypeCd")));
+		if (params.get("eInvoiceStatus") != null)
+			criteria.add(Restrictions.eq("eInvoiceStatus", params.get("eInvoiceStatus")));
+		if (params.get("eInvoiceStatusList") != null)
+			criteria.add(Restrictions.in("eInvoiceStatus", (List<String>) params.get("eInvoiceStatusList")));
+		if (params.get("statusList") != null)
+			criteria.add(Restrictions.in("statusCd", (List<String>) params.get("statusList")));
+		
+		// for EInvoiceSchedulerServiceImpl
+		if (params.get("invIdList") != null)
+			criteria.add(Restrictions.in("id", (List<Long>) params.get("invIdList")));
+
+		if (params.get("invDateFr") != null && params.get("invDateTo") != null)
+			criteria.add(Restrictions.between("invoiceDt", params.get("invDateFr"), params.get("invDateTo")));
+
+		if (params.get("depDateFr") != null && params.get("depDateTo") != null)
+			criteria.add(Restrictions.between("departureDt", (Date) params.get("depDateFr"), (Date) params.get("depDateTo")));
+
+		List<InvoiceVO> ls = criteria.list();
+
+		return ls;
+	}
+
+	@Override
+	public void updateInvoiceEInvoiceData(Long idInv, String docUuid, String submissionUid, String status) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(" update invoice set ");
+		if (StringUtils.isNotBlank(docUuid))		sb.append(" e_invoice_document_uuid = :docUuid, ");
+		if (StringUtils.isNotBlank(submissionUid))	sb.append(" e_invoice_submission_uid = :submissionUid, ");
+		if (StringUtils.isNotBlank(status))			sb.append(" e_invoice_status = :status, ");
+		
+		sb.append(" upd_by = :updatedBy, ");
+		sb.append(" dt_upd = now() ");
+		
+		sb.append(" where id = :id ");
+		
+		Query query = createSQLQuery(sb.toString());
+		if (StringUtils.isNotBlank(docUuid))		query.setParameter("docUuid", docUuid);
+		if (StringUtils.isNotBlank(submissionUid))	query.setParameter("submissionUid", submissionUid);
+		if (StringUtils.isNotBlank(status))			query.setParameter("status", status);
+		query.setParameter("id", idInv);
+		query.setParameter("updatedBy", updatedBy);
+		query.executeUpdate();
+		
+		insertInvoiceHistory(idInv, CommonConstant.ACTION_CD_UPD, "Submit E-Invoice");
+	}
+	
+	/**
+	 * @deprecated
+	 */
+	@Deprecated
+	@Override
+	public void updateEInvoiceStatus(String eInvoiceDocumentUuid, String eInvoiceStatus) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(" update invoice set ");
+		if (StringUtils.isNotBlank(eInvoiceStatus))			sb.append(" e_invoice_status = :eInvoiceStatus, ");
+		
+		sb.append(" upd_by = :updatedBy, ");
+		sb.append(" dt_upd = now() ");
+		
+		sb.append(" where e_invoice_document_uuid = :eInvoiceDocumentUuid ");
+		
+		System.out.println("CYY eInvoiceDocumentUuid: " + eInvoiceDocumentUuid);
+		
+		Query query = createSQLQuery(sb.toString());
+		if (StringUtils.isNotBlank(eInvoiceStatus))	query.setParameter("eInvoiceStatus", eInvoiceStatus);
+		query.setParameter("eInvoiceDocumentUuid", eInvoiceDocumentUuid);
+		query.setParameter("updatedBy", updatedBy);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public void updateRefundNoteEInvoiceStatus(String eInvoiceDocumentUuid, String eInvoiceStatus) throws BusinessException {
+		String updatedBy = BaseContext.getUserFullName();
+		if (StringUtils.isBlank(updatedBy)) updatedBy = BaseContext.getLoginId();
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(" update invoice set ");
+		if (StringUtils.isNotBlank(eInvoiceStatus))			sb.append(" e_invoice_rn_status = :eInvoiceStatus, ");
+		
+		sb.append(" upd_by = :updatedBy, ");
+		sb.append(" dt_upd = now() ");
+		
+		sb.append(" where e_invoice_rn_document_uuid = :eInvoiceDocumentUuid ");
+		
+//		System.out.println("CYY eInvoiceDocumentUuid: " + eInvoiceDocumentUuid);
+		
+		Query query = createSQLQuery(sb.toString());
+		if (StringUtils.isNotBlank(eInvoiceStatus))	query.setParameter("eInvoiceStatus", eInvoiceStatus);
+		query.setParameter("eInvoiceDocumentUuid", eInvoiceDocumentUuid);
+		query.setParameter("updatedBy", updatedBy);
+		query.executeUpdate();
+	}
+	
+	@Override
+	public InvoiceVO getInvoiceByBookingId(Long bookingId) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		criteria.add(Restrictions.eq("bookingId", bookingId));
+		criteria.add(Restrictions.eq("docTypeCd", "I"));
+		criteria.setMaxResults(1);
+		return (InvoiceVO) criteria.uniqueResult();
+	}
+	
+	public Boolean isInvoiceBeforeEInvoice(Long idInv, LocalDateTime targetDateTime) throws BusinessException {
+
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		criteria.add(Restrictions.eq("id", idInv));
+		InvoiceVO invVO = (InvoiceVO) criteria.uniqueResult();
+		
+		if (invVO.getPsNo()!=null && invVO.getPsNo().length()>0) {
+			return false;
+		} else {
+			return true;
+		}
+		
+//		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+//		criteria.add(Restrictions.eq("id", idInv));
+//		criteria.setProjection(Projections.property("createdDate"));
+//		criteria.setMaxResults(1);
+//		Date createdDate = (Timestamp) criteria.uniqueResult();
+//		
+//		if (createdDate != null) {
+//            // Convert Date to LocalDate for comparison
+//			LocalDateTime createdLocalDateTime = createdDate.toInstant()
+//                    .atZone(ZoneId.systemDefault())
+//                    .toLocalDateTime();
+//
+//			// Check if created datetime is before the target datetime
+//			return createdLocalDateTime.isBefore(targetDateTime);
+//        } else {
+//        	return false;
+//        }
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public int getCreditNoteDisplayListSize(Map<String, Object> params) throws BusinessException { 
+		
+		boolean ljCust = false, ljPerson = false, ljInv = false, ljTourDep = false;
+		StringBuilder sbFilters = new StringBuilder();
+		
+		if (params.get("departureDateFr") != null && params.get("departureDateTo") != null) {
+			sbFilters.append("and ifnull(cn_iv.dt_departure, cn_ps.dt_departure) BETWEEN date(:departureDateFr) and date(:departureDateTo) ");
+			ljInv = true;
+		}
+		if (params.get("departureDateFr") != null) {
+			sbFilters.append("and ifnull(cn_iv.dt_departure, cn_ps.dt_departure) >= date(:departureDateFr) ");
+			ljInv = true;
+		}
+		if (params.get("departureDateTo") != null) {
+			sbFilters.append("and ifnull(cn_iv.dt_departure, cn_ps.dt_departure) <= date(:departureDateTo) ");
+			ljInv = true;
+		}
+		
+		if (params.get("showSubmittedInvOnly") != null && (Boolean) params.get("showSubmittedInvOnly"))	{
+//			sbFilters.append(" and cn_iv.e_invoice_status = 'Valid' ");
+			
+			sbFilters.append(" and cn_iv.e_invoice_status = 'Valid' ");
+			sbFilters.append(" and iv.e_invoice_status != 'Valid' and iv.e_invoice_status != 'Submitted' ");
+			sbFilters.append(" and iv.e_invoice_rn_status != 'Valid' and iv.e_invoice_rn_status != 'Submitted' ");
+			
+			ljInv = true;
+		}
+
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sbFilters.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				
+				if ("codeLong".equals(entry.getKey())) sbFilters.append("iv.code like '%").append(entry.getValue()).append("%'");
+				else if ("invoiceDt".equals(entry.getKey())) {
+					sbFilters.append("date_format(iv.dt_inv, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+					ljInv = true;
+				}
+				else if ("departureDt".equals(entry.getKey())) {
+					sbFilters.append("date_format(ifnull(cn_iv.dt_departure, cn_ps.dt_departure), '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+					ljInv = true;
+				}
+				else if ("custCdLong".equals(entry.getKey())) {
+					sbFilters.append("cm.code like '%").append(entry.getValue()).append("%'");
+					ljCust = true;
+				}
+				else if ("custName".equals(entry.getKey())) {
+					sbFilters.append("concat(ps.last_name, ' ', ps.first_name) like '%").append(entry.getValue()).append("%'");
+					ljCust = true;
+					ljPerson = true;
+				}
+				else if ("rnNo".equals(entry.getKey())) sbFilters.append("iv.rn_no like '%").append(entry.getValue()).append("%'");
+				else if ("cnInvNo".equals(entry.getKey())) sbFilters.append("(iv.cn_ps_no like '%").append(entry.getValue()).append("%' or iv.cn_inv_no like '%").append(entry.getValue()).append("%') ");
+				else if ("tourCd".equals(entry.getKey())) {
+					sbFilters.append("d.code like '%").append(entry.getValue()).append("%'");
+					ljInv = true;
+					ljTourDep = true;
+				}
+				else if ("amount".equals(entry.getKey())) sbFilters.append("iv.amount like '%").append(entry.getValue()).append("%'");
+				else if ("amtAftRefund".equals(entry.getKey())) sbFilters.append("iv.amt_aft_refund like '%").append(entry.getValue()).append("%'");
+				else if ("refundAmt".equals(entry.getKey())) sbFilters.append("iv.refund_amt like '%").append(entry.getValue()).append("%'");
+				else if ("statusCd".equals(entry.getKey())) sbFilters.append("upper((select ref_value from com_ref_data where ref_cd = iv.status_cd and cat_cd = 'INV_STATUS')) like upper('%").append(entry.getValue()).append("%')");
+				else if ("eInvoiceStatus".equals(entry.getKey())) {
+					if (entry.getValue().equals(BaseConstant.PAD_DASH)) {
+						sbFilters.append("iv.amt_aft_refund = 0");
+					} else {
+						sbFilters.append("iv.amt_aft_refund != 0 AND iv.e_invoice_status like '%").append(entry.getValue()).append("%'");
+					}
+				}
+				else if ("eInvoiceRnStatus".equals(entry.getKey())) {
+					if (entry.getValue().equals(BaseConstant.PAD_DASH)) {
+						sbFilters.append("iv.refund_amt = 0");
+					} else {
+						sbFilters.append("iv.refund_amt != 0 AND iv.e_invoice_rn_status like '%").append(entry.getValue()).append("%'");
+					}
+				}
+				if (filters.size() > 1 && it.hasNext()) sbFilters.append(" and ");
+			}
+			sbFilters.append(")");
+		}
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append(" select count(*) ");
+//		sb.append("from invoice iv, employee ep, sec_user usr, customer cm, person ps "); // original getCreditNoteDisplayListSize query
+		sb.append(" from invoice iv ");
+		if (ljInv) {
+			sb.append(" LEFT JOIN invoice cn_iv ");
+				sb.append(" ON iv.id_company = cn_iv.id_company AND iv.doc_type_cd = 'C' AND iv.cn_inv_no IS NOT NULL AND cn_iv.code = iv.cn_inv_no AND cn_iv.doc_type_cd = 'I' ");
+			sb.append(" LEFT JOIN invoice cn_ps ");
+				sb.append(" ON iv.id_company = cn_ps.id_company AND iv.doc_type_cd = 'C' AND iv.cn_ps_no IS NOT NULL AND cn_ps.ps_no = iv.cn_ps_no AND cn_ps.doc_type_cd = 'P' ");
+			if (ljTourDep) {
+				sb.append(" LEFT JOIN tour_dep d ");
+					sb.append(" ON ifnull(cn_iv.id_tour_dep, cn_ps.id_tour_dep) = d.id ");
+			}
+		}
+//		sb.append(" left join employee ep on iv.id_saler = ep.id "); // original getCreditNoteDisplayListSize query
+//		sb.append(" left join sec_user usr on ep.u_sec_user = usr.uuid "); // original getCreditNoteDisplayListSize query
+		if (ljCust)	sb.append(" left join customer cm on iv.id_customer = cm.id ");
+		if (ljPerson) sb.append(" left join person ps on cm.id_pc = ps.id ");
+		sb.append(" where iv.id_company = :idCompany and iv.doc_type_cd = :docTypeCd ");
+		
+		if (params.get("orderSourceCode") != null) sb.append(" and iv.order_cd = :orderSourceCode ");
+		if (params.get("paymentStatusList") != null)	sb.append(" and iv.status_cd in :paymentStatusList ");
+		if (params.get("eInvoiceStatusList") != null)	sb.append(" and iv.e_invoice_status in :eInvoiceStatusList ");
+		if (params.get("fromDate") != null && params.get("toDate") != null) sb.append(" and date(iv.dt_inv) BETWEEN date(:fromDate) and date(:toDate) ");
+		if (params.get("fromDate") != null) sb.append(" and date(iv.dt_inv) >= date(:fromDate) ");
+		if (params.get("toDate") != null) sb.append(" and date(iv.dt_inv) <= date(:toDate) ");
+		
+		if (sbFilters.length() > 0) {
+			sb.append(sbFilters);
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		
+		query.setParameter("idCompany", params.get("idCompany"));
+		if (params.get("orderSourceCode") != null) query.setParameter("orderSourceCode", params.get("orderSourceCode"));
+		if (params.get("paymentStatusList") != null) query.setParameterList("paymentStatusList", (String[]) params.get("paymentStatusList"));
+		if (params.get("eInvoiceStatusList") != null)	query.setParameterList("eInvoiceStatusList", (String[]) params.get("eInvoiceStatusList"));
+		if (params.get("fromDate") != null) query.setParameter("fromDate", params.get("fromDate"));
+		if (params.get("toDate") != null) query.setParameter("toDate", params.get("toDate"));
+		if (params.get("departureDateFr") != null) query.setParameter("departureDateFr", params.get("departureDateFr"));
+		if (params.get("departureDateTo") != null) query.setParameter("departureDateTo", params.get("departureDateTo"));
+		query.setParameter("docTypeCd", "C");
+		
+//		System.out.println("InvoiceDAOImpl.getCreditNoteDisplayListSize()");
+//		System.out.println(sb.toString());
+		
+		return ((BigInteger) query.uniqueResult()).intValue();
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getCreditNoteDisplayList(Map<String, Object> params) throws BusinessException { 
+		StringBuilder sb = new StringBuilder();
+		sb.append("select iv.id as inv_id, ");
+		sb.append("iv.code as inv_cd, ");
+		sb.append("iv.dt_inv as dt_inv, ");
+		sb.append("ifnull(cn_iv.dt_departure, cn_ps.dt_departure) as dt_departure, ");
+		sb.append("iv.amount as inv_amt, ");
+		sb.append("iv.balance as inv_bln, ");
+		sb.append("iv.inv_due as inv_due, ");
+		sb.append("iv.status_cd as status_cd, ");
+		sb.append("iv.id_tour_booking as id_tour_booking, ");
+		sb.append("iv.id_customer as id_cust, ");
+		sb.append("usr.user_name as user_name, ");
+		sb.append("ps.first_name as cust_first_name, ");
+		sb.append("ps.last_name as cust_last_name, ");
+		sb.append("case when ps.salutation_cd != '"+ LookupItemConstant.SALUTATION_EMPTY_CD +"' then ps.salutation_cd else '' end as cust_salutation, ");
+		sb.append("cm.corporate_name as company_name, ");
+		sb.append("iv.cn_inv_no as cn_inv_no, ");
+		sb.append("cm.code as cust_cd, ");
+		sb.append("iv.rn_no as rn_no, iv.e_invoice_status as e_invoice_status, iv.cn_ps_no, iv.e_invoice_rn_status as e_invoice_rn_status, iv.refund_amt as refund_amt, iv.amt_aft_refund as amt_aft_refund, ");
+		sb.append("d.code as tour_cd, cn_iv.e_invoice_status as cn_iv_e_inv_status ");
+		sb.append("from invoice iv ");
+			sb.append("LEFT JOIN invoice cn_iv ");
+				sb.append("ON iv.id_company = cn_iv.id_company AND iv.doc_type_cd = 'C' AND iv.cn_inv_no IS NOT NULL AND cn_iv.code = iv.cn_inv_no AND cn_iv.doc_type_cd = 'I' ");
+			sb.append("LEFT JOIN invoice cn_ps ");
+				sb.append("ON iv.id_company = cn_ps.id_company AND iv.doc_type_cd = 'C' AND iv.cn_ps_no IS NOT NULL AND cn_ps.ps_no = iv.cn_ps_no AND cn_ps.doc_type_cd = 'P' ");
+			sb.append("LEFT JOIN tour_dep d ");
+				sb.append("ON ifnull(cn_iv.id_tour_dep, cn_ps.id_tour_dep) = d.id, ");
+			sb.append("employee ep, sec_user usr, customer cm, person ps ");
+		sb.append("where iv.id_company = :idCompany and iv.doc_type_cd = :docTypeCd and ");
+		sb.append("iv.id_saler = ep.id and ep.u_sec_user = usr.uuid and iv.id_customer = cm.id and cm.id_pc = ps.id ");
+		
+		if (params.get("orderSourceCode") != null) sb.append("and iv.order_cd = :orderSourceCode ");
+		if (params.get("paymentStatusList") != null)	sb.append("and iv.status_cd in :paymentStatusList ");
+		if (params.get("eInvoiceStatusList") != null)	sb.append("and iv.e_invoice_status in :eInvoiceStatusList ");
+		if (params.get("fromDate") != null && params.get("toDate") != null) sb.append("and date(iv.dt_inv) BETWEEN date(:fromDate) and date(:toDate) ");
+		if (params.get("fromDate") != null) sb.append("and date(iv.dt_inv) >= date(:fromDate) ");
+		if (params.get("toDate") != null) sb.append("and date(iv.dt_inv) <= date(:toDate) ");
+		
+		if (params.get("departureDateFr") != null && params.get("departureDateTo") != null) sb.append("and ifnull(cn_iv.dt_departure, cn_ps.dt_departure) BETWEEN date(:departureDateFr) and date(:departureDateTo) ");
+		if (params.get("departureDateFr") != null) sb.append("and ifnull(cn_iv.dt_departure, cn_ps.dt_departure) >= date(:departureDateFr) ");
+		if (params.get("departureDateTo") != null) sb.append("and ifnull(cn_iv.dt_departure, cn_ps.dt_departure) <= date(:departureDateTo) ");
+		if (params.get("showSubmittedInvOnly") != null && (Boolean) params.get("showSubmittedInvOnly"))	{
+			sb.append(" and cn_iv.e_invoice_status = 'Valid' ");
+			sb.append(" and iv.e_invoice_status != 'Valid' and iv.e_invoice_status != 'Submitted' ");
+			sb.append(" and iv.e_invoice_rn_status != 'Valid' and iv.e_invoice_rn_status != 'Submitted' ");
+		}
+		
+		Map<String, String> filters = (Map<String, String>) params.get("filters");
+		if (!filters.isEmpty()) {
+			sb.append("and (");
+			for (Iterator<Entry<String, String>> it = filters.entrySet().iterator() ; it.hasNext() ;) {
+				Entry<String, String> entry = it.next();
+				
+				if ("codeLong".equals(entry.getKey())) sb.append("iv.code like '%").append(entry.getValue()).append("%'");
+				else if ("invoiceDt".equals(entry.getKey())) sb.append("date_format(iv.dt_inv, '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("departureDt".equals(entry.getKey())) sb.append("date_format(ifnull(cn_iv.dt_departure, cn_ps.dt_departure), '%d-%b-%Y') like '%").append(entry.getValue()).append("%'");
+				else if ("custCdLong".equals(entry.getKey())) sb.append("cm.code like '%").append(entry.getValue()).append("%'");
+				else if ("custName".equals(entry.getKey())) sb.append("concat(ps.last_name, ' ', ps.first_name) like '%").append(entry.getValue()).append("%'");
+				else if ("rnNo".equals(entry.getKey())) sb.append("iv.rn_no like '%").append(entry.getValue()).append("%'");
+				else if ("cnInvNo".equals(entry.getKey())) sb.append("(iv.cn_ps_no like '%").append(entry.getValue()).append("%' or iv.cn_inv_no like '%").append(entry.getValue()).append("%') ");
+				else if ("tourCd".equals(entry.getKey())) sb.append("d.code like '%").append(entry.getValue()).append("%'");
+				else if ("amount".equals(entry.getKey())) sb.append("iv.amount like '%").append(entry.getValue()).append("%'");
+				else if ("amtAftRefund".equals(entry.getKey())) sb.append("iv.amt_aft_refund like '%").append(entry.getValue()).append("%'");
+				else if ("refundAmt".equals(entry.getKey())) sb.append("iv.refund_amt like '%").append(entry.getValue()).append("%'");
+				else if ("statusCd".equals(entry.getKey())) sb.append("upper((select ref_value from com_ref_data where ref_cd = iv.status_cd and cat_cd = 'INV_STATUS')) like upper('%").append(entry.getValue()).append("%')");
+				else if ("eInvoiceStatus".equals(entry.getKey())) {
+					if (entry.getValue().equals(BaseConstant.PAD_DASH)) {
+						sb.append("iv.amt_aft_refund = 0");
+					} else {
+						sb.append("iv.amt_aft_refund != 0 AND iv.e_invoice_status like '%").append(entry.getValue()).append("%'");
+					}
+				}
+				else if ("eInvoiceRnStatus".equals(entry.getKey())) {
+					if (entry.getValue().equals(BaseConstant.PAD_DASH)) {
+						sb.append("iv.refund_amt = 0");
+					} else {
+						sb.append("iv.refund_amt != 0 AND iv.e_invoice_rn_status like '%").append(entry.getValue()).append("%'");
+					}
+				}
+				if (filters.size() > 1 && it.hasNext()) sb.append(" and ");
+			}
+			sb.append(")");
+		}
+		
+		sb.append(" order by ");
+		String sortField = (String) params.get("sortField");
+		
+		if (sortField == null) 
+			sb.append(" iv.dt_inv desc, iv.id desc ");
+		else {
+			if ("codeLong".equals(sortField)) sb.append("cast(iv.code as decimal)");
+			else if ("invoiceDt".equals(sortField)) sb.append("iv.dt_inv");
+			else if ("departureDt".equals(sortField)) sb.append("ifnull(cn_iv.dt_departure, cn_ps.dt_departure)");
+			else if ("custCdLong".equals(sortField)) sb.append("cast(cm.code as decimal)");
+			else if ("custName".equals(sortField)) sb.append("concat(ps.last_name, ' ', ps.first_name)");
+			else if ("rnNo".equals(sortField)) sb.append("iv.rn_no");
+			else if ("cnInvNo".equals(sortField)) sb.append("concat(ifnull(iv.cn_inv_no, ''), ifnull(iv.cn_ps_no, ''))");
+			else if ("tourCd".equals(sortField)) sb.append("d.code");
+			else if ("amount".equals(sortField)) sb.append("iv.amount");
+			else if ("amtAftRefund".equals(sortField)) sb.append("iv.amt_aft_refund");
+			else if ("refundAmt".equals(sortField)) sb.append("iv.refund_amt");
+			else if ("eInvoiceStatus".equals(sortField)) sb.append("iv.e_invoice_status");
+			else if ("eInvoiceRnStatus".equals(sortField)) sb.append("iv.e_invoice_rn_status");
+			
+			if (CommonConstant.SORT_ASC.equals(((SortOrder) params.get("sortOrder")).toString())) sb.append(" asc");
+			else sb.append(" desc");
+		}
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCompany", params.get("idCompany"));
+		if (params.get("orderSourceCode") != null) query.setParameter("orderSourceCode", params.get("orderSourceCode"));
+		if (params.get("paymentStatusList") != null) query.setParameterList("paymentStatusList", (String[]) params.get("paymentStatusList"));
+		if (params.get("eInvoiceStatusList") != null)	query.setParameterList("eInvoiceStatusList", (String[]) params.get("eInvoiceStatusList"));
+		if (params.get("fromDate") != null) query.setParameter("fromDate", params.get("fromDate"));
+		if (params.get("toDate") != null) query.setParameter("toDate", params.get("toDate"));
+		if (params.get("departureDateFr") != null) query.setParameter("departureDateFr", params.get("departureDateFr"));
+		if (params.get("departureDateTo") != null) query.setParameter("departureDateTo", params.get("departureDateTo"));
+		if (params.get("first") != null && (Integer) params.get("first") >= 0)	query.setFirstResult((Integer) params.get("first"));
+		if (params.get("pageSize") != null && (Integer) params.get("pageSize") >= 0)	query.setMaxResults((Integer) params.get("pageSize"));
+		query.setParameter("docTypeCd", "C");
+		
+//		System.out.println("InvoiceDAOImpl.getCreditNoteDisplayList()");
+//		System.out.println(sb.toString());
+		
+		List<Object> results = query.list();
+		List<InvoiceVO> invoiceList = new ArrayList<InvoiceVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoiceVO vo = new InvoiceVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			vo.setCode((String) row[1]);
+			vo.setInvoiceDt((Date) row[2]);
+			vo.setDepartureDt((Date) row[3]);
+			vo.setAmount(Double.parseDouble(row[4].toString()));
+			vo.setBalance(Double.parseDouble(row[5].toString()));
+			vo.setInvoiceDue((Date) row[6]);
+			vo.setStatusCd((String) row[7]);
+			if(row[8] == null )
+			{ vo.setBookingId(null);
+			}else{	vo.setBookingId(  Long.parseLong(row[8].toString()));
+			} 
+			//if(row[9] != null ) vo.setTourCd( row[9].toString());   
+			if(row[9] != null ) vo.setCustomerId( Long.parseLong(row[9].toString()));   
+			if(row[10] != null ) vo.setSalerName( row[10].toString());   
+			//vo.setCustName( row[11].toString() + " " + row[12].toString() );   
+			vo.setCustName(row[12].toString() + " " + row[11].toString());   
+			vo.setCustSalutation(row[13].toString() );
+			vo.setCoName((row[14] != null) ? row[14].toString() : null);
+			vo.setCnInvNo((row[15] != null) ? row[15].toString() : null);
+			vo.setCustCd((row[16] != null) ? row[16].toString() : null);
+			vo.setRnNo((row[17] != null) ? row[17].toString() : null);
+			vo.seteInvoiceStatus((row[18] != null) ? row[18].toString() : null);
+			vo.setCnPsNo((row[19] != null) ? row[19].toString() : null);
+			vo.seteInvoiceRnStatus((row[20] != null) ? row[20].toString() : null);
+			vo.setRefundAmt((row[21] != null) ? Double.parseDouble(row[21].toString()) : null);
+			vo.setAmtAftRefund((row[22] != null) ? Double.parseDouble(row[22].toString()) : null);
+			vo.setTourCd((row[23] != null) ? row[23].toString() : null);
+			
+			vo.setCnInv(new InvoiceVO());
+			vo.getCnInv().seteInvoiceStatus((row[24] != null) ? row[24].toString() : null);
+			invoiceList.add(vo);
+		}
+		return invoiceList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoicePaymentVO> getSubInvPmntList(Long idParentPmnt) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoicePaymentVO.class);
+		criteria.add(Restrictions.eq("idParentPmnt", idParentPmnt));
+		criteria.add(Restrictions.eq("statusCode", BaseConstant.STATUS_ACTIVE));
+		return criteria.list();
+	}
+	
+	@Override
+	public List<InvoicePaymentVO> getChildInvPmntList(Long idParentPmnt) throws BusinessException {
+		return getSubInvPmntList(idParentPmnt);
+	}
+	
+	@Override
+	public List<InvoicePaymentVO> getInvPmntListByIdCreditNote(Long idCreditNote) throws BusinessException {
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append(" select ip.id, ip.id_parent_pmnt, i.doc_type_cd ");
+		sb.append(" from invoice_pmnt ip ");
+		sb.append(" left join invoice i on ip.id_inv = i.id ");
+		sb.append(" where ip.status_cd = :statusCode and ip.id_credit_note = :idCreditNote ");
+		
+		Query query = createSQLQuery(sb.toString());
+		query.setParameter("idCreditNote", idCreditNote);
+		query.setParameter("statusCode", BaseConstant.STATUS_ACTIVE);
+		
+		List<Object> results = query.list();
+		List<InvoicePaymentVO> invoicePmntList = new ArrayList<InvoicePaymentVO>();
+
+		for (Iterator<Object> it = results.iterator() ; it.hasNext() ;) {
+			Object[] row = (Object[]) it.next();
+			InvoicePaymentVO vo = new InvoicePaymentVO();
+			vo.setId(((BigInteger) row[0]).longValue());
+			if (row[1] != null)	vo.setIdParentPmnt(((BigInteger) row[1]).longValue());
+			vo.setInvoiceDocTypeCd((String) row[2]);
+			
+			invoicePmntList.add(vo);
+		}
+		return invoicePmntList;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<InvoiceVO> getInvoiceList(Map<String, Object> params, Long idCompany) throws BusinessException {
+		Criteria criteria = getSession().createCriteria(InvoiceVO.class);
+		
+		if (params.get("invDtFrom") != null) {
+			criteria.add(Restrictions.ge("invoiceDt", params.get("invDtFrom")));
+		}
+		
+		if (params.get("invDtTo") != null) {
+			criteria.add(Restrictions.le("invoiceDt", params.get("invDtTo")));
+		}
+		
+		if (params.get("docTypeCdList") != null) {
+			criteria.add(Restrictions.in("docTypeCd", (String[]) params.get("docTypeCdList")));
+		}
+		
+		if (params.get("docTypeStatusList") != null) {
+			criteria.add(Restrictions.in("docTypeStatus", (String[]) params.get("docTypeStatusList")));
+		}
+		
+		criteria.add(Restrictions.eq("companyId", idCompany));
+		
+		criteria.addOrder(Order.desc("invoiceDt"));
+		criteria.addOrder(Order.desc("id"));
+		
+		return criteria.list();
+	}
+	
+	@Override
+	public List<InvoiceVoucherVO> getInvoiceVoucherList(Long idInv) throws BusinessException {
+		Criteria criteria = createCriteria(InvoiceVoucherVO.class);
+		criteria.add(Restrictions.eq("idInv", idInv));
+		criteria.add(Restrictions.eq("statusCode", CRMUtils.VOUCHER_ACTIVE));
+		List<InvoiceVoucherVO> invoiceVoucherList = criteria.list();
+		return invoiceVoucherList;
+	}
+}

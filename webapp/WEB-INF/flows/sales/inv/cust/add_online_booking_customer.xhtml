@@ -1,0 +1,310 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+	<p:growl id="msg" />
+	<style>
+	.phone-row {
+	    display: flex;
+	    align-items: center;
+	    gap: 10px;
+	}
+	</style>
+
+	<script type="text/javascript">
+		function onBookingCustValidation(xhr, status, args) {
+			if (!args.validationFailed) {
+				varOnlineBookingCustDialog.hide();
+			}
+		}
+	</script>
+
+	<div>
+		<p:panelGrid id="idOnlineCustomerDetail">
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idSalutate">Title <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idSalutate" label="Title"
+						value="#{custBean.customerVO.personVO.salutation}" required="true">
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{bterp:lookupItemList('salutatn2')}"
+							var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idTitle">Honor</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idTitle" label="Honor"
+						value="#{custBean.customerVO.personVO.title}">
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{bterp:lookupItemList('salutatn')}"
+							var="vo" itemValue="#{vo.code}" itemLabel="#{vo.description}" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idLastName">SurName <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idLastName" label="SurName"
+						value="#{custBean.customerVO.personVO.lastName}" required="true" />
+				</p:column>
+				<p:column style="width:90px;">
+					<h:outputLabel for="idGivenName">Given Name <span
+							class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idGivenName" label="Given Name"
+						value="#{custBean.customerVO.personVO.givenName}" required="true" />
+				</p:column>
+			</p:row>
+
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idNickName">NickName</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idNickName" label="NickName"
+						value="#{custBean.customerVO.personVO.nickName}" />
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idGender">Gender</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idGender" label="Gender"
+						value="#{custBean.customerVO.personVO.sex}">
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{bterp:lookupItemList('gender_type')}"
+							var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+					</h:selectOneMenu>
+				</p:column>
+			</p:row>
+
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idNationality">Nationality</h:outputLabel>
+				</p:column>
+				<p:column>
+					<h:selectOneMenu id="idNationality" label="Nationality"
+						value="#{custBean.customerVO.personVO.countryId}" style="width:180px;">
+						<f:selectItem itemLabel="Select One" itemValue="" />
+						<f:selectItems value="#{custBean.countryList}" var="vo"
+							itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+					</h:selectOneMenu>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idTaxIdNo">TIN</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idTaxIdNo" label="TIN" value="#{custBean.customerVO.personVO.taxIdNo}" maxlength="20"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idECNric">NRIC <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idECNric" label="NRIC"
+						value="#{custBean.customerVO.personVO.nric}" maxlength="20" size="20" />
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idPassportNo">Passport No <span class="required">*</span></h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idPassportNo" label="Passport No" value="#{custBean.customerVO.personVO.passportNo}" maxlength="20"/>
+				</p:column>
+			</p:row>
+
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idContactNo">Contact Number</h:outputLabel>
+				</p:column>
+				<p:column styleClass="phone-row">
+					<p:selectOneMenu id="idCountryCd" value="#{custBean.personContactVO.idCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+				        <f:selectItems value="#{custBean.countryList}" var="c" itemLabel="#{c.countryCd} #{c.country}" itemValue="#{c.id}"/>
+				    </p:selectOneMenu>
+					<p:inputText id="idContactNo" label="Number"
+						value="#{custBean.personContactVO.number}"
+						maxlength="14" size="20"
+						onkeypress="return rtnPhoneNo(event);"
+							validatorMessage="Contact number must contain only digits, and be at least 8 characters long.">
+						<p:watermark for="idContactNo" value="Number" />
+						<f:validateLength maximum="14" minimum="8" />
+						<f:validateRegex pattern="^[0-9]+$" />
+					</p:inputText>
+				</p:column>
+			</p:row>
+
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idEmail">Email </h:outputLabel>
+				</p:column>
+				<p:column colspan="3">
+					<p:inputText id="idEmail" label="Email"
+						value="#{custBean.customerVO.personVO.email}" size="40" />
+				</p:column>
+			</p:row>
+			
+			
+			<p:row>
+				<p:column colspan="4">
+					<p:panel id="idPanelEmergencyContact" header="Emergency Contact" toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idECSurName">SurName </h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:inputText id="idECSurName" label="Emergency Contact SurName"
+										value="#{custBean.customerVO.personVO.ecSurname}" maxlength="50" />
+								</p:column>
+								<p:column>
+									<h:outputLabel for="idECGivenName">Given Name </h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:inputText id="idECGivenName" label="Emergency Contact Given Name"
+										value="#{custBean.customerVO.personVO.ecGivenName}" maxlength="50" />
+								</p:column>
+							</p:row>
+							
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idNumber">Contact Number </h:outputLabel>
+								</p:column>
+								<p:column styleClass="phone-row">
+									<p:selectOneMenu id="idEcCountryCd" value="#{custBean.customerVO.personVO.ecIdCountryCd}" style="width:120px" filter="true" filterMatchMode="contains">
+								        <f:selectItems value="#{custBean.countryList}" var="c" itemLabel="#{c.countryCd} #{c.country}" itemValue="#{c.id}"/>
+								    </p:selectOneMenu>
+									<p:inputText id="idECContacts" label="Number"
+										value="#{custBean.customerVO.personVO.ecContacts}"
+										maxlength="14" size="20"
+										onkeypress="return rtnPhoneNo(event);"
+										validatorMessage="Contact number must contain only digits, and be at least 8 characters long.">
+										<p:watermark for="idECContacts" value="Number" />
+										<f:validateLength maximum="14" minimum="8" />
+										<f:validateRegex pattern="^[0-9]+$" />
+									</p:inputText>
+								</p:column>
+								<p:column>
+									<h:outputLabel for="idECRelationship">Relationship </h:outputLabel>
+								</p:column>
+								<p:column>
+									<h:selectOneMenu id="idECRelationship" label="Emergency Contact Relationship"
+										value="#{custBean.customerVO.personVO.ecRelationship}">
+										<f:selectItem itemLabel="Select One" itemValue="" />
+										<f:selectItems value="#{bterp:lookupItemList('emergency_relationship')}"
+											var="vo" itemLabel="#{vo.description}" itemValue="#{vo.code}" />
+									</h:selectOneMenu>
+								</p:column>
+							</p:row>
+	
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idECEmail">Email </h:outputLabel>
+								</p:column>
+								<p:column colspan="3">
+									<p:inputText id="idECEmail" label="Emergency Contact Email"
+										value="#{custBean.customerVO.personVO.ecEmail}" maxlength="200" size="40" />
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:panel>
+				</p:column>
+			</p:row>
+
+			<p:row>
+				<p:column colspan="4">
+					<p:panel id="idPanelBillAddress" header="Billing Address"
+						toggleable="true">
+						<p:panelGrid>
+							<p:row>
+								<p:column>
+									<h:outputLabel for="idAdd1">Address Line 1 <span
+											class="required">*</span>
+									</h:outputLabel>
+								</p:column>
+								<p:column colspan="3">
+									<p:inputText id="idAdd1" label="Address Line 1"
+										value="#{custBean.customerVO.billAddressVO.addr1}" size="50"
+										required="true" />
+								</p:column>
+							</p:row>
+
+							<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+								<p:column>
+									<h:outputLabel for="idAdd2">Address Line 2 </h:outputLabel>
+								</p:column>
+								<p:column colspan="3">
+									<p:inputText id="idAdd2" label="Address Line 2"
+										value="#{custBean.customerVO.billAddressVO.addr2}" size="50" />
+								</p:column>
+							</p:row>
+
+							<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+								<p:column>
+									<h:outputLabel for="idState">State </h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:inputText id="idState" label="State"
+										value="#{custBean.customerVO.billAddressVO.state}" />
+								</p:column>
+							</p:row>
+
+							<p:row rendered="#{custBean.customerVO.pcTypeCd != 'C'}">
+								<p:column>
+									<h:outputLabel for="idPostcode">Postcode </h:outputLabel>
+								</p:column>
+								<p:column>
+									<p:inputText id="idPostcode" label="Postcode"
+										value="#{custBean.customerVO.billAddressVO.postcode}" />
+								</p:column>
+								<p:column>
+									<h:outputLabel for="idCountry">Country <span
+											class="required">*</span>
+									</h:outputLabel>
+								</p:column>
+								<p:column>
+									<h:selectOneMenu id="idCountry" label="Country"
+										value="#{custBean.customerVO.billAddressVO.countryId}"
+										required="true" style="width:180px;">
+										<f:selectItem itemLabel="Select One" itemValue="" />
+										<f:selectItems value="#{custBean.countryList}" var="vo"
+											itemLabel="#{vo.country}" itemValue="#{vo.id}" />
+									</h:selectOneMenu>
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+					</p:panel>
+				</p:column>
+			</p:row>
+
+		</p:panelGrid>
+	</div>
+
+	<h:panelGrid columns="2" style="width: 1px;">
+		<p:commandButton value="Convert to Customer" style="width:160px;"
+			actionListener="#{salesBean.convertToCustomer(custBean.customerVO)}"
+			oncomplete="onBookingCustValidation(xhr, status, args);" update=":idAddInvoiceForm" />
+		<p:commandButton value="#{msg['common.button.label.cancel']}"
+			actionListener="#{custBean.resetForm}" update="@form" process="@this"
+			oncomplete="varOnlineBookingCustDialog.hide()" global="false">
+		</p:commandButton>
+	</h:panelGrid>
+
+</ui:composition>

@@ -1,0 +1,48 @@
+package com.bcs.zsg.sales.helper;
+
+import java.math.BigDecimal;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.sales.vo.BookingChargeItemVO;
+import com.bcs.zsg.sales.vo.InvoiceItemVO;
+
+public class SalesUtils {
+	
+	public static InvoiceItemVO buildBaseInvItemFromBookingChargeItem(BookingChargeItemVO itemVO) {
+		InvoiceItemVO invItemVO = new InvoiceItemVO();
+		invItemVO.setAcctId(itemVO.getIdAcct());
+		invItemVO.setInvEOItemId(itemVO.getIdInvEoItem());
+		invItemVO.setInvItemCd(itemVO.getCode());
+		invItemVO.setItemCode(itemVO.getCode());
+		invItemVO.setCode(itemVO.getCode());
+		invItemVO.setDesc(itemVO.getDesc());
+		invItemVO.setQty(itemVO.getQuantity());
+		invItemVO.setUnitPrice(itemVO.getAmount());
+		invItemVO.setCurrencyId(CommonConstant.DEF_CURRENCY_ID);
+	    invItemVO.setExRate(1.0);
+	    invItemVO.setCurrencyPrice(itemVO.getAmount());
+		invItemVO.setAmount((new BigDecimal(String.valueOf(itemVO.getAmount())))
+				.multiply(new BigDecimal(String.valueOf(itemVO.getQuantity()))).doubleValue());
+		invItemVO.setTaxAmount(0.00);
+		
+		return invItemVO;
+	}
+	
+	public static InvoiceItemVO buildInvItem(InvoiceItemVO baseInvItemVO, String desc, Integer qty, Double unitPrice, Boolean showInInv, Integer seq) {
+		InvoiceItemVO itemVO = new InvoiceItemVO();
+		itemVO = (InvoiceItemVO) baseInvItemVO.clone();
+		itemVO.setDesc(desc);
+		itemVO.setQty(qty);
+		itemVO.setUnitPrice(unitPrice);
+		itemVO.setCurrencyId(CommonConstant.DEF_CURRENCY_ID);
+		itemVO.setExRate(1.0);
+		itemVO.setCurrencyPrice(unitPrice);
+		itemVO.setAmount((new BigDecimal(String.valueOf(itemVO.getUnitPrice())))
+				.multiply(new BigDecimal(String.valueOf(itemVO.getQty()))).doubleValue());
+		
+		if (showInInv != null)	itemVO.setShowInInv(showInInv);
+		if (seq != null)		itemVO.setSeq(seq);
+		
+		return itemVO;
+	}
+}

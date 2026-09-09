@@ -1,0 +1,163 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:growl id="msg"/>
+<p:panelGrid style="margin-bottom:10px;">
+	<p:row>
+		<p:column style="width:140px">
+			<p:outputLabel value="Merchant" for="idHiddenMerchant"/>
+		</p:column>
+		<p:column>
+			<h:inputHidden id="idHiddenMerchant" value="#{onlineBookingBean.onlineBookingPaymentVO.ipayConfigComment}" required="true"/>
+			<p:inputText id="idMerchant" value="#{onlineBookingBean.onlineBookingPaymentVO.ipayConfigComment}" required="true" readonly="true" style="background:#ccc"/>
+			<p:commandButton icon="ui-icon-search" actionListener="#{onlineBookingBean.loadIpayConfigList}" oncomplete="varIpayConfigListDialog.show()" 
+				update=":idIpayConfigListDialog" process="@this" style="margin-left: 5px;" disabled="#{onlineBookingBean.onlineBookingPaymentVO.paymentStatus ne 'P'}"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Invoice No." for="idTxtInvoiceNo"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTxtInvoiceNo" value="#{onlineBookingBean.onlineBookingPaymentVO.prefix} #{onlineBookingBean.onlineBookingPaymentVO.invoiceNo}" required="true" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Invoice Status" for="idTxtInvoiceStatus"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTxtInvoiceStatus" value="#{zsg:referenceDataValue('INV_STATUS', onlineBookingBean.onlineBookingPaymentVO.invoiceStatus)}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Customer Email" for="idEmail"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idEmail" value="#{onlineBookingBean.onlineBookingPaymentVO.email}" required="true" maxlength="50"
+				validatorMessage="Invalid email format" 
+				readonly="#{onlineBookingBean.onlineBookingPaymentVO.paymentStatus ne 'P'}"
+				style="width: 250px;background:#{onlineBookingBean.onlineBookingPaymentVO.paymentStatus ne 'P' ? '#ccc' : ''}">
+				<f:validateRegex pattern="#{config['email.format.pattern']}" />
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Payment Amount" for="idPaymentAmt"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idPaymentAmt" value="#{onlineBookingBean.onlineBookingPaymentVO.paymentAmt}" required="true" 
+				readonly="#{onlineBookingBean.onlineBookingPaymentVO.paymentStatus ne 'P'}"
+				style="background:#{onlineBookingBean.onlineBookingPaymentVO.paymentStatus ne 'P' ? '#ccc' : ''}">
+				<p:ajax event="change" listener="#{onlineBookingBean.handleAdminChargesPercentageChange}" 
+					process="@this, idAdminCharges" update="idAdminCharges, idTotalPayment"/>
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Admin Charges (%)" for="idAdminChargesPercent"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAdminChargesPercent" value="#{onlineBookingBean.onlineBookingPaymentVO.adminChargesPercentage}" maxlength="5" required="true" 
+				readonly="true" style="background: #ccc">
+				<p:ajax event="change" listener="#{onlineBookingBean.handleAdminChargesPercentageChange}" 
+					process="@this, idPaymentAmt" update="idAdminCharges, idTotalPayment"/>
+				<f:convertNumber pattern="0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Admin Charges" for="idAdminCharges"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idAdminCharges" value="#{onlineBookingBean.onlineBookingPaymentVO.adminCharges}" required="true"
+				readonly="true" style="background: #ccc">
+				<p:ajax event="change" listener="#{onlineBookingBean.calculateTotalPaymentAmt}" 
+					process="@this, idPaymentAmt" update="idTotalPayment"/>
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Total Payment" for="idTotalPayment"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTotalPayment" value="#{onlineBookingBean.onlineBookingPaymentVO.totalPaymentAmt}" readonly="true" style="background:#ccc">
+				<f:convertNumber pattern="#,##0.00"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Status" for="idTxtStatus"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTxtStatus" value="#{onlineBookingBean.onlineBookingPaymentVO.paymentStatus eq 'P' ? 'Pending' : 'Success'}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column>
+			<p:outputLabel value="Trans No." for="idTransNo"/>
+		</p:column>
+		<p:column>
+			<p:inputText id="idTransNo" value="#{onlineBookingBean.onlineBookingPaymentVO.transId}" readonly="true" style="background:#ccc"/>
+		</p:column>
+	</p:row>
+</p:panelGrid>
+<p:panel header="Credit Card Info">
+	<p:panelGrid>
+		<p:row>
+			<p:column style="width:110px">
+				<p:outputLabel value="CC Name" for="idCCName"/>
+			</p:column>
+			<p:column style="width:150px">
+				<p:inputText id="idCCName" value="#{onlineBookingBean.onlineBookingPaymentVO.ccName}" readonly="true" style="background:#ccc"/>
+			</p:column>
+			<p:column style="width:110px">
+				<p:outputLabel value="CC No." for="idCCNo"/>
+			</p:column>
+			<p:column>
+				<p:inputText id="idCCNo" value="#{onlineBookingBean.onlineBookingPaymentVO.ccNo}" readonly="true" style="background:#ccc"/>
+			</p:column>
+		</p:row>
+		<p:row>
+			<p:column>
+				<p:outputLabel value="CC Bank" for="idSBank"/>
+			</p:column>
+			<p:column>
+				<p:inputText id="idSBank" value="#{onlineBookingBean.onlineBookingPaymentVO.sBankname}" readonly="true" style="background:#ccc"/>
+			</p:column>
+			<p:column>
+				<p:outputLabel value="CC Country" for="idSCountry"/>
+			</p:column>
+			<p:column>
+				<p:inputText id="idSCountry" value="#{onlineBookingBean.onlineBookingPaymentVO.sCountry}" readonly="true" style="background:#ccc"/>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+</p:panel>
+<p:panelGrid id="idButtonGrid" columns="3" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{onlineBookingBean.save}" 
+		update=":idForm" />
+	<p:commandButton value="#{msg['common.button.label.cancel']}" process="@this" oncomplete="varOnlineBookingPayment.hide();">
+		<pe:resetEditableValues for="idOnlineBookingPaymentForm"/>
+	</p:commandButton>
+</p:panelGrid>
+
+
+		
+</ui:composition>

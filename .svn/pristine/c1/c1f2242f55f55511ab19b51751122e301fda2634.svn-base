@@ -1,0 +1,84 @@
+package com.bcs.zsg.sales.helper;
+
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.sales.vo.IdentityDetailVO;
+
+public class IdentityUtils {
+	
+	/**
+	 * sync NRIC and passport to identity list
+	 * when update cust/inv pax
+	 * due to user not able to edit nricIdVO & passportIdVO
+	 * 
+	 * @param nricIdVO
+	 * @param passportIdVO
+	 * @param identityList
+	 */
+	public static void syncNricPassport(IdentityVO nricIdVO, IdentityVO passportIdVO, List<IdentityVO> identityList) {
+		if (nricIdVO != null) {
+			if (StringUtils.isNotEmpty(nricIdVO.getIdNo())) {
+				if (nricIdVO.getId() != null) {
+					for (IdentityVO idVO : identityList) {
+						if (StringUtils.equals(idVO.getIdType(), CommonConstant.LOOKUP_ITM_ID_NRIC) && nricIdVO.getId().equals(idVO.getId())) {
+							idVO.setIdNo(nricIdVO.getIdNo());
+							break;
+						}
+					}
+				} else {
+					IdentityVO idttyVO = new IdentityVO();
+					idttyVO.setIdType(CommonConstant.LOOKUP_ITM_ID_NRIC);
+					idttyVO.setIdNo(nricIdVO.getIdNo());
+					idttyVO.setIdentityDetailVO(new IdentityDetailVO());
+					identityList.add(idttyVO);
+				}
+			} else {
+				if (nricIdVO.getId() != null) {
+					for (Iterator<IdentityVO> iterator = identityList.iterator(); iterator.hasNext();) {
+						if (CommonConstant.LOOKUP_ITM_ID_NRIC.equals(iterator.next().getIdType())) {
+							iterator.remove();
+						}
+					}
+				}
+			}
+		}
+		
+//		IdentityVO passportIdVO = invoicePaxVO.getCustDetailsVO().getPassportIdVO();		
+		if (passportIdVO != null) {
+		    if (StringUtils.isNotBlank(passportIdVO.getIdNo())) {
+		        if (passportIdVO.getId() != null) {
+		            for (IdentityVO idVO : identityList) {
+		                if (StringUtils.equals(idVO.getIdType(), CommonConstant.LOOKUP_ITM_ID_PASSPRT) && passportIdVO.getId().equals(idVO.getId())) {
+		                    idVO.setIdNo(passportIdVO.getIdNo());
+		                    idVO.setIdentityDetailVO(passportIdVO.getIdentityDetailVO());
+		                    return;
+		                }
+		            }
+		        } else {
+					IdentityVO idttyVO = new IdentityVO();
+					idttyVO.setIdType(CommonConstant.LOOKUP_ITM_ID_PASSPRT);
+					idttyVO.setIdNo(passportIdVO.getIdNo());
+					idttyVO.setIdentityDetailVO(passportIdVO.getIdentityDetailVO());
+					idttyVO.getIdentityDetailVO().setId(null);
+					idttyVO.getIdentityDetailVO().setPersonIdentityId(null);
+					identityList.add(idttyVO);
+				}
+
+		    } else {
+		    	if (passportIdVO.getId() != null) {
+			        for (Iterator<IdentityVO> iterator = identityList.iterator(); iterator.hasNext();) {
+			            if (CommonConstant.LOOKUP_ITM_ID_PASSPRT.equals(iterator.next().getIdType())) {
+			            	iterator.remove();
+			            }
+			        }
+		    	}
+		    }
+		}	
+		
+	}
+}

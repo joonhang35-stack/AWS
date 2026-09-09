@@ -1,0 +1,164 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+				template="/WEB-INF/views/layouts/main.xhtml">
+
+<ui:define name="content">
+<p:panel header="Receipt / Deposit" toggleable="true" toggleSpeed="500">
+	<h:form>
+	
+		<h:panelGrid columns="3" style="width: 380px;">
+					<p:commandButton value="Create Receipt" onclick="varAddRcptDialog.show()" immediate="true"/>
+					<p:commandButton value="Create Deposit" onclick="varAddRcptDialog.show()" immediate="true"/>
+		</h:panelGrid>
+		<br/><br/>
+		
+		<p:dataTable id="dataTable" var="car" value="#{receiptDepositBean.carsSmall}" widgetVar="carsTable" paginator="true" rows="10" rowsPerPageTemplate="10,50,100" 
+            emptyMessage="No cars found with given criteria" filteredValue="#{receiptDepositBean.filteredCars}">  
+  
+        <f:facet name="header">  
+            <p:outputPanel>  
+                <h:outputText value="Search all fields:" />  
+                <p:inputText id="globalFilter" onkeyup="carsTable.filter()" style="width:150px" />  
+            </p:outputPanel>  
+        </f:facet>
+        
+              
+        <p:column id="senderColumn" filterBy="#{car.sender}" headerText="Received From"  filterOptions="#{receiptDepositBean.senderOptions}"  
+                filterMatchMode="contains" sortBy="#{car.sender}">  
+            <h:outputText value="#{car.sender}" />  
+        </p:column>
+        
+        <p:column id="modelColumn" filterBy="#{car.accNo}" headerText="Account Number" filterMatchMode="contains" sortBy="#{car.accNo}">  
+            <h:outputText value="#{car.accNo}" />  
+        </p:column>
+        
+        <p:column id="memoColumn" headerText="Memo" filterBy="#{car.memo}" filterMatchMode="contains" sortBy="#{car.memo}">  
+            <h:outputText value="#{car.memo}" />  
+        </p:column>
+        
+        <p:column id="chequeColumn" filterBy="#{car.chequeNo}"  
+                headerText="Cheque Number" filterMatchMode="contains" sortBy="#{car.chequeNo}">  
+            <h:outputText value="#{car.chequeNo}" />  
+        </p:column>
+        
+       <p:column id="balColumn" headerText="Amount" filterBy="#{car.amount}" filterMatchMode="contains" sortBy="#{car.amount}">  
+            <h:outputText value="#{car.amount}" />  
+        </p:column> 
+        
+        </p:dataTable> 
+	</h:form>
+</p:panel>
+
+<p:dialog id="idAcctDialog" widgetVar="varAddRcptDialog" modal="true" resizable="false" dynamic="true" draggable="true" 
+			hideEffect="fade" showEffect="fade" closable="false">
+			<f:facet name="header">
+				<h:outputFormat value="Create a Receipt" />
+			</f:facet>
+			<p:panelGrid>
+			<p:row>
+				<p:column style="width:100px"><h:outputLabel for="idRcvFrom">Receive From</h:outputLabel></p:column>
+				<p:column style="width:350px">
+				<h:selectOneMenu id="idRcvFrom" value="">  
+                	<f:selectItem itemLabel="Select Client" itemValue="" />  
+                	<f:selectItems value="" />  
+            	</h:selectOneMenu>
+            	</p:column>
+            	
+				<p:column style="width:100px"><h:outputLabel for="idDt">Date</h:outputLabel></p:column>
+				<p:column style="width:250px"><p:calendar pattern="mm-dd-yyyy" showButtonPanel="true" navigator="true" showButtonPanel="true" id="idDt"/></p:column>
+				<p:column style="width:250px">
+					<p:button outcome="NumDetail" value="New No" >  
+				    	<f:param name="numId" value="10" />  
+					</p:button>
+				</p:column>
+			</p:row>
+			
+			<p:row>
+				<p:column style="width:100px"><h:outputLabel for="idAmount">Amount:</h:outputLabel></p:column>
+				<p:column style="width:250px"><p:inputText id="idAmount" label="Amount" size="35"/></p:column>
+			</p:row>
+			
+			<p:row>
+				<p:column style="width:100px"><h:outputLabel for="idChequeNo">Cheque No:</h:outputLabel></p:column>
+				<p:column style="width:250px"><p:inputText id="idChequeNo" label="Cheque No" size="35"/></p:column>
+				<p:column style="width:100px"><h:outputLabel for="idGrpNo">Group No:</h:outputLabel></p:column>
+				<p:column style="width:250px"><p:inputText id="idGrpNo" label="Group No" size="35"/></p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:20px"><h:outputLabel for="idMemo">Memo:</h:outputLabel></p:column>
+				<p:column style="width:270px"><p:inputText id="idMemo" label="Memo" size="35"/></p:column>
+			</p:row>
+			<p:row>
+				<p:column style="width:20px"><p:commandButton value="Update Balance"/></p:column>
+				<p:column style="width:20px"><p:commandButton value="Pay Invoice"/></p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:20px"><h:outputLabel>CREDIT ACCOUNT:</h:outputLabel></p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:dataTable var="car" value="11">  
+  
+	        <p:column id="accHeader" headerText="Account" style="text-align:center">  
+				<h:selectOneMenu id="idAccNo" value="">  
+                	<f:selectItem itemLabel="Select Account" itemValue="" />  
+                	<f:selectItems value="" />  
+            	</h:selectOneMenu>
+			</p:column>  
+	        <p:column id="descHeader" headerText="Description" style="text-align:center">  Current Account Description  </p:column>  
+	        <p:column id="tourCodeHeader" headerText="Tour Code" sortBy="#{car.color}" style="text-align:center">  
+	        	<h:selectOneMenu id="idTourCode" value="">  
+                	<f:selectItem itemLabel="Select Tour" itemValue="" />  
+                	<f:selectItems value="" />  
+            	</h:selectOneMenu>
+	        </p:column>
+	        <p:column id="amountHeader" headerText="Amount" sortBy="#{car.sender}">  1039.10  </p:column>  
+	        <p:summaryRow>  
+	            <p:column colspan="3" style="text-align:right">  Total:  </p:column>  
+	            <p:column>  1039.10  </p:column>  
+	        </p:summaryRow>  
+    	</p:dataTable>  
+    	
+    	<p:panelGrid>
+    		<p:row><p:column style="width:100px"><h:outputLabel> </h:outputLabel></p:column></p:row>
+			<p:row><p:column style="width:100px"><h:outputLabel> </h:outputLabel></p:column></p:row>
+			<p:row><p:column style="width:100px"><h:outputLabel> </h:outputLabel></p:column></p:row>
+    	<p:row>
+				<p:column style="width:100px"><p:selectBooleanCheckbox value="" /> Used for Invoice</p:column>
+				<p:column style="width:100px"><h:outputLabel for="idCompanyCode">Company Code</h:outputLabel></p:column>
+				<p:column style="width:250px">
+					<h:selectOneMenu id="idCompanyCode" value="">  
+	                	<f:selectItem itemLabel="Select Company" itemValue="" />  
+	                	<f:selectItems value="" />  
+	            	</h:selectOneMenu>
+            	</p:column>
+            	<p:column style="width:100px"><h:outputLabel for="idProjectCode">Project Code</h:outputLabel></p:column>
+				<p:column style="width:250px">
+					<h:selectOneMenu id="idProjectCode" value="">  
+	                	<f:selectItem itemLabel="Select Project" itemValue="" />  
+	                	<f:selectItems value="" />  
+	            	</h:selectOneMenu>
+            	</p:column>
+		</p:row>
+		</p:panelGrid>
+		<p:separator id="separator"/>
+		<h:panelGrid columns="2" style="width: 1px;">
+				<p:commandButton value="Submit"/>
+				<p:commandButton value="Cancel" onclick="varAddRcptDialog.hide()" process="@this" />
+		</h:panelGrid>
+			
+</p:dialog>			
+
+</ui:define>
+</ui:composition>

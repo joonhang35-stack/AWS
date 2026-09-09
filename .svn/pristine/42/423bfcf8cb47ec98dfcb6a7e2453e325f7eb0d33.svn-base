@@ -1,0 +1,52 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+	<p:panelGrid>
+							
+		<p:row>
+			<p:column><h:outputLabel for="idEditBankName">GL Name </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idEditBankName" label="GL Account" value="#{billPymtBean.cashBookVO.temp}" onclick="varBankAcctListDialog.show()"/>
+			</p:column>
+			<p:column><h:outputLabel for="idEditBankAcc">GL Account </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idEditBankAcc" label="GL Account" value="#{billPymtBean.cashBookVO.bankAcc}" onclick="varBankAcctListDialog.show()"/>
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idEditDate">Date </h:outputLabel></p:column>
+			<p:column><p:calendar pattern="dd-MMM-yyyy" id="idEditDate" label="Date" value="#{billPymtBean.cashBookVO.dtTrans}" navigator="true" showButtonPanel="true" /></p:column>
+			<p:column><h:outputLabel for="idEditChequeNo">Cheque No </h:outputLabel></p:column>
+			<p:column><p:inputText label="Cheque No" value="#{billPymtBean.cashBookVO.refNo}" /></p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idEditPayTo">Pay to </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idEditPayTo" label="Pay to" value="#{billPymtBean.cashBookVO.payee}" />  
+			</p:column>
+		</p:row>
+		
+		<p:row>
+			<p:column><h:outputLabel for="idEditAmtPaid">Amount Paid </h:outputLabel></p:column>
+			<p:column>
+				<p:inputText label="Amount Paid" value="#{billPymtBean.cashBookVO.credit}">
+					<f:convertNumber pattern="#,##0.00"/>
+				</p:inputText>
+			</p:column>
+			<p:column><h:outputLabel for="idEditMemoTextBox">Memo Text Box </h:outputLabel></p:column>
+			<p:column><p:inputTextarea label="Memo Text Box" value="#{billPymtBean.cashBookVO.remarks}" /></p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width: 1px;">
+		<p:commandButton value="Save" actionListener="#{billPymtBean.editPayment}" update="@form,:idAddFuncForm:tabView:idBillPmnt,:idEditFuncForm:tabView:idBillPmnt" oncomplete="varEditPymtDialog.hide()" process="@form"/>
+		<p:commandButton value="Cancel" onclick="varEditPymtDialog.hide()" process="@this" />
+	</p:panelGrid>
+</ui:composition>

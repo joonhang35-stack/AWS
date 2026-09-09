@@ -1,0 +1,61 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<p:tabView id="idInvDetailsTab">
+	<p:tab id="idInvDetailsSubTab" title="Invoice Details">
+		<p:dataTable value="#{historyBean.invoiceHistoryViewVO.invoiceItemHisViewList}" var="vo"
+			scrollable="true" scrollHeight="400">
+			
+			<p:column headerText="Description" width="300"><h:outputText value="#{vo.desc}"/></p:column>
+			<p:column headerText="Sales Account" width="250">
+				<h:outputText value="#{vo.acctCd}: #{vo.acctDesc}" rendered="#{vo.subAcctCd == ''}"/>
+				<h:outputText value="#{vo.acctCd}-#{vo.subAcctCd}: #{vo.acctDesc}-#{vo.subAcctDesc}" rendered="#{vo.subAcctCd != ''}"/>
+			</p:column>
+			<p:column headerText="Airline" width="150"><h:outputText value="#{vo.airlineDesc}"/></p:column>
+			<p:column headerText="Quantity" width="100" styleClass="txt_center"><h:outputText value="#{vo.qty}"><f:convertNumber pattern="#,##0"/></h:outputText></p:column>
+			<p:column headerText="Net Price" width="100"><h:outputText value="#{vo.netPrice}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+			<p:column headerText="Unit Price" width="100"><h:outputText value="#{vo.unitPrice}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+			<p:column headerText="Amount" width="100"><h:outputText value="#{vo.amount}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+		</p:dataTable>
+	</p:tab>
+	
+	<p:tab id="idPassengerDetailsSubTab" title="Passenger Details">
+		<p:dataTable value="#{historyBean.invoiceHistoryViewVO.invoicePaxHisViewList}" var="vo"
+			scrollable="true" scrollHeight="400">
+			
+			<p:column headerText="Passenger Name" width="150">
+				<h:outputText value="#{bterp:lookupItemDesc('salutatn', vo.custSalutatnCd)} #{vo.custLName} #{vo.custFName}" rendered="#{vo.custType == 'P'}"/>
+				<h:outputText value="#{vo.coName}" rendered="#{vo.custType == 'C'}"/>
+			</p:column>
+			<p:column headerText="Room Type" width="100" styleClass="txt_center"><h:outputText value="#{bterp:lookupItemDesc('room_type', vo.roomTypeCd)}"/></p:column>
+			<p:column headerText="Room Pairing No" width="100" styleClass="txt_center"><h:outputText value="#{vo.roomPairingNo}"/></p:column>
+			<p:column headerText="Trvl Ins Type" width="100" styleClass="txt_center"><h:outputText value="#{bterp:lookupItemDesc('travel_Ins_type', vo.travelInsType)}"/></p:column>
+			<p:column headerText="Trvl Ins Policy" width="150"><h:outputText value="#{vo.travelInsPolicy}"/></p:column>
+			<p:column headerText="Ticket No" width="100"><h:outputText value="#{vo.ticketNo}"/></p:column>
+			<p:column headerText="Special Request" width="300"><h:outputText value="#{vo.spclReq}"/></p:column>
+		</p:dataTable>
+	</p:tab>
+	
+	<p:tab id="idPaymentsSubTab" title="Payments">
+		<p:dataTable value="#{historyBean.invoiceHistoryViewVO.invoicePaymentHisViewList}" var="vo"
+			scrollable="true" scrollHeight="400">
+			
+			<p:column headerText="Payment Date" width="100" styleClass="txt_center"><h:outputText value="#{vo.pmntDt}"><f:convertDateTime pattern="dd-MMM-yyyy"/></h:outputText></p:column>
+			<p:column headerText="Original Receipt No" width="120"><h:outputText value="#{vo.code}"/></p:column>
+			<p:column headerText="Payment Type" width="100" styleClass="txt_center"><h:outputText value="#{bterp:lookupItemDesc('pymt_type', vo.pmntTypeCd)}"/></p:column>
+			<p:column headerText="Payment Ref. No" width="150"><h:outputText value="#{vo.refNo}"/></p:column>
+			<p:column headerText="Being Payment For" width="200"><h:outputText value="#{vo.pmntFor}"/></p:column>
+			<p:column headerText="Amount Paid" width="100"><h:outputText value="#{vo.amount}"><f:convertNumber pattern="#,##0.00"/></h:outputText></p:column>
+			<p:column headerText="Issued By" width="150"><h:outputText value="#{vo.pmntIssuedBy}"/></p:column>
+			<p:column headerText="Received From" width="150"><h:outputText value="#{vo.recievedFr}"/></p:column>
+		</p:dataTable>
+	</p:tab>
+</p:tabView>
+</ui:composition>

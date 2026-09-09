@@ -1,0 +1,513 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	
+	<p:growl id="msg"/>
+
+	<script type="text/javascript">
+		function onValidation(xhr, status, args) {
+			if (args.validationFailed) {
+				varCompanyDialog.show();
+			} else {
+				varCompanyDialog.hide();
+			}
+		}
+		
+	</script>
+	<div style="height:400px; width:800px; overflow:auto;">
+		<p:panelGrid>
+			<p:row>
+				<p:column style="width:110px;">
+					<h:outputLabel for="idCompanyCode">Company Code</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idCompanyCode" label="Company Code" 
+						value="#{corporateProfileBean.companyVO.code}" style="width:200px"/>
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idCompanyName">Company Name <span class="required">*</span>
+					</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idCompanyName" label="Company Name" 
+						value="#{corporateProfileBean.companyVO.name}" style="width:200px" required="true"/>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idSlogan">Slogan</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idSlogan" label="Slogan" 
+						value="#{corporateProfileBean.companyVO.slogan}" style="width:200px" />
+				</p:column>
+				<p:column>
+					<h:outputLabel for="idconumber">Co No</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idconumber" label="Co No" 
+						value="#{corporateProfileBean.companyVO.conumber}" style="width:200px" />
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idTin">TIN</h:outputLabel>
+				</p:column>
+				<p:column>
+					<p:inputText id="idTin" label="TIN" 
+						value="#{corporateProfileBean.companyVO.taxIdNo}" style="width:200px" />
+				</p:column>
+				<p:column>
+					
+				</p:column>
+				<p:column>
+					
+				</p:column>
+			</p:row>
+		</p:panelGrid>
+		
+		<p:panel header="Company Name" style="margin:15px 10px 0 0;" toggleable="true">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<p:commandButton value="Add" update=":idCompanyNameDialog" 
+							actionListener="#{corporateProfileBean.onNameSelected(null)}" process="@this" 
+							oncomplete="varCompanyNameDialog.show()" />
+						
+						<p:dataTable id="idShowNameList" 
+							value="#{corporateProfileBean.companyVO.companyNameList}" 
+							var="companyNameVO" style="width:720px;padding-top:10px">
+						
+							<p:column headerText="Edit" style="width:20px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil" 
+									actionListener="#{corporateProfileBean.onNameSelected(companyNameVO)}" 
+									oncomplete="varCompanyNameDialog.show()" process="@this" 
+									update=":idCompanyNameDialog"/>
+							</p:column>
+							<p:column headerText="Delete" style="width:20px; text-align:center;">
+								<p:commandButton icon="ui-icon-close" 
+									actionListener="#{corporateProfileBean.deleteName(companyNameVO)}" 
+									update=":idCompanyNameDialog, :idCompanyForm:idShowNameList" 
+									process="@this"/>
+							</p:column>
+							<p:column headerText="Name"  style="width:300px; ">
+								<h:outputText value="#{companyNameVO.name}" />
+								<br/>
+								<h:outputText value="#{companyNameVO.shortName}" 
+									rendered="#{companyNameVO.shortName ne null and companyNameVO.shortName ne ''}"/>
+							</p:column>
+							<p:column headerText="Letter Head URL"  style="width:100px; ">
+								<h:outputText value="#{companyNameVO.letterHeadUrl}" />
+							</p:column>
+							<p:column headerText="Valid From">
+								<h:outputText value="#{companyNameVO.validFrom}" >
+									<f:convertDateTime pattern="dd-MMM-yyyy"/>
+								</h:outputText>
+							</p:column>
+							<p:column headerText="Valid To">
+								<h:outputText value="#{companyNameVO.validTo}">
+									<f:convertDateTime pattern="dd-MMM-yyyy"/>
+								</h:outputText>
+							</p:column>
+						</p:dataTable>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:panel>
+		
+		<p:panel header="Address" style="margin:15px 10px 0 0;" toggleable="true">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idAdd1">Line 1 <span class="required">*</span>
+						</h:outputLabel>
+					</p:column>
+					<p:column colspan="3">
+						<p:inputText id="idAdd1" label="Address Line 1" 
+							value="#{corporateProfileBean.companyVO.companyAddressVO.address1}" size="62" required="true"/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idAdd2">Line 2 </h:outputLabel>
+					</p:column>
+					<p:column colspan="3">
+						<p:inputText id="idAdd2" label="Address Line 2" 
+							value="#{corporateProfileBean.companyVO.companyAddressVO.address2}" size="62"/>
+					</p:column>
+				</p:row>
+		
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idAdd3">Line 3 </h:outputLabel>
+					</p:column>
+					<p:column colspan="3">
+						<p:inputText id="idAdd3" label="Address Line 3" 
+							value="#{corporateProfileBean.companyVO.companyAddressVO.address3}" size="62"/>
+					</p:column>
+				</p:row>
+		
+				<p:row>
+					<p:column style="width:100px;">
+						<h:outputLabel for="idCity">City </h:outputLabel>
+					</p:column>
+					<p:column style="width:120px;">
+						<p:inputText id="idCity" label="City" value="#{corporateProfileBean.companyVO.companyAddressVO.city}" />
+					</p:column>
+					<p:column style="width:100px;">
+						<h:outputLabel for="idState">State/ Province </h:outputLabel>
+					</p:column>
+					<p:column>
+					    <!-- Non-Malaysia -->
+					    <h:panelGroup id="idStateProvince">
+					        <p:inputText id="idState"
+					            label="State / Province"
+					            rendered="#{corporateProfileBean.companyVO.companyAddressVO.countryid ne 129}"
+					            value="NA">
+					            <p:ajax event="change" global="false" />
+					        </p:inputText>
+					
+					        <!-- Malaysia -->
+					        <h:selectOneMenu id="idStateMalaysia"
+					            label="State / Province"
+					            value="#{corporateProfileBean.companyVO.companyAddressVO.state}"
+					            rendered="#{corporateProfileBean.companyVO.companyAddressVO.countryid eq 129}"
+					            required="true">
+					            <f:selectItem itemLabel="Select One" itemValue="" />
+					            <f:selectItems
+					                value="#{corporateProfileBean.malaysiaStateList}"
+					                var="vo"
+					                itemLabel="#{vo.name}"
+					                itemValue="#{vo.name}" />
+					        </h:selectOneMenu>
+					    </h:panelGroup>
+					</p:column>
+				</p:row>
+				
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idPostcode">Postcode </h:outputLabel>
+					</p:column>
+					<p:column>
+						<p:inputText id="idPostcode" label="Postcode" 
+							value="#{corporateProfileBean.companyVO.companyAddressVO.postcode}" />
+					</p:column>
+					<p:column>
+						<h:outputLabel for="idEmail">Email </h:outputLabel>
+					</p:column>
+					<p:column>
+						<p:inputText id="idEmail" label="Email ID" value="#{corporateProfileBean.companyVO.email}" />
+					</p:column>
+				</p:row>
+			
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idCountry">Country<span class="required">*</span></h:outputLabel>
+					</p:column>
+					<p:column  colspan="3">
+						<h:selectOneMenu id="idCountry" label="Country" 
+							value="#{corporateProfileBean.companyVO.companyAddressVO.countryid}" required="true">
+							<f:selectItems value="#{corporateProfileBean.countryList}" 
+								var="countryVO" itemLabel="#{countryVO.country}" itemValue="#{countryVO.id}"/>
+					            <p:ajax event="change" update="idStateProvince" global="false" />
+						</h:selectOneMenu>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:panel>
+		
+		<p:panel header="GST" style="margin:15px 10px 0 0;" toggleable="true">
+			<p:panelGrid  style="margin-bottom:10px;">
+				<p:row>
+					<p:column >
+						<p:outputLabel value="Registration Number" for="idTxtGSTTaxNumber"></p:outputLabel>
+					</p:column>
+					<p:column>
+						<p:inputText id="idTxtGSTTaxNumber" value="#{corporateProfileBean.companyTaxVO.taxNumber}" 
+							maxlength="20" />
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column style="width:130px;">
+						<p:outputLabel value="Valid From" for="idTxtGSTValidFrom"></p:outputLabel>
+					</p:column>
+					<p:column style="width:150px;">
+						<p:calendar id="idTxtGSTValidFrom" value="#{corporateProfileBean.companyTaxVO.validFrom}"
+							maxdate="#{corporateProfileBean.companyTaxVO.validTo}" navigator="true" showButtonPanel="true"
+							pattern="#{config['date.display.pattern']}" >
+						    <p:ajax event="dateSelect" update="idTxtGSTValidTo" />
+	                    </p:calendar>
+					</p:column>
+					<p:column style="width:130px;">
+						<p:outputLabel value="Valid To" for="idTxtGSTValidTo"></p:outputLabel>
+					</p:column>
+					<p:column>
+						<p:calendar id="idTxtGSTValidTo" value="#{corporateProfileBean.companyTaxVO.validTo}" navigator="true" showButtonPanel="true"
+							mindate="#{corporateProfileBean.companyTaxVO.validFrom}" pattern="#{config['date.display.pattern']}" >
+	                        <p:ajax event="dateSelect" update="idTxtGSTValidFrom" />
+	                    </p:calendar>
+	               	</p:column>	
+				</p:row>
+				<p:row>
+					<p:column>
+						<p:outputLabel value="Gst Filling Date" for="idTxtGstFilling"></p:outputLabel>
+					</p:column>
+					<p:column>
+						<p:calendar id="idTxtGstFilling" value="#{corporateProfileBean.companyTaxVO.gstFilling}" 
+     						navigator="true" showButtonPanel="true" pattern="#{config['date.display.pattern']}" style="width:120px;"/>
+					</p:column>
+					<p:column>
+						<p:outputLabel value="Carry Forward Refund" for="idTxtCarryForwardRefund"></p:outputLabel>
+					</p:column>
+					<p:column>
+						<p:selectOneRadio id="idTxtCarryForwardRefund" value="#{corporateProfileBean.companyTaxVO.refundCarryForward}" style="width:120px;">
+				            <f:selectItem itemLabel="Yes" itemValue="Y" />
+				            <f:selectItem itemLabel="No" itemValue="N" />
+     					</p:selectOneRadio>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<p:outputLabel value="Gst Taxable Period" for="idGstTaxablePeriod"></p:outputLabel>
+					</p:column>
+					<p:column>
+						<h:selectOneMenu id="idGstTaxablePeriod" label="Gst Taxable Period" 
+							value="#{corporateProfileBean.companyTaxVO.period}" required="true">
+							<f:selectItem itemLabel="Monthly" itemValue="1"/>
+							<f:selectItem itemLabel="Quarterly" itemValue="3"/>
+						</h:selectOneMenu>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column colspan="3">
+						<h:outputLabel class="required" value="* GST filling date is mandatory if GST Registration Number is not empty" />
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:panel>
+		
+		<p:panel header="Company Contact" style="margin:10px 10px 10px 0;" toggleable="true">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<p:commandButton value="Add" update=":idCompanyContactDialog" 
+							actionListener="#{corporateProfileBean.onContactSelected(null)}" process="@this" 
+							oncomplete="varCompanyContactDialog.show()" />
+						
+						<p:dataTable id="idShowContactList" 
+							value="#{corporateProfileBean.companyVO.companyContactList}" 
+							var="companyContactVO" rowKey="#{companyContactVO.number}"
+							style="width:550px;padding-top:10px">
+						
+							<p:column headerText="Edit" style="width:50px; text-align:center;">
+								<p:commandButton icon="ui-icon-pencil" 
+									actionListener="#{corporateProfileBean.onContactSelected(companyContactVO)}" 
+									oncomplete="varCompanyContactDialog.show()" process="@this" 
+									update=":idCompanyContactDialog"/>
+							</p:column>
+							<p:column headerText="Delete" style="width:50px; text-align:center;">
+								<p:commandButton icon="ui-icon-close" 
+									actionListener="#{corporateProfileBean.deleteContact(companyContactVO)}" 
+									update=":idCompanyContactDialog,:idCompanyForm:idShowContactList" 
+									process="@this"/>
+							</p:column>
+							<p:column headerText="Contact Type"  style="width:80px; ">
+								<h:outputText value="#{companyContactVO.typecodecontact}" />
+							</p:column>
+							<p:column headerText="Contact No">
+								<h:outputText value="#{companyContactVO.number}" />
+							</p:column>
+						</p:dataTable>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:panel>
+		
+		<p:panel header="E-Invoice" style="margin:15px 10px 0 0;" toggleable="true">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idMyInvoisClientId">Client ID <span class="required">*</span>
+						</h:outputLabel>
+					</p:column>
+					<p:column colspan="3">
+						<p:inputText id="idMyInvoisClientId" label="Client ID" 
+							value="#{corporateProfileBean.companyVO.myInvoisClientId}" size="62" required="true"/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idMyInvoisClientSecret1">Client Secret 1 </h:outputLabel>
+					</p:column>
+					<p:column colspan="3">
+						<p:inputText id="idMyInvoisClientSecret1" label="Client Secret 1" 
+							value="#{corporateProfileBean.companyVO.myInvoisClientSecret1}" size="62"/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idMyInvoisClientSecret2">Client Secret 2 </h:outputLabel>
+					</p:column>
+					<p:column colspan="3">
+						<p:inputText id="idMyInvoisClientSecret2" label="Client Secret 2" 
+							value="#{corporateProfileBean.companyVO.myInvoisClientSecret2}" size="62"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:panel>
+		
+		<p:panel header="Keycloak" style="margin:15px 10px 0 0;" toggleable="true">
+			<p:panelGrid>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idKeycloakClientId">Client ID <span class="required">*</span> </h:outputLabel>
+					</p:column>
+					<p:column colspan="3">
+						<p:inputText id="idKeycloakClientId" label="Client ID" 
+							value="#{corporateProfileBean.companyVO.keycloakClientId}" size="62" required="true"/>
+					</p:column>
+				</p:row>
+				<p:row>
+					<p:column>
+						<h:outputLabel for="idKeycloakClientSecret">Client Secret 1 <span class="required">*</span> </h:outputLabel>
+					</p:column>
+					<p:column colspan="3">
+						<p:inputText id="idKeycloakClientSecret" label="Client Secret 1" 
+							value="#{corporateProfileBean.companyVO.keycloakClientSecret}" size="62" required="true"/>
+					</p:column>
+				</p:row>
+			</p:panelGrid>
+		</p:panel>
+		
+		<p:panelGrid id="idDefaultAccount">
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAcctSales">Default Account Receivable 
+					</h:outputLabel>
+				</p:column>
+				
+				<p:column>
+				
+					<p:autoComplete id="idAcctSales"  value="#{corporateProfileBean.companyVO.idAcctSalesTemp}"   
+                    	completeMethod="#{corporateProfileBean.complete}">  </p:autoComplete>
+			&nbsp;<p:commandButton icon="ui-icon-search" actionListener="#{corporateProfileBean.onShowAcctList('SALES')}"
+						oncomplete="varAcctListDialog.show()" update=":idAcctList" process="@this"/>
+				</p:column>
+				<p:column>
+					<p:commandButton id="idAcctSalesClear" value="Clear" actionListener="#{corporateProfileBean.onClearAcctSales}" update=":idCompanyForm:idAcctSales" process="@this"></p:commandButton>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAcctTrade">Default Account Payable (Trade) 
+					</h:outputLabel>
+				</p:column>
+				
+				<p:column>
+			
+                    <p:autoComplete id="idAcctTrade"  value="#{corporateProfileBean.companyVO.idAcctTradeTemp}"   
+                    completeMethod="#{corporateProfileBean.complete}">  </p:autoComplete>
+			&nbsp;<p:commandButton icon="ui-icon-search" actionListener="#{corporateProfileBean.onShowAcctList('TRADE')}"
+						oncomplete="varAcctListDialog.show()" update=":idAcctListDialog" process="@this"/>
+				</p:column>
+				<p:column>
+					<p:commandButton id="idAcctTradeClear" value="Clear" actionListener="#{corporateProfileBean.onClearAcctTrade}" update=":idCompanyForm:idAcctTrade" process="@this"></p:commandButton>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAcctSundry">Default Account Payable (Sundry)
+					</h:outputLabel>
+				</p:column>
+				
+				<p:column>
+			
+				<p:autoComplete id="idAcctSundry"  value="#{corporateProfileBean.companyVO.idAcctSundryTemp}"   
+                    completeMethod="#{corporateProfileBean.complete}">  </p:autoComplete>
+			&nbsp;<p:commandButton icon="ui-icon-search" actionListener="#{corporateProfileBean.onShowAcctList('SUNDRY')}"
+						oncomplete="varAcctListDialog.show()" update=":idAcctListDialog" process="@this"/>
+				</p:column>
+				<p:column>
+					<p:commandButton id="idAcctSundryClear" value="Clear" 
+						actionListener="#{corporateProfileBean.onClearAcctSundry}" update=":idCompanyForm:idAcctSundry" process="@this"></p:commandButton>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAcctGST">Default GST Suspense Account
+					</h:outputLabel>
+				</p:column>
+				
+				<p:column>
+			
+				<p:autoComplete id="idAcctGST"  value="#{corporateProfileBean.companyVO.idAcctGSTTemp}"   
+                    completeMethod="#{corporateProfileBean.complete}">  </p:autoComplete>
+			&nbsp;<p:commandButton icon="ui-icon-search" actionListener="#{corporateProfileBean.onShowAcctList('GST')}"
+						oncomplete="varAcctListDialog.show()" update=":idAcctListDialog" process="@this"/>
+				</p:column>
+				<p:column>
+					<p:commandButton id="idAcctGSTClear" value="Clear" 
+						actionListener="#{corporateProfileBean.onClearAcctGST}" update=":idCompanyForm:idAcctGST" process="@this"></p:commandButton>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAcctGST">Default GST Non Claimable Account
+					</h:outputLabel>
+				</p:column>
+				
+				<p:column>
+			
+				<p:autoComplete id="idAcctNonClaimableGST"  value="#{corporateProfileBean.companyVO.idAcctNonClaimableGSTTemp}"   
+                    completeMethod="#{corporateProfileBean.complete}">  </p:autoComplete>
+			&nbsp;<p:commandButton icon="ui-icon-search" actionListener="#{corporateProfileBean.onShowAcctList('NON_CLAIMABLE_GST')}"
+						oncomplete="varAcctListDialog.show()" update=":idAcctListDialog" process="@this"/>
+				</p:column>
+				<p:column>
+					<p:commandButton id="idAcctNonClaimableGSTClear" value="Clear" 
+						actionListener="#{corporateProfileBean.onClearAcctNonClaimableGST}" update=":idCompanyForm:idAcctNonClaimableGST" process="@this"></p:commandButton>
+				</p:column>
+			</p:row>
+			<p:row>
+				<p:column>
+					<h:outputLabel for="idAcctRounding">Default Rounding Adjustment Account
+					</h:outputLabel>
+				</p:column>
+				
+				<p:column>
+			
+				<p:autoComplete id="idAcctRounding"  value="#{corporateProfileBean.companyVO.idAcctRoundingTemp}"   
+                    completeMethod="#{corporateProfileBean.complete}">  </p:autoComplete>
+			&nbsp;<p:commandButton icon="ui-icon-search" actionListener="#{corporateProfileBean.onShowAcctList('ROUNDING')}"
+						oncomplete="varAcctListDialog.show()" update=":idAcctListDialog" process="@this"/>
+				</p:column>
+				<p:column>
+				</p:column>
+			</p:row>
+			
+		</p:panelGrid>
+		
+	</div>
+	
+	<p:panelGrid id="idButtonGrid" columns="3" style="width:160px;">
+		<p:commandButton id="idBtnEditSubmit" value="#{msg['common.button.label.save']}" 
+			actionListener="#{corporateProfileBean.saveCompany}" update="@form,:idForm:idCompanyListTable" 
+			oncomplete="onValidation(xhr, status, args)"/>
+		<p:commandButton id="idBtnEditCancel" value="#{msg['common.button.label.cancel']}" 
+				actionListener="#{corporateProfileBean.loadCorporateProfile}" 
+				update="@form,:idForm:idCompanyListTable,:idCompanyForm" process="@this" 
+				oncomplete="varCompanyDialog.hide()" global="false">
+			<pe:resetEditableValues for="idCompanyForm"/>
+		</p:commandButton>
+	</p:panelGrid>
+	
+	<br/>
+	<h:outputLabel><span class="required">*</span> - required field</h:outputLabel>
+	
+</ui:composition>

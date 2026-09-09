@@ -1,0 +1,4111 @@
+package com.bcs.zsg.purchase.web.bean;
+
+import java.io.ByteArrayInputStream;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+import javax.faces.event.AjaxBehaviorEvent;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.primefaces.component.api.UIColumn;
+import org.primefaces.component.datatable.DataTable;
+import org.primefaces.component.export.CSVExporter;
+import org.primefaces.context.RequestContext;
+import org.primefaces.event.FileUploadEvent;
+import org.primefaces.event.SelectEvent;
+import org.primefaces.event.UnselectEvent;
+import org.primefaces.event.data.FilterEvent;
+import org.primefaces.event.data.PageEvent;
+import org.primefaces.json.JSONObject;
+import org.primefaces.model.DefaultStreamedContent;
+import org.primefaces.model.LazyDataModel;
+import org.primefaces.model.SortOrder;
+import org.primefaces.model.StreamedContent;
+import org.primefaces.model.UploadedFile;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+
+import com.bcs.zsg.acct.bo.ChartOfAcctBO;
+import com.bcs.zsg.acct.bo.EInvoiceBO;
+import com.bcs.zsg.acct.bo.JournalBO;
+import com.bcs.zsg.acct.helper.AccountHelper;
+import com.bcs.zsg.acct.helper.EInvoiceProperties;
+import com.bcs.zsg.acct.vo.AcctCatVO;
+import com.bcs.zsg.acct.vo.AcctTransVO;
+import com.bcs.zsg.acct.vo.AcctVO;
+import com.bcs.zsg.acct.vo.EInvoiceDocumentVO;
+import com.bcs.zsg.acct.vo.JournalVO;
+import com.bcs.zsg.bank.bo.BankAcctBO;
+import com.bcs.zsg.bank.bo.CashBookBO;
+import com.bcs.zsg.bank.bo.PaymentBO;
+import com.bcs.zsg.bank.vo.BankAcctVO;
+import com.bcs.zsg.bank.vo.BankAcctViewVO;
+import com.bcs.zsg.bank.vo.CashBookVO;
+import com.bcs.zsg.cfg.sec.bo.UserBO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeVO;
+import com.bcs.zsg.cfg.sec.vo.EmployeeViewVO;
+import com.bcs.zsg.common.helper.AppConfigConstant;
+import com.bcs.zsg.common.helper.CommonConstant;
+import com.bcs.zsg.common.helper.CommonErrConstant;
+import com.bcs.zsg.common.helper.EInvoiceConstant;
+import com.bcs.zsg.common.helper.EInvoiceUtils;
+import com.bcs.zsg.common.helper.EnglishNumberToWords;
+import com.bcs.zsg.common.helper.FileUploadUtils;
+import com.bcs.zsg.common.helper.LookupItemUtils;
+import com.bcs.zsg.common.helper.QRCodeUtils;
+import com.bcs.zsg.common.helper.ReportUtils;
+import com.bcs.zsg.common.helper.TrackingLogUtils;
+import com.bcs.zsg.common.vo.AddUpdDelVO;
+import com.bcs.zsg.common.web.bean.AppBackingBean;
+import com.bcs.zsg.component.security.bo.SecurityBO;
+import com.bcs.zsg.component.security.service.SecurityService;
+import com.bcs.zsg.component.security.vo.RoleVO;
+import com.bcs.zsg.component.security.vo.UserRoleViewVO;
+import com.bcs.zsg.component.security.vo.UserVO;
+import com.bcs.zsg.core.exception.BusinessException;
+import com.bcs.zsg.core.helper.BaseConstant;
+import com.bcs.zsg.db.bterp.vo.AmountCalcViewVO;
+import com.bcs.zsg.db.bterp.vo.gst.TaxCodeVO;
+import com.bcs.zsg.gst.bo.GSTBO;
+import com.bcs.zsg.gst.helper.GSTType;
+import com.bcs.zsg.maintenance.bo.CorporateProfileBO;
+import com.bcs.zsg.maintenance.bo.ListingTableViewBO;
+import com.bcs.zsg.maintenance.bo.MalaysiaStateBO;
+import com.bcs.zsg.maintenance.bo.RegionBO;
+import com.bcs.zsg.maintenance.helper.ConstantListingTableView;
+import com.bcs.zsg.maintenance.helper.MaintConstant;
+import com.bcs.zsg.maintenance.vo.CompanyContactVO;
+import com.bcs.zsg.maintenance.vo.CompanyVO;
+import com.bcs.zsg.maintenance.vo.ListingTableViewColumnsVO;
+import com.bcs.zsg.maintenance.vo.ListingTableViewVO;
+import com.bcs.zsg.maintenance.vo.LookupItemVO;
+import com.bcs.zsg.maintenance.vo.MalaysiaStateVO;
+import com.bcs.zsg.maintenance.vo.SystemNumberGenerationVO;
+import com.bcs.zsg.product.bo.InvoiceAndExchangeOrderBO;
+import com.bcs.zsg.product.bo.TourPackageBO;
+import com.bcs.zsg.product.helper.LazyDMTourDep;
+import com.bcs.zsg.product.helper.ProductConstant;
+import com.bcs.zsg.product.vo.TourDepartureVO;
+import com.bcs.zsg.purchase.bo.BillPymtBO;
+import com.bcs.zsg.purchase.bo.PurchaseBO;
+import com.bcs.zsg.purchase.bo.PurchaseEOBO;
+import com.bcs.zsg.purchase.helper.PurchaseUtils;
+import com.bcs.zsg.purchase.vo.BillPaymentVO;
+import com.bcs.zsg.purchase.vo.ContactVO;
+import com.bcs.zsg.purchase.vo.CountryVO;
+import com.bcs.zsg.purchase.vo.ExOrderBillAttachmentVO;
+import com.bcs.zsg.purchase.vo.ExOrderBillPersonVO;
+import com.bcs.zsg.purchase.vo.ExOrderBillVO;
+import com.bcs.zsg.purchase.vo.ExOrderDetailsVO;
+import com.bcs.zsg.purchase.vo.ExOrderVO;
+import com.bcs.zsg.purchase.vo.IdentityVO;
+import com.bcs.zsg.purchase.vo.PayeeViewVO;
+import com.bcs.zsg.purchase.vo.RemarksVO;
+import com.bcs.zsg.purchase.vo.SupplierVO;
+import com.bcs.zsg.sales.bo.InvoiceBO;
+import com.bcs.zsg.sales.helper.SalesConstant;
+import com.bcs.zsg.sales.vo.AuthVO;
+import com.bcs.zsg.sales.vo.CustomerVO;
+import com.bcs.zsg.sales.vo.InvPmntAuthVO;
+import com.bcs.zsg.sales.vo.InvoiceVO;
+import com.bcs.zsg.web.object.EInvoiceDocument;
+import com.bcs.zsg.zextra.backend.helper.QueueException;
+import com.bcs.zsg.zextra.backend.helper.SysNumGenUtil;
+import com.lowagie.text.Document;
+import com.lowagie.text.Element;
+import com.lowagie.text.Font;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.pdf.PdfPTable;
+
+import net.sf.jasperreports.engine.JasperPrint;
+import oasis.names.specification.ubl.schema.xsd.invoice_21.InvoiceType;
+
+public class BillPymtBean extends AppBackingBean {
+	private static final long serialVersionUID = 1L;
+	
+	@Autowired
+	protected transient PurchaseBO purchaseBO;
+	@Autowired
+	protected transient PurchaseEOBO purchaseEOBO;
+	@Autowired
+	protected transient BillPymtBO billPymtBO;
+	@Autowired
+	protected transient PaymentBO paymentBO;
+	@Autowired
+	private transient TourPackageBO tourPkgBO;
+	@Autowired
+	private transient CorporateProfileBO corporateProfileBO;
+	@Autowired
+	protected transient InvoiceBO invoiceBO;
+	@Autowired
+	private transient BankAcctBO bankAcctBO;
+	@Autowired
+	private transient SecurityBO securityBO;
+	@Autowired
+	private transient RegionBO regionBO;
+	@Autowired
+	private transient MalaysiaStateBO malaysiaStateBO;
+	@Autowired
+	private transient GSTBO gstBO;
+	@Autowired
+	private transient CashBookBO cashBookBO;
+	@Autowired
+	private transient ListingTableViewBO listingTableViewBO;
+	@Autowired
+	private transient ChartOfAcctBO chartOfAcctBO;
+	@Autowired
+	private transient EInvoiceBO eInvoiceBO;
+	@Autowired
+	private transient JournalBO journalBO;
+	@Autowired
+	protected transient InvoiceAndExchangeOrderBO invoiceAndExchangeOrderBO;
+	@Autowired
+	private transient MessageSource messageSource;
+	@Autowired
+	private transient UserBO userBO;
+	@Autowired
+	private transient SecurityService securityService;
+	
+	protected SupplierVO supplierVO;
+	protected ExOrderVO exOrderVO;
+	protected ExOrderDetailsVO exOrderDetailsVO;
+	protected AcctCatVO expenditureVO;
+	protected AcctCatVO purchaseVO;
+	protected AcctCatVO assetVO;
+	protected AcctVO acctVO;
+	protected AcctTransVO acctTransVO;
+	protected AcctTransVO acctTransViewVO;
+	protected ExOrderBillVO exOrderBillVO;
+	protected CashBookVO cashBookVO;
+	protected IdentityVO identityVO;
+	protected ContactVO contactVO;
+	protected RemarksVO remarksVO;
+	private BillPaymentVO billPaymentVO;
+	private InvPmntAuthVO invPmntAuthVO;
+	private CashBookVO bankPmntVO;
+	private ListingTableViewVO listingTableViewVO;
+	private EmployeeViewVO employeeVO;
+	private ExOrderBillAttachmentVO billAttachmentVO;
+	private ExOrderBillAttachmentVO billAttachmentOriVO;
+	
+	private List<ExOrderVO> exOrderList;
+	private List<ExOrderDetailsVO> exOrderDetailsList;
+ 	private List<SupplierVO> supplierList;
+ 	private List<SupplierVO> multiSuppList;
+	private List<ExOrderBillVO> billList;
+	private List<CompanyVO> companyList;
+	private List<AcctVO> liabilityList;
+	private List<AcctVO> acctList;
+	private List<AcctTransVO> acctTransList;
+	private List<AcctTransVO> acctTransViewList;
+	private List<BankAcctViewVO> bankAcctList;
+	private List<CashBookVO> cashBookList;
+	private List<CashBookVO> cashBookViewList;
+	private List<AcctVO> glListByBank;
+	private List<CountryVO> countryList;
+	private List<LookupItemVO> pymtTermList;
+	private List<TourDepartureVO> tourList;
+	private List<ExOrderDetailsVO> eoDetailsList;
+	private List<IdentityVO> identityList;
+	private List<AcctVO> acctAutoCompleteList;
+	private List<BillPaymentVO> billPaymentList;
+	private List<BillPaymentVO> billPaymentViewList;
+	private Map<Integer, Boolean> listingTableViewMap;
+	private List<EmployeeViewVO> employeeList;
+	private List<MalaysiaStateVO> malaysiaStateList;
+	
+	private Double totalAmt;
+	private Double totalPymtAmt;
+	private Double totalCurBal;
+	private Double totalAmtPerson = 0.00D;
+	private boolean blMultiPymt = false;
+	private boolean blSelect;
+	private Long oldExOrderID;
+	private AuthVO authVO ;
+	private String tourCodeDesc;
+	private Date fromDate, toDate;
+	private String billFrom, billTo;
+	private String inUseUserType;
+	
+	private LazyDataModel<ExOrderBillVO> lazyDataModel;
+	private LazyDataModel<ExOrderBillVO> lazyConsolDataModel; // for consol bill pmnt submission
+	private LazyDMTourDep<TourDepartureVO> lazyDataModelTourDep;
+	private List<ExOrderBillVO> billPmntList;
+	private boolean isMultiple;
+	private boolean isDateInFinPeriodClosed;
+	private Map<String, Double> totalAmtMap;
+	
+	private String fileName;
+	private final String destinationAttachmentPath = LookupItemUtils.getGlobalConfigValue(MaintConstant.GLOBAL_CD_GLOBAL, MaintConstant.GLOBAL_CD_PATH_EO_ATTACH);
+	private FileUploadUtils fileUploadUtils;
+	
+	private UploadedFile attachmentUploadedFile;
+	private String deletedFilePath;
+
+	private List<TaxCodeVO> inputTaxCodeVOList;
+	private List<TaxCodeVO> outputTaxCodeVOList;
+	private AmountCalcViewVO amtCalcViewVO;
+	private boolean isGSTPeriod;
+	
+	private Long idSupplier;
+	private boolean isSupplier;
+	private TrackingLogUtils trackingLogUtils;
+	
+	// E-Invoice
+	private String cancellationReason;
+	private Date billFromDate;
+	private Date billToDate;
+	private ExOrderBillVO[] selectedBillList; // to store selected bill for consol e inv
+	private List<ExOrderBillVO> savedSelectedBillList; // to store selected bill for consol e inv
+	private Map<String, String> filters; // keep filters from the table
+	private Boolean isEInvoice = true;
+	private List<ExOrderBillVO> mulpInvSubmRespList;
+	private List<Long> idSupplierList;
+
+	private String countryFilter = "ALL";
+	private String suppTypeFilter = "ALL";
+	
+	private int mulpEInvActiveTabIndex = 0; // active index for multiple e-invoice submission dialog
+	private int consolEInvActiveTabIndex = 0; // active index for consol e-invoice submission dialog
+	
+	private String postSaveSuplAction; // to determine edit supplier action comes from supplier or payee
+	private String ACTION_SUPPLIER = "supplier";
+	private String ACTION_PAYEE_SUPPLIER = "add_payee_supplier";
+
+	public void init() {
+		trackingLogUtils = new TrackingLogUtils(this.getClass());
+		
+		loadBillList();
+		initSingleBill();
+		loadListingTableView();
+		initPrefixVal();
+		loadEmployeeList();
+	}
+	
+	public void initSingleBill() {
+		try {
+			isMultiple = false;
+			isDateInFinPeriodClosed = false;
+			exOrderVO = new ExOrderVO();
+			exOrderDetailsVO = new ExOrderDetailsVO();
+			
+			expenditureVO = new AcctCatVO();
+			assetVO = new AcctCatVO();
+			acctVO = new AcctVO();
+			acctTransVO = new AcctTransVO();
+			acctTransViewVO = new AcctTransVO();
+			exOrderBillVO = new ExOrderBillVO();
+			cashBookVO = new CashBookVO();
+			identityVO = new IdentityVO();
+			contactVO = new ContactVO();
+			remarksVO = new RemarksVO();
+			
+			exOrderList = new ArrayList<ExOrderVO>();
+			exOrderDetailsList = new ArrayList<ExOrderDetailsVO>();
+		 
+		 	companyList = new ArrayList<CompanyVO>();
+		 	liabilityList = new ArrayList<AcctVO>();
+		 	acctTransList = new ArrayList<AcctTransVO>();
+		 	acctTransViewList = new ArrayList<AcctTransVO>();
+		 	bankAcctList = new ArrayList<BankAcctViewVO>();
+		 	cashBookViewList = new ArrayList<CashBookVO>();
+		 	glListByBank = new ArrayList<AcctVO>();
+		 	pymtTermList = new ArrayList<LookupItemVO>();
+		 	tourList = new ArrayList<TourDepartureVO>();
+		 	eoDetailsList = new ArrayList<ExOrderDetailsVO>();
+		 	
+		 	billPaymentVO = new BillPaymentVO();
+		 	billPaymentList = new ArrayList<BillPaymentVO>();
+		 	billPaymentViewList = new ArrayList<BillPaymentVO>();
+		 	
+			if (!blMultiPymt) {
+				supplierVO = new SupplierVO();
+				supplierList = new ArrayList<SupplierVO>();
+				multiSuppList = new ArrayList<SupplierVO>();
+				isSupplier = false;
+				idSupplier = null;
+				
+			} else { 
+				isSupplier = true;
+			}
+			
+		 	pymtTermList = purchaseBO.getPymtTermList("pymt_type");
+		 	countryList = regionBO.getActualCountryList();
+		 	supplierVO.setCountryId(CommonConstant.DEF_COUNTRY_ID);
+		 	
+		 	totalAmt = 0.00;
+		 	totalPymtAmt = 0.00;
+		 	totalCurBal = 0.00;
+		 	totalAmtPerson = 0.00D;
+			
+			// get user assigned role list
+			List<UserRoleViewVO> userRoleList = securityBO.getUserRoleListByUser(this.getSessionInfoBean().getUserVO().getUuid());
+			authVO = new AuthVO();
+			invPmntAuthVO = new InvPmntAuthVO();
+			if (CollectionUtils.isNotEmpty(userRoleList)) {
+				for (UserRoleViewVO userRoleVO : userRoleList) { 
+					if (userRoleVO.getRoleCode().equals(SalesConstant.BILL_PMNT_ROLE_DEL)) {
+						authVO.setBillPmntDel(true);
+					} else if (userRoleVO.getRoleCode().equalsIgnoreCase(SalesConstant.ACCT_MANAGER_ROLE)) {
+						invPmntAuthVO.setAccountManager(true);
+					} else if (userRoleVO.getRoleCode().equals(SalesConstant.GST_FT_ROLE)) {
+						invPmntAuthVO.setGstFreeText(true);
+					} else if (StringUtils.equalsIgnoreCase(userRoleVO.getRoleCode(), SalesConstant.SUPER_USER_ROLE)
+							|| StringUtils.equalsIgnoreCase(userRoleVO.getRoleCode(), SalesConstant.E_INV_SUBMIT)) {
+						invPmntAuthVO.seteInvoice(true);
+					}
+				}
+			}
+			EmployeeVO employeeVO = getSessionInfoBean().getEmployeeVO();
+			String department = employeeVO.getDepartment();
+			
+			if (StringUtils.equals(department, MaintConstant.DEPT_TYPE_ACCT) || StringUtils.equals(department, MaintConstant.DEPT_TYPE_FINANCE)) {
+				invPmntAuthVO.seteInvoice(true);
+			}
+			
+			loadLiability();
+			// GST List
+			inputTaxCodeVOList = gstBO.getTaxCodeList(GSTType.INPUT);
+			outputTaxCodeVOList = gstBO.getTaxCodeList(GSTType.OUTPUT);
+			
+			setOriObj(null);
+			
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Add Bill
+	 */
+	public void addBill() {
+		try {
+			totalAmt = 0.00;
+		 	totalPymtAmt = 0.00;
+
+			resetForm();
+			loadSupplier();
+			loadExpenAsset();
+			
+			exOrderBillVO.setStatus("Draft"); 
+			exOrderBillVO.setBillDt(new Date());
+			exOrderBillVO.setInvoiceDt(exOrderBillVO.getBillDt());
+			exOrderBillVO.setIsEInvoice(true);
+			tourCodeDesc = "";
+			
+			if (supplierVO != null && supplierVO.getId() != null) {
+				handleSupplierChange();
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public List<String> complete(String query) {
+		List<String> results = new ArrayList<String>();
+        try{
+        	String tempStr;
+        	for (int i = 0 ; i < acctList.size() ; i++) {
+        		tempStr = acctList.get(i).getCode() + ((StringUtils.isEmpty(acctList.get(i).getSubCode())) ? "" : "-" + acctList.get(i).getSubCode());
+        		if (tempStr.startsWith(query)) {
+        			results.add(tempStr);
+        		}
+        	}
+        } catch(Exception e) {
+        	e.printStackTrace() ; 
+        }
+        return results;  
+    }
+	
+	@Override
+	public void resetForm() {
+		initSingleBill();
+		amtCalcViewVO = new AmountCalcViewVO();
+	}
+	
+	public void resetExOrderForm() {
+		exOrderBillVO.setEoCode(null);
+		exOrderBillVO.setEoId(null);
+		if (null == exOrderBillVO.getId()) exOrderVO = new ExOrderVO();
+	}
+	
+	public void resetSupplierForm() {
+		supplierVO = new SupplierVO();
+		supplierVO.setCountryId(CommonConstant.DEF_COUNTRY_ID);
+		supplierVO.setCode("C");
+	}
+	
+	public void resetGLAcctList() {
+		glListByBank = new ArrayList<AcctVO>();
+		cashBookVO = new CashBookVO();
+	}
+	
+	public void resetGLAcctForm() {
+		acctTransViewVO = new AcctTransVO();
+	}
+
+	public void resetPymtForm() {
+		cashBookVO = new CashBookVO();
+		billPaymentVO = new BillPaymentVO();
+	}
+	
+	public void resetMultiBillsForm() {
+		BigDecimal totCurBal = new BigDecimal("0.0");
+		for(int i = 0; i < billList.size(); i++){
+			totCurBal = totCurBal.add(new BigDecimal(billList.get(i).getCurBal().toString()));
+		}
+		totalCurBal = totCurBal.doubleValue();
+		cashBookVO = new CashBookVO();
+	}
+	
+	/**
+	 * Reset identity form
+	 * @throws BusinessException
+	 */
+	public void resetIdentityForm() throws BusinessException {
+		identityVO = new IdentityVO();
+	}
+	
+	/**
+	 * Reset contact form
+	 * @throws BusinessException
+	 */
+	public void resetContactForm() throws BusinessException {
+		contactVO = new ContactVO();
+	}
+	
+	/**
+	 * Reset remarks form
+	 * @throws BusinessException
+	 */
+	public void resetRemarksForm() throws BusinessException {
+		remarksVO = new RemarksVO();
+	}
+
+	/**
+	 * Add Single Bill
+	 */
+	public void addSingleBill() {
+		try {
+			trackingLogUtils.startLogs();
+			
+			// check financial closed / gst submitted
+			checkFinGSTClosed(CommonConstant.ACTION_CD_ADD, null, exOrderBillVO.getBillDt(), invPmntAuthVO.isAccountManager());
+			if (exOrderBillVO.getBillAmt().doubleValue() <= 0 && CollectionUtils.isNotEmpty(billPaymentList)) throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_NEGATIVE);
+			if (supplierVO.getAccountId() == null) throw new BusinessException(CommonErrConstant.ERR_SUPPLIER_REQUIRED);
+			acctTransVO.setCompanyId(getSessionInfoBean().getCompanyVO().getId());
+			if (CollectionUtils.isNotEmpty(acctTransVO.getAcctTransList())) {
+				/*if ((amtCalcViewVO.getTotalAmountIncludeTax().compareTo(new BigDecimal(exOrderBillVO.getBillAmt().toString()))) == 0) {
+					if (CollectionUtils.isEmpty(billPaymentList)) {
+						exOrderBillVO.setStatus(CommonConstant.STATUS_CD_BILLED);
+						exOrderVO.setStatus(CommonConstant.STATUS_CD_BILLED);
+					} else {
+						if(totalPymtAmt.doubleValue() == exOrderBillVO.getBillAmt().doubleValue()){
+							exOrderBillVO.setStatus(CommonConstant.STATUS_CD_PAID);
+							exOrderVO.setStatus(CommonConstant.STATUS_CD_PAID);
+							
+						} else if(totalPymtAmt.doubleValue() < exOrderBillVO.getBillAmt().doubleValue()){
+							exOrderBillVO.setStatus(CommonConstant.STATUS_CD_PAID);
+							exOrderVO.setStatus(CommonConstant.STATUS_CD_PAID);
+						}
+						//exOrderVO.setAmtDue(exOrderVO.getTotalAmt() - totalPymtAmt);
+						exOrderVO.setAmtDue(new BigDecimal(exOrderVO.getTotalAmt()).subtract(amtCalcViewVO.getTotalAmountPaid()).doubleValue());
+					}
+				} else throw new BusinessException(CommonErrConstant.ERR_BANK_PAYMENT_NOT_EQUAL);*/
+				if ((amtCalcViewVO.getTotalAmountIncludeTax().compareTo(new BigDecimal(exOrderBillVO.getBillAmt().toString()))) != 0) {
+					throw new BusinessException(CommonErrConstant.ERR_BANK_PAYMENT_NOT_EQUAL);
+				}
+			} else throw new BusinessException(CommonErrConstant.ERR_BANK_PAYMENT_NOT_EQUAL);
+			
+			if (CollectionUtils.isEmpty(billPaymentList)) {
+				exOrderBillVO.setStatus(CommonConstant.STATUS_CD_BILLED);
+				exOrderVO.setStatus(CommonConstant.STATUS_CD_BILLED);
+			} else {
+				exOrderBillVO.setStatus(CommonConstant.STATUS_CD_PAID);
+				exOrderVO.setStatus(CommonConstant.STATUS_CD_PAID);
+				exOrderVO.setAmtDue(new BigDecimal(exOrderVO.getTotalAmt()).subtract(amtCalcViewVO.getTotalAmountPaid()).doubleValue());
+			}
+			
+			exOrderBillVO.setSupplierId(supplierVO.getId());
+			exOrderBillVO.setSupplierType(supplierVO.getSupplierType());
+			exOrderBillVO.setSupplierName(supplierVO.getFullName());
+			exOrderBillVO.setAcctId(supplierVO.getAccountId());
+			insertSingleBill(exOrderVO, exOrderBillVO, acctTransVO, billPaymentList, getSessionInfoBean().getCompanyVO().getId());
+			onBillSelected(exOrderBillVO.getId());
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("addSingleBill");
+		}
+	}
+	
+	/**
+	 * Edit Single Bill
+	 */
+	public void editSingleBill() {
+		try {
+			trackingLogUtils.startLogs();
+			
+			// check financial closed / gst submitted
+			ExOrderBillVO oriVO = (ExOrderBillVO) getOriObj();
+			checkFinGSTClosed(CommonConstant.ACTION_CD_UPD, oriVO.getBillDt(), exOrderBillVO.getBillDt(), invPmntAuthVO.isAccountManager());
+			
+			if (exOrderBillVO.getBillAmt().doubleValue() <= 0 && CollectionUtils.isNotEmpty(billPaymentList) && !isMultiple) throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_NEGATIVE);
+			
+			if (CollectionUtils.isNotEmpty(exOrderBillVO.getEoBillPersonList()) && exOrderBillVO.getBillAmt().doubleValue() != totalAmtPerson) throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_PERSON_LIST_NOT_TALLY);
+			
+			if (CollectionUtils.isNotEmpty(acctTransVO.getAcctTransList())) {
+				/*if ((amtCalcViewVO.getTotalAmountIncludeTax().compareTo(new BigDecimal(exOrderBillVO.getBillAmt().toString()))) == 0) {
+					if (CollectionUtils.isEmpty(billPaymentList)) {
+						exOrderBillVO.setStatus(CommonConstant.STATUS_CD_BILLED);
+						exOrderVO.setAmtDue(exOrderVO.getTotalAmt());
+						exOrderVO.setStatus(CommonConstant.STATUS_CD_BILLED);
+						
+					} else {
+						if(totalPymtAmt.doubleValue() == exOrderBillVO.getBillAmt().doubleValue()) {
+							exOrderBillVO.setStatus(CommonConstant.STATUS_CD_PAID);
+							exOrderVO.setStatus(CommonConstant.STATUS_CD_PAID);
+							
+						} else if(totalPymtAmt.doubleValue() < exOrderBillVO.getBillAmt().doubleValue()){
+							exOrderBillVO.setStatus(CommonConstant.STATUS_CD_PAID);
+							exOrderVO.setStatus(CommonConstant.STATUS_CD_PAID);
+						}
+						exOrderVO.setAmtDue(new BigDecimal(exOrderVO.getTotalAmt()).subtract(amtCalcViewVO.getTotalAmountPaid()).doubleValue());
+					}
+				} else throw new BusinessException(CommonErrConstant.ERR_BANK_PAYMENT_NOT_EQUAL);*/
+				if ((amtCalcViewVO.getTotalAmountIncludeTax().compareTo(new BigDecimal(exOrderBillVO.getBillAmt().toString()))) != 0) {
+					throw new BusinessException(CommonErrConstant.ERR_BANK_PAYMENT_NOT_EQUAL);
+				}
+			} else throw new BusinessException(CommonErrConstant.ERR_BANK_PAYMENT_NOT_EQUAL);
+			
+			journalBO.validateJournalTotalAgainstBill(exOrderBillVO);
+			
+			if (CollectionUtils.isEmpty(billPaymentList)) {
+				exOrderBillVO.setStatus(CommonConstant.STATUS_CD_BILLED);
+				exOrderVO.setAmtDue(exOrderVO.getTotalAmt());
+				exOrderVO.setStatus(CommonConstant.STATUS_CD_BILLED);
+				
+			} else {
+				exOrderBillVO.setStatus(CommonConstant.STATUS_CD_PAID);
+				exOrderVO.setStatus(CommonConstant.STATUS_CD_PAID);
+				exOrderVO.setAmtDue(new BigDecimal(exOrderVO.getTotalAmt()).subtract(amtCalcViewVO.getTotalAmountPaid()).doubleValue());
+			}
+			
+			generateBillRemarks();
+			
+			for (JournalVO journalVO : exOrderBillVO.getJournalList()) {
+				saveJournalCart(journalVO, exOrderBillVO.getId());
+			}
+
+			exOrderBillVO.setSupplierId(supplierVO.getId());
+			exOrderBillVO.setSupplierType(supplierVO.getSupplierType());
+			exOrderBillVO.setSupplierName(supplierVO.getFullName());
+			exOrderBillVO.setAcctId(supplierVO.getAccountId());
+			updateSingleBill(oldExOrderID, exOrderVO, exOrderBillVO, acctTransVO, acctTransViewList, billPaymentList, billPaymentViewList);
+			onBillSelected(exOrderBillVO.getId());
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("editSingleBill");
+		}
+	}
+	
+	/**
+	 * Delete Bill
+	 */
+	public void deleteBill() {
+		try {
+			trackingLogUtils.startLogs();
+			
+			// Unable to delete this record due to financial period closed.
+			if (isDateInFinPeriodClosed()) throw new BusinessException(CommonErrConstant.ERR_ACCT_FIN_PERIOD_CLOSED_CANNOT_DEL);
+			
+			billPymtBO.delBill(exOrderVO, exOrderBillVO, acctTransVO, billPaymentList);
+			resetForm();
+			initSingleBill();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("deleteBill");
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	public void onAddGLAcct() {
+		if (null == exOrderBillVO.getBillAmt()) acctTransViewVO.setDebit(0.0);
+		else acctTransViewVO.setDebit(exOrderBillVO.getBillAmt());
+		
+		if (CollectionUtils.isNotEmpty(acctTransVO.getAcctTransList())) {
+			for (AcctTransVO vo : acctTransVO.getAcctTransList()) {
+				acctTransViewVO.setDebit(new BigDecimal(acctTransViewVO.getDebit().toString()).
+						subtract(new BigDecimal(String.valueOf(vo.getDAmountIncludeTax()))).doubleValue());
+			}
+		}
+		acctTransViewVO.setAmount(acctTransViewVO.getDebit());
+		acctTransViewVO.seteInvoiceClassCode(EInvoiceConstant.CLASS_CODE_SELF_BILL_OTHERS);
+		if (exOrderBillVO.getIdPayee() != null) {
+			acctTransViewVO.seteInvoiceClassCode(EInvoiceConstant.CLASS_CODE_SELF_BILL_AGENT);
+		}
+	}
+	
+	/**
+	 * Add G/L Account
+	 */
+	public void addGLAcct() {
+		try {
+			if(null == acctTransVO.getAcctTransList()) acctTransVO.setAcctTransList(new ArrayList<AcctTransVO>());
+			
+			if (acctTransViewVO.getAmount() < 0) {
+				acctTransViewVO.setCredit(-acctTransViewVO.getAmount());
+				acctTransViewVO.setDebit(0.0);
+			} else {
+				acctTransViewVO.setCredit(0.0);
+				acctTransViewVO.setDebit(acctTransViewVO.getAmount());
+			}
+			acctTransVO.getAcctTransList().add(acctTransViewVO);
+			
+			updateTaxableAmount(false);
+			resetGLAcctForm();
+			onAddGLAcct();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit G/L Account
+	 */
+	public void editGLAcct() {
+		try {
+			if (acctTransViewVO.getAmount() < 0) {
+				acctTransViewVO.setCredit(-acctTransViewVO.getAmount());
+				acctTransViewVO.setDebit(0.0);
+			} else {
+				acctTransViewVO.setCredit(0.0);
+				acctTransViewVO.setDebit(acctTransViewVO.getAmount());
+			}
+			updateTaxableAmount(false);
+			resetGLAcctForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 *  Delete G/L Account
+	 */
+	public void delGLAcctList(AcctTransVO vo) {
+		try {
+			acctTransVO.getAcctTransList().remove(vo);
+			updateTaxableAmount(false);
+			resetGLAcctForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add Payment
+	 */
+	public void addPayment() {
+		try {
+			if (null == billPaymentList) billPaymentList = new ArrayList<BillPaymentVO>();
+			BigDecimal totAmt = (amtCalcViewVO.getTotalAmountPaid() == null ? BigDecimal.ZERO : amtCalcViewVO.getTotalAmountPaid()).add(billPaymentVO.getPmntAmount() == null ? BigDecimal.ZERO : BigDecimal.valueOf(billPaymentVO.getPmntAmount()));
+			
+			if (billPaymentVO.getPmntAmount().doubleValue() == 0) {
+				throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_NO_AMOUNT);
+		        
+			} else if (null != exOrderBillVO.getBillAmt() && (new BigDecimal(exOrderBillVO.getBillAmt().toString()).compareTo(totAmt)) < 0) {
+				throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_AMOUNT_EXCEED);
+		        
+			} else {
+				billPaymentVO.setChqAmount(billPaymentVO.getPmntAmount());
+				billPaymentList.add(billPaymentVO);
+				Double billAmt = exOrderBillVO.getBillAmt() == null ? 0 : exOrderBillVO.getBillAmt();
+		        BigDecimal totalPaid = amtCalcViewVO.getTotalAmountPaid() == null ? BigDecimal.ZERO : amtCalcViewVO.getTotalAmountPaid();
+				// calculate total amount
+				updateTaxableAmount(false);
+				
+				resetPymtForm();
+				billPaymentVO.setPayee(billPaymentList.get(0).getPayee());
+				billPaymentVO.setPymtDt(billPaymentList.get(0).getPymtDt());
+				billPaymentVO.setPmntAmount(new BigDecimal(billAmt.toString()).subtract(totalPaid).doubleValue());
+				successResult();
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Edit Payment
+	 */
+	public void editPayment() {
+		try {
+			if (billPaymentVO.getPmntAmount().doubleValue() == 0) throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_NO_AMOUNT);
+			
+			billPaymentVO.setChqAmount(billPaymentVO.getPmntAmount());
+			// calculate total amount
+			updateTaxableAmount(false);
+			
+			if (null != exOrderBillVO.getBillAmt() && (new BigDecimal(exOrderBillVO.getBillAmt().toString()).compareTo(amtCalcViewVO.getTotalAmountPaid())) < 0)
+				throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_AMOUNT_EXCEED);
+			
+			resetPymtForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 *  Delete Payment
+	 */
+	public void delPymtList() {
+		try {
+			if (LookupItemUtils.getFinAndGSTPeriodClosedStatus(this.getSessionInfoBean().getCompanyVO().getId(), billPaymentVO.getPymtDt(), invPmntAuthVO.isAccountManager()))
+				throw new BusinessException(CommonErrConstant.ERR_ACCT_FIN_PERIOD_CLOSED_CANNOT_DEL);
+			
+			billPaymentList.remove(billPaymentVO);
+			updateTaxableAmount(false);
+			successResult();
+			resetPymtForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*public void delPymtList(BillPaymentVO vo) {
+		try {
+			if (LookupItemUtils.getFinAndGSTPeriodClosedStatus(this.getSessionInfoBean().getCompanyVO().getId(), vo.getPymtDt(), invPmntAuthVO.isAccountManager())) throw new BusinessException(CommonErrConstant.ERR_ACCT_FIN_PERIOD_CLOSED_CANNOT_DEL);
+			
+			billPaymentList.remove(vo);
+			updateTaxableAmount(false);
+			successResult();
+			resetPymtForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	public void delPymtList(CashBookVO vo) {
+		try {
+			cashBookList.remove(vo);
+			
+			totalPymtAmt = 0.00;
+			if(null == cashBookList) setCashBookList(new ArrayList<CashBookVO>());
+			
+			for(int i = 0; i < cashBookList.size(); i++){
+				totalPymtAmt = totalPymtAmt + cashBookList.get(i).getBillPmntAmount();
+			}
+			exOrderBillVO.setAmtPaid(totalPymtAmt);
+			exOrderBillVO.setCurBal(exOrderBillVO.getBillAmt() - exOrderBillVO.getAmtPaid());
+			successResult();
+			resetPymtForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleDeletePayment(CashBookVO vo){
+		//selectedCashBookVO = vo;
+	}*/
+	
+	/**
+	 * Add Personal Supplier
+	 */
+	public void addPersonalSuppl() {
+		try {
+			
+			SystemNumberGenerationVO vo = new SystemNumberGenerationVO();
+			vo.setCode(CommonConstant.SYS_NUM_CD_SUPL);
+			vo.setIdCompany(getSessionInfoBean().getCompanyVO().getId());
+			vo = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(vo));
+			
+			if (supplierVO.getCode().equals("P")){
+				insertPersonal(vo);
+			} else if(supplierVO.getCode().equals("C")){
+				insertCompany(vo);
+			}
+			supplierVO = new SupplierVO();
+			loadSupplier();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add Identity
+	 */
+	public void addIdentity() {
+		try {
+			// if identity list instance is null, create instance
+			if(null == supplierVO.getIdentityList()) supplierVO.setIdentityList(new ArrayList<IdentityVO>());
+			
+			identityList = purchaseBO.getIdentityList();
+			
+			for(IdentityVO vo : identityList){
+				if(identityVO.getIdType().equals(vo.getIdType())){
+					if(identityVO.getIdNo().equals(vo.getIdNo())) throw new BusinessException(CommonErrConstant.ERR_EO_IDENTITY_DUPLICATED);
+				}
+			}
+			
+			supplierVO.getIdentityList().add(identityVO);
+			resetIdentityForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	/**
+	 * 
+	 *  Delete Identity
+	 */
+	public void delIdentityList(IdentityVO identityVO) {
+		try {
+			supplierVO.getIdentityList().remove(identityVO);
+			successResult();
+			resetIdentityForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Add Contact
+	 */
+	public void addContact() {
+		try {
+			// if identity list instance is null, create instance
+			if(null == supplierVO.getContactList()) supplierVO.setContactList(new ArrayList<ContactVO>());
+			
+			supplierVO.getContactList().add(contactVO);
+			resetContactForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 *  Delete Individual Contact
+	 */
+	public void delContactList(ContactVO contactVO) {
+		try {
+			supplierVO.getContactList().remove(contactVO);
+			successResult();
+			resetContactForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	/**
+	 * Add Remarks Details
+	 */
+	public void addRemarks() {
+		try {
+			Date dtnow = new Date();
+			String strdtnow = null;
+			DateFormat dtformat = new SimpleDateFormat("yyyy-MMM-dd HH:mm:ss");
+			strdtnow = dtformat.format(dtnow);
+			dtnow = dtformat.parse(strdtnow);
+			// if identity list instance is null, create instance
+			if(null == supplierVO.getRemarksList()) supplierVO.setRemarksList(new ArrayList<RemarksVO>());
+			remarksVO.setStrTimestamp(strdtnow);
+			remarksVO.setTimestamp(dtnow);
+			
+			supplierVO.getRemarksList().add(remarksVO);
+			resetRemarksForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 *  Delete Remarks Details
+	 */
+	public void delRemarksList(RemarksVO remarksVO) {
+		try {
+			
+			supplierVO.getRemarksList().remove(remarksVO);
+			successResult();
+			resetRemarksForm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void onAddUser() {
+		try {
+			resetUserForm();
+			
+			if(countryList == null) countryList = regionBO.getActualCountryList();
+			if(malaysiaStateList == null) malaysiaStateList = malaysiaStateBO.getStateList();
+			
+			if (StringUtils.isEmpty(employeeVO.getMsicCode())) employeeVO.setMsicCode(EInvoiceConstant.MSIC_CODE_NA);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void onNameChange() {
+		try {
+			if (StringUtils.isNotEmpty(employeeVO.getFullName())) {
+				String input = employeeVO.getFullName();
+					employeeVO.getUserVO().setName(input.length() > 50 ? input.substring(0, 50) : input);
+					
+					String login = input.replaceAll("\\s+", "").toLowerCase();
+					employeeVO.getUserVO().setLoginId(login.length() > 20 ? login.substring(0, 20) : login);
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void addUser() {
+		try {
+			employeeVO.setCompanyId(getSessionInfoBean().getCompanyVO().getId());
+			employeeVO.setIsDefaultComp(Boolean.TRUE);
+			employeeVO.getUserVO().setLoginPassword("A12345678@123");
+			UserVO vo = securityBO.addNewUser(employeeVO.getUserVO());
+			
+			// get user assigned role list
+			RoleVO roleVO  = securityService.getDefaultUserRole();
+			String[] selectedRoles = {roleVO.getUuid()};
+			
+			securityBO.updateUserRoles(vo.getUuid(), selectedRoles);
+			
+			employeeVO.setSecUser(vo.getUuid());
+			userBO.insertEmployee(employeeVO);
+			
+			loadEmployeeList();
+			// Set payee name
+			handlePayeeSelected(employeeVO);
+//			exOrderBillVO.setIdPayee(employeeVO.getId());
+//			exOrderBillVO.setPayee(getUserName(exOrderBillVO.getIdPayee()));
+			
+			resetUserForm();
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void resetUserForm() {
+		try {
+			employeeVO = new EmployeeViewVO();
+			employeeVO.setUserVO(new UserVO());
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void resetFileUploadForm() {
+		fileName = "";
+		fileUploadUtils = new FileUploadUtils(AppConfigConstant.uploadPath);
+	}
+	
+	public void resetAttachmentForm() {
+		fileName = "";
+		deletedFilePath = "";
+		attachmentUploadedFile = null;
+		billAttachmentVO = new ExOrderBillAttachmentVO();
+		billAttachmentOriVO = new ExOrderBillAttachmentVO();
+	}
+	
+	public void handleBillAttachmentClick(ExOrderBillAttachmentVO vo) {
+		billAttachmentVO = vo;
+		billAttachmentOriVO = SerializationUtils.clone(vo);
+	}
+
+	/**
+	 * Handle payment term
+	 */
+	@SuppressWarnings("unchecked")
+	public void handlePaymentTerm() { 
+		try {
+			List<LookupItemVO> lookupList = LookupItemUtils.getLookupItemList("pymt_term");
+			for (LookupItemVO vo : lookupList) {
+				if (vo.getCode().equals(exOrderBillVO.getPaymentTerm())) {
+					Date newDate = DateUtils.addDays(exOrderBillVO.getBillDt(), Integer.parseInt(vo.getRemarks()));
+					exOrderBillVO.setDueDt(newDate);
+					break;
+				}
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 *  Add is false 
+	 */
+	public void booleanAdd() {
+		try {
+			supplierVO.setAddEdit(false);
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * Load Bill list
+	 */
+	public void loadBillList() {
+		try {
+			lazyDataModel = new LazyBillPmntDataModel();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+		
+	}
+	
+	/*
+	 * Load Bill list
+	 */
+	/*private void loadBillListById() {
+		try {
+			//isOnBillPay = false;
+			//lazyDataModel = new LazyBillPmntDataModel(supplierVO.getId(), true);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}*/
+	
+	/*
+	 * Load Bank list
+	 */
+	public void retrievePymtDetails(){
+		try {
+			resetPymtForm();
+			AcctVO acctVO = new AcctVO();
+			Double billAmt = exOrderBillVO.getBillAmt() == null ? 0 : exOrderBillVO.getBillAmt();
+	        BigDecimal totalPaid = amtCalcViewVO.getTotalAmountPaid() == null ? BigDecimal.ZERO : amtCalcViewVO.getTotalAmountPaid();
+			bankAcctList = bankAcctBO.getBankAcctList(getSessionInfoBean().getCompanyVO().getId());
+			for (BankAcctVO bankAcctVO : bankAcctList) {
+				 acctVO = billPymtBO.getGLByBank(bankAcctVO.getIdAcct());
+				 glListByBank.add(acctVO);
+			}
+			billPaymentVO.setPymtDt(new Date());
+			billPaymentVO.setPayee(supplierVO.getBeneficiaryName());
+			billPaymentVO.setPmntAmount(new BigDecimal(billAmt.toString()).subtract(totalPaid).doubleValue());
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * Load exchange order list
+	 */
+	public void loadExOrder() {
+		try {
+			resetFilteredObjList();
+			exOrderList = purchaseEOBO.getBillEOList(getSessionInfoBean().getCompanyVO().getId(), CommonConstant.STATUS_CD_PENDING);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * Load Acct Trans
+	 */
+	private void loadAcctTrans(String sysNo) throws BusinessException{
+		acctTransVO = billPymtBO.getAcctTrans(sysNo, getSessionInfoBean().getCompanyVO().getId());
+	}
+	
+	/*
+	 * Load Acct Trans list
+	 */
+	private void loadAcctTransList(String sysNo) throws BusinessException{
+		acctTransVO.setAcctTransList(billPymtBO.getAcctTransList(sysNo, CommonConstant.SYS_NUM_CD_PURC_BILL, getSessionInfoBean().getCompanyVO().getId()));
+	}
+	
+	/*
+	 * Load Bill Payment list
+	 */
+	private void loadBillPymtList(Long eoBillId) throws BusinessException {
+		billPaymentList = billPymtBO.getBillPymtList(eoBillId);
+	}
+	
+	private void loadEoBillPersonList(Long eoBillId) throws BusinessException {
+		exOrderBillVO.setEoBillPersonList(billPymtBO.getEoBillPersonList(eoBillId));
+		onBillPersonCalc();
+	}
+	
+	/*
+	 * Load supplier list
+	 */
+	private void loadSupplier() throws BusinessException {
+		supplierList = purchaseBO.getSupplierList(getSessionInfoBean().getCompanyVO().getId(), true);
+	}
+	
+	private void loadMultiSupplier() throws BusinessException {
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("idCompany", getSessionInfoBean().getCompanyVO().getId());
+		params.put("suppType", suppTypeFilter);
+		multiSuppList = purchaseBO.getSupplierList(params);
+	}
+	
+	public void loadEmployeeList() {
+		loadEmployeeList(null);
+	}
+	
+	public void loadEmployeeList(String inUseType) {
+		try {
+			inUseUserType = inUseType;
+			employeeList = invoiceBO.getEmployeeViewList(this.getSessionInfoBean().getCompanyVO().getId());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * Load corporate list
+	 */
+	public List<String> loadCorpList(String s) throws BusinessException {
+		List<String> results = new ArrayList<String>();
+		for (SupplierVO vo : supplierList) {
+			if (vo.getFullName().toLowerCase().startsWith(s.toLowerCase()) && vo.getCode().equals("C")) {
+				results.add(vo.getFullName());
+			}
+		}
+		return results;
+	}
+	
+	private void loadJournal(ExOrderBillVO exOrderBillVO) throws BusinessException {
+		
+//		System.out.println("BillPymtBean.loadJournal()");
+		
+		exOrderBillVO.setJournalList(new ArrayList<JournalVO>());
+		exOrderBillVO.setJournalList(journalBO.getJournalListByBillId(exOrderBillVO.getId(), exOrderBillVO.getCompanyId()));
+//		if (CollectionUtils.isEmpty(exOrderBillVO.getJournalList()))	exOrderBillVO.setJournalList(new ArrayList<JournalVO>());
+		
+		for (JournalVO journalVO : exOrderBillVO.getJournalList()) {
+			journalBO.getJournalDetails(journalVO);
+			journalVO.setJournalItemsVO(new AddUpdDelVO(new ArrayList<Object>(), new ArrayList<Object>(), new ArrayList<Object>()));
+//			loadJournalItems(journalVO);
+			journalVO.calcJourItemTotal(true);
+			journalVO.setOriObj((JournalVO) journalVO.clone());
+			journalVO.setDateInFinPeriodClosed(LookupItemUtils.getFinAndGSTPeriodClosedStatus(this.getSessionInfoBean().getCompanyVO().getId(), journalVO.getJournalDt(), invPmntAuthVO.isAccountManager()));
+			
+			for (AcctTransVO vo : journalVO.getJournalCartList()) {
+//				System.out.println("CYY DCDC: " + vo.getDebit() + ", " + vo.getCredit());
+			}
+		}
+		
+//		System.out.println("CYY exOrderBillVO.getId(): " + exOrderBillVO.getId());
+//		System.out.println("CYY exOrderBillVO.getJournalList().size(): " + exOrderBillVO.getJournalList().size());
+		
+//		if (exOrderBillVO.getIdJournal() != null) {
+//			exOrderBillVO.setJournalVO(journalBO.getJournalById(exOrderBillVO.getIdJournal(), exOrderBillVO.getCompanyId()));
+//			
+//			// ref : JournalBean.handleJournalDetailSelect
+//			loadJournalItems(exOrderBillVO.getJournalVO());
+//			exOrderBillVO.getJournalVO().calcJourItemTotal(true);
+//			
+//			// deprecated (need to show journal details)
+//			// to show journal in table format (although will only have one line) 
+////			exOrderBillVO.setJournalList(new ArrayList<JournalVO>());
+////			exOrderBillVO.getJournalList().add(exOrderBillVO.getJournalVO());
+//		}
+	}
+	
+	/**
+	 * tour code selected
+	 * @param event
+	 */
+	public void handleTourCodeSelect(SelectEvent event){
+		try{
+			TourDepartureVO tourDepVO = (TourDepartureVO) event.getObject();  
+			
+			exOrderBillVO.setTourId(tourDepVO.getId());
+			exOrderBillVO.setTourCode(tourDepVO.getCode());
+			exOrderBillVO.setTourDesc(tourDepVO.getPackageDesc());
+//			exOrderBillVO.setDepDt(tourDepVO.getDtDep());
+			
+			if (ProductConstant.TYPE_TICKETING.equals(tourDepVO.getTourPkgTypeCd())) {
+				exOrderBillVO.setDepDt(new Date());
+			} else { // Type: MICE and TOUR
+				exOrderBillVO.setDepDt(tourDepVO.getDtDep());
+			}
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * clear tour code
+	 */
+	public void clearTourCode() {
+		try {
+			exOrderBillVO.setTourId(null);
+			exOrderBillVO.setTourCode(null);
+			exOrderBillVO.setTourDesc(null);
+			exOrderBillVO.setDepDt(null);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * on chnage bill amount
+	 */
+	public void onChangeBillAmt() {
+		try {
+			exOrderBillVO.setCurBal(exOrderBillVO.getBillAmt() - exOrderBillVO.getAmtPaid());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * Load tour list
+	 */
+	public void loadTour() throws BusinessException {
+//		tourList = tourPkgBO.getTourDepListV2();
+		lazyDataModelTourDep = new LazyDMTourDep<>(true);
+		lazyDataModelTourDep.setCompanyId(getSessionInfoBean().getCompanyVO().getId());
+	}
+	
+	/*
+	 * Load A/P Account list
+	 */
+	private void loadLiability() throws BusinessException{
+		liabilityList = billPymtBO.getAPAccount(getSessionInfoBean().getCompanyVO().getId());
+	}
+	
+	/*
+	 * Load Expenditure and Asset list
+	 */
+	private void loadExpenAsset() throws BusinessException {
+		acctList = billPymtBO.getAcctList(null, null, null, getSessionInfoBean().getCompanyVO().getId());
+	}
+	
+	public void reloadConsolBillPymtList() {
+		
+		try {
+//			String dateString = "2024-10-02";
+//	        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+//	        
+//        	billFromDate = dateFormat.parse(dateString);
+//        	billToDate = dateFormat.parse(dateString);
+	        
+			lazyConsolDataModel = new LazyBillPmntDataModel(billFromDate, billToDate, true);
+			
+//			System.out.println("CYY lazyConsolDataModel.getRowCount(): " + lazyConsolDataModel.getRowCount());
+			
+			savedSelectedBillList = new ArrayList<ExOrderBillVO>();
+			selectedBillList = new ExOrderBillVO[1];
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/*
+	 * Insert single bill
+	 */
+	private void insertSingleBill( ExOrderVO exOrderVO2, ExOrderBillVO exOrderBillVO, AcctTransVO acctTransVO, List<BillPaymentVO> billPaymentList, Long companyId) throws BusinessException, QueueException {
+		updateTaxableAmount(false);
+		exOrderBillVO.setAmountCalcViewVO(amtCalcViewVO);
+		exOrderBillVO.getAmountCalcViewVO().setIdTaxAcct(getSessionInfoBean().getCompanyVO().getIdAcctGST());
+		exOrderBillVO.getAmountCalcViewVO().setIdTaxNonClaimableAcct(getSessionInfoBean().getCompanyVO().getIdAcctNonClaimableGST());
+		billPymtBO.insertSingleBill(exOrderVO2, exOrderBillVO, acctTransVO, billPaymentList, companyId, supplierVO);
+	}
+	
+	/*
+	 * Update Single Bill
+	 */
+	private void updateSingleBill(Long oldExOrderID2,ExOrderVO exOrderVO,ExOrderBillVO exOrderBillVO, AcctTransVO acctTransVO, List<AcctTransVO> acctTransViewList,
+			List<BillPaymentVO> billPaymentList, List<BillPaymentVO> billPaymentViewList) throws BusinessException, QueueException{
+		updateTaxableAmount(false);
+		exOrderBillVO.setAmountCalcViewVO(amtCalcViewVO);
+		exOrderBillVO.getAmountCalcViewVO().setIdTaxAcct(getSessionInfoBean().getCompanyVO().getIdAcctGST());
+		exOrderBillVO.getAmountCalcViewVO().setIdTaxNonClaimableAcct(getSessionInfoBean().getCompanyVO().getIdAcctNonClaimableGST());
+		billPymtBO.updateSingleBill(oldExOrderID2,exOrderVO,exOrderBillVO, acctTransVO, acctTransViewList, billPaymentList, billPymtBO.getBillPymtList(exOrderBillVO.getId()), supplierVO);	
+	}
+	
+	/*
+	 * Insert Personal Supplier
+	 */
+	
+	private void insertPersonal(SystemNumberGenerationVO systemNumberGenerationVO) throws BusinessException{
+		purchaseBO.insertPersonal(supplierVO, systemNumberGenerationVO);
+	}
+	
+	/*
+	 * Insert Company Supplier
+	 */
+	private void insertCompany(SystemNumberGenerationVO systemNumberGenerationVO) throws BusinessException{
+		purchaseBO.insertCompany(supplierVO, systemNumberGenerationVO);
+	}
+	
+	/**
+	 * Handle Exchange Order selection
+	 */
+	public void handleEOSelect(SelectEvent event) {
+		try {
+		
+			Double totalAmt = 0.00;
+			Double totalEOAmt = 0.00;
+			ExOrderVO exOrderViewVO = (ExOrderVO) event.getObject();
+			eoDetailsList = purchaseEOBO.getEODetailsList(exOrderViewVO.getId());
+			
+			for(ExOrderDetailsVO vo : eoDetailsList){
+				totalEOAmt = totalEOAmt + vo.getAmount();
+			}
+			
+			exOrderVO = billPymtBO.getEOById(exOrderViewVO.getId(), getSessionInfoBean().getCompanyVO().getId());
+			supplierVO = billPymtBO.getSupplier(exOrderVO.getSupplierId(), getSessionInfoBean().getCompanyVO().getId());
+			if (supplierVO.getSupplierType().equals(CommonConstant.DEF_ACCT_TYPE_TC))
+				supplierVO.setSupplierTypeStr(CommonConstant.DEF_ACCT_TRADE_CREDITOR);
+			else supplierVO.setSupplierTypeStr(CommonConstant.DEF_ACCT_SUNDRY_CREDITOR);
+			acctTransVO.setAcctId(supplierVO.getAccountId());
+			cashBookVO.setPayee(supplierVO.getFullName());
+			exOrderDetailsList = billPymtBO.getEODetailsList(exOrderViewVO.getId());
+			exOrderVO.setSupplierId(supplierVO.getId());
+			exOrderVO.setCode(exOrderViewVO.getCode());
+			exOrderVO.setId(exOrderViewVO.getId());
+			exOrderVO.setStatus(CommonConstant.STATUS_CD_BILLED);
+			
+			exOrderBillVO.setEoId(exOrderVO.getId());
+			exOrderBillVO.setEoCode(exOrderVO.getCode());
+			exOrderBillVO.setDueDt(exOrderViewVO.getDueDt());
+			exOrderBillVO.setBillAmt(totalEOAmt);
+			exOrderBillVO.setTourId(exOrderVO.getTourId());
+			exOrderBillVO.setPaymentTerm(exOrderVO.getPaymentTerm());
+			exOrderBillVO.setTourCode(exOrderVO.getTourDepVO().getCode());
+			exOrderBillVO.setTourDesc(exOrderVO.getTourDepVO().getPackageDesc());
+			if(exOrderVO.getTourDepVO().getDtDep() != null) {
+				if (ProductConstant.TYPE_TICKETING.equals(exOrderVO.getTourDepVO().getTourPkgTypeCd())) {
+					exOrderBillVO.setDepDt(new Date());
+				} else { // Type: MICE and TOUR
+					exOrderBillVO.setDepDt(exOrderVO.getTourDepVO().getDtDep());
+				}
+			}
+			if(exOrderVO.getTourDepVO() != null) tourCodeDesc = exOrderVO.getTourDepVO().getCode();
+			else tourCodeDesc = "";
+			acctTransViewVO.setDebit(exOrderBillVO.getBillAmt());
+			
+			if(CollectionUtils.isNotEmpty(exOrderDetailsList)){
+				for(int i = 0; i < exOrderDetailsList.size(); i++) {
+					totalAmt = totalAmt + exOrderDetailsList.get(i).getAmount();
+				}
+				exOrderDetailsVO.setTotalAmt(totalAmt);
+				
+			} else exOrderDetailsVO.setTotalAmt(totalAmt);
+			exOrderBillVO.setAmtPaid(totalPymtAmt);
+			exOrderBillVO.setCurBal(exOrderBillVO.getBillAmt() - exOrderBillVO.getAmtPaid());
+			
+			// set eo invoice list
+			exOrderVO.setEoInvList(purchaseEOBO.getEOInvList(exOrderVO.getId()));
+			InvoiceVO tempInvoiceVO;
+			for (int i = 0 ; i < exOrderVO.getEoInvList().size() ; i++) {
+				tempInvoiceVO = invoiceBO.getInvoiceById(exOrderVO.getEoInvList().get(i).getInvId());
+				invoiceBO.getInvoiceDetails(tempInvoiceVO);
+				exOrderVO.getEoInvList().get(i).setInvDate(tempInvoiceVO.getInvoiceDt().toString());
+				exOrderVO.getEoInvList().get(i).setInvDateView(tempInvoiceVO.getInvoiceDt());
+				exOrderVO.getEoInvList().get(i).setCustomerID(tempInvoiceVO.getCustDetailsVO().getCode()); 
+				exOrderVO.getEoInvList().get(i).setCustomerName(tempInvoiceVO.getCustDetailsVO().getContPersonName()); 
+				exOrderVO.getEoInvList().get(i).setSalesAmount(tempInvoiceVO.getAmount());
+				if (tempInvoiceVO.getDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_PAX_STMT)) {
+					exOrderVO.getEoInvList().get(i).setCode(tempInvoiceVO.getPsNo());
+				} else {
+					exOrderVO.getEoInvList().get(i).setCode(tempInvoiceVO.getCode());
+				}
+				exOrderVO.getEoInvList().get(i).setDocTypeCd(tempInvoiceVO.getDocTypeCd());
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Handle Exchange Order selection
+	 */
+	public void handleSubAcctSelect(SelectEvent event) {
+		try {
+			AcctVO acctViewVO = (AcctVO) event.getObject();
+			acctTransViewVO.setAcctId(acctViewVO.getId());
+			acctTransViewVO.setCode(acctViewVO.getCode() + (StringUtils.isNotEmpty(acctViewVO.getSubCode()) ? "-" + acctViewVO.getSubCode() : ""));
+			acctTransViewVO.setDesc(acctViewVO.getDesc() + (StringUtils.isNotEmpty(acctViewVO.getSubDesc()) ? ", " + acctViewVO.getSubDesc() : ""));
+			
+			handleTaxCodeSelection(acctViewVO.getTaxCode(), acctViewVO.getTaxRate() == null ? null : (double) acctViewVO.getTaxRate());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleAccountCodeKeyUp() {
+		AcctVO tempAcctVO = null;
+		String strTemp;
+		try{ 
+			if(StringUtils.isNotEmpty(acctTransViewVO.getCode())) {
+				String tempCode = null;
+				String tempSubCode = null;
+				if (acctTransViewVO.getCode().indexOf("-") > 0) {
+					tempCode = acctTransViewVO.getCode().substring(0, acctTransViewVO.getCode().indexOf("-"));
+					tempSubCode = acctTransViewVO.getCode().substring(acctTransViewVO.getCode().indexOf("-") + 1, acctTransViewVO.getCode().length());
+				} else tempCode = acctTransViewVO.getCode();
+				
+				for (AcctVO vo : acctList) {
+					if (vo.getCode().equals(tempCode)) {
+						if (tempSubCode != null) {
+							if(vo.getSubCode().equals(tempSubCode)) {
+								tempAcctVO = vo;
+								break;
+							} else continue;
+						} else {
+							tempAcctVO = vo;
+							break;
+						}
+					}
+				}
+				
+				if(tempAcctVO != null) {
+					strTemp= tempAcctVO.getDesc();
+					if(StringUtils.isNotEmpty(tempAcctVO.getSubDesc())) strTemp += ", " + tempAcctVO.getSubDesc();
+					
+					acctTransViewVO.setDesc(strTemp);
+					acctTransViewVO.setAcctId(tempAcctVO.getId());
+					// populate GST code and rate]
+					handleTaxCodeSelection(tempAcctVO.getTaxCode(), tempAcctVO.getTaxRate() == null ? null : (double) tempAcctVO.getTaxRate());
+					
+				} else acctTransViewVO.setDesc("<font color='red'>No data found !</font>");
+			}
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Supplier Change
+	 */
+	public void handleSupplierChange() {
+		try {
+			supplierVO = billPymtBO.getSupplier(supplierVO.getId(), getSessionInfoBean().getCompanyVO().getId());
+			if (supplierVO.getSupplierType().equals(CommonConstant.DEF_ACCT_TYPE_TC))
+				supplierVO.setSupplierTypeStr(CommonConstant.DEF_ACCT_TRADE_CREDITOR);
+			else supplierVO.setSupplierTypeStr(CommonConstant.DEF_ACCT_SUNDRY_CREDITOR);
+			cashBookVO.setPayee(supplierVO.getFullName());
+			exOrderBillVO.setSupplierName(supplierVO.getFullName());
+			exOrderBillVO.setPaymentTerm(supplierVO.getPaymentTerm());
+			exOrderBillVO.setSupplierType(supplierVO.getSupplierType());
+			acctTransVO.setAcctId(supplierVO.getAccountId());
+			handlePaymentTerm();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleSuppTypeSelecttion() {
+		try {
+			isSupplier = true;
+			blSelect = true;
+			
+			if (!"ALL".equals(suppTypeFilter) && !billPmntList.isEmpty()) billPmntList.clear();
+			if (idSupplierList != null && !idSupplierList.isEmpty()) idSupplierList.clear();
+			
+			loadMultiSupplier();
+			loadBillList();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Supplier Selection
+	 */
+	public void handleSuppSelection() {
+		try {
+			isSupplier = true;
+			blSelect = true;
+			
+//			supplierVO = billPymtBO.getSupplier(idSupplier, getSessionInfoBean().getCompanyVO().getId());
+//			if (!billPmntList.isEmpty()) billPmntList.clear();
+				
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void handleEmployeeSelect(SelectEvent event) {
+		try {
+			EmployeeViewVO vo = (EmployeeViewVO) event.getObject();
+			
+			if (StringUtils.equals(inUseUserType, "PAYEE")) {
+				exOrderBillVO.setIdPayee(vo.getId());
+				exOrderBillVO.setPayee(vo.getUserVO().getName());
+				if (StringUtils.isNotEmpty(vo.getFullName())) {
+					exOrderBillVO.setPayee(exOrderBillVO.getPayee() + " (" + vo.getFullName() + ")");
+				}
+			} else if (StringUtils.equals(inUseUserType, "PERSON")) {
+				ExOrderBillPersonVO eoBillPersonVO = new ExOrderBillPersonVO();
+				eoBillPersonVO.setIdUser(vo.getId());
+				eoBillPersonVO.setAmount(0.00);
+				exOrderBillVO.getEoBillPersonList().add(eoBillPersonVO);
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handlePayeeSelected(SelectEvent event) {
+		System.out.println("BillPymtBean.handlePayeeSelected(SelectEvent)");
+	    Object selected = event.getObject();
+
+	    try {
+	        if (selected instanceof EmployeeViewVO) {
+	            handlePayeeSelected((EmployeeViewVO) selected);
+	        } else if (selected instanceof CustomerVO) {
+	        	handlePayeeSelected((CustomerVO) selected);
+	        } else if (selected instanceof SupplierVO) {
+	        	handlePayeeSelected((SupplierVO) selected);
+	        }
+	    } catch (Throwable t) {
+	        t.printStackTrace();
+	        errorResult(t);
+	    }
+	}
+	
+	public void handlePayeeSelected(EmployeeViewVO vo) {
+		System.out.println("BillPymtBean.handlePayeeSelect(EmployeeViewVO)");
+		try {
+			exOrderBillVO.setIdPayee(vo.getId());
+			exOrderBillVO.setPayeeType(CommonConstant.PAYEE_TYPE_EMPLOYEE);
+			exOrderBillVO.setPayee(StringUtils.isNotBlank(vo.getFullName()) ? vo.getFullName() : vo.getUserVO().getName());
+			exOrderBillVO.setPayeeSalutatn(null);
+			exOrderBillVO.setPayeeSupportName(StringUtils.isNotBlank(vo.getFullName()) ? vo.getUserVO().getName() : null);			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void handlePayeeSelected(CustomerVO vo) {
+		System.out.println("BillPymtBean.handlePayeeSelect(CustomerVO)");
+		try {
+			exOrderBillVO.setIdPayee(vo.getId());
+			exOrderBillVO.setPayeeType(CommonConstant.PAYEE_TYPE_CUST);
+			if (StringUtils.equals(vo.getPcTypeCd(), "C") && StringUtils.isNotBlank(vo.getCorporateName())) {
+				exOrderBillVO.setPayee(vo.getCorporateName());
+				exOrderBillVO.setPayeeSalutatn(null);
+			} else {
+				exOrderBillVO.setPayee(vo.getCustName());
+				exOrderBillVO.setPayeeSalutatn(vo.getSalutationCd());
+			}
+			exOrderBillVO.setPayeeSupportName(null);
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void handlePayeeSelected(SupplierVO vo) {
+		System.out.println("BillPymtBean.handlePayeeSelect(SupplierVO)");
+		try {
+			exOrderBillVO.setIdPayee(vo.getId());
+			exOrderBillVO.setPayeeType(CommonConstant.PAYEE_TYPE_SUPPLIER);
+			exOrderBillVO.setPayee(vo.getFullName());
+			exOrderBillVO.setPayeeSalutatn(null);
+			exOrderBillVO.setPayeeSupportName(null);
+		} catch(Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void clearPayee() {
+		try {
+			exOrderBillVO.setIdPayee(null);
+			exOrderBillVO.setPayee(null);
+			
+			// payee linked to u, s, c
+			exOrderBillVO.setPayeeType(null);
+			exOrderBillVO.setPayeeSalutatn(null);
+			exOrderBillVO.setPayeeSupportName(null);
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onPayeeAdded(SupplierVO supplierVO) {
+		try {
+			PayeeViewVO payeeViewVO = billPymtBO.getPayeeViewVO(supplierVO.getId(), CommonConstant.PAYEE_TYPE_SUPPLIER);
+			PurchaseUtils.mapPayeeViewToBill(payeeViewVO, exOrderBillVO);
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void deleteEoBillPerson(ExOrderBillPersonVO eoBillPersonVO) {
+		try {
+			exOrderBillVO.getEoBillPersonList().remove(eoBillPersonVO);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Handle Bank Account selection
+	 */
+	public void handleBankSelect(SelectEvent event) {
+		try {
+			
+			AcctVO acctVO = (AcctVO) event.getObject();
+			BankAcctVO bankAcctVO = new BankAcctVO();
+			
+			cashBookVO.setTemp(acctVO.getDesc());
+			cashBookVO.setBankAcc(acctVO.getCode());
+			bankAcctVO = billPymtBO.getBankId(acctVO.getId());
+			cashBookVO.setIdAcct(acctVO.getId());
+			cashBookVO.setIdBank(bankAcctVO.getId());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+
+	/**
+	 * Handle Bank Account selection
+	 */
+	public void handleBankSelectUsingBank(SelectEvent event) {
+		try {
+			BankAcctViewVO bankAcctViewVO = (BankAcctViewVO)event.getObject();
+			billPaymentVO.setAcctId(bankAcctViewVO.getAcctViewVO().getId());
+			billPaymentVO.setBankId(bankAcctViewVO.getId());
+			billPaymentVO.setBankName(bankAcctViewVO.getName());
+			
+			cashBookVO.setIdAcct(bankAcctViewVO.getAcctViewVO().getId());
+			cashBookVO.setIdBank(bankAcctViewVO.getId());
+			cashBookVO.setTemp(bankAcctViewVO.getName());
+			
+			billPaymentVO.setBankAcct(bankAcctViewVO.getAcctViewVO().getCode());
+			cashBookVO.setBankAcc(bankAcctViewVO.getAcctViewVO().getCode());
+			if (StringUtils.isNotEmpty(bankAcctViewVO.getAcctViewVO().getSubCode())) {
+				billPaymentVO.setBankAcct(billPaymentVO.getBankAcct() + "-" + bankAcctViewVO.getAcctViewVO().getSubCode());
+				cashBookVO.setBankAcc(cashBookVO.getBankAcc() + "-" + bankAcctViewVO.getAcctViewVO().getSubCode());
+			}
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+
+	/**
+	 * On G/L Account selected
+	 * @param event
+	 */
+	public void onGLAcctSelected(AcctTransVO vo) {
+		try {
+			resetGLAcctForm();
+			acctTransViewVO = vo;
+			vo = null;
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Payment selected
+	 * @param event
+	 */
+	public void onPymtSelected(BillPaymentVO vo) {
+		try {
+			if (vo.getPymtDt() != null) {
+				vo.setDateInPeriodClosed(LookupItemUtils.getFinAndGSTPeriodClosedStatus(this.getSessionInfoBean().getCompanyVO().getId(), vo.getPymtDt(), invPmntAuthVO.isAccountManager()));
+			}
+			
+			resetPymtForm();
+			billPaymentVO = vo;
+			vo = null;
+			
+			successResult();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On G/L Account selected
+	 * @param event
+	 */
+	public void onBillSelected(Long idBill) {
+		try {
+			trackingLogUtils.startLogs();
+			
+			exOrderBillVO = billPymtBO.getBillDetails(idBill);
+			// set origin vo
+			setOriObj(exOrderBillVO.clone());
+			oldExOrderID = exOrderBillVO.getEoId();
+			
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), exOrderBillVO.getBillDt());
+			
+			loadSupplier();
+			loadExpenAsset();
+			
+			supplierVO = billPymtBO.getSupplier(exOrderBillVO.getSupplierId(), getSessionInfoBean().getCompanyVO().getId());
+			if (supplierVO.getSupplierType().equals(CommonConstant.DEF_ACCT_TYPE_TC))
+				supplierVO.setSupplierTypeStr(CommonConstant.DEF_ACCT_TRADE_CREDITOR);
+			else supplierVO.setSupplierTypeStr(CommonConstant.DEF_ACCT_SUNDRY_CREDITOR);
+			billPaymentVO.setPayee(supplierVO.getBeneficiaryName());
+			
+			// Set payee name
+			exOrderBillVO.setPayee(getUserName(exOrderBillVO.getIdPayee()));
+			
+			if (exOrderBillVO.getIdPayee() != null) {
+				PayeeViewVO payeeViewVO = billPymtBO.getPayeeViewVO(exOrderBillVO.getIdPayee(), exOrderBillVO.getPayeeType());
+				exOrderBillVO.setPayee(payeeViewVO.getPayeeName());
+				exOrderBillVO.setPayeeSalutatn(payeeViewVO.getSalutationCd());
+				exOrderBillVO.setPayeeSupportName(payeeViewVO.getSupportName());
+			}
+			
+			if(exOrderBillVO.getEoId() != null){
+				exOrderVO = billPymtBO.getEOById(exOrderBillVO.getEoId(), getSessionInfoBean().getCompanyVO().getId());
+				exOrderBillVO.setEoCode(exOrderVO.getCode());
+				
+				exOrderVO.setEoInvList(purchaseEOBO.getEOInvList(exOrderBillVO.getEoId()));
+				InvoiceVO tempInvoiceVO;
+				for (int i = 0 ; i < exOrderVO.getEoInvList().size() ; i++) {
+					tempInvoiceVO = invoiceBO.getInvoiceById(exOrderVO.getEoInvList().get(i).getInvId());
+					invoiceBO.getInvoiceDetails(tempInvoiceVO);
+					exOrderVO.getEoInvList().get(i).setInvDate(tempInvoiceVO.getInvoiceDt().toString());
+					exOrderVO.getEoInvList().get(i).setInvDateView(tempInvoiceVO.getInvoiceDt());
+					exOrderVO.getEoInvList().get(i).setCustomerID(tempInvoiceVO.getCustDetailsVO().getCode()); 
+					exOrderVO.getEoInvList().get(i).setCustomerName(tempInvoiceVO.getCustDetailsVO().getContPersonName()); 
+					exOrderVO.getEoInvList().get(i).setSalesAmount(tempInvoiceVO.getAmount());
+					exOrderVO.getEoInvList().get(i).setCode(tempInvoiceVO.getCode());
+					if (tempInvoiceVO.getDocTypeCd().equals(SalesConstant.DOC_TYPE_CD_PAX_STMT)) {
+						exOrderVO.getEoInvList().get(i).setCode(tempInvoiceVO.getPsNo());
+					} else {
+						exOrderVO.getEoInvList().get(i).setCode(tempInvoiceVO.getCode());
+					}
+					exOrderVO.getEoInvList().get(i).setDocTypeCd(tempInvoiceVO.getDocTypeCd());
+				}
+			}
+			
+			loadAcctTrans((exOrderBillVO.getCode()).toString());
+			loadAcctTransList((exOrderBillVO.getCode()).toString());
+			loadBillPymtList(exOrderBillVO.getId());
+			loadEoBillPersonList(exOrderBillVO.getId());
+			loadJournal(exOrderBillVO);
+			
+			if(exOrderBillVO.getTourId() != null && exOrderBillVO.getTourId() != 0) {
+//				for (TourDepartureVO vo : tourList) {
+//					if (exOrderBillVO.getTourId().equals(vo.getId())) {
+//						exOrderBillVO.setTourCode(vo.getCode());
+//						exOrderBillVO.setTourDesc(vo.getPackageDesc());
+//						break;
+//					}
+//				}
+				TourDepartureVO tourDepVO = tourPkgBO.getTourDepById(exOrderBillVO.getTourId());
+				if (tourDepVO != null) {
+					exOrderBillVO.setTourCode(tourDepVO.getCode());
+					//exOrderBillVO.setDepDt(tourDepVO.getDtDep());	allow to store new departure date without follow the tourcode
+				}
+			}
+			
+			if (CommonConstant.STATUS_CD_CANCELLED.equals(exOrderBillVO.getStatus()) || CommonConstant.STATUS_CD_VOID.equals(exOrderBillVO.getStatus())) {
+				double tmpTotAmt = 0;
+				for (int i = 0 ; i < acctTransVO.getAcctTransList().size() ; i++) {
+					tmpTotAmt += acctTransVO.getAcctTransList().get(i).getAmount();
+					if (exOrderBillVO.getBillAmt().doubleValue() > 0) {
+						if (tmpTotAmt <= exOrderBillVO.getBillAmt().doubleValue()) totalAmt = tmpTotAmt;
+						if (tmpTotAmt > exOrderBillVO.getBillAmt().doubleValue()) acctTransVO.getAcctTransList().remove(i);
+						
+					} else {
+						if (tmpTotAmt >= exOrderBillVO.getBillAmt().doubleValue()) totalAmt = tmpTotAmt;
+						if (tmpTotAmt < exOrderBillVO.getBillAmt().doubleValue()) acctTransVO.getAcctTransList().remove(i);
+					}
+				}
+			} else {
+				BigDecimal totAmt = new BigDecimal("0.0");
+				for (int i = acctTransVO.getAcctTransList().size() - 1 ; i >= 0 ; i--) {
+					if (acctTransVO.getAcctTransList().get(i).getStatusCode().equals(BaseConstant.STATUS_TERMINATED)) {
+						acctTransVO.getAcctTransList().remove(i);
+						continue;
+					}
+					totAmt = totAmt.add(new BigDecimal(String.valueOf(acctTransVO.getAcctTransList().get(i).getAmount())));
+				}
+				totalAmt = totAmt.doubleValue();
+			}
+			
+			if (CollectionUtils.isNotEmpty(billPaymentList)) {
+				for (BillPaymentVO billPmntVO : billPaymentList) {
+					totalPymtAmt += billPmntVO.getPmntAmount();
+					if (CommonConstant.BILL_PMNT_TYPE_MUL.equals(billPmntVO.getPmntType())) isMultiple = true;
+				}
+			}
+			
+			// Check Financial Period Closed
+			getFinPeriodClosedStatus();
+			acctTransViewList.addAll(acctTransVO.getAcctTransList());
+			// GST Amount
+			updateTaxableAmount(true);
+			
+			resetFileUploadForm();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("onBillSelected");
+		}
+	}
+	
+
+	/**
+	 * On Payment selected selected
+	 * @param event
+	 */
+	public void onBillPay(ExOrderBillVO vo, boolean isButton) {
+		try {
+			if ("ALL".equals(suppTypeFilter)) throw new BusinessException(CommonErrConstant.ERR_BILL_PMNT_SUPP_TYPE_NO_SLCT);
+			
+			if (isButton) {
+				if (vo.getAmtAllocate() != 0) {
+					for (int i = billPmntList.size() - 1 ; i >= 0 ; i--) {
+						if (vo.getId().equals(billPmntList.get(i).getId())) {
+							if (vo.getAmtAllocate() != billPmntList.get(i).getCurBal().doubleValue()) 
+								billPmntList.get(i).setAmtAllocate(billPmntList.get(i).getCurBal());
+							else billPmntList.remove(i);
+							break;
+						}
+					}
+				} else {
+					vo.setAmtAllocate(vo.getCurBal());
+					billPmntList.add(vo);
+				}
+			} else {
+				if (vo.getAmtAllocate() != 0) {
+					boolean flag = true;
+					for (int i = 0 ; i < billPmntList.size() ; i++) {
+						if (vo.getId().equals(billPmntList.get(i).getId())) {
+							billPmntList.get(i).setAmtAllocate(vo.getAmtAllocate());
+							flag = false;
+							break;
+						}
+					}
+					// if not existed
+					if (flag) billPmntList.add(vo);
+				} else {
+					for (int i = billPmntList.size() - 1 ; i >= 0 ; i--) {
+						if (vo.getId().equals(billPmntList.get(i).getId())) {
+							billPmntList.remove(i);
+							break;
+						}
+					}
+				}
+			}
+		 } catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void onBillPersonCalc() {
+		try {
+			if (CollectionUtils.isNotEmpty(exOrderBillVO.getEoBillPersonList())) {
+				BigDecimal totAmt = new BigDecimal("0.0");
+				for (ExOrderBillPersonVO sumVO : exOrderBillVO.getEoBillPersonList()) {
+					totAmt = totAmt.add(new BigDecimal(sumVO.getAmount().toString()));
+				}
+				totalAmtPerson = totAmt.doubleValue();
+			}
+		 } catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Identity selected
+	 * @param event
+	 */
+	public void onIdentitySelected(IdentityVO vo) {
+		try {
+			resetIdentityForm();
+			identityVO = vo;
+			vo = null;
+			successResult();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Contact selected
+	 * @param event
+	 */
+	public void onContactSelected(ContactVO vo) {
+		try {
+			resetContactForm();
+			contactVO = vo;
+			vo = null;
+		successResult();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On Remarks selected
+	 * @param event
+	 */
+	public void onRemarksSelected(RemarksVO vo) {
+		try {
+			resetRemarksForm();
+			remarksVO = vo;
+			vo = null;
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On G/L Account selected
+	 * @param event
+	 */
+	public void onMultiBillSelected() {
+		try {
+			
+			trackingLogUtils.startLogs();
+			
+			double tempDouble = 0;
+			List<ExOrderBillVO> billList2 = new ArrayList<ExOrderBillVO>();
+			
+			for (ExOrderBillVO exOrderBillVO : billPmntList) {
+				if (exOrderBillVO.getAmtAllocate() != 0) {
+					tempDouble +=  exOrderBillVO.getAmtAllocate();
+					billList2.add(exOrderBillVO);
+				}
+			}
+			
+			if (tempDouble > 0) {
+				SystemNumberGenerationVO bankPymtVO = new SystemNumberGenerationVO();
+				bankPymtVO.setCode(CommonConstant.SYS_NUM_CD_BANK_PMNT);
+				bankPymtVO.setIdCompany(getSessionInfoBean().getCompanyVO().getId());
+				bankPymtVO = SysNumGenUtil.getSysNumber(SysNumGenUtil.getIdx(bankPymtVO));
+				billPymtBO.billPaymentMultipleV2(billList2, cashBookVO, bankPymtVO, tempDouble);
+			}
+			billPmntList = new ArrayList<ExOrderBillVO>();
+			initSingleBill();
+			successResult();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			trackingLogUtils.endLogs("onMultiBillSelected");
+		}
+	}
+	
+	/**
+	 * On G/L Account selected
+	 * @param event
+	 */
+	public void onMultiPmntSelected() {
+		try {
+			Date dtTrans = new Date();
+			totalCurBal = 0.00;
+			
+			for(ExOrderBillVO exOrderBillVO : billList){
+				if(exOrderBillVO.isSelect() == true){
+					totalCurBal = totalCurBal + exOrderBillVO.getCurBal();
+				}
+			}
+
+			if (totalCurBal.doubleValue() == 0) throw new BusinessException(CommonErrConstant.ERR_PURCHASE_BILL_NO_SELECTION);
+			
+			bankAcctList = bankAcctBO.getBankAcctList(getSessionInfoBean().getCompanyVO().getId());
+			for(BankAcctVO bankAcctVO : bankAcctList){
+				acctVO = billPymtBO.getGLByBank(bankAcctVO.getIdAcct());
+				glListByBank.add(acctVO);
+			}
+
+			cashBookVO.setDtTrans(dtTrans);
+			cashBookVO.setPayee(supplierVO.getBeneficiaryName());
+			cashBookVO.setCredit(totalCurBal);
+			successResult();
+			
+		}catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void onMultiPmntClick() {
+		try {
+			double totalAmountPaid = 0.00;
+			totalCurBal = 0.00;
+			String payee = "";
+			
+			for(ExOrderBillVO exOrderBillVO : billPmntList){
+				totalCurBal += exOrderBillVO.getCurBal();
+				totalAmountPaid += exOrderBillVO.getAmtAllocate();
+				if (StringUtils.isEmpty(payee)) payee = exOrderBillVO.getBeneficiaryName();
+			}
+			
+			bankAcctList = bankAcctBO.getBankAcctList(getSessionInfoBean().getCompanyVO().getId());
+			for(BankAcctVO bankAcctVO : bankAcctList) {
+				acctVO = billPymtBO.getGLByBank(bankAcctVO.getIdAcct());
+				glListByBank.add(acctVO);
+			}
+
+			cashBookVO.setDtTrans(new Date());
+			cashBookVO.setPayee(payee); 
+			cashBookVO.setCredit(totalAmountPaid);
+			
+			if(totalAmountPaid <= 0) {	
+				FacesMessage msg  = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Amount to allocate not provided or contra amount is negative", "");
+				if (msg != null) FacesContext.getCurrentInstance().addMessage(null, msg);
+		        RequestContext.getCurrentInstance().addCallbackParam("validateError", true);
+			}
+		}catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * On G/L Account selected
+	 * @param event
+	 */
+	public void onMultiBillsPymt() {
+		try {
+			billPmntList = new ArrayList<ExOrderBillVO>();
+			
+			if (!blMultiPymt) {
+				blMultiPymt = true;
+				blSelect = false;
+//				loadSupplier();
+				isSupplier = true;
+				loadMultiSupplier();
+				
+			} else {
+				blMultiPymt = false;
+				blSelect = false;
+				isSupplier = false;
+				idSupplier = null;
+				supplierVO = new SupplierVO();
+			}
+			
+			BigDecimal totAmt = new BigDecimal("0.0");
+			BigDecimal totPmntAmt = new BigDecimal("0.0");
+			BigDecimal totCurBal = new BigDecimal("0.0");
+			for(int i = 0; i < billList.size(); i++){
+				totAmt = totAmt.add(new BigDecimal(billList.get(i).getBillAmt().toString()));
+				totPmntAmt = totPmntAmt.add(new BigDecimal(billList.get(i).getAmtPaid().toString()));
+				totCurBal = totCurBal.add(new BigDecimal(billList.get(i).getCurBal().toString()));
+			}
+			totalAmt = totAmt.doubleValue();
+			totalPymtAmt = totPmntAmt.doubleValue();
+			totalCurBal = totCurBal.doubleValue();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Print PaymentVoucher
+	 */
+	public void printPV(BillPaymentVO vo) {
+		try {
+			SimpleDateFormat ft = new SimpleDateFormat("yyyyMMdd'_'HHmmss");
+			CompanyVO company = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			HashMap map = new HashMap();
+			map.put("companyName", company.getName());
+			map.put("slogan", company.getSlogan());
+			map.put("address1", company.getCompanyAddressVO().getAddress1());
+			map.put("address2", company.getCompanyAddressVO().getAddress2());
+			map.put("address3", company.getCompanyAddressVO().getAddress3());
+			map.put("city", company.getCompanyAddressVO().getCity());
+			map.put("state", company.getCompanyAddressVO().getState());
+			map.put("postcode", company.getCompanyAddressVO().getPostcode());
+			map.put("countryName",getCountryName(company.getCompanyAddressVO().getCountryid()));
+			map.put("date", new SimpleDateFormat("dd/MM/yyyy").format(vo.getPymtDt()));
+			map.put("voucherNo", vo.getCode());
+			map.put("chequeNo", vo.getRefNum());
+			map.put("contPersonName", vo.getPayee());
+			//map.put("vAmount", vo.getPmntAmount());
+			map.put("vAmount", vo.getChqAmount());
+			map.put("vAmountWord", EnglishNumberToWords.withCents(vo.getChqAmount().doubleValue()));
+			map.put("memo", vo.getRemarks());
+			map.put("voucherName","PAYMENT VOUCHER");
+			map.put("bankAcctName",vo.getBankName());
+			
+			String contact = ""; 
+			for (CompanyContactVO contactVO : company.getCompanyContactList()) {
+				contact += LookupItemUtils.getLookupItemDesc(CommonConstant.LOOKUP_CAT_CD_CNTC_TYPE, contactVO.getTypecodecontact()) + ": " + contactVO.getNumber() + "  ";
+			}
+			map.put("contact", contact);
+			JasperPrint jasperPrint = ReportUtils.getJasperPrint(map, CommonConstant.JAS_RPT_PMNT_VOU);
+			ReportUtils.printReport(jasperPrint, CommonConstant.PDF_RPT_PV);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param document
+	 */
+	public void postProcessXLS(Object document) {
+		try {
+        HSSFWorkbook wb = (HSSFWorkbook) document;
+        HSSFSheet sheet = wb.getSheetAt(0);
+        sheet.shiftRows(0, sheet.getLastRowNum(), 2);
+        HSSFRow header = sheet.createRow(0);
+        
+        for(int i=0; i < header.getPhysicalNumberOfCells();i++) {
+            HSSFCell cell = header.getCell(i);
+
+        }
+       
+		} catch(Throwable t) {
+			errorResult(t);
+		}
+    }
+	
+	public void handleChangeColumnsViewClick() {
+		// Get Data Table Columns
+		DataTable dataTable = (DataTable) FacesContext.getCurrentInstance().getViewRoot().findComponent("idBillListForm:idPurBillPmntTable");
+		List<UIColumn> column = dataTable.getColumns();
+		int index = 1;
+		List<ListingTableViewColumnsVO> columnList = new ArrayList<>();
+		for (UIColumn uiColumn : column) {
+			boolean isExists = false;
+			for (ListingTableViewColumnsVO columnsVO : listingTableViewVO.getListingTableViewColumnsVOList()) {
+				if (StringUtils.equals(columnsVO.getColumnsName(), uiColumn.getHeaderText())) {
+					columnsVO.setSeqNo(index);
+					
+					columnList.add(columnsVO);
+					isExists = true;
+					break;
+				}
+			}
+			
+			if (!isExists) {
+				ListingTableViewColumnsVO columnsVO = new ListingTableViewColumnsVO();
+				columnsVO.setColumnsName(uiColumn.getHeaderText());
+				columnsVO.setSeqNo(index);
+				columnsVO.setVisible(true);
+				columnList.add(index - 1, columnsVO);
+			}
+			index++;
+		} 
+		
+		listingTableViewVO.setListingTableViewColumnsVOList(columnList);
+	}
+	
+	public void updateListingTableView() {
+		try {
+			listingTableViewBO.updateListingTableView(listingTableViewVO);
+			
+			loadListingTableView();
+			successResult();
+		} catch (BusinessException e) {
+			errorResult(e);
+		}
+	}
+	
+	public void loadListingTableView() {
+		listingTableViewMap = new HashMap<>();
+		try {
+			listingTableViewVO = listingTableViewBO.getListingTableView(ConstantListingTableView.LISTING_TYPE_BILL_PYMT, getSessionInfo().getUserVO().getId());
+			
+			if (listingTableViewVO == null) {
+				listingTableViewVO = new ListingTableViewVO();
+				listingTableViewVO.setIdUser(getSessionInfo().getUserVO().getId());
+				listingTableViewVO.setListingType(ConstantListingTableView.LISTING_TYPE_BILL_PYMT);
+				
+				listingTableViewVO.setListingTableViewColumnsVOList(new ArrayList<ListingTableViewColumnsVO>()); 
+			}
+			
+			for (ListingTableViewColumnsVO columnsVO : listingTableViewVO.getListingTableViewColumnsVOList()) {
+				listingTableViewMap.put(columnsVO.getSeqNo(), columnsVO.getVisible());
+			}
+		} catch (BusinessException e) {
+			errorResult(e);
+		}
+	}
+	
+	/**
+	 * Get Financial Period Closed Status
+	 */ 
+	public void getFinPeriodClosedStatus() {
+		try {
+			// TODO temporary disable financial period close checking
+			setDateInFinPeriodClosed(LookupItemUtils.getFinAndGSTPeriodClosedStatus(this.getSessionInfoBean().getCompanyVO().getId(), exOrderBillVO.getBillDt(), invPmntAuthVO.isAccountManager()));
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Forward GST calculation
+	 */
+	public void handleAmountChange() {
+		try {
+			acctTransViewVO = (AcctTransVO) AccountHelper.calcTaxableAmount(acctTransViewVO, false, 0, 0);
+			amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, false, acctTransVO.getAcctTransList(), billPaymentList, false);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * GST + Amount
+	 */
+	public void handleGSTAmtChange() {
+		try {
+			BigDecimal amount = new BigDecimal(String.valueOf(acctTransViewVO.getAmount()));
+			BigDecimal taxAmount = new BigDecimal(acctTransViewVO.getTaxAmount().toString());
+			
+			acctTransViewVO.setAmountIncludeTax(amount.add(taxAmount).doubleValue());
+			amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, false, acctTransVO.getAcctTransList(), billPaymentList, false);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * Reverse GST calculation
+	 */
+	public void handleAmountInclTaxChange() {
+		try {
+			acctTransViewVO = (AcctTransVO) AccountHelper.calcAmountBaseOnTotalTaxableAmount(acctTransViewVO);
+			amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, false, acctTransVO.getAcctTransList(), billPaymentList, false);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+
+	/**
+	 * 
+	 * @param event
+	 */
+	public void handleGSTSelect(SelectEvent event) {
+		try {
+			TaxCodeVO taxCodeVO = (TaxCodeVO) event.getObject();
+			handleTaxCodeSelection(taxCodeVO.getCode(), (double) taxCodeVO.getRate());
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleTaxCodeClear() {
+		try {
+			handleTaxCodeSelection(null, null);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void addExOrderBillAttachment() {
+		try {
+			if (StringUtils.isBlank(billAttachmentVO.getScannedPath())) {
+				FacesMessage msg = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Scanned Copy is required.", "");
+				FacesContext.getCurrentInstance().addMessage(null, msg);
+				return;
+			}
+			
+			if (attachmentUploadedFile != null) {
+				fileUploadUtils.uploadSingleFile(attachmentUploadedFile, destinationAttachmentPath, billAttachmentVO.getFilePath(), null, null, false);
+			}
+			
+			if (billAttachmentVO.getId() != null) {
+				billPymtBO.addDeleteBillAttachment(billAttachmentVO, false);
+			} else {
+				billAttachmentVO.setIdBill(exOrderBillVO.getId());
+				billPymtBO.addDeleteBillAttachment(billAttachmentVO, false);
+				exOrderBillVO.getBillAttachmentList().add(billAttachmentVO);
+			}
+			
+			if (StringUtils.isNotBlank(deletedFilePath)) {
+				fileUploadUtils.deleteFile(destinationAttachmentPath, deletedFilePath);
+			}
+			
+			resetAttachmentForm();
+			successResult();
+		} catch (Exception e) {
+			e.printStackTrace();
+			errorResult(e);
+		}
+	}
+	
+	public void delAttachmentScannedCopy() {
+		try {
+			deletedFilePath = billAttachmentOriVO.getFilePath();
+			billAttachmentVO.setScannedPath(null);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void deleteInvAttachment() {
+		try {
+			fileUploadUtils.deleteFile(destinationAttachmentPath, billAttachmentVO.getFilePath());
+			billPymtBO.addDeleteBillAttachment(billAttachmentVO, true);
+			exOrderBillVO.getBillAttachmentList().remove(billAttachmentVO);
+			successResult();
+			
+		} catch (Exception e) {
+			errorResult(e);
+		}
+	}
+	
+	public void cancelAttachmentChange() {
+		try {
+			deletedFilePath = ""; 
+			billAttachmentVO.setScannedPath(billAttachmentOriVO.getScannedPath());
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleAttachmentFileUpload(FileUploadEvent event) {
+		try {
+			// rename the valid file name
+			fileName = event.getFile().getFileName();
+			fileName = fileName.replace(" ", "_");
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+			fileName = sdf.format(new Date()) + "_" + fileName;
+			
+			billAttachmentVO.setName(fileName);
+			billAttachmentVO.setFilePath(UUID.randomUUID().toString() + "." + FilenameUtils.getExtension(fileName));
+			
+			attachmentUploadedFile = event.getFile();
+			
+			billAttachmentVO.setScannedPath(fileName);
+			
+			FacesMessage msg = new FacesMessage(FacesMessage.SEVERITY_INFO, "Success! ", event.getFile().getFileName() + " is uploaded.");
+			FacesContext.getCurrentInstance().addMessage(null, msg);
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	public void onAttachPmntClick() {
+		try {
+			bankPmntVO = new CashBookVO();
+			cashBookVO = new CashBookVO();
+			
+			BigDecimal totalAmountPaid = new BigDecimal("0.00");
+			totalCurBal = 0.00;
+			
+			for(ExOrderBillVO exOrderBillVO : billPmntList){
+				totalCurBal += exOrderBillVO.getCurBal();
+				totalAmountPaid = totalAmountPaid.add(new BigDecimal(String.valueOf(exOrderBillVO.getAmtAllocate())));
+			}
+			
+			cashBookVO.setCredit(totalAmountPaid.doubleValue());
+			
+			if(totalAmountPaid.doubleValue() <= 0) {	
+				FacesMessage msg  = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Amount to allocate not provided", "");
+				if (msg != null) FacesContext.getCurrentInstance().addMessage(null, msg);
+		        RequestContext.getCurrentInstance().addCallbackParam("validateError", true);
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void searchBankPayment() {
+		try {
+			//bankPmntVO = cashBookBO.getCashBookBySysNo(getSessionInfoBean().getCompanyVO().getId(), CommonConstant.SYS_NUM_CD_BANK_PMNT, bankPmntVO.getSysNo(), "cash_with");
+			bankPmntVO = cashBookBO.getCashBookBySysNo(getSessionInfoBean().getCompanyVO().getId(), CommonConstant.SYS_NUM_CD_BANK_PMNT, bankPmntVO.getSysNo(), null);
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void saveAttachPayment() {
+		try {
+			BigDecimal tempDouble = new BigDecimal("0.00");
+			List<ExOrderBillVO> billList2 = new ArrayList<ExOrderBillVO>();
+			
+			for (ExOrderBillVO exOrderBillVO : billPmntList) {
+				if (exOrderBillVO.getAmtAllocate() != 0) {
+					tempDouble = tempDouble.add(new BigDecimal(String.valueOf(exOrderBillVO.getAmtAllocate())));
+					billList2.add(exOrderBillVO);
+				}
+			}
+			
+			if (tempDouble.doubleValue() > 0) billPymtBO.saveAttachPayment(getSessionInfoBean().getCompanyVO().getId(), billList2, bankPmntVO, cashBookVO, supplierVO);
+			
+			billPmntList = new ArrayList<ExOrderBillVO>();
+			initSingleBill();
+			successResult();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void saveJournalCart(JournalVO journalVO, Long idBill) throws BusinessException, QueueException {
+		TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+		trackingLogUtils.startLogs();
+		// check financial closed / GST submitted
+		if (getOriObj() == null) checkFinGSTClosed(CommonConstant.ACTION_CD_ADD, null, journalVO.getJournalDt(), invPmntAuthVO.isAccountManager());
+		else {
+			JournalVO oriVO = (JournalVO) journalVO.getOriObj();
+			checkFinGSTClosed(CommonConstant.ACTION_CD_UPD, oriVO.getJournalDt(), journalVO.getJournalDt(), invPmntAuthVO.isAccountManager());
+		}
+		if (journalVO.getJournalCartList().size() == 0)
+			throw new BusinessException(CommonErrConstant.ERR_ACCT_JOURNAL_NO_ITEM); 
+		if (journalVO.getTotalCrdAmt().doubleValue() == journalVO.getTotalDbtAmt().doubleValue() && journalVO.getTotalCrdAmt().doubleValue() != 0.00) {
+			journalVO.setTotalAmt(journalVO.getTotalCrdAmt().doubleValue());
+			
+//			journalVO.setAmountCalcViewVO(amtCalcViewVO);
+			if (journalVO.getId() == null){
+				journalBO.insertJournal(journalVO, journalVO.getJournalCartList());
+				if (idBill != null) {
+					billPymtBO.updateJournalToBill(idBill, journalVO.getId());
+				}
+			} else {
+				journalBO.updateJournal(journalVO, journalVO.getJournalCartList(), journalVO.getJournalItemsVO());
+			}
+		} else 
+			throw new BusinessException(CommonErrConstant.ERR_ACCT_CREDIT_DEBIT_NOT_EQUAL); 
+//		init();
+//		successResult();
+		
+		trackingLogUtils.endLogs("saveJournalCart");
+	}
+	
+	public void handleFilterSource() {
+		try {
+			lazyDataModel = new LazyBillPmntDataModel();
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	public void handleBillDtChange() {
+		try {
+			lazyDataModel = new LazyBillPmntDataModel(billFromDate, billToDate);
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+	}
+	
+	/**********
+	 * HELPER *
+	 **********/
+	
+	private void updateTaxableAmount(boolean isCalGLItems) throws BusinessException {
+		if (isCalGLItems) calculateGLItemsAmount(acctTransVO.getAcctTransList());
+		
+		amtCalcViewVO = AccountHelper.computeAmountTotalBasedItem(amtCalcViewVO, false, acctTransVO.getAcctTransList(), billPaymentList, false);
+		exOrderBillVO.setAmtPaid(amtCalcViewVO.getTotalAmountPaid().doubleValue());
+		exOrderBillVO.setCurBal(amtCalcViewVO.getTotalBalance().doubleValue());
+	}
+	
+	private void handleTaxCodeSelection(String taxCode, Double taxRate) throws BusinessException {
+		if(getSessionInfoBean().getCompanyVO().getIdAcctGST() != null && taxCode != null) {
+			isGSTPeriod = gstBO.isGSTPeriod(getSessionInfoBean().getCompanyVO().getId(), exOrderBillVO.getBillDt());
+			
+			if(isGSTPeriod) {
+				if(taxCode != null && taxRate == null) {
+					TaxCodeVO taxCodeVO = gstBO.getTaxCode(taxCode);
+					acctTransViewVO.setTaxCode(taxCodeVO.getCode());
+					acctTransViewVO.setTaxRate(taxCodeVO.getRate());
+					
+				} else {
+					acctTransViewVO.setTaxCode(taxCode);
+					acctTransViewVO.setTaxRate(taxRate.floatValue());
+				}
+				
+				handleAmountChange();
+			}
+		} else {
+			acctTransViewVO.setTaxCode(null);
+			acctTransViewVO.setTaxRate(null);
+			acctTransViewVO.setTaxAmount(0.00);
+			acctTransViewVO.setAmountIncludeTax(acctTransViewVO.getAmount());
+		}
+	}
+	
+	private void calculateGLItemsAmount(List<AcctTransVO> list) throws BusinessException {
+		for (AcctTransVO vo : list) {
+			vo.setTaxAmount(vo.getAmount() < 0 ? -vo.getTaxAmount() : vo.getTaxAmount());
+			
+			BigDecimal amount = new BigDecimal(String.valueOf(vo.getAmount()));
+			BigDecimal taxAmount = new BigDecimal(vo.getTaxAmount().toString());
+			
+			vo.setAmountIncludeTax(amount.add(taxAmount).doubleValue());
+		}
+	}
+	
+	private void generateBillRemarks() throws BusinessException {
+		if (CollectionUtils.isNotEmpty(exOrderBillVO.getEoBillPersonList())) {
+			StringBuilder result = new StringBuilder();
+			StringBuilder personList = new StringBuilder();
+			String startWords = "[Person List - Start]";
+			String endWords = "[Person List - End]";
+			
+			if (exOrderBillVO.getExReason() != null) {
+				String[] lines = exOrderBillVO.getExReason().split("\\R"); // \R matches any line break (cross-platform)
+			    int lineNumber = 1;
+			    int removeLine = 0;
+			    for (String line : lines) {
+			    	if (line.contains(startWords) || line.contains(endWords)) {
+			    		removeLine = 1;
+			    	}
+			    	if (removeLine == 0) {
+			    		result.append(line).append("\n");
+			    	}
+			    	if (line.contains(endWords)) {
+			    		removeLine = 0;
+			    	}
+			    	System.out.println("Found at line " + lineNumber + ": " + line);
+			        lineNumber++;
+			    }
+			}
+			
+			personList.append(startWords + "\n");
+			for (ExOrderBillPersonVO vo : exOrderBillVO.getEoBillPersonList()) {
+				personList.append(getUserName(vo.getIdUser()) + " - " + new DecimalFormat("#,##0.##").format(vo.getAmount()) + "\n");
+			}
+			personList.append(endWords + "\n");
+			
+			result.append(personList);
+			
+			exOrderBillVO.setExReason(result.toString());
+		}
+	}
+	
+	
+	public String generateReportFileName(String reportName) {
+		String fileName = "";
+		if (reportName != null) {
+			fileName = reportName +  ReportUtils.ft.format(new Date());
+		} else {
+			fileName = "Report" +  ReportUtils.ft.format(new Date());
+		}
+        return fileName;
+    }
+	
+	public StreamedContent getQrCodeStream() {
+        try {
+        	if (StringUtils.isNotBlank(exOrderBillVO.geteInvoiceValidationLink())) {
+                return new DefaultStreamedContent(new ByteArrayInputStream(QRCodeUtils.generateQRCodeByteArray(exOrderBillVO.geteInvoiceValidationLink(), 200, 200)), "image/png");
+
+        	} else {
+        		return null;
+        	}
+//            ByteArrayOutputStream qrStream = new ByteArrayOutputStream();
+//            BitMatrix matrix = new MultiFormatWriter().encode("Your QR Content", BarcodeFormat.QR_CODE, 200, 200);
+//            MatrixToImageWriter.writeToStream(matrix, "PNG", qrStream);
+        } catch (Throwable t) {
+            t.printStackTrace();
+            return null;
+        }
+    }
+	
+	public void onEInvoice() {
+		try {
+			System.out.println("CYY EInvoiceProperties.ENV_BASE_URL: " + EInvoiceProperties.getEnvBaseUrl());
+			System.out.println("CYY EInvoiceProperties.SYSTEM_API: " + EInvoiceProperties.getSystemApiUrl());
+			
+			if (StringUtils.isBlank(exOrderBillVO.geteInvoiceDocumentUuid())) {
+				// if no uuid, means didn't submit before, no need call API
+				return;
+			}
+			
+//			String accessToken = eInvoiceUtils.getAccessToken(getSessionInfoBean().getCompanyVO(), true);            	
+			String accessToken = eInvoiceBO.getAccessToken(getSessionInfoBean().getCompanyVO(), true);            	
+	        
+//	        if (!EInvoiceUtils.validateTaxpayerTin(invoiceVO, accessToken)) {
+//	        	throw new BusinessException(CommonErrConstant.ERR_TAXPAYER_TIN_VALIDATION_FAILED);
+//	        }
+	        
+	        EInvoiceDocument eInvoiceDocument = EInvoiceUtils.getDocumentDetails(exOrderBillVO.geteInvoiceDocumentUuid(), accessToken);
+	        exOrderBillVO.seteInvoiceDocument(eInvoiceDocument);
+	        
+//	        System.out.println("####################\n");
+//	        
+//	        System.out.println(eInvoiceDocument.getUuid());
+//	        System.out.println(eInvoiceDocument.getSubmissionChannel());
+//	        System.out.println(eInvoiceDocument.getSubmissionUid());
+//	        System.out.println(eInvoiceDocument.getLongId());
+//	        System.out.println(eInvoiceDocument.getStatus());
+//	        System.out.println(eInvoiceDocument.getTotalNetAmount());
+//	        System.out.println(eInvoiceDocument.getTotalPayableAmount());
+//	        
+//	        System.out.println(eInvoiceDocument.getValidationResults().getStatus());
+//	        for (EInvoiceValidationStepResult step : eInvoiceDocument.getValidationResults().getValidationSteps()) {
+//	        	if (step.getStatus().equals(CommonConstant.E_INV_STATUS_VALID)) {
+//	        		System.out.println(step.getStatus() + ": " + step.getName());
+//	        	} else if (step.getStatus().equals(CommonConstant.E_INV_STATUS_INVALID)) {
+//	        		System.out.println(step.getStatus() + ": " + step.getName());
+//	        		for (EInvoiceStandardError err : step.getError().getInnerError()) {
+//	        			System.out.println(err.getErrorCode() + " " + err.getError());
+//	        		}
+//	        	}
+//	        }
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void submitEInvoice() {
+		try {
+			
+			// reset err
+			exOrderBillVO.seteInvoiceErr(null);
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, regionBO, malaysiaStateBO, corporateProfileBO, billPymtBO, purchaseEOBO, chartOfAcctBO);
+			CompanyVO companyVO = corporateProfileBO.getCompanyDetails(exOrderBillVO.getCompanyId());
+			JSONObject submitResponse = eInvoiceUtils.submitSelfBilledInvoice(exOrderBillVO, supplierVO, supplierList, acctTransVO, companyVO);
+			eInvoiceUtils.processSubmitResponse(submitResponse, exOrderBillVO);
+			
+			successResult();
+			
+		} catch (Throwable t) {
+			
+			// display err on interface, instead as err popup
+			if (t instanceof BusinessException) {
+				BusinessException be = (BusinessException) t;
+				String message = messageSource.getMessage(be.getErrorCode(), be.getParameters(), "System error", getLocale());
+				exOrderBillVO.seteInvoiceErr(message);
+			}
+						
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onCancelEInvoice() {
+		
+	}
+	
+	public void cancelEInvoice(String cancellationReason) {
+		try {
+			
+			if (StringUtils.isBlank(exOrderBillVO.geteInvoiceDocumentUuid())) {
+				throw new BusinessException(CommonErrConstant.ERR_DOC_NO_UUID);
+			}
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO);
+			CompanyVO companyVO = corporateProfileBO.getCompanyDetails(exOrderBillVO.getCompanyId());
+			JSONObject cancelResponse = eInvoiceUtils.cancelDocument(cancellationReason, exOrderBillVO.geteInvoiceDocumentUuid(), companyVO);
+			eInvoiceUtils.processCancelResponse(cancelResponse);
+			
+			// update sys doc e inv status
+			exOrderBillVO.seteInvoiceStatus(EInvoiceConstant.E_INV_STATUS_CANCELLED);
+            
+            successResult();
+            
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	
+	public void submitConsolEInvoice() {
+		try {
+			for (ExOrderBillVO vo : savedSelectedBillList) {
+				System.out.println(vo.getCode());
+			}
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, invoiceBO, null, regionBO, malaysiaStateBO, chartOfAcctBO);
+
+			CompanyVO companyVO = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			InvoiceType consolidateInvoiceType = eInvoiceUtils.generateConsolidateSelfBilledInvoiceType(savedSelectedBillList, companyVO);
+			JSONObject submitResponse = eInvoiceUtils.submitConsolidateInvoice(consolidateInvoiceType, companyVO);
+			eInvoiceUtils.processConsolSubmitResponse2(submitResponse, savedSelectedBillList, consolidateInvoiceType.getIDValue(), companyVO, consolidateInvoiceType);
+		
+			successResult();
+			reloadConsolBillPymtList();
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			consolEInvActiveTabIndex = 0;
+		}
+	}
+	
+	public void getEInvoiceDocStatus() {
+		try {
+			
+//			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, regionBO, malaysiaStateBO, corporateProfileBO, billPymtBO, purchaseEOBO, chartOfAcctBO);
+
+			if (StringUtils.isBlank(exOrderBillVO.geteInvoiceDocumentUuid())) {
+				throw new BusinessException(CommonErrConstant.ERR_DOC_NO_UUID);
+			}
+
+			String accessToken = eInvoiceBO.getAccessToken(getSessionInfoBean().getCompanyVO(), true);
+			EInvoiceDocumentVO eInvoiceDocumentVO = eInvoiceBO.updDocumentDetails(exOrderBillVO.geteInvoiceDocumentUuid(), accessToken);
+
+			// update existing exOrderBillVO to show result
+			if (StringUtils.isNotBlank(eInvoiceDocumentVO.getStatusCode()))	exOrderBillVO.seteInvoiceStatus(eInvoiceDocumentVO.getStatusCode());
+			exOrderBillVO.seteInvoiceDocumentVO(eInvoiceDocumentVO);
+			if (eInvoiceDocumentVO != null) exOrderBillVO.seteInvoiceDocument(eInvoiceDocumentVO.geteInvoiceDocument());
+
+			successResult();
+					
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void printEInvoice() {
+		try {
+			HashMap<String, Object> map = corporateProfileBO.getReportTitle(getSessionInfoBean().getCompanyVO());
+			
+			EInvoiceDocumentVO eInvoiceDocumentVO = eInvoiceBO.getEInvoiceByUUID(exOrderBillVO.geteInvoiceDocumentUuid());
+			eInvoiceBO.getEInvoiceDetails(eInvoiceDocumentVO);
+			EInvoiceUtils.printEInvoice(eInvoiceDocumentVO, map);
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void submitMultipleEInvoice() {
+//		TrackingLogUtils trackingLogUtils = new TrackingLogUtils(getClass());
+		trackingLogUtils.startLogs();
+		try {
+			
+			if (savedSelectedBillList.size() > CommonConstant.E_INV_MAX_DOC_CNT) {
+				throw new BusinessException(CommonErrConstant.ERR_E_INV_ERR_MSG, null,
+						new String[] { "Maximum document count in a submission is 15."
+								+ savedSelectedBillList.size() + " is selected." });
+			}
+			
+			loadSupplier();
+			
+			EInvoiceUtils eInvoiceUtils = new EInvoiceUtils(eInvoiceBO, regionBO, malaysiaStateBO, corporateProfileBO, billPymtBO, purchaseEOBO, chartOfAcctBO);
+			eInvoiceUtils.setMessageSource(messageSource);
+			CompanyVO companyVO = corporateProfileBO.getCompanyDetails(getSessionInfoBean().getCompanyVO().getId());
+			
+			JSONObject submitResponse = eInvoiceUtils.submitSelfBilledInvoices(savedSelectedBillList, companyVO.getId(), supplierList);
+			eInvoiceUtils.processSubmitResponseSelfBilledInvoices(submitResponse, savedSelectedBillList, companyVO.getId());
+			
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		} finally {
+			mulpEInvActiveTabIndex = 0;
+		}
+		
+		mulpInvSubmRespList = new ArrayList<ExOrderBillVO>(savedSelectedBillList);		
+		savedSelectedBillList.clear();
+		selectedBillList = new ExOrderBillVO[1];
+		
+		trackingLogUtils.endLogs("submitMultipleEInvoice");
+	}
+	
+	public void onSelect(SelectEvent e) {
+		try {
+			
+			savedSelectedBillList.add((ExOrderBillVO) e.getObject());
+			
+			System.out.println("BillPymtBean.onSelect()");
+			for (ExOrderBillVO vo : savedSelectedBillList) {
+//				System.out.println(vo.getCode());
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onUnselect(UnselectEvent e) {
+		try {
+			ExOrderBillVO removeBillVO = null;
+			for (ExOrderBillVO vo : savedSelectedBillList) {
+				if (vo.getId().equals(((ExOrderBillVO) e.getObject()).getId())) {
+					removeBillVO = vo;
+//					savedSelectedBillList.remove(vo);
+				}
+			}
+			if (removeBillVO != null)	savedSelectedBillList.remove(removeBillVO);
+			
+//			savedSelectedInvoiceList.remove((InvoiceVO) e.getObject());
+			
+			System.out.println("BillPymtBean.onUnselect()");
+			for (ExOrderBillVO vo : savedSelectedBillList) {
+//				System.out.println(vo.getCode());
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onToggle(AjaxBehaviorEvent e) {
+		try {
+			
+			List<ExOrderBillVO> dataList = (List<ExOrderBillVO>) lazyConsolDataModel.getWrappedData();
+			
+//			for (int j = 0; j < selectedBillList.length; j++) {
+//				System.out.println(selectedBillList[j].getCode());
+//            }
+			
+//			for (int j = 0; j < dataList.size(); j++) {
+//				System.out.println(dataList.get(j).getCode());
+//            }
+			
+			if (selectedBillList.length > 0) {
+				System.out.println("Select All");
+//				savedSelectedBillList= new ArrayList<ExOrderBillVO>();
+				
+				List<ExOrderBillVO> addList = new ArrayList<ExOrderBillVO>();
+				
+				for (ExOrderBillVO selectedBillVO : dataList) {
+					boolean found = false;
+					for (ExOrderBillVO savedBillVO : savedSelectedBillList) {
+						if (savedBillVO.getId().equals(selectedBillVO.getId())) {
+							found = true;
+							break;
+						}
+					}
+					
+					if (!found) {
+						addList.add(selectedBillVO);
+					}
+				}
+//				List <ExOrderBillVO> list =  lazyConsolDataModel.load(-1, -1, null, null, filters);
+				savedSelectedBillList.addAll(addList);
+			} else {
+				System.out.println("Unselect All");
+				
+				List<ExOrderBillVO> removeList = new ArrayList<ExOrderBillVO>();
+				
+				for (ExOrderBillVO selectedBillVO : dataList) {
+					for (ExOrderBillVO savedBillVO : savedSelectedBillList) {
+						if (savedBillVO.getId().equals(selectedBillVO.getId())) {
+							removeList.add(savedBillVO);
+							break;
+						}
+					}
+				}
+//				List <ExOrderBillVO> list =  lazyConsolDataModel.load(-1, -1, null, null, filters);
+				savedSelectedBillList.removeAll(removeList);
+			}
+			
+			System.out.println("BillPymtBean.onToggle()");
+			for (ExOrderBillVO vo : savedSelectedBillList) {
+//				System.out.println(vo.getCode());
+			}
+		
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onPagination(PageEvent e){
+		try {
+			if(CollectionUtils.isNotEmpty(savedSelectedBillList)){
+//				selectedInvoiceList = (InvoiceVO[]) savedSelectedInvoiceList.toArray();
+				selectedBillList = new ExOrderBillVO[savedSelectedBillList.size()];
+	            for (int j = 0; j < savedSelectedBillList.size(); j++) {
+//	            	InvoiceVO[] newArray = Arrays.copyOf(selectedInvoiceList, selectedInvoiceList.length + 1);
+	            	selectedBillList[j] = savedSelectedBillList.get(j);
+//	                selectedInvoiceList = newArray;
+	            }
+	        }
+			
+			System.out.println("BillPymtBean.onPagination()");
+			for (ExOrderBillVO vo : savedSelectedBillList) {
+//				System.out.println(vo.getCode());
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void onFilter(FilterEvent e){
+		try {
+			if(CollectionUtils.isNotEmpty(savedSelectedBillList)){
+//				selectedInvoiceList = (InvoiceVO[]) savedSelectedInvoiceList.toArray();
+				selectedBillList = new ExOrderBillVO[savedSelectedBillList.size()];
+	            for (int j = 0; j < savedSelectedBillList.size(); j++) {
+//	            	InvoiceVO[] newArray = Arrays.copyOf(selectedInvoiceList, selectedInvoiceList.length + 1);
+	            	selectedBillList[j] = savedSelectedBillList.get(j);
+//	                selectedInvoiceList = newArray;
+	            }
+	        }
+			
+			System.out.println("BillPymtBean.onFilter()");
+			for (ExOrderBillVO vo : savedSelectedBillList) {
+				System.out.println(vo.getCode());
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void removeBillFromSelectedBills(ExOrderBillVO billVO) {
+		try {
+			savedSelectedBillList.remove(billVO);
+			selectedBillList = new ExOrderBillVO[savedSelectedBillList.size()];
+            for (int j = 0; j < savedSelectedBillList.size(); j++) {
+//            	InvoiceVO[] newArray = Arrays.copyOf(selectedInvoiceList, selectedInvoiceList.length + 1);
+            	selectedBillList[j] = savedSelectedBillList.get(j);
+//                selectedInvoiceList = newArray;
+            }
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void validateBillListExport() {
+		System.out.println("BillPymtBean.validateExport()");
+		
+		try {
+			DataTable table = (DataTable) FacesContext.getCurrentInstance().getViewRoot().findComponent(":idBillListForm:idPurBillPmntTable");
+			
+			int rowCount = table.getRowCount();
+			
+	        System.out.println("CYY rowCount: " + rowCount);
+	        System.out.println("CYY table.getPageCount(): " + table.getPageCount());
+
+//	        int maxAllowedRows = 3000;
+
+//	        if (rowCount > maxAllowedRows) {
+//				throw new BusinessException(CommonErrConstant.ERR_EXPORT_DATA_TOO_LARGE, null,
+//						FunctionUtils.generateArrayFromStr(String.valueOf(rowCount), String.valueOf(maxAllowedRows)));
+//	        }
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	public void exportBillList(String type) {
+		System.out.println("BillPymtBean.export()");
+		
+		try {
+			FacesContext context = FacesContext.getCurrentInstance();
+			DataTable table = (DataTable) context.getViewRoot().findComponent(":idBillListForm:idPurBillPmntTable");
+			table.setLazy(false);
+			
+			if ("csv".equalsIgnoreCase(type)) {
+				CSVExporter csvExporter = new CSVExporter();
+				csvExporter.export(context, table, ReportUtils.generateReportFileName("Bill_Payment_List"), false, false, "UTF-8", null, null);
+			}
+				
+			context.responseComplete();
+			table.setLazy(true);
+		} catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+	
+	//create PDF
+	public void preProcessPDF(Object document) {
+	    try {
+	        Document pdf = (Document) document;
+	        pdf.setPageSize(PageSize.A2.rotate()); 
+	        pdf.setMargins(0, 0, 0, 0);
+	        pdf.open();
+
+	        Font titleFont = new Font(Font.HELVETICA, 14, Font.BOLD);
+	        Paragraph title = new Paragraph("Bill Payment List", titleFont);
+	        title.setAlignment(Element.ALIGN_CENTER);
+	        pdf.add(title);
+	        pdf.add(new Paragraph(" "));
+	        
+	        PdfPTable table = new PdfPTable(1);
+	        table.setWidthPercentage(100);
+	        table.getDefaultCell().setNoWrap(false);
+	        table.getDefaultCell().setPadding(5);
+	        
+	        Font tableFont = new Font(Font.HELVETICA, 7);
+	        
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	}
+	
+	/****************
+	 * Lazy loading *
+	 ****************/
+	
+	class LazyBillPmntDataModel extends LazyDataModel<ExOrderBillVO> implements Serializable {
+		private static final long serialVersionUID = 1L;
+		
+		private Date billFromDate;
+		private Date billToDate;
+		private Boolean isConsol = false; // indicate the list is load for consol or not
+		
+		// for main listing searching
+		public LazyBillPmntDataModel(Date billFromDate, Date billToDate) {
+			super();
+			this.billFromDate = billFromDate;
+			this.billToDate = billToDate;
+		}
+		
+		public LazyBillPmntDataModel(Date billFromDate, Date billToDate, Boolean isConsol) {
+			super();
+			this.billFromDate = billFromDate;
+			this.billToDate = billToDate;
+			this.isConsol = isConsol;
+		}
+
+		public LazyBillPmntDataModel() {
+			super();
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#load(int, int, java.lang.String, org.primefaces.model.SortOrder, java.util.Map)
+		 */
+		@Override
+		public List<ExOrderBillVO> load(int first, int pageSize, String sortField, SortOrder sortOrder, Map<String, String> filters) {
+			try {
+				trackingLogUtils.startLogs();
+				
+				BillPymtBean.this.filters = filters;
+				
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("first", first);
+				params.put("pageSize", pageSize);
+				params.put("sortField", sortField);
+				params.put("sortOrder", sortOrder);
+				params.put("filters", filters);
+				params.put("psPrefixVal", psPrefixVal);
+				if (fromDate != null) params.put("fromDate", fromDate);
+				if (toDate != null) params.put("toDate", toDate);
+				if (StringUtils.isNotBlank(billFrom)) params.put("billFrom", billFrom);
+				if (StringUtils.isNotBlank(billTo)) params.put("billTo", billTo);
+				if (StringUtils.isNotBlank(countryFilter)) params.put("countryFilter", countryFilter);
+				if (StringUtils.isNotBlank(suppTypeFilter)) params.put("suppType", suppTypeFilter);
+				if (idSupplierList != null && idSupplierList.size() > 0) params.put("idSupplierList", idSupplierList);
+				
+				// for consol e inv
+				if (billFromDate != null) params.put("fromDate", billFromDate);
+				if (billToDate != null) params.put("toDate", billToDate);
+				params.put("isConsol", isConsol);
+				
+				int size = billPymtBO.getBillListSize(first, pageSize, filters, getSessionInfoBean().getCompanyVO().getId(), isSupplier ? idSupplier : null, params);
+				//int size = billPymtBO.getBillListSize(first, pageSize, filters, (isSupplier) ? null : getSessionInfoBean().getCompanyVO().getId(), idSupplier);
+				setRowCount(size);
+				if (size > 0) billList = billPymtBO.getBillList(first, pageSize, sortField, sortOrder, filters, getSessionInfoBean().getCompanyVO().getId(), isSupplier ? idSupplier : null, params);
+				//if (size > 0) billList = billPymtBO.getBillList(first, pageSize, sortField, sortOrder, filters, (isSupplier) ? null : getSessionInfoBean().getCompanyVO().getId(), idSupplier);
+				else billList = new ArrayList<ExOrderBillVO>();
+				
+//				if (idSupplier == null && blMultiPymt == true) {
+				if ("ALL".equals(suppTypeFilter) && blMultiPymt == true) {
+					totalAmtMap = new HashMap<String, Double>();
+					totalAmtMap.put("totalBillAmt", (Double) 0.0);
+					totalAmtMap.put("totalAmtPaid", (Double) 0.0);
+				} else {
+					totalAmtMap = billPymtBO.getTotalAmt(getSessionInfoBean().getCompanyVO().getId(), idSupplier);
+				}
+				BigDecimal totalBillAmt = new BigDecimal(totalAmtMap.get("totalBillAmt").toString());
+				BigDecimal totalAmtPaid = new BigDecimal(totalAmtMap.get("totalAmtPaid").toString());
+				totalAmtMap.put("totalCurBal", totalBillAmt.subtract(totalAmtPaid).doubleValue());
+				
+//				if (idSupplier != null) {
+				if (!"ALL".equals(suppTypeFilter)) {
+					for(int i = 0; i < billList.size(); i++) {
+						for (int j = 0 ; j < billPmntList.size() ; j++) {
+							if (billList.get(i).getId().equals(billPmntList.get(j).getId())) {
+								billList.get(i).setAmtAllocate(billPmntList.get(j).getAmtAllocate());
+								break;
+							}
+						}
+					}
+					
+				}
+			} catch (Throwable t) {
+				t.printStackTrace();
+			} finally {
+				trackingLogUtils.endLogs("LazyBillPmntDataModel");
+			}
+			return billList;
+		}
+		
+		/*
+		 * (non-Javadoc)
+		 * @see org.primefaces.model.LazyDataModel#setRowIndex(int)
+		 */
+		@Override
+		public void setRowIndex(int rowIndex) {
+			if (rowIndex == -1 || getPageSize() == 0) super.setRowIndex(-1);
+			else super.setRowIndex(rowIndex % getPageSize());
+		}
+	}
+	
+	/**
+	 * Get country name
+	 */
+	public String getCountryName(Long id) {
+		try {
+			CountryVO vo = regionBO.getCountryById(id);
+			if (vo == null) return "";
+			else return vo.getCountry();
+			
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return "";
+	}
+	
+	/**
+	 * Get employee name
+	 */
+	public String getUserName(Long id) {
+		try {
+			if (id != null) {
+				for (EmployeeViewVO vo : employeeList) {
+					if (vo.getId().longValue() == id.longValue()) {
+						String name = vo.getUserVO().getName();
+						if (StringUtils.isNotEmpty(vo.getFullName())) {
+							name += " (" + vo.getFullName() + ")";
+						}
+						return name;
+					}
+				}
+			}
+		} catch (Throwable t) {
+			errorResult(t);
+		}
+		return "";
+	}
+	
+	/*******************
+	 * Getter & Setter *
+	 *******************/
+
+	public List<SupplierVO> getSupplierList() {
+		return supplierList;
+	}
+	   
+
+	public void setAuthVO(AuthVO authVO) {
+		this.authVO = authVO;
+	}
+
+	public AuthVO getAuthVO() {
+		return authVO;
+	}
+
+	
+	public void setSupplierList(List<SupplierVO> supplierList) {
+		this.supplierList = supplierList;
+	}
+
+	public List<ExOrderBillVO> getBillList() {
+		return billList;
+	}
+
+	public void setBillList(List<ExOrderBillVO> billList) {
+		this.billList = billList;
+	}
+
+	/**
+	 * @return the supplierVO
+	 */
+	public SupplierVO getSupplierVO() {
+		return supplierVO;
+	}
+	
+	/**
+	 * @param supplierVO the supplierVO to set
+	 */
+	public void setSupplierVO(SupplierVO supplierVO) {
+		this.supplierVO = supplierVO;
+	}
+
+	public ExOrderVO getExOrderVO() {
+		return exOrderVO;
+	}
+
+	public void setExOrderVO(ExOrderVO exOrderVO) {
+		this.exOrderVO = exOrderVO;
+	}
+
+	public List<ExOrderVO> getExOrderList() {
+		return exOrderList;
+	}
+
+	public void setExOrderList(List<ExOrderVO> exOrderList) {
+		this.exOrderList = exOrderList;
+	}
+
+	public List<ExOrderDetailsVO> getExOrderDetailsList() {
+		return exOrderDetailsList;
+	}
+
+	public void setExOrderDetailsList(List<ExOrderDetailsVO> exOrderDetailsList) {
+		this.exOrderDetailsList = exOrderDetailsList;
+	}
+
+	public ExOrderDetailsVO getExOrderDetailsVO() {
+		return exOrderDetailsVO;
+	}
+
+	public void setExOrderDetailsVO(ExOrderDetailsVO exOrderDetailsVO) {
+		this.exOrderDetailsVO = exOrderDetailsVO;
+	}
+
+	public List<CompanyVO> getCompanyList() {
+		return companyList;
+	}
+
+	public void setCompanyList(List<CompanyVO> companyList) {
+		this.companyList = companyList;
+	}
+
+	/*public AcctCatVO getLiabilityVO() {
+		return liabilityVO;
+	}
+
+	public void setLiabilityVO(AcctCatVO liabilityVO) {
+		this.liabilityVO = liabilityVO;
+	}*/
+
+	public List<AcctVO> getLiabilityList() {
+		return liabilityList;
+	}
+
+	public void setLiabilityList(List<AcctVO> liabilityList) {
+		this.liabilityList = liabilityList;
+	}
+
+	public AcctCatVO getExpenditureVO() {
+		return expenditureVO;
+	}
+
+	public void setExpenditureVO(AcctCatVO expenditureVO) {
+		this.expenditureVO = expenditureVO;
+	}
+
+	public AcctCatVO getAssetVO() {
+		return assetVO;
+	}
+
+	public void setAssetVO(AcctCatVO assetVO) {
+		this.assetVO = assetVO;
+	}
+
+	public AcctTransVO getAcctTransVO() {
+		return acctTransVO;
+	}
+
+	public void setAcctTransVO(AcctTransVO acctTransVO) {
+		this.acctTransVO = acctTransVO;
+	}
+
+	public List<AcctTransVO> getAcctTransList() {
+		return acctTransList;
+	}
+
+	public void setAcctTransList(List<AcctTransVO> acctTransList) {
+		this.acctTransList = acctTransList;
+	}
+
+	public AcctVO getAcctVO() {
+		return acctVO;
+	}
+
+	public void setAcctVO(AcctVO acctVO) {
+		this.acctVO = acctVO;
+	}
+
+	public List<AcctVO> getAcctList() {
+		return acctList;
+	}
+
+	public void setAcctList(List<AcctVO> acctList) {
+		this.acctList = acctList;
+	}
+
+	public AcctTransVO getAcctTransViewVO() {
+		return acctTransViewVO;
+	}
+
+	public void setAcctTransViewVO(AcctTransVO acctTransViewVO) {
+		this.acctTransViewVO = acctTransViewVO;
+	}
+
+	public ExOrderBillVO getExOrderBillVO() {
+		return exOrderBillVO;
+	}
+
+	public void setExOrderBillVO(ExOrderBillVO exOrderBillVO) {
+		this.exOrderBillVO = exOrderBillVO;
+	}
+
+	public List<AcctTransVO> getAcctTransViewList() {
+		return acctTransViewList;
+	}
+
+	public void setAcctTransViewList(List<AcctTransVO> acctTransViewList) {
+		this.acctTransViewList = acctTransViewList;
+	}
+
+	public Double getTotalAmt() {
+		return totalAmt;
+	}
+
+	public void setTotalAmt(Double totalAmt) {
+		this.totalAmt = totalAmt;
+	}
+
+	public CashBookVO getCashBookVO() {
+		return cashBookVO;
+	}
+
+	public void setCashBookVO(CashBookVO cashBookVO) {
+		this.cashBookVO = cashBookVO;
+	}
+
+	public List<BankAcctViewVO> getBankAcctList() {
+		return bankAcctList;
+	}
+
+	public void setBankAcctList(List<BankAcctViewVO> bankAcctList) {
+		this.bankAcctList = bankAcctList;
+	}
+
+	public Double getTotalPymtAmt() {
+		return totalPymtAmt;
+	}
+
+	public void setTotalPymtAmt(Double totalPymtAmt) {
+		this.totalPymtAmt = totalPymtAmt;
+	}
+
+	public List<CashBookVO> getCashBookList() {
+		return cashBookList;
+	}
+
+	public void setCashBookList(List<CashBookVO> cashBookList) {
+		this.cashBookList = cashBookList;
+	}
+
+	public List<CashBookVO> getCashBookViewList() {
+		return cashBookViewList;
+	}
+
+	public void setCashBookViewList(List<CashBookVO> cashBookViewList) {
+		this.cashBookViewList = cashBookViewList;
+	}
+
+	public Double getTotalCurBal() {
+		return totalCurBal;
+	}
+
+	public void setTotalCurBal(Double totalCurBal) {
+		this.totalCurBal = totalCurBal;
+	}
+
+	public boolean isBlMultiPymt() {
+		return blMultiPymt;
+	}
+
+	public void setBlMultiPymt(boolean blMultiPymt) {
+		this.blMultiPymt = blMultiPymt;
+	}
+
+	public boolean isBlSelect() {
+		return blSelect;
+	}
+
+	public void setBlSelect(boolean blSelect) {
+		this.blSelect = blSelect;
+	}
+
+	public List<AcctVO> getGlListByBank() {
+		return glListByBank;
+	}
+
+	public void setGlListByBank(List<AcctVO> glListByBank) {
+		this.glListByBank = glListByBank;
+	}
+
+	public List<CountryVO> getCountryList() {
+		return countryList;
+	}
+
+	public void setCountryList(List<CountryVO> countryList) {
+		this.countryList = countryList;
+	}
+
+	public IdentityVO getIdentityVO() {
+		return identityVO;
+	}
+
+	public void setIdentityVO(IdentityVO identityVO) {
+		this.identityVO = identityVO;
+	}
+
+	public ContactVO getContactVO() {
+		return contactVO;
+	}
+
+	public void setContactVO(ContactVO contactVO) {
+		this.contactVO = contactVO;
+	}
+
+	public RemarksVO getRemarksVO() {
+		return remarksVO;
+	}
+
+	public void setRemarksVO(RemarksVO remarksVO) {
+		this.remarksVO = remarksVO;
+	}
+
+	public List<LookupItemVO> getPymtTermList() {
+		return pymtTermList;
+	}
+
+	public void setPymtTermList(List<LookupItemVO> pymtTermList) {
+		this.pymtTermList = pymtTermList;
+	}
+
+	public List<TourDepartureVO> getTourList() {
+		return tourList;
+	}
+
+	public void setTourList(List<TourDepartureVO> tourList) {
+		this.tourList = tourList;
+	}
+
+	public List<ExOrderDetailsVO> getEoDetailsList() {
+		return eoDetailsList;
+	}
+
+	public void setEoDetailsList(List<ExOrderDetailsVO> eoDetailsList) {
+		this.eoDetailsList = eoDetailsList;
+	}
+
+	public List<IdentityVO> getIdentityList() {
+		return identityList;
+	}
+
+	public void setIdentityList(List<IdentityVO> identityList) {
+		this.identityList = identityList;
+	}
+
+	public List<AcctVO> getAcctAutoCompleteList() {
+		return acctAutoCompleteList;
+	}
+
+	public void setAcctAutoCompleteList(List<AcctVO> acctAutoCompleteList) {
+		this.acctAutoCompleteList = acctAutoCompleteList;
+	}
+	public String getTourCodeDesc() {
+		return tourCodeDesc;
+	}
+
+	public void setTourCodeDesc(String tourCodeDesc) {
+		this.tourCodeDesc = tourCodeDesc;
+	}
+
+
+	/**
+	 * @return the billPaymentVO
+	 */
+	public BillPaymentVO getBillPaymentVO() {
+		return billPaymentVO;
+	}
+
+	/**
+	 * @param billPaymentVO the billPaymentVO to set
+	 */
+	public void setBillPaymentVO(BillPaymentVO billPaymentVO) {
+		this.billPaymentVO = billPaymentVO;
+	}
+
+	/**
+	 * @return the billPaymentList
+	 */
+	public List<BillPaymentVO> getBillPaymentList() {
+		return billPaymentList;
+	}
+
+	/**
+	 * @param billPaymentList the billPaymentList to set
+	 */
+	public void setBillPaymentList(List<BillPaymentVO> billPaymentList) {
+		this.billPaymentList = billPaymentList;
+	}
+
+	/**
+	 * @return the billPaymentViewList
+	 */
+	public List<BillPaymentVO> getBillPaymentViewList() {
+		return billPaymentViewList;
+	}
+
+	/**
+	 * @param billPaymentViewList the billPaymentViewList to set
+	 */
+	public void setBillPaymentViewList(List<BillPaymentVO> billPaymentViewList) {
+		this.billPaymentViewList = billPaymentViewList;
+	}
+
+	/**
+	 * @return the lazyDataModel
+	 */
+	public LazyDataModel<ExOrderBillVO> getLazyDataModel() {
+		return lazyDataModel;
+	}
+
+	/**
+	 * @param lazyDataModel the lazyDataModel to set
+	 */
+	public void setLazyDataModel(LazyDataModel<ExOrderBillVO> lazyDataModel) {
+		this.lazyDataModel = lazyDataModel;
+	}
+
+	/**
+	 * @return the isMultiple
+	 */
+	public boolean isMultiple() {
+		return isMultiple;
+	}
+
+	/**
+	 * @return the totalAmtMap
+	 */
+	public Map<String, Double> getTotalAmtMap() {
+		return totalAmtMap;
+	}
+
+	/**
+	 * @param totalAmtMap the totalAmtMap to set
+	 */
+	public void setTotalAmtMap(Map<String, Double> totalAmtMap) {
+		this.totalAmtMap = totalAmtMap;
+	}
+	
+	/**
+	 * @return the isDateInFinPeriodClosed
+	 */
+	public boolean isDateInFinPeriodClosed() {
+		return isDateInFinPeriodClosed;
+	}
+	/**
+	 * @param isDateInFinPeriodClosed the isDateInFinPeriodClosed to set
+	 */
+	public void setDateInFinPeriodClosed(boolean isDateInFinPeriodClosed) {
+		this.isDateInFinPeriodClosed = isDateInFinPeriodClosed;
+	}
+
+	/**
+	 * @return the inputTaxCodeVOList
+	 */
+	public List<TaxCodeVO> getInputTaxCodeVOList() {
+		return inputTaxCodeVOList;
+	}
+
+	/**
+	 * @return the outputTaxCodeVOList
+	 */
+	public List<TaxCodeVO> getOutputTaxCodeVOList() {
+		return outputTaxCodeVOList;
+	}
+
+	/**
+	 * @return the amtCalcViewVO
+	 */
+	public AmountCalcViewVO getAmtCalcViewVO() {
+		return amtCalcViewVO;
+	}
+
+	/**
+	 * @return the idSupplier
+	 */
+	public Long getIdSupplier() {
+		return idSupplier;
+	}
+
+	/**
+	 * @param idSupplier the idSupplier to set
+	 */
+	public void setIdSupplier(Long idSupplier) {
+		this.idSupplier = idSupplier;
+	}
+
+	/**
+	 * @return the invPmntAuthVO
+	 */
+	public InvPmntAuthVO getInvPmntAuthVO() {
+		return invPmntAuthVO;
+	}
+
+	/**
+	 * @return the bankPmntVO
+	 */
+	public CashBookVO getBankPmntVO() {
+		return bankPmntVO;
+	}
+
+	public boolean isGSTPeriod() {
+		return isGSTPeriod;
+	}
+
+	public void setGSTPeriod(boolean isGSTPeriod) {
+		this.isGSTPeriod = isGSTPeriod;
+	}
+
+	public Date getFromDate() {
+		return fromDate;
+	}
+
+	public void setFromDate(Date fromDate) {
+		this.fromDate = fromDate;
+	}
+
+	public Date getToDate() {
+		return toDate;
+	}
+
+	public void setToDate(Date toDate) {
+		this.toDate = toDate;
+	}
+
+	public String getBillFrom() {
+		return billFrom;
+	}
+
+	public void setBillFrom(String billFrom) {
+		this.billFrom = billFrom;
+	}
+
+	public String getBillTo() {
+		return billTo;
+	}
+
+	public void setBillTo(String billTo) {
+		this.billTo = billTo;
+	}
+
+	public ListingTableViewVO getListingTableViewVO() {
+		return listingTableViewVO;
+	}
+
+	public void setListingTableViewVO(ListingTableViewVO listingTableViewVO) {
+		this.listingTableViewVO = listingTableViewVO;
+	}
+
+	public Map<Integer, Boolean> getListingTableViewMap() {
+		return listingTableViewMap;
+	}
+
+	public void setListingTableViewMap(Map<Integer, Boolean> listingTableViewMap) {
+		this.listingTableViewMap = listingTableViewMap;
+	}
+
+	public LazyDataModel<TourDepartureVO> getLazyDataModelTourDep() {
+		return lazyDataModelTourDep;
+	}
+
+	public String getCancellationReason() {
+		return cancellationReason;
+	}
+
+	public void setCancellationReason(String cancellationReason) {
+		this.cancellationReason = cancellationReason;
+	}
+
+	public LazyDataModel<ExOrderBillVO> getLazyConsolDataModel() {
+		return lazyConsolDataModel;
+	}
+
+	public void setLazyConsolDataModel(LazyDataModel<ExOrderBillVO> lazyConsolDataModel) {
+		this.lazyConsolDataModel = lazyConsolDataModel;
+	}
+
+	public Date getBillFromDate() {
+		return billFromDate;
+	}
+
+	public void setBillFromDate(Date billFromDate) {
+		this.billFromDate = billFromDate;
+	}
+
+	public Date getBillToDate() {
+		return billToDate;
+	}
+
+	public void setBillToDate(Date billToDate) {
+		this.billToDate = billToDate;
+	}
+
+	public ExOrderBillVO[] getSelectedBillList() {
+		return selectedBillList;
+	}
+
+	public void setSelectedBillList(ExOrderBillVO[] selectedBillList) {
+//		this.selectedBillList = selectedBillList;
+		
+//		System.out.println("\nBillPymtBean.setSelectedBillList()");
+//		System.out.println("CYY selectedBillList.length: " + selectedBillList.length);
+//		for (ExOrderBillVO vo : selectedBillList) {
+//			System.out.print(vo.getCode() + ", ");
+//		}
+//		System.out.println();
+		
+		if (savedSelectedBillList == null) savedSelectedBillList = new ArrayList<ExOrderBillVO>();
+    	if (selectedBillList != null) {
+    		boolean existed = false;
+    		for (Object obj : selectedBillList) {
+    			ExOrderBillVO custVO = (ExOrderBillVO) obj;
+        		existed = false;
+        		for (ExOrderBillVO selectedVO : savedSelectedBillList) {
+        			if (selectedVO.getId().equals(custVO.getId())) {
+        				existed = true;
+        				break;
+        			}
+        		}
+        		if (!existed) savedSelectedBillList.add(custVO);
+        	}
+    	}
+    	
+    	if (lazyConsolDataModel == null)	return;
+    	
+    	List<ExOrderBillVO> dataList = (List<ExOrderBillVO>) lazyConsolDataModel.getWrappedData();
+//    	System.out.println("CYY dataList.size(): " + dataList.size());
+//    	for (InvoiceVO vo : dataList) {
+//    		System.out.print(vo.getPsNo() + ", ");
+//		}
+//    	System.out.println();
+    	if (dataList != null && dataList.size() > 0 && selectedBillList != null) {
+    		List<ExOrderBillVO> removeList = new ArrayList<ExOrderBillVO>();
+    		for (ExOrderBillVO data : dataList) {
+    			for (Object obj : selectedBillList) {
+    				ExOrderBillVO custVO = (ExOrderBillVO) obj;
+    	    		if (data.getId().equals(custVO.getId())) {
+    	    			removeList.add(data);
+    	    			break;
+    	    		}
+    	    	}
+    		}
+    		if(removeList.size() > 0) dataList.removeAll(removeList);
+    		removeList = new ArrayList<ExOrderBillVO>();
+    		for (ExOrderBillVO data : dataList) {
+    			for (ExOrderBillVO selectedVO : savedSelectedBillList) {
+    	    		if (data.getId().equals(selectedVO.getId())) {
+    	    			removeList.add(selectedVO);
+    	    			break;
+    	    		}
+    	    	}
+    		}
+    		if(removeList.size() > 0) savedSelectedBillList.removeAll(removeList);
+    	}
+    	
+    	this.selectedBillList = savedSelectedBillList.toArray(new ExOrderBillVO[savedSelectedBillList.size()]);
+    	
+    	Collections.sort(savedSelectedBillList, new Comparator<ExOrderBillVO>() {
+    		@Override
+            public int compare(ExOrderBillVO a, ExOrderBillVO b) {
+                return b.getId().compareTo(a.getId()); // reverse order
+            }
+		});
+    	
+//    	System.out.println("CYY savedSelectedBillList.size(): " + savedSelectedBillList.size());
+	}
+	
+	public void viewPaymentForBillPayment(Long idBill) {
+		try {
+			loadBillPymtList(idBill);
+		}catch (Throwable t) {
+			t.printStackTrace();
+			errorResult(t);
+		}
+	}
+
+	public List<ExOrderBillVO> getSavedSelectedBillList() {
+		return savedSelectedBillList;
+	}
+
+	public void setSavedSelectedBillList(List<ExOrderBillVO> savedSelectedBillList) {
+		this.savedSelectedBillList = savedSelectedBillList;
+	}
+
+	public String getCountryFilter() {
+		return countryFilter;
+	}
+
+	public void setCountryFilter(String countryFilter) {
+		this.countryFilter = countryFilter;
+	}
+
+	public Boolean getIsEInvoice() {
+		return isEInvoice;
+	}
+
+	public void setIsEInvoice(Boolean isEInvoice) {
+		this.isEInvoice = isEInvoice;
+	}
+
+	public List<ExOrderBillVO> getMulpInvSubmRespList() {
+		return mulpInvSubmRespList;
+	}
+
+	public void setMulpInvSubmRespList(List<ExOrderBillVO> mulpInvSubmRespList) {
+		this.mulpInvSubmRespList = mulpInvSubmRespList;
+	}
+
+	public List<SupplierVO> getMultiSuppList() {
+		return multiSuppList;
+	}
+
+	public void setMultiSuppList(List<SupplierVO> multiSuppList) {
+		this.multiSuppList = multiSuppList;
+	}
+
+	public List<Long> getIdSupplierList() {
+		return idSupplierList;
+	}
+
+	public void setIdSupplierList(List<Long> idSupplierList) {
+		this.idSupplierList = idSupplierList;
+	}
+
+	public String getSuppTypeFilter() {
+		return suppTypeFilter;
+	}
+
+	public void setSuppTypeFilter(String suppTypeFilter) {
+		this.suppTypeFilter = suppTypeFilter;
+	}
+
+	public List<ExOrderBillVO> getBillPmntList() {
+		return billPmntList;
+	}
+
+	public void setBillPmntList(List<ExOrderBillVO> billPmntList) {
+		this.billPmntList = billPmntList;
+	}
+
+	public List<EmployeeViewVO> getEmployeeList() {
+		return employeeList;
+	}
+
+	public void setEmployeeList(List<EmployeeViewVO> employeeList) {
+		this.employeeList = employeeList;
+	}
+
+	public EmployeeViewVO getEmployeeVO() {
+		return employeeVO;
+	}
+
+	public void setEmployeeVO(EmployeeViewVO employeeVO) {
+		this.employeeVO = employeeVO;
+	}
+
+	public List<MalaysiaStateVO> getMalaysiaStateList() {
+		return malaysiaStateList;
+	}
+
+	public void setMalaysiaStateList(List<MalaysiaStateVO> malaysiaStateList) {
+		this.malaysiaStateList = malaysiaStateList;
+	}
+
+	public String getInUseUserType() {
+		return inUseUserType;
+	}
+
+	public void setInUseUserType(String inUseUserType) {
+		this.inUseUserType = inUseUserType;
+	}
+
+	public Double getTotalAmtPerson() {
+		return totalAmtPerson;
+	}
+
+	public void setTotalAmtPerson(Double totalAmtPerson) {
+		this.totalAmtPerson = totalAmtPerson;
+	}
+
+	public int getMulpEInvActiveTabIndex() {
+		return mulpEInvActiveTabIndex;
+	}
+
+	public void setMulpEInvActiveTabIndex(int mulpEInvActiveTabIndex) {
+		this.mulpEInvActiveTabIndex = mulpEInvActiveTabIndex;
+	}
+
+	public int getConsolEInvActiveTabIndex() {
+		return consolEInvActiveTabIndex;
+	}
+
+	public void setConsolEInvActiveTabIndex(int consolEInvActiveTabIndex) {
+		this.consolEInvActiveTabIndex = consolEInvActiveTabIndex;
+	}
+
+	public String getPostSaveSuplAction() {
+		return postSaveSuplAction;
+	}
+
+	public void setPostSaveSuplAction(String postSaveSuplAction) {
+		this.postSaveSuplAction = postSaveSuplAction;
+	}
+
+	public String getACTION_SUPPLIER() {
+		return ACTION_SUPPLIER;
+	}
+
+	public void setACTION_SUPPLIER(String aCTION_SUPPLIER) {
+		ACTION_SUPPLIER = aCTION_SUPPLIER;
+	}
+
+	public String getACTION_PAYEE_SUPPLIER() {
+		return ACTION_PAYEE_SUPPLIER;
+	}
+
+	public void setACTION_PAYEE_SUPPLIER(String aCTION_PAYEE_SUPPLIER) {
+		ACTION_PAYEE_SUPPLIER = aCTION_PAYEE_SUPPLIER;
+	}
+
+	public ExOrderBillAttachmentVO getBillAttachmentVO() {
+		return billAttachmentVO;
+	}
+
+	public void setBillAttachmentVO(ExOrderBillAttachmentVO billAttachmentVO) {
+		this.billAttachmentVO = billAttachmentVO;
+	}
+
+	public String getFileName() {
+		return fileName;
+	}
+
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
+	}
+
+	public UploadedFile getAttachmentUploadedFile() {
+		return attachmentUploadedFile;
+	}
+
+	public void setAttachmentUploadedFile(UploadedFile attachmentUploadedFile) {
+		this.attachmentUploadedFile = attachmentUploadedFile;
+	}
+
+	public String getDeletedFilePath() {
+		return deletedFilePath;
+	}
+
+	public void setDeletedFilePath(String deletedFilePath) {
+		this.deletedFilePath = deletedFilePath;
+	}
+
+	public String getDestinationAttachmentPath() {
+		return destinationAttachmentPath;
+	}
+
+	public ExOrderBillAttachmentVO getBillAttachmentOriVO() {
+		return billAttachmentOriVO;
+	}
+
+	public void setBillAttachmentOriVO(ExOrderBillAttachmentVO billAttachmentOriVO) {
+		this.billAttachmentOriVO = billAttachmentOriVO;
+	}
+}

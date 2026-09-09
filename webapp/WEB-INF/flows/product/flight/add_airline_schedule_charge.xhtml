@@ -1,0 +1,67 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf">
+
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onAddValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddScheduleChargeDialog.hide();
+		}
+	}
+	
+	function onEditValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAddScheduleChargeDialog.hide();
+		}
+	}
+</script>
+
+<p:panelGrid>
+	<p:row>
+		<p:column><h:outputLabel for="idExtraFeeCode">Extra Fee Code <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:selectOneMenu id="idExtraFeeCode" label="Extra Fee Code" value="#{airlineBean.extraItemChargeVO.typeCd}" required="true"
+				filter="true" filterMatchMode="contains" effect="fade" style="width: 280px;">
+				<f:selectItem itemLabel="Select One" itemValue=""/>
+				<f:selectItems value="#{airlineBean.invEoItemList}" var="vo" itemLabel="#{vo.code} - #{vo.description}" itemValue="#{vo.code}"/>
+				<p:ajax listener="#{airlineBean.handleInvEoItemSelect}" event="change" update=":idAddScheduleItemChargeForm"/>
+			</p:selectOneMenu>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idExtraFeeName">Extra Fee Name <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idExtraFeeName" label="Extra Fee Name" value="#{airlineBean.extraItemChargeVO.typeDesc}" required="true"
+				style="width:280px;"/>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idExtraFeeAmt">Extra Fee Amount <span class="required">*</span></h:outputLabel></p:column>
+		<p:column>
+			<p:inputText id="idExtraFeeAmt" label="Extra Fee Amount" value="#{airlineBean.extraItemChargeVO.amount}" required="true">
+				<f:convertNumber pattern="#,##0.00"/>
+				<pe:keyFilter regEx="/[\d\.\s,]/"/>
+			</p:inputText>
+		</p:column>
+	</p:row>
+	<p:row>
+		<p:column><h:outputLabel for="idIsMisc">Calculate into MISC charges?</h:outputLabel></p:column>
+		<p:column><p:selectBooleanCheckbox id="idIsMisc" value="#{airlineBean.extraItemChargeVO.isMisc}"/> </p:column>
+	</p:row>
+</p:panelGrid>
+ <h:panelGrid columns="2" style="width:1px;">
+	<p:commandButton value="#{msg['common.button.label.save']}" actionListener="#{airlineBean.addExtraItemCharge}" update="@form,:idAddAirlineScheduleForm:idExtraItemCharge,:idEditAirlineSchedulesForm:idExtraItemCharge"  oncomplete="onAddValidation(xhr, status, args)" rendered="#{airlineBean.itemChargeAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.update']}" actionListener="#{airlineBean.updExtraItemCharge}" update="@form,:idAddAirlineScheduleForm:idExtraItemCharge,:idEditAirlineSchedulesForm:idExtraItemCharge" oncomplete="onEditValidation(xhr, status, args)" rendered="#{not airlineBean.itemChargeAdd}"/>
+	<p:commandButton value="#{msg['common.button.label.cancel']}" actionListener="#{airlineBean.resetItemChargeForm}" oncomplete="varAddScheduleChargeDialog.hide()" process="@this" update="@form, :idAddScheduleItemChargeForm">
+		<pe:resetEditableValues for="idAddScheduleItemChargeForm"/>
+	</p:commandButton>
+</h:panelGrid>
+</ui:composition>

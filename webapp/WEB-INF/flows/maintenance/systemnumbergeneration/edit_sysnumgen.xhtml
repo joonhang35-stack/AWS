@@ -1,0 +1,52 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+	
+<p:growl id="msg"/>
+
+<script type="text/javascript">
+	function onValidation(xhr, status, args) {
+		if (args.validationFailed) {
+			varEditSystemNumberGenerationDialog.show();
+		} else {
+			varEditSystemNumberGenerationDialog.hide();
+		}
+	}
+	</script>
+	
+
+
+<h:panelGrid columns="2" style="margin-bottom:10px; width:5px">
+	 <h:outputLabel for="idCompanyCode">Company Code</h:outputLabel>
+	<h:outputText label="idCompanyCode" value="#{systemNumberGenerationBean.sessionInfoBean.companyVO.name}"/>
+	<h:outputLabel for="idDescription">description</h:outputLabel>
+	<h:outputText id="idDescriptionlabe100" label="Description" value="#{systemNumberGenerationBean.systemNumberGenerationVO.description}" style="width:100px"/>
+	<h:outputLabel for="idCode">Code</h:outputLabel>
+	<h:outputText id="idCodelabe100" label="Code" value="#{systemNumberGenerationBean.systemNumberGenerationVO.code}" style="width:100px"/>
+	<h:outputLabel for="idRemarks">Prefix id</h:outputLabel>
+	<p:inputText id="idRemarkslabe100" label="Remarks" value="#{systemNumberGenerationBean.systemNumberGenerationVO.prefixid}" style="width:100px" />
+	<h:outputLabel for="id">Next Number<span class="required">*</span></h:outputLabel>
+	<p:inputText id="idRemarkslabe101" label="Next Number" value="#{systemNumberGenerationBean.systemNumberGenerationVO.nextnumber}" style="width:100px" required="true"/>
+	
+	
+	
+	<h:outputText/>
+	<h:panelGrid id="idButtonGrid" columns="3" style="width: 1px;">
+		<p:commandButton id="idBtnEditSubmit" actionListener="#{systemNumberGenerationBean.editSystemNumberGeneration}" value="#{msg['common.button.label.save']}" update="@form,:idForm:idSystemNumberGenerationTable" oncomplete="onValidation(xhr, status, args)"/>
+		<p:commandButton id="idBtnEditCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{systemNumberGenerationBean.resetForm}" update="@form" process="@this" oncomplete="varEditSystemNumberGenerationDialog.hide()" global="false">
+			<pe:resetEditableValues for="idEditSystemNumberGenerationForm"/>
+		</p:commandButton>
+	</h:panelGrid>
+	<h:outputText/>
+	
+</h:panelGrid>
+<br/>
+<h:outputLabel><span class="required">*</span> - required field</h:outputLabel>
+
+</ui:composition>

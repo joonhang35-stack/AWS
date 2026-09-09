@@ -1,0 +1,97 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:c="http://java.sun.com/jsp/jstl/core"
+	    		xmlns:ui="http://java.sun.com/jsf/facelets"
+	  			xmlns:h="http://java.sun.com/jsf/html"
+	  			xmlns:f="http://java.sun.com/jsf/core"
+	  			xmlns:p="http://primefaces.org/ui"
+	  			xmlns:pe="http://primefaces.org/ui/extensions"
+	  			xmlns:zsg="http://www.bcs.com/zsg/jsf"
+	  			xmlns:bterp="http://www.bcs.com/zsg/jsf/bterp">
+
+<script type="text/javascript">
+	function onAccTransValidation(xhr, status, args) {
+		if (!args.validationFailed) {
+			varAccountTransactionDialog.hide();
+		}
+	}
+</script>
+<p:growl id="msg"/>
+<p:panelGrid id="idAcctTransSection">
+		<p:row>
+			<p:column><h:outputLabel for="idAcct">Account <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:autoComplete id="idAcct" label="Account" value="#{paymentBean.acctTransViewVO.code}" completeMethod="#{paymentBean.complete}" required="true">  
+					<p:ajax event="itemSelect" listener="#{paymentBean.changeDesc}" update=":idAddAcctTrans:idAcctTransSection"/> 
+		     	</p:autoComplete>
+				&nbsp;<p:commandButton icon="ui-icon-search" oncomplete="varAcctListDialog.show()" update=":idAcctListDialog" process="@this"/>
+			</p:column> 
+		</p:row>
+		<p:row>
+        	<p:column><h:outputLabel for="idAddDescription">Description</h:outputLabel></p:column>
+			<p:column><h:outputText id="idAddDescription" label="Description" value="#{paymentBean.acctTransViewVO.desc}" required="true"/></p:column>
+		</p:row>
+		<p:row rendered="#{paymentBean.isGSTPeriod}">
+			<p:column>
+				<h:outputLabel for="idGSTCode">GST Code <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idGSTCode" label="GST Code" value="#{paymentBean.acctTransViewVO.taxCode}" required="true" 
+						maxlength="0" readonly="true" style="background:#ccc;"/>
+				&nbsp;<p:commandButton icon="ui-icon-search" oncomplete="varGSTListDialog.show()" update=":idGSTListDialog" 
+							process="@this" disabled="#{ empty paymentBean.acctTransViewVO.code or empty paymentBean.amtCalcViewVO.idTaxAcct}"/>
+				<p:commandButton icon="ui-icon-close" actionListener="#{paymentBean.handleTaxCodeClear}" update=":idAddAcctTrans:idAcctTransSection" 
+							process="@this" disabled="#{ empty paymentBean.acctTransViewVO.code or empty paymentBean.amtCalcViewVO.idTaxAcct}"/>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{paymentBean.isGSTPeriod}">
+			<p:column>
+				<h:outputLabel for="idGSTRate">GST Rate (%) <span class="required">*</span></h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idGSTRate" label="GST Rate (%)" value="#{paymentBean.acctTransViewVO.taxRate}" required="true" 
+						maxlength="0" readonly="true" style="background:#ccc;" styleClass="txt_right"/>
+			</p:column>
+		</p:row>
+		 <p:row>
+		 <p:column><h:outputLabel for="idAddAmount">Amount <span class="required">*</span></h:outputLabel></p:column>
+			<p:column>
+				<p:inputText id="idAddAmount" label="Amount" value="#{paymentBean.acctTransViewVO.amount}" required="true" 
+					styleClass="txt_right" disabled="#{paymentBean.acctTransViewVO.amount == 0}" >
+					<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+					<p:ajax event="change" update=":idAddAcctTrans:idAcctTransSection" listener="#{paymentBean.handleAmountChange}"/>
+			</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{paymentBean.isGSTPeriod}">
+			<p:column>
+				<h:outputLabel for="idGSTAmt">GST Amount</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idGSTAmt" label="GST Amount" value="#{paymentBean.acctTransViewVO.taxAmount}" 
+					readonly="true" style="background:#ccc" styleClass="txt_right">
+					<f:convertNumber pattern="#{config['amount.format.pattern']}"/>
+				</p:inputText>
+			</p:column>
+		</p:row>
+		<p:row rendered="#{paymentBean.isGSTPeriod}">
+			<p:column>
+				<h:outputLabel for="idAmt">Amount Inc. GST</h:outputLabel>
+			</p:column>
+			<p:column>
+				<p:inputText id="idAmt" label="Amount Inc. GST" value="#{paymentBean.acctTransViewVO.amountIncludeTax}" 
+					readonly="true" style="background:#ccc" styleClass="txt_right">
+					<f:convertNumber pattern="#{config['amount.format.pattern']}" />
+				</p:inputText>
+			</p:column>
+		</p:row>
+	</p:panelGrid>
+	
+	<p:panelGrid columns="3" style="width:1px;">
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{paymentBean.addAcctTrans}" update="@form,:idAddPayment:idShowAcctTransList,:idAddPayment:idTaxableSection" disabled="#{paymentBean.acctTransViewVO.amount == 0}" rendered="#{paymentBean.addAcctTrans}"/>
+		<p:commandButton value="#{msg['common.button.label.ok']}" actionListener="#{paymentBean.editAcctTrans}" update="@form,:idAddPayment:idShowAcctTransList,:idAddPayment:idTaxableSection" oncomplete="onAccTransValidation(xhr, status, args)" rendered="#{not paymentBean.addAcctTrans}"/>
+		<p:commandButton id="idBtnAddCancel" value="#{msg['common.button.label.cancel']}" actionListener="#{paymentBean.resetAcctTransViewForm}" update="@form" process="@this" oncomplete="varAccountTransactionDialog.hide()" global="false">
+			<pe:resetEditableValues for="idAddAcctTrans"/>
+		</p:commandButton>
+	</p:panelGrid>
+</ui:composition>
